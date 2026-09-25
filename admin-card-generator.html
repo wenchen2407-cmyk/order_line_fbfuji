@@ -286,20 +286,24 @@
           <input type="url" id="prodImageUrl" class="input-text" value="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" oninput="updatePreview()">
         </div>
 
-        <!-- 電腦版登入狀態與輔助列 -->
-        <div id="loginStatusBox" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
-          <span id="loginStatusText">🔍 偵測 LINE 登入狀態中...</span>
-          <button type="button" id="btnLoginLine" style="display: none; background: #06c755; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 700; cursor: pointer;" onclick="loginLine()">登入 LINE</button>
-        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+          <!-- 電腦專用按鈕 (置頂，最符合目前情境) -->
+          <div style="background: #eef2ff; border: 1.5px solid #c7d2fe; border-radius: 12px; padding: 14px;">
+            <div style="font-weight: 800; font-size: 14px; color: #3730a3; margin-bottom: 6px;">💻 電腦版專用發布：</div>
+            <button type="button" id="btnCopyText" style="width: 100%; background: #4f46e5; color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);" onclick="copyPromoText()">
+              <span>📋 1. 一鍵複製圖文文案與下單連結</span>
+            </button>
+            <p style="font-size: 12px; color: #6366f1; margin-top: 6px; line-height: 1.4;">點擊後直接切換到電腦版 LINE 聊天室按 <b>Ctrl + V</b> 即可發送！</p>
+          </div>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <button type="button" class="btn-share" id="btnShareTarget" onclick="shareFlexCardToGroup()">
-            <span>🚀 一鍵分享 Flex 卡片到 LINE 群組 (手機/電腦皆可)</span>
-          </button>
-          
-          <button type="button" id="btnCopyText" style="width: 100%; background: #0f172a; color: #fff; border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="copyPromoText()">
-            <span>📋 一鍵複製商品文案與下單連結 (電腦版 LINE 貼上用)</span>
-          </button>
+          <!-- 手機專用按鈕 -->
+          <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px;">
+            <div style="font-weight: 800; font-size: 14px; color: #166534; margin-bottom: 6px;">📱 手機版專用發布：</div>
+            <button type="button" class="btn-share" id="btnShareTarget" style="margin-top: 0;" onclick="shareFlexCardToGroup()">
+              <span>🚀 發送 Flex 互動卡片至群組</span>
+            </button>
+            <p style="font-size: 12px; color: #15803d; margin-top: 6px; line-height: 1.4;">在手機 LINE 內開啟此頁面，點此鈕可直接呼叫群組發送圖文大卡片。</p>
+          </div>
         </div>
       </div>
 
@@ -461,13 +465,19 @@
       };
     }
 
-    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費)
+    // 發送處理
     async function shareFlexCardToGroup() {
+      // 判斷是否在 LINE App 內打開
+      const isInLineApp = /Line/i.test(navigator.userAgent);
+
+      if (!isInLineApp) {
+        alert('💡 電腦版操作提示：\nLINE 官方的「Flex 互動大卡片」僅支援在【手機 LINE App 內部】直接彈窗發送。\n\n在電腦上，請直接點擊上方的【📋 1. 一鍵複製圖文文案與下單連結】，切換到電腦版 LINE 按 Ctrl+V 貼到群組，客人點進去一樣能滿版秒下單唷！');
+        copyPromoText();
+        return;
+      }
+
       if (!liff.isLoggedIn()) {
-        const confirmLogin = confirm('在電腦版發送需要先進行 LINE 快速登入授權，是否立即登入？');
-        if (confirmLogin) {
-          liff.login();
-        }
+        liff.login();
         return;
       }
 
@@ -479,8 +489,7 @@
           alert('🎉 Flex 商品卡已成功發送至指定群組！');
         }
       } catch (err) {
-        console.warn('shareTargetPicker 桌面調用受限:', err);
-        // 電腦端自動降級：直接幫賣家複製文案並提示
+        console.warn('發送受限:', err);
         copyPromoText();
       }
     }
