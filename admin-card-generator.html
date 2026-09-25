@@ -461,18 +461,13 @@
       };
     }
 
-    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費，手機/電腦皆支援)
+    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費)
     async function shareFlexCardToGroup() {
       if (!liff.isLoggedIn()) {
-        const confirmLogin = confirm('在電腦版瀏覽器發送需要先完成 LINE 快速登入，是否立即前往登入？');
+        const confirmLogin = confirm('在電腦版發送需要先進行 LINE 快速登入授權，是否立即登入？');
         if (confirmLogin) {
           liff.login();
         }
-        return;
-      }
-
-      if (!liff.isApiAvailable('shareTargetPicker')) {
-        alert('您的瀏覽器目前未開啟 shareTargetPicker 權限，請確認 LINE Developers 後台總開關是否已啟動。');
         return;
       }
 
@@ -484,8 +479,9 @@
           alert('🎉 Flex 商品卡已成功發送至指定群組！');
         }
       } catch (err) {
-        console.error('發送失敗:', err);
-        alert('發送取消或發生錯誤：' + err.message);
+        console.warn('shareTargetPicker 桌面調用受限:', err);
+        // 電腦端自動降級：直接幫賣家複製文案並提示
+        copyPromoText();
       }
     }
 
