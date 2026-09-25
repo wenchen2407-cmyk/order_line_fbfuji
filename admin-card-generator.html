@@ -255,9 +255,9 @@
     .preview-img {
       width: 100%;
       height: 160px;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
-      background: #cbd5e1;
+      background: #f8fafc;
     }
 
     .preview-body {
@@ -732,13 +732,17 @@
         bubble.className = 'flex-preview-bubble';
         const displayImg = getSafeMainImage(prod.imageUrl);
         const priceNum = Number(prod.price) || 0;
+        const origPriceNum = Number(prod.originalPrice) || 0;
+        const origPriceHtml = (origPriceNum > 0 && origPriceNum > priceNum) 
+          ? `<span style="font-size:11px; color:#94a3b8; text-decoration:line-through; margin-left:6px;">NT$ ${origPriceNum.toLocaleString()}</span>` 
+          : '';
 
         bubble.innerHTML = `
           <img class="preview-img" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/300'">
           <div class="preview-body">
             <span class="preview-tag">${prod.category || '連線好物'}</span>
             <div class="preview-title">${prod.name || '未命名商品'}</div>
-            <div class="preview-price">NT$ ${priceNum.toLocaleString()}</div>
+            <div class="preview-price">NT$ ${priceNum.toLocaleString()} ${origPriceHtml}</div>
           </div>
           <div class="preview-footer">
             <div class="preview-btn">點此立即下單</div>
@@ -768,7 +772,8 @@
         }
       ];
 
-      if (origPriceNum > priceNum) {
+      // 只有在填寫了原價、且原價大於連線代購價時才顯示劃線原價
+      if (origPriceNum > 0 && origPriceNum > priceNum) {
         priceRowContents.push({
           type: 'text',
           text: `NT$ ${origPriceNum.toLocaleString()}`,
@@ -788,7 +793,8 @@
           url: safeImg,
           size: 'full',
           aspectRatio: '20:13',
-          aspectMode: 'cover'
+          aspectMode: 'fit', // 依使用者需求：整張圖片等比完整顯示，不裁切
+          backgroundColor: '#f8fafc'
         },
         body: {
           type: 'box',
@@ -1159,7 +1165,7 @@
             name: name,
             category: category,
             price: Number(price),
-            originalPrice: origPrice ? Number(origPrice) : Number(price),
+            originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
             stock: stock,
             isUnlimitedStock: isUnlimited,
             specs: specs,
