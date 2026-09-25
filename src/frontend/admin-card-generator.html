@@ -589,7 +589,7 @@
       fetchProductList();
     }
 
-    // 3. 渲染勾選清單
+    // 3. 渲染勾選清單 (含嚴格防呆)
     function renderProductCheckboxes() {
       const container = document.getElementById('productListContainer');
       container.innerHTML = '';
@@ -601,14 +601,41 @@
         item.id = `item_${prod.id}`;
         item.onclick = () => toggleSelectProduct(prod.id);
 
+        // 規格字串安全處理 (防呆：若是字串或陣列皆能正常處理)
+        let specsDisplay = '';
+        if (Array.isArray(prod.specs)) {
+          specsDisplay = prod.specs.join('、');
+        } else if (typeof prod.specs === 'string' && prod.specs.trim()) {
+          try {
+            const parsed = JSON.parse(prod.specs);
+            specsDisplay = Array.isArray(parsed) ? parsed.join('、') : prod.specs;
+          } catch(e) {
+            specsDisplay = prod.specs;
+          }
+        }
+        if (!specsDisplay) specsDisplay = '單一規格';
+
+        // 圖片安全取出第一張 (支援分號/逗號/換行分割)
+        let displayImg = 'https://via.placeholder.com/80';
+        if (prod.imageUrl) {
+          const parts = String(prod.imageUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
+          if (parts.length > 0 && parts[0].startsWith('http')) {
+            displayImg = parts[0];
+          }
+        }
+
+        // 庫存顯示優化
+        const stockDisplay = (Number(prod.stock) >= 9999) ? '不限名額' : `剩餘: ${prod.stock}`;
+        const priceNum = Number(prod.price) || 0;
+
         item.innerHTML = `
           <input type="checkbox" style="transform: scale(1.2); pointer-events: none;" ${isChecked ? 'checked' : ''}>
-          <img class="prod-thumb" src="${prod.imageUrl || 'https://via.placeholder.com/80'}" alt="">
+          <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
           <div class="prod-info">
-            <div class="prod-name">${prod.name}</div>
-            <div class="prod-sub">${prod.id} ｜ 庫存: ${prod.stock} ｜ ${(prod.specs || []).join('、')}</div>
+            <div class="prod-name">${prod.name || '未命名商品'}</div>
+            <div class="prod-sub">${prod.id} ｜ ${stockDisplay} ｜ 規格: ${specsDisplay}</div>
           </div>
-          <div class="prod-price-tag">NT$ ${prod.price.toLocaleString()}</div>
+          <div class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</div>
         `;
         container.appendChild(item);
       });
@@ -639,6 +666,15 @@
       updateCarouselPreview();
     }
 
+    function getSafeMainImage(rawUrl) {
+      if (!rawUrl) return 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+      const parts = String(rawUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
+      if (parts.length > 0 && parts[0].startsWith('http')) {
+        return parts[0];
+      }
+      return 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+    }
+
     // 5. 更新輪播預覽視窗
     function updateCarouselPreview() {
       const preview = document.getElementById('carouselPreview');
@@ -654,12 +690,15 @@
       selected.forEach(prod => {
         const bubble = document.createElement('div');
         bubble.className = 'flex-preview-bubble';
+        const displayImg = getSafeMainImage(prod.imageUrl);
+        const priceNum = Number(prod.price) || 0;
+
         bubble.innerHTML = `
-          <img class="preview-img" src="${prod.imageUrl || 'https://via.placeholder.com/300'}" alt="">
+          <img class="preview-img" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/300'">
           <div class="preview-body">
             <span class="preview-tag">${prod.category || '連線好物'}</span>
-            <div class="preview-title">${prod.name}</div>
-            <div class="preview-price">NT$ ${prod.price.toLocaleString()}</div>
+            <div class="preview-title">${prod.name || '未命名商品'}</div>
+            <div class="preview-price">NT$ ${priceNum.toLocaleString()}</div>
           </div>
           <div class="preview-footer">
             <div class="preview-btn">點此立即下單</div>
@@ -672,13 +711,16 @@
     // 6. 產生單一 Bubble JSON
     function createBubbleJson(prod) {
       const targetOrderUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?p=${encodeURIComponent(prod.id)}`;
+      const safeImg = getSafeMainImage(prod.imageUrl);
+      const priceNum = Number(prod.price) || 0;
+      const origPriceNum = Number(prod.originalPrice) || priceNum;
 
       return {
         type: 'bubble',
         size: 'micro',
         hero: {
           type: 'image',
-          url: prod.imageUrl || 'https://via.placeholder.com/400',
+          url: safeImg,
           size: 'full',
           aspectRatio: '20:13',
           aspectMode: 'cover'
