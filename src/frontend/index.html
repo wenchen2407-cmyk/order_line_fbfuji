@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>連線代購即時訂購單</title>
+  <!-- Google Fonts & LINE LIFF SDK -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    :root {
+      --primary: #06c755; /* LINE Green */
+      --primary-dark: #059b43;
+      --accent: #ff4757;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --radius: 16px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 90px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* 頂部買家資訊列 (LIFF 自動帶入) */
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(6, 199, 85, 0.08);
+      border: 1px solid rgba(6, 199, 85, 0.2);
+      padding: 8px 14px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid var(--primary);
+    }
+
+    /* 商品主圖與卡片 */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .product-img-wrap {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      background: #eee;
+    }
+
+    .product-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .badge-stock {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .product-details {
+      padding: 18px;
+    }
+
+    .product-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      background: #eefbf3;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .product-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .price-box {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .current-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .original-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .product-desc {
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.6;
+      border-top: 1px dashed var(--border-color);
+      padding-top: 12px;
+    }
+
+    /* 表單區塊 */
+    .form-section {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 18px;
+      border: 1px solid var(--border-color);
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    .spec-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .spec-btn {
+      background: #f1f5f9;
+      border: 1.5px solid transparent;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .spec-btn.active {
+      background: #eefbf3;
+      border-color: var(--primary);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    .qty-control {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f5f9;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .qty-btn {
+      width: 38px;
+      height: 38px;
+      border: none;
+      background: transparent;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-input {
+      width: 45px;
+      text-align: center;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #f8fafc;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    /* 物流選項卡片樣式 */
+    .shipping-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .shipping-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .shipping-card.active {
+      border-color: var(--primary);
+      background: #eefbf3;
+    }
+
+    .shipping-card input[type="radio"] {
+      display: none;
+    }
+
+    .shipping-info {
+      flex: 1;
+    }
+
+    .shipping-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .shipping-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .shipping-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    /* 底部固定結帳 Bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    }
+
+    .bottom-bar-inner {
+      max-width: 500px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .total-summary {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .total-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .total-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .btn-submit {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    .btn-submit:active {
+      transform: scale(0.97);
+    }
+
+    .btn-submit:disabled {
+      background: #cbd5e1;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* 彈跳成功遮罩 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 20px 30px rgba(0,0,0,0.15);
+      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: #eefbf3;
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+    }
+
+    .bank-card {
+      background: #f8fafc;
+      border: 1px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      margin: 16px 0;
+      text-align: left;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- LINE 使用者資訊 (LIFF 自動帶入) -->
+    <div class="user-badge" id="userBadge">
+      <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
+      <span id="userName">正在驗證 LINE 帳號...</span>
+    </div>
+
+    <!-- 商品主卡片 -->
+    <div class="card">
+      <div class="product-img-wrap">
+        <img id="productImage" class="product-img" src="" alt="商品圖片">
+        <div id="productStock" class="badge-stock">庫存載入中...</div>
+      </div>
+      <div class="product-details">
+        <span id="productCategory" class="product-tag">連線推薦</span>
+        <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
+        <div class="price-box">
+          <span class="current-price" id="productPrice">NT$ ---</span>
+          <span class="original-price" id="originalPrice">NT$ ---</span>
+        </div>
+        <p id="productDesc" class="product-desc">商品描述準備中...</p>
+      </div>
+    </div>
+
+    <!-- 選購選項 -->
+    <div class="form-section">
+      <div class="section-title">選擇款式與數量</div>
+      <div class="form-group">
+        <label class="form-label">規格款式</label>
+        <div class="spec-pills" id="specList">
+          <!-- 動態生成規格 -->
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">購買數量</label>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" id="btnMinus">-</button>
+          <input type="number" id="inputQty" class="qty-input" value="1" min="1" readonly>
+          <button type="button" class="qty-btn" id="btnPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 物流方式選擇 -->
+    <div class="form-section">
+      <div class="section-title">選擇配送方式</div>
+      <div class="form-group">
+        <div class="shipping-options">
+          <label class="shipping-card active" id="shipOptStore">
+            <input type="radio" name="shippingMethod" value="STORE_PICKUP" checked onchange="changeShippingMethod('STORE_PICKUP', 60)">
+            <div class="shipping-info">
+              <div class="shipping-name">超商純取貨 (需先匯款)</div>
+              <div class="shipping-desc">7-11 / 全家 店到店</div>
+            </div>
+            <div class="shipping-price">NT$ 60</div>
+          </label>
+
+          <label class="shipping-card" id="shipOptCod">
+            <input type="radio" name="shippingMethod" value="COD_MART" onchange="changeShippingMethod('COD_MART', 38)">
+            <div class="shipping-info">
+              <div class="shipping-name">超商貨到付款 (賣貨便 / 好賣+)</div>
+              <div class="shipping-desc">下單後提供專屬賣場結帳</div>
+            </div>
+            <div class="shipping-price">NT$ 38</div>
+          </label>
+
+          <label class="shipping-card" id="shipOptHome">
+            <input type="radio" name="shippingMethod" value="HOME_DELIVERY" onchange="changeShippingMethod('HOME_DELIVERY', 100)">
+            <div class="shipping-info">
+              <div class="shipping-name">郵局 / 宅配到府 (先匯款)</div>
+              <div class="shipping-desc">黑貓宅配或郵局包裹直送到家</div>
+            </div>
+            <div class="shipping-price">NT$ 100</div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 寄件資料 (支援記憶功能) -->
+    <div class="form-section">
+      <div class="section-title">收件人資訊（下次自動帶入）</div>
+      <div class="form-group">
+        <label class="form-label">收件人真實姓名 *</label>
+        <input type="text" id="custName" class="form-input" placeholder="請填寫證件相符全名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">手機號碼 *</label>
+        <input type="tel" id="custPhone" class="form-input" placeholder="09xxxxxxxx">
+      </div>
+      <div class="form-group" id="addressGroup">
+        <label class="form-label" id="addressLabel">取件超商門市名稱與店號 *</label>
+        <input type="text" id="custAddress" class="form-input" placeholder="例：7-11 鑫泰門市 (店號: 123456)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">訂單備註</label>
+        <textarea id="custNote" class="form-textarea" rows="2" placeholder="如有特殊需求或賣貨便帳號請備註"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部固定下單 Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-bar-inner">
+      <div class="total-summary">
+        <span class="total-label">總金額 (含運費)</span>
+        <span class="total-price" id="totalDisplay">NT$ 0</span>
+      </div>
+      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>確認下單</button>
+    </div>
+  </div>
+
+  <!-- 訂購成功彈跳視窗 -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-content">
+      <div class="success-icon">✓</div>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">訂單成立！</h2>
+      <p style="font-size: 13px; color: #64748b;">感謝您的訂購，訂單明細已記錄至系統。</p>
+      
+      <div class="bank-card">
+        <div style="font-weight: 700; color: #1e293b; margin-bottom: 4px;">匯款帳號資料：</div>
+        <div id="bankInfoText" style="color: #334155; line-height: 1.5;">822 中國信託 12345-67890123</div>
+        <div style="margin-top: 8px; color: #e11d48; font-weight: 600;">應付總金額：<span id="modalTotal"></span></div>
+      </div>
+
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">匯款後請至「我的訂單」回報後五碼以利出貨。</p>
+      <button type="button" class="btn-submit" style="width: 100%;" onclick="goToMyOrders()">查看我的訂單 / 回報五碼</button>
+    </div>
+  </div>
+
+  <script>
+    // ======= 核心環境設定 (請替換為賣家的 GAS 部署網址與 LIFF ID) =======
+    const CONFIG = {
+      LIFF_ID: 'YOUR_LIFF_ID_HERE', // 請至 LINE Developers 申請填入
+      GAS_API_URL: 'YOUR_GAS_EXEC_URL_HERE' // 請將部署的 Web App URL 填入
+    };
+
+    // 狀態變數
+    let currentProduct = null;
+    let selectedSpec = '';
+    let currentQty = 1;
+    let currentShippingFee = 60;
+    let currentUser = {
+      userId: 'TEST_USER_999',
+      displayName: '訪客預覽',
+      pictureUrl: 'https://via.placeholder.com/40'
+    };
+
+    // 網址參數取得指定商品 ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetProductId = urlParams.get('p') || 'P001';
+
+    // 初始化頁面
+    window.onload = async () => {
+      loadSavedCustomerInfo();
+      setupEventListeners();
+      await initLiff();
+      await fetchProductData();
+    };
+
+    // 1. 初始化 LINE LIFF
+    async function initLiff() {
+      if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === 'YOUR_LIFF_ID_HERE') {
+        document.getElementById('userName').textContent = '未啟用 LIFF (本機測試模式)';
+        return;
+      }
+
+      try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          currentUser.userId = profile.userId;
+          currentUser.displayName = profile.displayName;
+          currentUser.pictureUrl = profile.pictureUrl || 'https://via.placeholder.com/40';
+
+          document.getElementById('userAvatar').src = currentUser.pictureUrl;
+          document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
+        } else {
+          liff.login();
+        }
+      } catch (err) {
+        console.error('LIFF Init Error:', err);
+        document.getElementById('userName').textContent = '訪客模式';
+      }
+    }
+
+    // 2. 取得商品資訊
+    async function fetchProductData() {
+      try {
+        let apiUrl = `${CONFIG.GAS_API_URL}?action=getProductById&productId=${targetProductId}`;
+        
+        // 若尚未設定 GAS URL 則使用展示用假資料
+        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
+          currentProduct = {
+            id: 'P001',
+            name: '日本代購限定 輕量防潑水後背包',
+            category: '包包配件',
+            originalPrice: 1880,
+            price: 1450,
+            stock: 15,
+            specs: ['經典黑', '燕麥米白', '海軍深藍'],
+            imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
+            description: '日本專櫃限量代購！輕盈防潑水尼龍材質，多隔層設計，大容量通勤與出遊都超百搭。'
+          };
+        } else {
+          const res = await fetch(apiUrl);
+          const json = await res.json();
+          if (json.success) {
+            currentProduct = json.data;
+          } else {
+            alert(json.message || '商品不存在');
+            return;
+          }
+        }
+
+        renderProductUI();
+      } catch (e) {
+        console.error('載入商品錯誤:', e);
+      }
+    }
+
+    // 3. 渲染商品 UI
+    function renderProductUI() {
+      document.getElementById('productImage').src = currentProduct.imageUrl;
+      document.getElementById('productTitle').textContent = currentProduct.name;
+      document.getElementById('productCategory').textContent = currentProduct.category || '連線好物';
+      document.getElementById('productPrice').textContent = `NT$ ${currentProduct.price.toLocaleString()}`;
+      document.getElementById('originalPrice').textContent = `NT$ ${currentProduct.originalPrice.toLocaleString()}`;
+      document.getElementById('productDesc').textContent = currentProduct.description;
+      document.getElementById('productStock').textContent = `剩餘現貨：${currentProduct.stock}`;
+
+      // 渲染規格按鈕
+      const specContainer = document.getElementById('specList');
+      specContainer.innerHTML = '';
+      if (currentProduct.specs && currentProduct.specs.length > 0) {
+        currentProduct.specs.forEach((spec, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `spec-btn ${idx === 0 ? 'active' : ''}`;
+          btn.textContent = spec;
+          btn.onclick = () => selectSpec(spec, btn);
+          specContainer.appendChild(btn);
+        });
+        selectedSpec = currentProduct.specs[0];
+      } else {
+        selectedSpec = '單一規格';
+        specContainer.innerHTML = '<span style="font-size: 13px; color: #64748b;">單一規格</span>';
+      }
+
+      updateTotal();
+      document.getElementById('btnSubmitOrder').disabled = false;
+    }
+
+    function selectSpec(spec, btnElement) {
+      selectedSpec = spec;
+      document.querySelectorAll('.spec-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+    }
+
+    // 4. 數量增減與金額計算
+    function setupEventListeners() {
+      document.getElementById('btnMinus').onclick = () => {
+        if (currentQty > 1) {
+          currentQty--;
+          document.getElementById('inputQty').value = currentQty;
+          updateTotal();
+        }
+      };
+
+      document.getElementById('btnPlus').onclick = () => {
+        if (currentProduct && currentQty < currentProduct.stock) {
+          currentQty++;
+          document.getElementById('inputQty').value = currentQty;
+          updateTotal();
+        } else {
+          alert('已達到目前庫存上限！');
+        }
+      };
+
+      document.getElementById('btnSubmitOrder').onclick = submitOrder;
+    }
+
+    function updateTotal() {
+      if (!currentProduct) return;
+      const subtotal = currentProduct.price * currentQty;
+      const total = subtotal + currentShippingFee;
+      document.getElementById('totalDisplay').textContent = `NT$ ${total.toLocaleString()}`;
+    }
+
+    let currentShippingMethod = '超商純取貨 (7-11/全家)';
+
+    function changeShippingMethod(methodKey, fee) {
+      currentShippingFee = fee;
+      document.querySelectorAll('.shipping-card').forEach(c => c.classList.remove('active'));
+
+      const addressLabel = document.getElementById('addressLabel');
+      const addressInput = document.getElementById('custAddress');
+
+      if (methodKey === 'STORE_PICKUP') {
+        document.getElementById('shipOptStore').classList.add('active');
+        currentShippingMethod = '超商純取貨 (需先匯款)';
+        addressLabel.textContent = '取件超商門市名稱與店號 *';
+        addressInput.placeholder = '例：7-11 鑫泰門市 (店號: 123456)';
+      } else if (methodKey === 'COD_MART') {
+        document.getElementById('shipOptCod').classList.add('active');
+        currentShippingMethod = '超商貨到付款 (賣貨便/好賣+)';
+        addressLabel.textContent = '賣貨便/好賣+ 會員手機或超商門市 *';
+        addressInput.placeholder = '例：7-11 鑫泰門市，下單後將發送賣場連結';
+      } else if (methodKey === 'HOME_DELIVERY') {
+        document.getElementById('shipOptHome').classList.add('active');
+        currentShippingMethod = '郵局 / 宅配到府 (需先匯款)';
+        addressLabel.textContent = '宅配詳細收件地址 *';
+        addressInput.placeholder = '例：台北市信義區信義路五段7號89樓';
+      }
+      updateTotal();
+    }
+
+    // 5. 記憶收件資料
+    function loadSavedCustomerInfo() {
+      const saved = localStorage.getItem('line_order_customer_cache');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.name) document.getElementById('custName').value = data.name;
+          if (data.phone) document.getElementById('custPhone').value = data.phone;
+          if (data.address) document.getElementById('custAddress').value = data.address;
+        } catch (e) {}
+      }
+    }
+
+    function saveCustomerInfo(name, phone, address) {
+      localStorage.setItem('line_order_customer_cache', JSON.stringify({ name, phone, address }));
+    }
+
+    // 6. 提交訂單
+    async function submitOrder() {
+      const name = document.getElementById('custName').value.trim();
+      const phone = document.getElementById('custPhone').value.trim();
+      const address = document.getElementById('custAddress').value.trim();
+      const note = document.getElementById('custNote').value.trim();
+
+      if (!name || !phone || !address) {
+        alert('請填寫完整的收件人姓名、手機及取件門市/地址！');
+        return;
+      }
+
+      saveCustomerInfo(name, phone, address);
+
+      const submitBtn = document.getElementById('btnSubmitOrder');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '處理訂單中...';
+
+      const orderPayload = {
+        action: 'createOrder',
+        data: {
+          productId: currentProduct.id,
+          spec: selectedSpec,
+          quantity: currentQty,
+          shippingMethod: currentShippingMethod,
+          shippingFee: currentShippingFee,
+          userId: currentUser.userId,
+          userName: currentUser.displayName,
+          recipientName: name,
+          phone: phone,
+          deliveryAddress: address,
+          note: note
+        }
+      };
+
+      try {
+        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
+          // 模擬模式
+          setTimeout(() => {
+            showSuccessModal('OD' + Date.now(), (currentProduct.price * currentQty) + currentShippingFee);
+          }, 800);
+          return;
+        }
+
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(orderPayload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          showSuccessModal(result.orderId, result.totalAmount);
+        } else {
+          alert('下單失敗：' + result.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = '確認下單';
+        }
+      } catch (err) {
+        console.error('送出錯誤:', err);
+        alert('網路連線異常，請稍後再試！');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '確認下單';
+      }
+    }
+
+    function showSuccessModal(orderId, total) {
+      document.getElementById('modalTotal').textContent = `NT$ ${total.toLocaleString()}`;
+      document.getElementById('successModal').classList.add('active');
+    }
+
+    function goToMyOrders() {
+      window.location.href = `my-orders.html?uid=${currentUser.userId}`;
+    }
+  </script>
+</body>
+</html>

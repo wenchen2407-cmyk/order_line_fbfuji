@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品卡產生器 & 群組一鍵分享工具 (賣家專用)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --accent: #ff4757;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .badge-pro {
+      display: inline-block;
+      background: #0f172a;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1.1fr 0.9fr;
+      }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
+    .input-text, .input-textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #f8fafc;
+    }
+
+    .input-text:focus, .input-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* LINE 預覽視窗 (仿 LINE 聊天室視覺) */
+    .line-chat-simulator {
+      background: #849ebf;
+      border-radius: 20px;
+      padding: 20px 16px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .flex-preview-bubble {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 320px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .preview-img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      background: #cbd5e1;
+    }
+
+    .preview-body {
+      padding: 16px;
+    }
+
+    .preview-tag {
+      font-size: 11px;
+      color: #059b43;
+      font-weight: 700;
+      background: #eefbf3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .preview-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .preview-price-box {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .preview-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: #e11d48;
+    }
+
+    .preview-original {
+      font-size: 13px;
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+
+    .preview-footer {
+      border-top: 1px solid #f1f5f9;
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .preview-btn {
+      flex: 1;
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      padding: 9px 0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    /* 動作按鈕 */
+    .btn-share {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(6, 199, 85, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-share:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <span class="badge-pro">SELLER TOOLKIT</span>
+      <h1 style="font-size: 24px; font-weight: 900;">LINE 商品卡產生器 & 免費推播工具</h1>
+      <p style="font-size: 13px; color: #64748b; margin-top: 4px;">利用個人帳號一鍵發送到群組，不扣官方推播額度，零成本宣傳！</p>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左側：輸入表單 -->
+      <div class="panel">
+        <div class="panel-title">📝 編輯商品資訊</div>
+        
+        <div class="form-group">
+          <label class="form-label">商品編號 (填試算表的代號)</label>
+          <input type="text" id="prodId" class="input-text" value="P001" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">商品名稱</label>
+          <input type="text" id="prodName" class="input-text" value="日本代購限定 輕量防潑水後背包" oninput="updatePreview()">
+        </div>
+
+        <div class="row-2">
+          <div class="form-group">
+            <label class="form-label">連線特價 (NT$)</label>
+            <input type="number" id="prodPrice" class="input-text" value="1450" oninput="updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">原價/專櫃價 (NT$)</label>
+            <input type="number" id="prodOriginalPrice" class="input-text" value="1880" oninput="updatePreview()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">分類/活動標籤</label>
+          <input type="text" id="prodTag" class="input-text" value="限時連線特惠" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">商品圖片網址 (URL)</label>
+          <input type="url" id="prodImageUrl" class="input-text" value="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">前台下單 LIFF 網址</label>
+          <input type="url" id="liffUrlBase" class="input-text" value="https://liff.line.me/YOUR_LIFF_ID" placeholder="https://liff.line.me/YOUR_LIFF_ID">
+        </div>
+
+        <button type="button" class="btn-share" id="btnShareTarget" onclick="shareFlexCardToGroup()">
+          <span>🚀 一鍵分享商品卡到 LINE 群組</span>
+        </button>
+      </div>
+
+      <!-- 右側：即時聊天室卡片預覽 -->
+      <div>
+        <div class="panel-title" style="margin-bottom: 12px;">📱 LINE 聊天室視覺預覽</div>
+        <div class="line-chat-simulator">
+          <div class="flex-preview-bubble">
+            <img id="prevImg" class="preview-img" src="" alt="預覽圖">
+            <div class="preview-body">
+              <span id="prevTag" class="preview-tag">限時連線特惠</span>
+              <div id="prevTitle" class="preview-title">商品名稱</div>
+              <div class="preview-price-box">
+                <span id="prevPrice" class="preview-price">NT$ 1,450</span>
+                <span id="prevOriginal" class="preview-original">NT$ 1,880</span>
+              </div>
+            </div>
+            <div class="preview-footer">
+              <div class="preview-btn">立即點此下單訂購</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LIFF_ID = 'YOUR_LIFF_ID_HERE'; // 填入您的 LIFF ID
+
+    window.onload = async () => {
+      updatePreview();
+      await initLiff();
+    };
+
+    async function initLiff() {
+      if (!LIFF_ID || LIFF_ID === 'YOUR_LIFF_ID_HERE') return;
+      try {
+        await liff.init({ liffId: LIFF_ID });
+      } catch (err) {
+        console.error('LIFF 初始化失敗:', err);
+      }
+    }
+
+    function updatePreview() {
+      const name = document.getElementById('prodName').value;
+      const price = Number(document.getElementById('prodPrice').value) || 0;
+      const origPrice = Number(document.getElementById('prodOriginalPrice').value) || 0;
+      const tag = document.getElementById('prodTag').value;
+      const img = document.getElementById('prodImageUrl').value;
+
+      document.getElementById('prevTitle').textContent = name;
+      document.getElementById('prevPrice').textContent = `NT$ ${price.toLocaleString()}`;
+      document.getElementById('prevOriginal').textContent = `NT$ ${origPrice.toLocaleString()}`;
+      document.getElementById('prevTag').textContent = tag;
+      document.getElementById('prevImg').src = img || 'https://via.placeholder.com/600x400?text=No+Image';
+    }
+
+    // 產生 LINE Flex Message JSON 結構
+    function buildFlexMessage() {
+      const pId = document.getElementById('prodId').value;
+      const name = document.getElementById('prodName').value;
+      const price = document.getElementById('prodPrice').value;
+      const origPrice = document.getElementById('prodOriginalPrice').value;
+      const tag = document.getElementById('prodTag').value;
+      const img = document.getElementById('prodImageUrl').value;
+      const liffBase = document.getElementById('liffUrlBase').value;
+      const targetOrderUrl = `${liffBase}?p=${encodeURIComponent(pId)}`;
+
+      return {
+        type: 'flex',
+        altText: `【連線好物推薦】${name} 特價 NT$ ${price}`,
+        contents: {
+          type: 'bubble',
+          hero: {
+            type: 'image',
+            url: img,
+            size: 'full',
+            aspectRatio: '20:13',
+            aspectMode: 'cover'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'text',
+                text: tag,
+                weight: 'bold',
+                color: '#059b43',
+                size: 'xs'
+              },
+              {
+                type: 'text',
+                text: name,
+                weight: 'bold',
+                size: 'lg',
+                wrap: true
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'md',
+                contents: [
+                  {
+                    type: 'text',
+                    text: `NT$ ${price}`,
+                    size: 'xl',
+                    color: '#e11d48',
+                    weight: 'bold',
+                    flex: 0
+                  },
+                  {
+                    type: 'text',
+                    text: `NT$ ${origPrice}`,
+                    size: 'sm',
+                    color: '#94a3b8',
+                    decoration: 'line-through'
+                  }
+                ]
+              }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '🛒 立即點此下單訂購',
+                  uri: targetOrderUrl
+                },
+                style: 'primary',
+                color: '#06c755'
+              }
+            ]
+          }
+        }
+      };
+    }
+
+    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費)
+    async function shareFlexCardToGroup() {
+      if (!liff.isLoggedIn()) {
+        alert('請先在 LINE 環境中開啟或完成 LINE 登入！');
+        liff.login();
+        return;
+      }
+
+      if (!liff.isApiAvailable('shareTargetPicker')) {
+        alert('當前環境不支援 shareTargetPicker，請確認 LINE App 版本或至 LINE Developers 後台開啟權限！');
+        return;
+      }
+
+      const flexMessage = buildFlexMessage();
+
+      try {
+        const res = await liff.shareTargetPicker([flexMessage]);
+        if (res) {
+          alert('🎉 商品卡已成功發送至指定群組！');
+        }
+      } catch (err) {
+        console.error('發送失敗:', err);
+        alert('發送取消或發生錯誤：' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>我的連線訂單與對帳專區</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --accent: #ff4757;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .header-box {
+      margin-bottom: 20px;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .order-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .order-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .order-id {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .badge-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .status-unpaid {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    .status-checking {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .status-paid {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .item-name {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .item-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .item-price {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+    }
+
+    .order-total-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-color);
+      margin-top: 10px;
+    }
+
+    .total-amount {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .btn-report {
+      width: 100%;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-report:hover {
+      background: #e2e8f0;
+    }
+
+    /* 回報彈窗 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #fff;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 16px;
+      margin: 10px 0 16px;
+      box-sizing: border-box;
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: 2px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-box">
+      <h1 class="page-title">📦 我的連線訂單清單</h1>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">即時掌握連線進度與匯款對帳狀態</p>
+    </div>
+
+    <!-- 訂單列表容器 -->
+    <div id="orderListContainer">
+      <div style="text-align: center; padding: 40px; color: #94a3b8;">載入訂單紀錄中...</div>
+    </div>
+  </div>
+
+  <!-- 回報後五碼彈窗 -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+      <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 6px;">回報轉帳後五碼</h3>
+      <p style="font-size: 13px; color: #64748b;">請填寫您的轉帳帳號末 5 碼，核對入帳後將立即為您安排採購！</p>
+      
+      <input type="text" id="inputFiveDigits" class="input-field" maxlength="5" placeholder="例如：54321">
+      <input type="hidden" id="targetOrderId">
+
+      <button type="button" class="btn-submit" onclick="submitFiveDigits()">送出對帳資料</button>
+      <button type="button" style="width: 100%; background: none; border: none; padding: 10px; color: #94a3b8; font-size: 13px; cursor: pointer; margin-top: 4px;" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      LIFF_ID: 'YOUR_LIFF_ID_HERE',
+      GAS_API_URL: 'YOUR_GAS_EXEC_URL_HERE'
+    };
+
+    let currentUserId = 'TEST_USER_999';
+
+    window.onload = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('uid')) {
+        currentUserId = urlParams.get('uid');
+      }
+
+      await initLiff();
+      await fetchUserOrders();
+    };
+
+    async function initLiff() {
+      if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === 'YOUR_LIFF_ID_HERE') return;
+      try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          currentUserId = profile.userId;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function fetchUserOrders() {
+      const container = document.getElementById('orderListContainer');
+
+      // 假資料預覽模式
+      if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
+        const dummyOrders = [
+          {
+            orderId: 'OD260925201501',
+            orderDate: '2026/09/25 20:15',
+            productName: '日本代購限定 輕量防潑水後背包',
+            spec: '燕麥米白',
+            quantity: 1,
+            subtotal: 1450,
+            shippingFee: 60,
+            totalAmount: 1510,
+            paymentStatus: '待付款',
+            lastFive: ''
+          }
+        ];
+        renderOrders(dummyOrders);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getOrdersByUserId&userId=${currentUserId}`);
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          renderOrders(json.data);
+        } else {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div style="font-size: 40px; margin-bottom: 12px;">🛍️</div>
+              <p>目前查無您的訂單紀錄唷！</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div class="empty-state">載入失敗，請重整頁面。</div>';
+      }
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('orderListContainer');
+      container.innerHTML = '';
+
+      orders.forEach(order => {
+        let badgeClass = 'status-unpaid';
+        if (order.paymentStatus === '已回報待對帳') badgeClass = 'status-checking';
+        if (order.paymentStatus === '已付款') badgeClass = 'status-paid';
+
+        const card = document.createElement('div');
+        card.className = 'order-card';
+        card.innerHTML = `
+          <div class="order-top">
+            <span class="order-id">${order.orderId}</span>
+            <span class="badge-status ${badgeClass}">${order.paymentStatus}</span>
+          </div>
+          <div class="item-row">
+            <div class="item-name">
+              ${order.productName}
+              <div class="item-meta">規格: ${order.spec} × ${order.quantity}</div>
+            </div>
+            <div class="item-price">NT$ ${order.subtotal.toLocaleString()}</div>
+          </div>
+          <div class="order-total-bar">
+            <span style="font-size: 13px; color: var(--text-muted);">含運費 NT$ ${order.shippingFee}</span>
+            <span class="total-amount">合計 NT$ ${order.totalAmount.toLocaleString()}</span>
+          </div>
+          ${order.paymentStatus === '待付款' ? `
+            <button class="btn-report" onclick="openReportModal('${order.orderId}')">回報匯款後五碼</button>
+          ` : (order.lastFive ? `<div style="font-size: 12px; color: #16a34a; margin-top: 10px;">✓ 已填報後五碼：${order.lastFive} (賣家對帳中)</div>` : '')}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openReportModal(orderId) {
+      document.getElementById('targetOrderId').value = orderId;
+      document.getElementById('inputFiveDigits').value = '';
+      document.getElementById('reportModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('reportModal').classList.remove('active');
+    }
+
+    async function submitFiveDigits() {
+      const orderId = document.getElementById('targetOrderId').value;
+      const digits = document.getElementById('inputFiveDigits').value.trim();
+
+      if (digits.length !== 5 || isNaN(digits)) {
+        alert('請正確輸入 5 位數字的帳號末碼！');
+        return;
+      }
+
+      if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
+        alert('回報成功（展示模式）！');
+        closeModal();
+        fetchUserOrders();
+        return;
+      }
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'reportPayment',
+            data: {
+              orderId: orderId,
+              lastFiveDigits: digits
+            }
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert('回報成功！賣家將儘速核對入帳。');
+          closeModal();
+          await fetchUserOrders();
+        } else {
+          alert('回報失敗：' + result.message);
+        }
+      } catch (e) {
+        alert('連線失敗，請重試！');
+      }
+    }
+  </script>
+</body>
+</html>
