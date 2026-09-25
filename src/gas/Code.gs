@@ -529,8 +529,11 @@ function handleUploadImages(data) {
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      const base64Data = f.base64.replace(/^data:image\/\w+;base64,/, '');
-      const decoded = Utilities.base64Decode(base64Data);
+      let base64String = f.base64 || '';
+      if (base64String.indexOf(',') > -1) {
+        base64String = base64String.split(',')[1];
+      }
+      const decoded = Utilities.base64Decode(base64String);
       const contentType = f.type || 'image/jpeg';
       const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + (i + 1) + '.jpg';
       
@@ -538,7 +541,7 @@ function handleUploadImages(data) {
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-      // 直接輸出可預覽的 Google Drive 圖片連結
+      // 直接輸出 Google Drive 穩定可直連的圖片網址
       const directUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
       uploadedUrls.push(directUrl);
     }
@@ -547,6 +550,15 @@ function handleUploadImages(data) {
   } catch (err) {
     return { success: false, message: '圖片上傳至 Google Drive 失敗：' + err.toString() };
   }
+}
+
+/**
+ * 測試並激活 Google Drive 權限（可在 GAS 編輯器上方下拉選單直接點「執行」測試）
+ */
+function testDrivePermission() {
+  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  Logger.log('成功連接 Google Drive 資料夾：' + folder.getName());
+  return 'OK: ' + folder.getName();
 }
 
 /**
