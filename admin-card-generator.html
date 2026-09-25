@@ -348,6 +348,12 @@
       <span class="badge-pro">SELLER HUB</span>
       <h1 style="font-size: 22px; font-weight: 900;">連線代購管理中心</h1>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">電腦商品建檔 ➔ 手機勾選多樣商品打包發布到 LINE 群組</p>
+      
+      <div style="margin-top: 8px;">
+        <div id="liffStatusBadge" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 20px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <span style="color:#64748b;">⏳ 正在連線 LINE 服務...</span>
+        </div>
+      </div>
     </div>
 
     <!-- 功能切換 Tab -->
@@ -541,11 +547,40 @@
       await fetchProductList();
     };
 
+    let liffReady = false;
+    let liffInClient = false;
+    let liffCanShare = false;
+
+    window.onload = async () => {
+      await initLiff();
+      await fetchProductList();
+    };
+
     async function initLiff() {
       try {
         await liff.init({ liffId: CONFIG.LIFF_ID });
+        liffReady = true;
+        liffInClient = liff.isInClient();
+        liffCanShare = liff.isApiAvailable('shareTargetPicker');
+        updateLiffStatusBadge();
       } catch (err) {
-        console.error('LIFF 初始化:', err);
+        console.error('LIFF 初始化失敗:', err);
+        updateLiffStatusBadge(err.message);
+      }
+    }
+
+    function updateLiffStatusBadge(errMsg) {
+      const badge = document.getElementById('liffStatusBadge');
+      if (!badge) return;
+
+      if (errMsg) {
+        badge.innerHTML = `<span style="color:#ef4444;">⚠️ LIFF 初始化異常 (${errMsg})</span>`;
+      } else if (liffInClient && liffCanShare) {
+        badge.innerHTML = `<span style="color:#10b981;">🟢 LINE 內部環境｜群組推播功能已就緒</span>`;
+      } else if (!liffInClient) {
+        badge.innerHTML = `<span style="color:#f59e0b;">🟡 外部瀏覽器開啟｜請在 LINE 聊天室中打開此頁面以使用群組推播</span>`;
+      } else if (!liffCanShare) {
+        badge.innerHTML = `<span style="color:#ef4444;">🔴 ShareTargetPicker 未啟用（請至 LINE Developers 後台開啟）</span>`;
       }
     }
 
@@ -616,13 +651,7 @@
         if (!specsDisplay) specsDisplay = '單一規格';
 
         // 圖片安全取出第一張 (支援分號/逗號/換行分割)
-        let displayImg = 'https://via.placeholder.com/80';
-        if (prod.imageUrl) {
-          const parts = String(prod.imageUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
-          if (parts.length > 0 && parts[0].startsWith('http')) {
-            displayImg = parts[0];
-          }
-        }
+        const displayImg = getSafeMainImage(prod.imageUrl);
 
         // 庫存顯示優化
         const stockDisplay = (Number(prod.stock) >= 9999) ? '不限名額' : `剩餘: ${prod.stock}`;
@@ -666,13 +695,24 @@
       updateCarouselPreview();
     }
 
+    // 安全取得圖片網址 (自動解析 Google Drive 連結與備用圖)
     function getSafeMainImage(rawUrl) {
-      if (!rawUrl) return 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+      const fallback = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+      if (!rawUrl) return fallback;
+      
       const parts = String(rawUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
-      if (parts.length > 0 && parts[0].startsWith('http')) {
-        return parts[0];
+      if (parts.length === 0) return fallback;
+
+      let url = parts[0];
+      if (!url.startsWith('http')) return fallback;
+
+      // 自動將 Google Drive 預覽/分享網址轉換為可靠的直連圖片網址
+      const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
       }
-      return 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+
+      return url;
     }
 
     // 5. 更新輪播預覽視窗
@@ -708,16 +748,41 @@
       });
     }
 
-    // 6. 產生單一 Bubble JSON
+    // 6. 產生單一 Bubble JSON (符合 LINE Carousel 標準 kilo 尺寸，穩定相容)
     function createBubbleJson(prod) {
       const targetOrderUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?p=${encodeURIComponent(prod.id)}`;
       const safeImg = getSafeMainImage(prod.imageUrl);
       const priceNum = Number(prod.price) || 0;
-      const origPriceNum = Number(prod.originalPrice) || priceNum;
+      const origPriceNum = Number(prod.originalPrice) || 0;
+      const categoryText = String(prod.category || '連線特惠').trim() || '連線特惠';
+      const nameText = String(prod.name || '精選代購好物').trim() || '精選代購好物';
+
+      const priceRowContents = [
+        {
+          type: 'text',
+          text: `NT$ ${priceNum.toLocaleString()}`,
+          size: 'md',
+          color: '#e11d48',
+          weight: 'bold',
+          flex: 0
+        }
+      ];
+
+      if (origPriceNum > priceNum) {
+        priceRowContents.push({
+          type: 'text',
+          text: `NT$ ${origPriceNum.toLocaleString()}`,
+          size: 'xs',
+          color: '#94a3b8',
+          decoration: 'line-through',
+          align: 'end',
+          gravity: 'bottom'
+        });
+      }
 
       return {
         type: 'bubble',
-        size: 'micro',
+        size: 'kilo',
         hero: {
           type: 'image',
           url: safeImg,
@@ -728,19 +793,19 @@
         body: {
           type: 'box',
           layout: 'vertical',
-          spacing: 'xs',
-          paddingAll: '12px',
+          spacing: 'sm',
+          paddingAll: '14px',
           contents: [
             {
               type: 'text',
-              text: prod.category || '連線特惠',
+              text: categoryText,
               weight: 'bold',
               color: '#059b43',
-              size: 'xxs'
+              size: 'xs'
             },
             {
               type: 'text',
-              text: prod.name,
+              text: nameText,
               weight: 'bold',
               size: 'sm',
               wrap: true,
@@ -750,36 +815,20 @@
               type: 'box',
               layout: 'baseline',
               spacing: 'sm',
-              contents: [
-                {
-                  type: 'text',
-                  text: `NT$ ${prod.price}`,
-                  size: 'md',
-                  color: '#e11d48',
-                  weight: 'bold',
-                  flex: 0
-                },
-                {
-                  type: 'text',
-                  text: `NT$ ${prod.originalPrice || prod.price}`,
-                  size: 'xxs',
-                  color: '#94a3b8',
-                  decoration: 'line-through'
-                }
-              ]
+              contents: priceRowContents
             }
           ]
         },
         footer: {
           type: 'box',
           layout: 'vertical',
-          paddingAll: '8px',
+          paddingAll: '10px',
           contents: [
             {
               type: 'button',
               action: {
                 type: 'uri',
-                label: '🛒 立即下單',
+                label: '🛒 點此立即下單',
                 uri: targetOrderUrl
               },
               style: 'primary',
@@ -794,12 +843,20 @@
     // 7. 發送輪播商品卡 (支援 1~10 件)
     async function shareBatchCarousel() {
       if (selectedProductIds.size === 0) {
-        alert('請至少勾選 1 件要推播的商品！');
+        alert('請先從左側商品清單勾選 1~10 件要推播的商品！');
         return;
       }
 
+      // 檢查是否在 LINE 環境與登入
       if (!liff.isLoggedIn()) {
+        alert('正在導向 LINE 登入，登入後請再次點選推播！');
         liff.login();
+        return;
+      }
+
+      // 檢查 Share Target Picker 是否可用
+      if (!liff.isApiAvailable('shareTargetPicker')) {
+        alert('⚠️ 您的環境目前無法使用「群組推播」功能！\n\n常見原因與解法：\n1. 請在手機「LINE 聊天室」內直接點擊本網址開啟（不要使用 Safari 或 Chrome 外部瀏覽器）。\n2. 若您是管理員，請前往 LINE Developers 後台確認該 LIFF App 的「Share Target Picker」開關已啟用 (ON)！');
         return;
       }
 
@@ -820,10 +877,17 @@
         const res = await liff.shareTargetPicker([flexPayload]);
         if (res) {
           alert(`🎉 成功將 ${selected.length} 件輪播商品卡推播至指定群組！`);
+        } else {
+          // res 為 null 表示使用者打開分享視窗後點擊取消
+          alert('ℹ️ 已關閉群組選擇視窗（未送出推播）');
         }
       } catch (err) {
-        console.error('發送失敗:', err);
-        alert('發送時發生錯誤：' + (err.message || JSON.stringify(err)));
+        console.error('推播發送失敗:', err);
+        let msg = '推播失敗：' + (err.message || JSON.stringify(err));
+        if (err.code === 'FORBIDDEN' || (err.message && err.message.includes('403'))) {
+          msg += '\n\n💡 請至 LINE Developers 後台將此 LIFF App 的「Share Target Picker」設定開啟為 ON！';
+        }
+        alert(msg);
       }
     }
 
@@ -976,12 +1040,51 @@
       });
     }
 
-    // 將 File 轉 Base64
-    function fileToBase64(file) {
+    // 智慧 Canvas 圖片壓縮 (將幾 MB 大圖壓縮成 100~200KB 高清 JPEG，杜絕網路連線逾時中斷)
+    function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
       return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name: file.name, type: file.type, base64: reader.result });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+          return;
+        }
+
         const reader = new FileReader();
-        reader.onload = () => resolve({ name: file.name, type: file.type, base64: reader.result });
-        reader.onerror = reject;
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth || height > maxHeight) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const base64Data = canvas.toDataURL('image/jpeg', quality);
+            resolve({
+              name: file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+              type: 'image/jpeg',
+              base64: base64Data
+            });
+          };
+          img.onerror = () => reject(new Error('圖片讀取失敗'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('檔案讀取失敗'));
         reader.readAsDataURL(file);
       });
     }
@@ -1018,11 +1121,17 @@
       try {
         let finalImageUrls = [...urlImages];
 
-        // 若有本地上傳的檔案，先透過 GAS 上傳至 Google Drive 取得永久網址
+        // 若有本地上傳的檔案，先經 Canvas 高效壓縮後透過 GAS 上傳至 Google Drive
         if (localSelectedFiles.length > 0) {
-          saveBtn.textContent = `正在上傳 ${localSelectedFiles.length} 張圖片至 Google Drive...`;
-          const base64Files = await Promise.all(localSelectedFiles.map(f => fileToBase64(f)));
-          
+          saveBtn.textContent = `⚡ 正在自動壓縮 ${localSelectedFiles.length} 張圖片...`;
+          const base64Files = [];
+          for (let i = 0; i < localSelectedFiles.length; i++) {
+            saveBtn.textContent = `⚡ 正在壓縮圖片 (${i + 1}/${localSelectedFiles.length})...`;
+            const comp = await compressImage(localSelectedFiles[i]);
+            base64Files.push(comp);
+          }
+
+          saveBtn.textContent = `☁️ 正在上傳至 Google Drive...`;
           const uploadRes = await fetch(CONFIG.GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -1094,8 +1203,12 @@
           alert('儲存失敗：' + result.message);
         }
       } catch (err) {
-        console.error(err);
-        alert('連線失敗，請檢查網路！');
+        console.error('建檔或上傳失敗詳細錯誤:', err);
+        let msg = '連線處理發生錯誤：' + (err.message || '網路異常或連線逾時');
+        msg += '\n\n💡 常見排查原因：';
+        msg += '\n1. Google Apps Script 尚未授權 Google Drive 存取：請至 GAS 編輯器執行一次 testDrivePermission 並點擊「審查權限」。';
+        msg += '\n2. GAS 部署未更新：修改 Code.gs 後，請記得至「管理部署作業 > 編輯 > 選擇『新版本』 > 部署」！';
+        alert(msg);
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
