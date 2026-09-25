@@ -11,37 +11,41 @@ const SHEET_NAMES = {
   SETTINGS: '系統設定'
 };
 
+// 指定的商品圖片 Google Drive 資料夾 ID
+const DRIVE_FOLDER_ID = '1dqoqS4VJK7Fn56-L-mM5Afwyb6dvTQMB';
+
 /**
- * 試算表初次安裝設定：自動建立所需的工作表與欄位標題
- * 可在 Apps Script 編輯器中直接執行此函式
+ * 試算表初次安裝設定與欄位升級：自動補齊成本價、重量備註與多圖欄位
+ * 可在 Apps Script 編輯器中直接執行此函式升級試算表結構
  */
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
   // 1. 商品清單工作表
   let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  const prodHeaders = [
+    '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
+    '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
+    '成本價(NT$)', '採購原幣與重量備註', '所有圖片清單(JSON)'
+  ];
+
   if (!prodSheet) {
     prodSheet = ss.insertSheet(SHEET_NAMES.PRODUCTS);
-    prodSheet.appendRow([
-      '商品編號', '商品名稱', '分類', '原價', '特價', '庫存', 
-      '規格清單(JSON)', '圖片網址', '商品描述', '狀態', '建立時間'
-    ]);
-    // 預設樣式
-    prodSheet.getRange(1, 1, 1, 11).setBackground('#2b5797').setFontColor('#ffffff').setFontWeight('bold');
+    prodSheet.appendRow(prodHeaders);
+    prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
     // 加入範例資料
     prodSheet.appendRow([
-      'P001', '日本代購限定 輕量防潑水後背包', '包包配件', 1880, 1450, 15,
+      'P001', '日本代購限定 輕量防潑水後背包', '包包配件', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
-      '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date()
+      '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
+      850, 'JPY 3500 (含稅), 380g', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80'])
     ]);
-    prodSheet.appendRow([
-      'P002', '熱銷款 舒眠天然草本香氛噴霧 100ml', '生活居家', 850, 680, 30,
-      JSON.stringify(['薰衣草森林', '洋甘菊微風']),
-      'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=800&auto=format&fit=crop&q=80',
-      '日本飯店御用款，睡前噴在枕頭上放鬆助眠。', '上架中', new Date()
-    ]);
+  } else {
+    // 既有表格：升級表頭為最新規格
+    prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
+    prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
   }
 
   // 2. 訂單明細工作表
@@ -168,17 +172,28 @@ function getProductsList() {
         specs = row[6] ? [row[6]] : [];
       }
 
+      // 解析所有圖片清單
+      let allImages = [];
+      try {
+        allImages = JSON.parse(row[13]);
+      } catch (e) {
+        allImages = row[7] ? String(row[7]).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean) : [];
+      }
+
       products.push({
         id: row[0],
         name: row[1],
         category: row[2],
-        originalPrice: Number(row[3]),
+        originalPrice: Number(row[3]) || Number(row[4]),
         price: Number(row[4]),
         stock: Number(row[5]),
         specs: specs,
-        imageUrl: row[7],
+        imageUrl: row[7] || (allImages[0] || ''),
+        imageUrls: allImages,
         description: row[8],
-        status: status
+        status: status,
+        costPrice: Number(row[11]) || 0,
+        costNote: row[12] || ''
       });
     }
   }
@@ -499,13 +514,13 @@ function handleAddProduct(data) {
  */
 function handleUploadImages(data) {
   try {
-    const folderName = 'LINE代購_商品圖片庫';
-    const folders = DriveApp.getFoldersByName(folderName);
     let folder;
-    if (folders.hasNext()) {
-      folder = folders.next();
-    } else {
-      folder = DriveApp.createFolder(folderName);
+    try {
+      folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    } catch (e) {
+      const folderName = 'LINE代購_商品圖片庫';
+      const folders = DriveApp.getFoldersByName(folderName);
+      folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
     }
     folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 

@@ -1031,10 +1031,13 @@
             })
           });
           const uploadResult = await uploadRes.json();
-          if (uploadResult.success && uploadResult.urls) {
+          if (uploadResult.success && uploadResult.urls && uploadResult.urls.length > 0) {
             finalImageUrls = uploadResult.urls.concat(finalImageUrls);
           } else {
-            console.warn('圖片上傳警告:', uploadResult.message);
+            alert('⚠️ 圖片上傳至 Google Drive 失敗：' + (uploadResult.message || '未知錯誤') + '\n\n💡 請確認您是否已將最新版的 Code.gs 複製至 Google Apps Script 並重新發布為「新版本」！');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
+            return;
           }
         }
 
@@ -1079,6 +1082,9 @@
           renderAllImageThumbs();
           resetCostCalculator();
           
+          if (result.productId) {
+            selectedProductIds.add(result.productId);
+          }
           // 切換回推播頁面並自動重新整理
           switchTab('tabPublish');
           document.querySelectorAll('.tab-btn')[0].classList.add('active');
