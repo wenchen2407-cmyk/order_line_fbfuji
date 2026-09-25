@@ -134,6 +134,8 @@ function doPost(e) {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
       result = handleAddProduct(postData.data);
+    } else if (action === 'uploadImages') {
+      result = handleUploadImages(postData.data);
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -449,18 +451,33 @@ function handleAddProduct(data) {
     specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
   }
 
+  // 圖片處理：支援多張圖片（第一張為主圖）
+  let imagesArray = [];
+  if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+    imagesArray = data.imageUrls;
+  } else if (data.imageUrl) {
+    imagesArray = data.imageUrl.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+  }
+  const mainImage = imagesArray[0] || data.imageUrl || '';
+
+  // 庫存名額：若勾選「不限庫存」則設定為 999999
+  const stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
+
   sheet.appendRow([
     pid,
     data.name.trim(),
     data.category || '連線好物',
     Number(data.originalPrice) || Number(data.price),
     Number(data.price),
-    Number(data.stock) || 10,
+    stockQty,
     JSON.stringify(specsArray),
-    data.imageUrl || '',
+    mainImage,
     data.description || '',
     '上架中',
-    now
+    now,
+    Number(data.costPrice) || 0, // 欄位 12: 成本價 (NT$)
+    data.costNote || '',         // 欄位 13: 採購原幣與重量備註
+    JSON.stringify(imagesArray)  // 欄位 14: 所有圖片清單
   ]);
 
   return { 
@@ -471,9 +488,50 @@ function handleAddProduct(data) {
       id: pid,
       name: data.name,
       price: Number(data.price),
-      imageUrl: data.imageUrl
+      imageUrl: mainImage,
+      costPrice: Number(data.costPrice) || 0
     }
   };
+}
+
+/**
+ * 處理附件圖片上傳至 Google Drive
+ */
+function handleUploadImages(data) {
+  try {
+    const folderName = 'LINE代購_商品圖片庫';
+    const folders = DriveApp.getFoldersByName(folderName);
+    let folder;
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder(folderName);
+    }
+    folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    const uploadedUrls = [];
+    const files = data.files || [];
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const base64Data = f.base64.replace(/^data:image\/\w+;base64,/, '');
+      const decoded = Utilities.base64Decode(base64Data);
+      const contentType = f.type || 'image/jpeg';
+      const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + (i + 1) + '.jpg';
+      
+      const blob = Utilities.newBlob(decoded, contentType, fileName);
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      // 直接輸出可預覽的 Google Drive 圖片連結
+      const directUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+      uploadedUrls.push(directUrl);
+    }
+
+    return { success: true, urls: uploadedUrls };
+  } catch (err) {
+    return { success: false, message: '圖片上傳至 Google Drive 失敗：' + err.toString() };
+  }
 }
 
 /**
