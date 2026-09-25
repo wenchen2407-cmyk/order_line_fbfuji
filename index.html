@@ -81,14 +81,73 @@
     .product-img-wrap {
       position: relative;
       width: 100%;
-      height: 280px;
-      background: #eee;
+      height: 320px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
     .product-img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      transition: opacity 0.2s ease;
+    }
+
+    /* 多圖縮圖切換列 */
+    .image-thumbs-strip {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      background: #ffffff;
+      border-top: 1px solid var(--border-color);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .image-thumbs-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .image-thumb-btn {
+      flex: 0 0 56px;
+      height: 56px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      overflow: hidden;
+      cursor: pointer;
+      background: #f1f5f9;
+      padding: 0;
+      transition: all 0.2s;
+    }
+
+    .image-thumb-btn.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(6, 199, 85, 0.25);
+    }
+
+    .image-thumb-btn img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    .image-counter-badge {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      backdrop-filter: blur(4px);
+      letter-spacing: 0.5px;
     }
 
     .badge-stock {
@@ -454,13 +513,17 @@
       <div class="product-img-wrap">
         <img id="productImage" class="product-img" src="" alt="商品圖片">
         <div id="productStock" class="badge-stock">庫存載入中...</div>
+        <div id="imageCounter" class="image-counter-badge" style="display: none;">1 / 1</div>
       </div>
+      <!-- 多圖縮圖切換列 -->
+      <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
+
       <div class="product-details">
         <span id="productCategory" class="product-tag">連線推薦</span>
         <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
         <div class="price-box">
           <span class="current-price" id="productPrice">NT$ ---</span>
-          <span class="original-price" id="originalPrice">NT$ ---</span>
+          <span class="original-price" id="originalPrice" style="display: none;">NT$ ---</span>
         </div>
         <p id="productDesc" class="product-desc">商品描述準備中...</p>
       </div>
@@ -662,15 +725,84 @@
       }
     }
 
-    // 3. 渲染商品 UI
+    // 3. 渲染商品 UI (含多圖相簿、無損全圖顯示、原價隱藏邏輯)
     function renderProductUI() {
-      document.getElementById('productImage').src = currentProduct.imageUrl;
+      // 處理多張圖片
+      let allImgs = [];
+      if (Array.isArray(currentProduct.imageUrls) && currentProduct.imageUrls.length > 0) {
+        allImgs = currentProduct.imageUrls;
+      } else if (currentProduct.imageUrl) {
+        allImgs = String(currentProduct.imageUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
+      }
+      if (allImgs.length === 0) {
+        allImgs = ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80'];
+      }
+
+      // 自動將 Google Drive 圖片連結轉為直連網址
+      allImgs = allImgs.map(u => {
+        const driveMatch = u.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || u.match(/id=([a-zA-Z0-9_-]+)/) || u.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveMatch && driveMatch[1]) {
+          return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+        }
+        return u;
+      });
+
+      // 設定主圖片
+      const mainImgElem = document.getElementById('productImage');
+      mainImgElem.src = allImgs[0];
+
+      // 渲染多圖縮圖列
+      const thumbsContainer = document.getElementById('imageThumbsStrip');
+      const counterBadge = document.getElementById('imageCounter');
+
+      if (allImgs.length > 1) {
+        thumbsContainer.innerHTML = '';
+        thumbsContainer.style.display = 'flex';
+        counterBadge.style.display = 'block';
+        counterBadge.textContent = `1 / ${allImgs.length}`;
+
+        allImgs.forEach((imgUrl, idx) => {
+          const thumbBtn = document.createElement('button');
+          thumbBtn.type = 'button';
+          thumbBtn.className = `image-thumb-btn ${idx === 0 ? 'active' : ''}`;
+          thumbBtn.innerHTML = `<img src="${imgUrl}" alt="圖片 ${idx + 1}" onerror="this.src='https://via.placeholder.com/56'">`;
+          thumbBtn.onclick = () => {
+            mainImgElem.style.opacity = '0.4';
+            setTimeout(() => {
+              mainImgElem.src = imgUrl;
+              mainImgElem.style.opacity = '1';
+            }, 120);
+            document.querySelectorAll('.image-thumb-btn').forEach(b => b.classList.remove('active'));
+            thumbBtn.classList.add('active');
+            counterBadge.textContent = `${idx + 1} / ${allImgs.length}`;
+          };
+          thumbsContainer.appendChild(thumbBtn);
+        });
+      } else {
+        thumbsContainer.style.display = 'none';
+        counterBadge.style.display = 'none';
+      }
+
       document.getElementById('productTitle').textContent = currentProduct.name;
       document.getElementById('productCategory').textContent = currentProduct.category || '連線好物';
-      document.getElementById('productPrice').textContent = `NT$ ${currentProduct.price.toLocaleString()}`;
-      document.getElementById('originalPrice').textContent = `NT$ ${currentProduct.originalPrice.toLocaleString()}`;
-      document.getElementById('productDesc').textContent = currentProduct.description;
-      document.getElementById('productStock').textContent = `剩餘現貨：${currentProduct.stock}`;
+      
+      const priceNum = Number(currentProduct.price) || 0;
+      const origPriceNum = Number(currentProduct.originalPrice) || 0;
+      document.getElementById('productPrice').textContent = `NT$ ${priceNum.toLocaleString()}`;
+
+      // 專櫃原價：若沒填原價、或原價<=連線價，則隱藏不顯示
+      const origPriceElem = document.getElementById('originalPrice');
+      if (origPriceNum > 0 && origPriceNum > priceNum) {
+        origPriceElem.textContent = `NT$ ${origPriceNum.toLocaleString()}`;
+        origPriceElem.style.display = 'inline';
+      } else {
+        origPriceElem.style.display = 'none';
+      }
+
+      document.getElementById('productDesc').textContent = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
+      
+      const stockNum = Number(currentProduct.stock) || 0;
+      document.getElementById('productStock').textContent = (stockNum >= 9999) ? '連線不限名額' : `剩餘現貨：${stockNum}`;
 
       // 渲染規格按鈕
       const specContainer = document.getElementById('specList');
