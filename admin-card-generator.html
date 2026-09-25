@@ -286,14 +286,21 @@
           <input type="url" id="prodImageUrl" class="input-text" value="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" oninput="updatePreview()">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">前台下單 LIFF 網址</label>
-          <input type="url" id="liffUrlBase" class="input-text" value="https://liff.line.me/2011732923-rcjz7Igd" placeholder="https://liff.line.me/2011732923-rcjz7Igd">
+        <!-- 電腦版登入狀態與輔助列 -->
+        <div id="loginStatusBox" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+          <span id="loginStatusText">🔍 偵測 LINE 登入狀態中...</span>
+          <button type="button" id="btnLoginLine" style="display: none; background: #06c755; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 700; cursor: pointer;" onclick="loginLine()">登入 LINE</button>
         </div>
 
-        <button type="button" class="btn-share" id="btnShareTarget" onclick="shareFlexCardToGroup()">
-          <span>🚀 一鍵分享商品卡到 LINE 群組</span>
-        </button>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button type="button" class="btn-share" id="btnShareTarget" onclick="shareFlexCardToGroup()">
+            <span>🚀 一鍵分享 Flex 卡片到 LINE 群組 (手機/電腦皆可)</span>
+          </button>
+          
+          <button type="button" id="btnCopyText" style="width: 100%; background: #0f172a; color: #fff; border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="copyPromoText()">
+            <span>📋 一鍵複製商品文案與下單連結 (電腦版 LINE 貼上用)</span>
+          </button>
+        </div>
       </div>
 
       <!-- 右側：即時聊天室卡片預覽 -->
@@ -320,7 +327,8 @@
   </div>
 
   <script>
-    const LIFF_ID = '2011732923-rcjz7Igd'; // 填入您的 LIFF ID
+    const LIFF_ID = '2011732923-rcjz7Igd';
+    let currentLiffUser = null;
 
     window.onload = async () => {
       updatePreview();
@@ -331,9 +339,26 @@
       if (!LIFF_ID || LIFF_ID === 'YOUR_LIFF_ID_HERE') return;
       try {
         await liff.init({ liffId: LIFF_ID });
+        const statusText = document.getElementById('loginStatusText');
+        const loginBtn = document.getElementById('btnLoginLine');
+
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          currentLiffUser = profile;
+          statusText.innerHTML = `🟢 <b>LINE 已連線</b>：${profile.displayName} (電腦/手機皆可直接發送)`;
+          loginBtn.style.display = 'none';
+        } else {
+          statusText.innerHTML = `⚪ <b>電腦版未登入</b>：登入後即可在電腦上直接發送卡片`;
+          loginBtn.style.display = 'inline-block';
+        }
       } catch (err) {
         console.error('LIFF 初始化失敗:', err);
+        document.getElementById('loginStatusText').textContent = '⚠️ LIFF 初始化異常，請重新整理';
       }
+    }
+
+    function loginLine() {
+      liff.login();
     }
 
     function updatePreview() {
@@ -358,7 +383,7 @@
       const origPrice = document.getElementById('prodOriginalPrice').value;
       const tag = document.getElementById('prodTag').value;
       const img = document.getElementById('prodImageUrl').value;
-      const liffBase = document.getElementById('liffUrlBase').value;
+      const liffBase = `https://liff.line.me/${LIFF_ID}`;
       const targetOrderUrl = `${liffBase}?p=${encodeURIComponent(pId)}`;
 
       return {
@@ -436,16 +461,18 @@
       };
     }
 
-    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費)
+    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費，手機/電腦皆支援)
     async function shareFlexCardToGroup() {
       if (!liff.isLoggedIn()) {
-        alert('請先在 LINE 環境中開啟或完成 LINE 登入！');
-        liff.login();
+        const confirmLogin = confirm('在電腦版瀏覽器發送需要先完成 LINE 快速登入，是否立即前往登入？');
+        if (confirmLogin) {
+          liff.login();
+        }
         return;
       }
 
       if (!liff.isApiAvailable('shareTargetPicker')) {
-        alert('當前環境不支援 shareTargetPicker，請確認 LINE App 版本或至 LINE Developers 後台開啟權限！');
+        alert('您的瀏覽器目前未開啟 shareTargetPicker 權限，請確認 LINE Developers 後台總開關是否已啟動。');
         return;
       }
 
@@ -454,12 +481,38 @@
       try {
         const res = await liff.shareTargetPicker([flexMessage]);
         if (res) {
-          alert('🎉 商品卡已成功發送至指定群組！');
+          alert('🎉 Flex 商品卡已成功發送至指定群組！');
         }
       } catch (err) {
         console.error('發送失敗:', err);
         alert('發送取消或發生錯誤：' + err.message);
       }
+    }
+
+    // 電腦版專用：一鍵複製精美排版文案
+    function copyPromoText() {
+      const pId = document.getElementById('prodId').value;
+      const name = document.getElementById('prodName').value;
+      const price = document.getElementById('prodPrice').value;
+      const origPrice = document.getElementById('prodOriginalPrice').value;
+      const tag = document.getElementById('prodTag').value;
+      const liffBase = `https://liff.line.me/${LIFF_ID}`;
+      const targetOrderUrl = `${liffBase}?p=${encodeURIComponent(pId)}`;
+
+      const text = 
+`✨【${tag}】${name}
+🔥 連線特惠價：NT$ ${Number(price).toLocaleString()} (原價 NT$ ${Number(origPrice).toLocaleString()})
+
+🛒 立即點連結下單（免登入、秒送單）：
+👉 ${targetOrderUrl}
+
+（點開即可選款式/數量，連線名額限量搶購中！）`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('📋 文案與下單連結已複製到剪貼簿！\n您可以直接打開電腦版 LINE 按 Ctrl + V 貼到群組發布囉！');
+      }).catch(err => {
+        prompt('請手動複製以下推廣文案：', text);
+      });
     }
   </script>
 </body>
