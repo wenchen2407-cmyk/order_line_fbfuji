@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>商品卡產生器 & 群組一鍵分享工具 (賣家專用)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +14,7 @@
       --primary: #06c755;
       --primary-dark: #059b43;
       --accent: #ff4757;
-      --bg: #f1f5f9;
+      --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
       --text: #0f172a;
@@ -24,13 +24,14 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       font-family: 'Noto Sans TC', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 24px 16px;
+      padding: 20px 16px;
       line-height: 1.5;
     }
 
@@ -97,7 +98,7 @@
       margin-bottom: 6px;
     }
 
-    .input-text, .input-textarea {
+    .input-text {
       width: 100%;
       padding: 10px 14px;
       border: 1px solid var(--border);
@@ -107,7 +108,7 @@
       background: #f8fafc;
     }
 
-    .input-text:focus, .input-textarea:focus {
+    .input-text:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
@@ -124,7 +125,7 @@
       background: #849ebf;
       border-radius: 20px;
       padding: 20px 16px;
-      min-height: 480px;
+      min-height: 440px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -235,9 +236,9 @@
       transition: all 0.2s;
     }
 
-    .btn-share:hover {
+    .btn-share:active {
+      transform: scale(0.98);
       background: var(--primary-dark);
-      transform: translateY(-1px);
     }
   </style>
 </head>
@@ -286,25 +287,9 @@
           <input type="url" id="prodImageUrl" class="input-text" value="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80" oninput="updatePreview()">
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-          <!-- 電腦專用按鈕 (置頂，最符合目前情境) -->
-          <div style="background: #eef2ff; border: 1.5px solid #c7d2fe; border-radius: 12px; padding: 14px;">
-            <div style="font-weight: 800; font-size: 14px; color: #3730a3; margin-bottom: 6px;">💻 電腦版專用發布：</div>
-            <button type="button" id="btnCopyText" style="width: 100%; background: #4f46e5; color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);" onclick="copyPromoText()">
-              <span>📋 1. 一鍵複製圖文文案與下單連結</span>
-            </button>
-            <p style="font-size: 12px; color: #6366f1; margin-top: 6px; line-height: 1.4;">點擊後直接切換到電腦版 LINE 聊天室按 <b>Ctrl + V</b> 即可發送！</p>
-          </div>
-
-          <!-- 手機專用按鈕 -->
-          <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px;">
-            <div style="font-weight: 800; font-size: 14px; color: #166534; margin-bottom: 6px;">📱 手機版專用發布：</div>
-            <button type="button" class="btn-share" id="btnShareTarget" style="margin-top: 0;" onclick="shareFlexCardToGroup()">
-              <span>🚀 發送 Flex 互動卡片至群組</span>
-            </button>
-            <p style="font-size: 12px; color: #15803d; margin-top: 6px; line-height: 1.4;">在手機 LINE 內開啟此頁面，點此鈕可直接呼叫群組發送圖文大卡片。</p>
-          </div>
-        </div>
+        <button type="button" class="btn-share" id="btnShareTarget" onclick="shareFlexCardToGroup()">
+          <span>🚀 一鍵分享商品卡到 LINE 群組</span>
+        </button>
       </div>
 
       <!-- 右側：即時聊天室卡片預覽 -->
@@ -332,7 +317,6 @@
 
   <script>
     const LIFF_ID = '2011732923-rcjz7Igd';
-    let currentLiffUser = null;
 
     window.onload = async () => {
       updatePreview();
@@ -340,29 +324,14 @@
     };
 
     async function initLiff() {
-      if (!LIFF_ID || LIFF_ID === 'YOUR_LIFF_ID_HERE') return;
       try {
         await liff.init({ liffId: LIFF_ID });
-        const statusText = document.getElementById('loginStatusText');
-        const loginBtn = document.getElementById('btnLoginLine');
-
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          currentLiffUser = profile;
-          statusText.innerHTML = `🟢 <b>LINE 已連線</b>：${profile.displayName} (電腦/手機皆可直接發送)`;
-          loginBtn.style.display = 'none';
-        } else {
-          statusText.innerHTML = `⚪ <b>電腦版未登入</b>：登入後即可在電腦上直接發送卡片`;
-          loginBtn.style.display = 'inline-block';
+        if (!liff.isLoggedIn()) {
+          liff.login();
         }
       } catch (err) {
         console.error('LIFF 初始化失敗:', err);
-        document.getElementById('loginStatusText').textContent = '⚠️ LIFF 初始化異常，請重新整理';
       }
-    }
-
-    function loginLine() {
-      liff.login();
     }
 
     function updatePreview() {
@@ -387,8 +356,7 @@
       const origPrice = document.getElementById('prodOriginalPrice').value;
       const tag = document.getElementById('prodTag').value;
       const img = document.getElementById('prodImageUrl').value;
-      const liffBase = `https://liff.line.me/${LIFF_ID}`;
-      const targetOrderUrl = `${liffBase}?p=${encodeURIComponent(pId)}`;
+      const targetOrderUrl = `https://liff.line.me/${LIFF_ID}?p=${encodeURIComponent(pId)}`;
 
       return {
         type: 'flex',
@@ -465,19 +433,10 @@
       };
     }
 
-    // 發送處理
+    // 利用 LIFF shareTargetPicker 分享至好友或群組 (完全免推播費)
     async function shareFlexCardToGroup() {
-      // 1. 檢查是否登入
       if (!liff.isLoggedIn()) {
-        alert('正在前往 LINE 登入授權...');
         liff.login();
-        return;
-      }
-
-      // 2. 檢查圖片網址防呆 (LINE 要求必須為 HTTPS 圖片)
-      const img = document.getElementById('prodImageUrl').value.trim();
-      if (!img.startsWith('https://')) {
-        alert('⚠️ LINE 要求商品圖片網址必須以 https:// 開頭！\n請填寫正確的圖片連結。');
         return;
       }
 
@@ -486,41 +445,12 @@
       try {
         const res = await liff.shareTargetPicker([flexMessage]);
         if (res) {
-          alert('🎉 Flex 商品卡已成功發送至指定群組！');
-        } else {
-          // 使用者可能在選擇群組視窗按了取消
-          console.log('使用者取消發送');
+          alert('🎉 商品卡已成功發送至指定群組！');
         }
       } catch (err) {
-        console.error('發送錯誤:', err);
-        alert('❌ 發送失敗，LINE 回傳訊息：\n' + (err.message || JSON.stringify(err)));
+        console.error('發送失敗:', err);
+        alert('發送時發生錯誤：' + (err.message || JSON.stringify(err)));
       }
-    }
-
-    // 電腦版專用：一鍵複製精美排版文案
-    function copyPromoText() {
-      const pId = document.getElementById('prodId').value;
-      const name = document.getElementById('prodName').value;
-      const price = document.getElementById('prodPrice').value;
-      const origPrice = document.getElementById('prodOriginalPrice').value;
-      const tag = document.getElementById('prodTag').value;
-      const liffBase = `https://liff.line.me/${LIFF_ID}`;
-      const targetOrderUrl = `${liffBase}?p=${encodeURIComponent(pId)}`;
-
-      const text = 
-`✨【${tag}】${name}
-🔥 連線特惠價：NT$ ${Number(price).toLocaleString()} (原價 NT$ ${Number(origPrice).toLocaleString()})
-
-🛒 立即點連結下單（免登入、秒送單）：
-👉 ${targetOrderUrl}
-
-（點開即可選款式/數量，連線名額限量搶購中！）`;
-
-      navigator.clipboard.writeText(text).then(() => {
-        alert('📋 文案與下單連結已複製到剪貼簿！\n您可以直接打開電腦版 LINE 按 Ctrl + V 貼到群組發布囉！');
-      }).catch(err => {
-        prompt('請手動複製以下推廣文案：', text);
-      });
     }
   </script>
 </body>
