@@ -180,11 +180,14 @@ function getProductsList() {
         allImages = row[7] ? String(row[7]).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean) : [];
       }
 
+      const origPriceVal = row[3];
+      const hasOrigPrice = origPriceVal !== '' && origPriceVal !== null && !isNaN(Number(origPriceVal)) && Number(origPriceVal) > 0;
+
       products.push({
         id: row[0],
         name: row[1],
         category: row[2],
-        originalPrice: Number(row[3]) || Number(row[4]),
+        originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
         price: Number(row[4]),
         stock: Number(row[5]),
         specs: specs,
@@ -482,7 +485,7 @@ function handleAddProduct(data) {
     pid,
     data.name.trim(),
     data.category || '連線好物',
-    Number(data.originalPrice) || Number(data.price),
+    (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
     Number(data.price),
     stockQty,
     JSON.stringify(specsArray),
