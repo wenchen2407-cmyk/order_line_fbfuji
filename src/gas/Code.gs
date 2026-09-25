@@ -434,24 +434,46 @@ function handleAddProduct(data) {
   const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   if (!sheet) return { success: false, message: '商品表不存在' };
 
+  if (!data.name || !data.price) {
+    return { success: false, message: '商品名稱與價格為必填欄位！' };
+  }
+
   const now = new Date();
-  const pid = 'P' + Utilities.formatDate(now, 'Asia/Taipei', 'MMddHHmm');
+  const pid = (data.id && String(data.id).trim()) || ('P' + Utilities.formatDate(now, 'Asia/Taipei', 'MMddHHmm'));
+
+  // 規格處理 (支援陣列或逗號字串)
+  let specsArray = [];
+  if (Array.isArray(data.specs)) {
+    specsArray = data.specs;
+  } else if (typeof data.specs === 'string' && data.specs.trim()) {
+    specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+  }
 
   sheet.appendRow([
     pid,
-    data.name,
+    data.name.trim(),
     data.category || '連線好物',
     Number(data.originalPrice) || Number(data.price),
     Number(data.price),
     Number(data.stock) || 10,
-    JSON.stringify(data.specs || []),
+    JSON.stringify(specsArray),
     data.imageUrl || '',
     data.description || '',
     '上架中',
     now
   ]);
 
-  return { success: true, message: '商品上架成功！', productId: pid };
+  return { 
+    success: true, 
+    message: '商品建檔成功！', 
+    productId: pid,
+    product: {
+      id: pid,
+      name: data.name,
+      price: Number(data.price),
+      imageUrl: data.imageUrl
+    }
+  };
 }
 
 /**
