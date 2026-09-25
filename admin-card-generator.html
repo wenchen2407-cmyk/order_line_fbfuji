@@ -358,8 +358,8 @@
 
     <!-- 功能切換 Tab -->
     <div class="tabs-nav">
-      <button type="button" class="tab-btn active" onclick="switchTab('tabPublish')">📱 勾選商品發群組 (多選輪播)</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabCreate')">💻 電腦快速建檔</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 勾選商品發群組 (多選輪播)</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 電腦快速建檔</button>
     </div>
 
     <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
@@ -584,13 +584,24 @@
       }
     }
 
-    // 1. Tab 切換
-    function switchTab(tabId) {
+    // 1. Tab 切換 (防呆強化：安全支援手動點選與程式非同步切換)
+    function switchTab(tabId, btnElement) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
-      event.target.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      const tabIdx = (tabId === 'tabPublish') ? 0 : 1;
+      const allBtns = document.querySelectorAll('.tab-btn');
+
+      if (btnElement) {
+        btnElement.classList.add('active');
+      } else if (allBtns[tabIdx]) {
+        allBtns[tabIdx].classList.add('active');
+      }
+
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
     }
 
     // 2. 從 GAS 載入商品清單
