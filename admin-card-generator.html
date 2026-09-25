@@ -467,17 +467,17 @@
 
     // 發送處理
     async function shareFlexCardToGroup() {
-      // 判斷是否在 LINE App 內打開
-      const isInLineApp = /Line/i.test(navigator.userAgent);
-
-      if (!isInLineApp) {
-        alert('💡 電腦版操作提示：\nLINE 官方的「Flex 互動大卡片」僅支援在【手機 LINE App 內部】直接彈窗發送。\n\n在電腦上，請直接點擊上方的【📋 1. 一鍵複製圖文文案與下單連結】，切換到電腦版 LINE 按 Ctrl+V 貼到群組，客人點進去一樣能滿版秒下單唷！');
-        copyPromoText();
+      // 1. 檢查是否登入
+      if (!liff.isLoggedIn()) {
+        alert('正在前往 LINE 登入授權...');
+        liff.login();
         return;
       }
 
-      if (!liff.isLoggedIn()) {
-        liff.login();
+      // 2. 檢查圖片網址防呆 (LINE 要求必須為 HTTPS 圖片)
+      const img = document.getElementById('prodImageUrl').value.trim();
+      if (!img.startsWith('https://')) {
+        alert('⚠️ LINE 要求商品圖片網址必須以 https:// 開頭！\n請填寫正確的圖片連結。');
         return;
       }
 
@@ -487,10 +487,13 @@
         const res = await liff.shareTargetPicker([flexMessage]);
         if (res) {
           alert('🎉 Flex 商品卡已成功發送至指定群組！');
+        } else {
+          // 使用者可能在選擇群組視窗按了取消
+          console.log('使用者取消發送');
         }
       } catch (err) {
-        console.warn('發送受限:', err);
-        copyPromoText();
+        console.error('發送錯誤:', err);
+        alert('❌ 發送失敗，LINE 回傳訊息：\n' + (err.message || JSON.stringify(err)));
       }
     }
 
