@@ -118,7 +118,7 @@ function doGet(e) {
     }
     return jsonResponse(result);
   } catch (err) {
-    return jsonResponse({ success: false, error: err.toString() });
+    return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
   }
 }
 
@@ -152,7 +152,7 @@ function doPost(e) {
     }
     return jsonResponse(result);
   } catch (err) {
-    return jsonResponse({ success: false, error: err.toString() });
+    return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
   }
 }
 
@@ -336,8 +336,12 @@ function handleCreateOrder(orderData) {
     ]);
 
     // 5. 更新或建立顧客檔案歸戶
-    if (orderData.realName || orderData.phone) {
-      updateCustomerProfile(custSheet, orderData, totalAmount, now);
+    try {
+      if (orderData.realName || orderData.phone) {
+        updateCustomerProfile(custSheet, orderData, totalAmount, now);
+      }
+    } catch (custErr) {
+      console.error('更新顧客歸戶失敗 (不影響訂單建立):', custErr);
     }
 
     return {
@@ -459,18 +463,85 @@ function handleCheckoutOrders(checkoutData) {
 }
 
 /**
+ * 更新或建立顧客檔案歸戶
+ * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記']
+ */
+function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!custSheet) {
+      custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+      if (!custSheet) {
+        custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
+        custSheet.appendRow([
+          'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
+          '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記'
+        ]);
+        custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+      }
+    }
+
+    const userId = orderData.userId || 'LINE_GUEST';
+    const userName = orderData.userName || '訪客';
+    const realName = orderData.realName || orderData.recipientName || '';
+    const phone = orderData.phone || '';
+    const data = custSheet.getDataRange().getValues();
+    let found = false;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        found = true;
+        const row = i + 1;
+        if (userName) custSheet.getRange(row, 2).setValue(userName);
+        if (realName) custSheet.getRange(row, 3).setValue(realName);
+        if (phone) custSheet.getRange(row, 4).setValue(phone);
+        
+        const currentOrders = Number(data[i][5]) || 0;
+        const currentSpend = Number(data[i][6]) || 0;
+        custSheet.getRange(row, 6).setValue(currentOrders + 1);
+        custSheet.getRange(row, 7).setValue(currentSpend + (Number(totalAmount) || 0));
+        custSheet.getRange(row, 9).setValue(now);
+        break;
+      }
+    }
+
+    if (!found) {
+      custSheet.appendRow([
+        userId,
+        userName,
+        realName,
+        phone,
+        '',
+        1,
+        Number(totalAmount) || 0,
+        now,
+        now,
+        ''
+      ]);
+    }
+  } catch (err) {
+    console.error('更新顧客歸戶失敗 (不影響訂單建立): ' + err.toString());
+  }
+}
+
+/**
  * 更新顧客常用地址電話
  */
 function updateCustomerAddress(custSheet, userId, name, phone, address) {
-  const data = custSheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === userId) {
-      const row = i + 1;
-      if (name) custSheet.getRange(row, 3).setValue(name);
-      if (phone) custSheet.getRange(row, 4).setValue(phone);
-      if (address) custSheet.getRange(row, 5).setValue(address);
-      break;
+  try {
+    if (!custSheet) return;
+    const data = custSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        const row = i + 1;
+        if (name) custSheet.getRange(row, 3).setValue(name);
+        if (phone) custSheet.getRange(row, 4).setValue(phone);
+        if (address) custSheet.getRange(row, 5).setValue(address);
+        break;
+      }
     }
+  } catch (err) {
+    console.error('更新顧客地址失敗: ' + err.toString());
   }
 }
 
