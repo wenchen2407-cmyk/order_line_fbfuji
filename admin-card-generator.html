@@ -367,11 +367,21 @@
       <div class="grid-layout">
         <!-- 左側：商品勾選列表 -->
         <div class="panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div class="panel-title" style="margin-bottom: 0;">📦 選擇要推播的商品 (可選 1~10 件)</div>
-            <button type="button" style="font-size: 12px; color: var(--primary-dark); background: none; border: none; cursor: pointer; font-weight: 700;" onclick="refreshProductList()">🔄 重新整理</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="searchStatsText" style="font-size: 11px; color: var(--text-muted); font-weight: 600;"></span>
+              <button type="button" style="font-size: 12px; color: var(--primary-dark); background: none; border: none; cursor: pointer; font-weight: 700;" onclick="refreshProductList()">🔄 重新整理</button>
+            </div>
           </div>
           
+          <!-- 🔍 商品即時搜尋框 -->
+          <div style="position: relative; margin-bottom: 12px;">
+            <input type="text" id="productSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 P001)、規格或分類..." oninput="handleProductSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
+            <button type="button" id="btnClearSearch" onclick="clearProductSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
+          </div>
+
           <div id="loadingBox" style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px;">正在從 Google 試算表載入商品...</div>
           <div class="product-select-list" id="productListContainer"></div>
 
@@ -397,12 +407,12 @@
         
         <div class="row-2">
           <div class="form-group">
-            <label class="form-label">自訂商品編號 (選填，如 P003)</label>
-            <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生">
+            <label class="form-label">自訂商品編號 (選填，留空依幣別自動跳號)</label>
+            <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)">
           </div>
           <div class="form-group">
             <label class="form-label">活動分類標籤</label>
-            <input type="text" id="newProdCategory" class="input-text" value="連線熱銷">
+            <input type="text" id="newProdCategory" class="input-text" value="2026.10月連線">
           </div>
         </div>
 
@@ -635,12 +645,84 @@
       fetchProductList();
     }
 
-    // 3. 渲染勾選清單 (含嚴格防呆)
+    let currentSearchKeyword = '';
+
+    // 處理商品即時搜尋
+    function handleProductSearch() {
+      const input = document.getElementById('productSearchInput');
+      currentSearchKeyword = input ? input.value.trim().toLowerCase() : '';
+      const clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) {
+        clearBtn.style.display = currentSearchKeyword ? 'block' : 'none';
+      }
+      renderProductCheckboxes();
+    }
+
+    // 清空商品搜尋
+    function clearProductSearch() {
+      const input = document.getElementById('productSearchInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      currentSearchKeyword = '';
+      const clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) {
+        clearBtn.style.display = 'none';
+      }
+      renderProductCheckboxes();
+    }
+
+    // 3. 渲染勾選清單 (支援即時關鍵字搜尋與防呆)
     function renderProductCheckboxes() {
       const container = document.getElementById('productListContainer');
       container.innerHTML = '';
 
-      allProducts.forEach(prod => {
+      // 依關鍵字篩選商品 (品名、編號、規格、分類)
+      const filteredProducts = allProducts.filter(prod => {
+        if (!currentSearchKeyword) return true;
+        const nameStr = (prod.name || '').toLowerCase();
+        const idStr = (prod.id || '').toLowerCase();
+        const catStr = (prod.category || '').toLowerCase();
+        let specsStr = '';
+        if (Array.isArray(prod.specs)) {
+          specsStr = prod.specs.join(' ');
+        } else if (typeof prod.specs === 'string') {
+          specsStr = prod.specs;
+        }
+        specsStr = specsStr.toLowerCase();
+
+        return nameStr.includes(currentSearchKeyword) || 
+               idStr.includes(currentSearchKeyword) || 
+               catStr.includes(currentSearchKeyword) || 
+               specsStr.includes(currentSearchKeyword);
+      });
+
+      // 更新搜尋結果統計標籤
+      const statsElem = document.getElementById('searchStatsText');
+      if (statsElem) {
+        if (currentSearchKeyword) {
+          statsElem.textContent = `找到 ${filteredProducts.length} 件 (共 ${allProducts.length} 件)`;
+        } else if (allProducts.length > 0) {
+          statsElem.textContent = `共 ${allProducts.length} 件`;
+        } else {
+          statsElem.textContent = '';
+        }
+      }
+
+      if (filteredProducts.length === 0) {
+        const safeWord = currentSearchKeyword.replace(/[<>&"]/g, '');
+        container.innerHTML = `
+          <div style="text-align: center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
+            <div style="font-size: 26px; margin-bottom: 6px;">🔍</div>
+            查無符合「<b style="color: var(--text-main);">${safeWord}</b>」的商品<br>
+            <button type="button" onclick="clearProductSearch()" style="margin-top: 10px; background: #e2e8f0; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #334155; font-weight: 700;">清除條件</button>
+          </div>
+        `;
+        return;
+      }
+
+      filteredProducts.forEach(prod => {
         const isChecked = selectedProductIds.has(prod.id);
         const item = document.createElement('div');
         item.className = `product-check-item ${isChecked ? 'selected' : ''}`;
@@ -664,8 +746,9 @@
         // 圖片安全取出第一張 (支援分號/逗號/換行分割)
         const displayImg = getSafeMainImage(prod.imageUrl);
 
-        // 庫存顯示優化
-        const stockDisplay = (Number(prod.stock) >= 9999) ? '不限名額' : `剩餘: ${prod.stock}`;
+        // 庫存顯示優化：連線時間不限名額跟庫存（無限接單）無需顯示在商品列表中
+        const stockNum = Number(prod.stock) || 0;
+        const stockDisplay = (stockNum >= 9999) ? '' : ` ｜ 剩餘: ${stockNum}`;
         const priceNum = Number(prod.price) || 0;
 
         item.innerHTML = `
@@ -673,7 +756,7 @@
           <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
           <div class="prod-info">
             <div class="prod-name">${prod.name || '未命名商品'}</div>
-            <div class="prod-sub">${prod.id} ｜ ${stockDisplay} ｜ 規格: ${specsDisplay}</div>
+            <div class="prod-sub">${prod.id}${stockDisplay} ｜ 規格: ${specsDisplay}</div>
           </div>
           <div class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</div>
         `;
@@ -1175,6 +1258,7 @@
           action: 'addProduct',
           data: {
             id: customId,
+            currency: document.getElementById('calcCurrency') ? document.getElementById('calcCurrency').value : 'JPY',
             name: name,
             category: category,
             price: Number(price),
@@ -1206,6 +1290,7 @@
           document.getElementById('newProdImageUrls').value = '';
           document.getElementById('newProdSpecs').value = '';
           document.getElementById('newProdDesc').value = '';
+          document.getElementById('newProdCategory').value = '2026.10月連線';
           localSelectedFiles = [];
           renderAllImageThumbs();
           resetCostCalculator();

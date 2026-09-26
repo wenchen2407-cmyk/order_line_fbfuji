@@ -512,14 +512,14 @@
     <div class="card">
       <div class="product-img-wrap">
         <img id="productImage" class="product-img" src="" alt="商品圖片">
-        <div id="productStock" class="badge-stock">庫存載入中...</div>
+        <div id="productStock" class="badge-stock" style="display: none;"></div>
         <div id="imageCounter" class="image-counter-badge" style="display: none;">1 / 1</div>
       </div>
       <!-- 多圖縮圖切換列 -->
       <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
 
       <div class="product-details">
-        <span id="productCategory" class="product-tag">連線推薦</span>
+        <span id="productCategory" class="product-tag">2026.10月連線</span>
         <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
         <div class="price-box">
           <span class="current-price" id="productPrice">NT$ ---</span>
@@ -552,8 +552,13 @@
       </div>
     </div>
 
-    <div style="background: #f1f5f9; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #64748b; line-height: 1.6;">
-      💡 <b>連線代購搶購須知</b>：連線期間僅需登記商品與數量，回國後統一於【出貨結帳清單】選擇配送方式（超商純取免運 / 貨到付款滿額免運等）並合併填寫收件地址！
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12px; color: #475569; line-height: 1.7;">
+      <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13px;">✈️ 連線代購必讀</div>
+      <div style="margin-bottom: 4px;">• 🚫 <b>下單即確定採買，不可取消或刪改</b>，下單前請確認規格數量。</div>
+      <div style="margin-bottom: 4px;">• ⚡ <b>現場依下單順序配貨</b>，若遇專櫃缺貨將主動通知取消退款。</div>
+      <div style="margin-bottom: 4px;">• ⏰ <b>收單截止時間</b>：以群組最後公告之截單時間為準。</div>
+      <div style="margin-bottom: 4px;">• 📦 <b>回國確認出貨</b>：商品整理完畢後，將於群組或私訊確認訂單資料並發送專屬賣場連結供下單出貨。</div>
+      <div>• 🚚 <b>出貨運費</b>：超商純取 0 元免運；賣貨便/好賣+ 滿 3,000 元免運；亦支援郵寄與宅配。</div>
     </div>
   </div>
 
@@ -564,7 +569,7 @@
         <span class="total-label">商品金額小計</span>
         <span class="total-price" id="totalDisplay">NT$ 0</span>
       </div>
-      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>🚀 確認搶購登記</button>
+      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>🚀 火速登記</button>
     </div>
   </div>
 
@@ -587,7 +592,7 @@
         <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
       </div>
 
-      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">✓ 確認並送出搶購</button>
+      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">✓ 確認並火速登記</button>
       <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
     </div>
   </div>
@@ -596,8 +601,8 @@
   <div class="modal-overlay" id="successModal">
     <div class="modal-content">
       <div class="success-icon">🎉</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">搶購登記成功！</h2>
-      <p style="font-size: 13px; color: #475569; line-height: 1.6;">已為您保留商品名額！本檔連線商品將於回國後統一出貨，屆時請至【出貨結帳清單】選擇配送方式並填寫地址即可！</p>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">登記成功！</h2>
+      <p style="font-size: 13px; color: #475569; line-height: 1.6;">連線商品將於回國後統一出貨，屆時請留意群組或私訊訊息等通知！</p>
 
       <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
         <div>商品品名：<b id="modalProdName">-</b></div>
@@ -763,7 +768,7 @@
       }
 
       document.getElementById('productTitle').textContent = currentProduct.name;
-      document.getElementById('productCategory').textContent = currentProduct.category || '連線好物';
+      document.getElementById('productCategory').textContent = currentProduct.category || '2026.10月連線';
       
       const priceNum = Number(currentProduct.price) || 0;
       const origPriceNum = Number(currentProduct.originalPrice) || 0;
@@ -781,7 +786,15 @@
       document.getElementById('productDesc').textContent = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
       
       const stockNum = Number(currentProduct.stock) || 0;
-      document.getElementById('productStock').textContent = (stockNum >= 9999) ? '連線不限名額' : `剩餘現貨：${stockNum}`;
+      const stockElem = document.getElementById('productStock');
+      if (stockNum >= 9999 || stockNum <= 0) {
+        // 不限名額或無特別限制時：無需顯示標籤
+        stockElem.style.display = 'none';
+      } else {
+        // 有限量名額時才提示買家
+        stockElem.textContent = `剩餘現貨：${stockNum}`;
+        stockElem.style.display = 'block';
+      }
 
       // 渲染規格按鈕
       const specContainer = document.getElementById('specList');
@@ -862,7 +875,7 @@
       }
     }
 
-    // 6. 點擊「確認搶購登記」：新客跳彈窗，老客 0.5 秒光速送單！
+    // 6. 點擊「火速登記」：新客跳彈窗，老客 0.5 秒光速送單！
     function handleClickSubmit() {
       const profile = getSavedCustomerProfile();
       if (profile && profile.realName && profile.phone) {
@@ -913,7 +926,7 @@
     async function executeCreateOrder(profile) {
       const submitBtn = document.getElementById('btnSubmitOrder');
       submitBtn.disabled = true;
-      submitBtn.textContent = '🚀 搶購登記中...';
+      submitBtn.textContent = '登記中....';
 
       const note = document.getElementById('custNote').value.trim();
       const orderPayload = {
@@ -935,7 +948,7 @@
           setTimeout(() => {
             showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
             submitBtn.disabled = false;
-            submitBtn.textContent = '🚀 確認搶購登記';
+            submitBtn.textContent = '🚀 火速登記';
           }, 600);
           return;
         }
@@ -947,7 +960,7 @@
         const result = await res.json();
 
         submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 確認搶購登記';
+        submitBtn.textContent = '🚀 火速登記';
 
         if (result.success) {
           showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
@@ -958,7 +971,7 @@
         console.error('送單錯誤:', err);
         alert('網路連線逾時，請檢查網路或稍候再試！');
         submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 確認搶購登記';
+        submitBtn.textContent = '🚀 火速登記';
       }
     }
 

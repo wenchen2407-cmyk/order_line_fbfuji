@@ -36,7 +36,7 @@ function setupSpreadsheet() {
     
     // 加入範例資料
     prodSheet.appendRow([
-      'P001', '日本代購限定 輕量防潑水後背包', '包包配件', 1880, 1450, 999999,
+      'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
@@ -60,6 +60,9 @@ function setupSpreadsheet() {
     ]);
     orderSheet.getRange(1, 1, 1, 20).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
   }
+  // 將聯絡電話 (第14欄 N) 與 匯款後五碼 (第18欄 R) 設為純文字格式
+  orderSheet.getRange("N:N").setNumberFormat('@');
+  orderSheet.getRange("R:R").setNumberFormat('@');
 
   // 3. 顧客歸戶表
   let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
@@ -71,18 +74,42 @@ function setupSpreadsheet() {
     ]);
     custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
   }
+  // 將電話欄 (第4欄 D) 設為純文字格式，避免開頭 0 被截斷
+  custSheet.getRange("D:D").setNumberFormat('@');
 
-  // 4. 系統設定表
+  // 4. 系統設定表 (升級版：支援分項銀行帳戶、6大配送方式與滿3000免運)
   let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+  const defaultSettings = [
+    ['BANK_NAME', '808 玉山銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
+    ['BANK_ACCOUNT_HOLDER', '陳小美', '賣家帳戶戶名'],
+    ['BANK_ACCOUNT', "'0123-4567-8901-2345", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
+    ['FREE_SHIPPING_THRESHOLD', '3000', '7-11 賣貨便 / 全家 好賣+ 滿額免運門檻金額 (NT$)'],
+    ['SHIP_FEE_711_COD', '38', '7-11 超商貨到付款 (賣貨便) 未達門檻運費 (NT$)'],
+    ['SHIP_FEE_FAMI_COD', '35', '全家 超商貨到付款 (好賣+) 未達門檻運費 (NT$)'],
+    ['SHIP_FEE_POST_PREPAID', '80', '郵局純寄件 (需先匯款) 郵資 (NT$)'],
+    ['SHIP_FEE_POST_COD', '130', '郵局貨到付款郵資 (NT$)'],
+    ['SHIP_FEE_BLACKCAT', '100', '黑貓宅配到府 (需先匯款) 運費 (NT$)'],
+    ['STORE_NAME', '日韓嚴選連線代購', '商店名稱'],
+    ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明']
+  ];
+
   if (!settSheet) {
     settSheet = ss.insertSheet(SHEET_NAMES.SETTINGS);
     settSheet.appendRow(['設定項目', '設定值', '說明']);
     settSheet.getRange(1, 1, 1, 3).setBackground('#d83b01').setFontColor('#ffffff').setFontWeight('bold');
-    settSheet.appendRow(['BANK_INFO', '822 中國信託 帳號: 12345-67890123 戶名: 代購小幫手', '賣家匯款帳號資料']);
-    settSheet.appendRow(['DEFAULT_SHIPPING_FEE', '60', '預設超取運費']);
-    settSheet.appendRow(['FREE_SHIPPING_THRESHOLD', '1500', '滿額免運門檻']);
-    settSheet.appendRow(['STORE_NAME', '日韓嚴選連線代購', '商店名稱']);
+    defaultSettings.forEach(s => settSheet.appendRow(s));
+  } else {
+    // 既有表格：將 B 欄設為純文字格式，並補齊缺少的新欄位 (不覆蓋賣家自訂值)
+    const existingData = settSheet.getDataRange().getValues();
+    const existingKeys = new Set(existingData.slice(1).map(r => String(r[0]).trim()));
+    defaultSettings.forEach(s => {
+      if (!existingKeys.has(s[0])) {
+        settSheet.appendRow(s);
+      }
+    });
   }
+  // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
+  settSheet.getRange("B:B").setNumberFormat('@');
 
   return '工作表初始化完成！';
 }
@@ -326,7 +353,7 @@ function handleCreateOrder(orderData) {
       shippingFee,
       totalAmount,
       orderData.realName || orderData.recipientName || '',
-      orderData.phone || '',
+      formatPhoneAsText(orderData.phone),
       '[待出貨結帳填寫]',
       orderData.note || '',
       '未結帳',
@@ -346,7 +373,7 @@ function handleCreateOrder(orderData) {
 
     return {
       success: true,
-      message: '🎉 搶購登記成功！已為您保留商品名額！',
+      message: '🎉 登記成功！已為您保留商品名額！',
       orderId: orderId,
       subtotal: subtotal,
       productName: targetProduct[1],
@@ -387,7 +414,15 @@ function handleCheckoutOrders(checkoutData) {
     return { success: false, message: '目前沒有待出貨結帳的連線商品！' };
   }
 
-  // 計算運費 (6 大配送方式規則)
+  // 計算運費 (6 大配送方式規則，動態連動系統設定表)
+  const settings = getSystemSettings().data || {};
+  const freeThreshold = Number(settings.FREE_SHIPPING_THRESHOLD) || 3000;
+  const fee711 = Number(settings.SHIP_FEE_711_COD) || 38;
+  const feeFami = Number(settings.SHIP_FEE_FAMI_COD) || 35;
+  const feePostPrepaid = Number(settings.SHIP_FEE_POST_PREPAID) || 80;
+  const feePostCod = Number(settings.SHIP_FEE_POST_COD) || 130;
+  const feeBlackcat = Number(settings.SHIP_FEE_BLACKCAT) || 100;
+
   const method = checkoutData.shippingMethod; // 代碼
   let shippingFee = 0;
   let isPrepay = false; // 是否需先匯款
@@ -397,24 +432,24 @@ function handleCheckoutOrders(checkoutData) {
     shippingFee = 0;
     isPrepay = true;
   } else if (method === '711_COD') {
-    // 2. 7-11超商貨到付款 (賣貨便)：運費38元/滿3000元運費0元
-    shippingFee = (goodsTotal >= 3000) ? 0 : 38;
+    // 2. 7-11超商貨到付款 (賣貨便)：滿額免運
+    shippingFee = (goodsTotal >= freeThreshold) ? 0 : fee711;
     isPrepay = false;
   } else if (method === 'FAMI_COD') {
-    // 3. 全家超商貨到付款 (好賣+)：運費35元/滿3000元運費0元
-    shippingFee = (goodsTotal >= 3000) ? 0 : 35;
+    // 3. 全家超商貨到付款 (好賣+)：滿額免運
+    shippingFee = (goodsTotal >= freeThreshold) ? 0 : feeFami;
     isPrepay = false;
   } else if (method === 'POST_PREPAID') {
-    // 4. 郵局純寄件 (先匯款)：郵資80元
-    shippingFee = 80;
+    // 4. 郵局純寄件 (先匯款)
+    shippingFee = feePostPrepaid;
     isPrepay = true;
   } else if (method === 'POST_COD') {
-    // 5. 郵局貨到付款：郵資130元
-    shippingFee = 130;
+    // 5. 郵局貨到付款
+    shippingFee = feePostCod;
     isPrepay = false;
   } else if (method === 'BLACKCAT_PREPAID') {
-    // 6. 黑貓宅配到府 (先匯款)：運費100元
-    shippingFee = 100;
+    // 6. 黑貓宅配到府 (先匯款)
+    shippingFee = feeBlackcat;
     isPrepay = true;
   } else {
     shippingFee = Number(checkoutData.shippingFee) || 0;
@@ -435,7 +470,7 @@ function handleCheckoutOrders(checkoutData) {
     orderSheet.getRange(r, 11).setValue(fee); // 運費
     orderSheet.getRange(r, 12).setValue(tot); // 總額
     orderSheet.getRange(r, 13).setValue(checkoutData.recipientName || '');
-    orderSheet.getRange(r, 14).setValue(checkoutData.recipientPhone || '');
+    orderSheet.getRange(r, 14).setValue(formatPhoneAsText(checkoutData.recipientPhone));
     orderSheet.getRange(r, 15).setValue(deliveryInfo);
     if (checkoutData.note) {
       orderSheet.getRange(r, 16).setValue(checkoutData.note);
@@ -484,7 +519,7 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
     const userId = orderData.userId || 'LINE_GUEST';
     const userName = orderData.userName || '訪客';
     const realName = orderData.realName || orderData.recipientName || '';
-    const phone = orderData.phone || '';
+    const phone = formatPhoneAsText(orderData.phone);
     const data = custSheet.getDataRange().getValues();
     let found = false;
 
@@ -525,17 +560,18 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
 }
 
 /**
- * 更新顧客常用地址電話
+ * 更新顧客常用地址電話 (純文字格式防止 0 被吃掉)
  */
 function updateCustomerAddress(custSheet, userId, name, phone, address) {
   try {
     if (!custSheet) return;
+    const cleanPhone = formatPhoneAsText(phone);
     const data = custSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === userId) {
         const row = i + 1;
         if (name) custSheet.getRange(row, 3).setValue(name);
-        if (phone) custSheet.getRange(row, 4).setValue(phone);
+        if (cleanPhone) custSheet.getRange(row, 4).setValue(cleanPhone);
         if (address) custSheet.getRange(row, 5).setValue(address);
         break;
       }
@@ -543,6 +579,17 @@ function updateCustomerAddress(custSheet, userId, name, phone, address) {
   } catch (err) {
     console.error('更新顧客地址失敗: ' + err.toString());
   }
+}
+
+/**
+ * 格式化電話號碼為 Google 試算表純文字 (防止開頭 0 被自動轉為數字截斷)
+ */
+function formatPhoneAsText(phone) {
+  if (phone === null || phone === undefined || phone === '') return '';
+  const clean = String(phone).trim();
+  if (!clean) return '';
+  if (clean.startsWith("'")) return clean;
+  return "'" + clean;
 }
 
 /**
@@ -669,7 +716,58 @@ function getSystemSettings() {
     if (key) settings[key] = val;
   }
 
+  // 向下相容相容性處理：若舊試算表只有單一 BANK_INFO，自動拆解為銀行名、帳號與戶名
+  if (settings.BANK_INFO && (!settings.BANK_NAME || !settings.BANK_ACCOUNT)) {
+    const info = String(settings.BANK_INFO);
+    if (!settings.BANK_NAME) {
+      const bankMatch = info.match(/^([^\s]+(?:\s+[^\s]+)?)/);
+      settings.BANK_NAME = bankMatch ? bankMatch[1] : '808 玉山銀行';
+    }
+    if (!settings.BANK_ACCOUNT) {
+      const accMatch = info.match(/帳號[:：\s]*([0-9-]+)/);
+      settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '0123-4567-8901-2345';
+    }
+    if (!settings.BANK_ACCOUNT_HOLDER) {
+      const holderMatch = info.match(/戶名[:：\s]*([^\s]+)/);
+      settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '連線小幫手';
+    }
+  }
+
   return { success: true, data: settings };
+}
+
+/**
+ * 自動產生商品編號：
+ * 日幣商品: J + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 J2609270001)
+ * 韓元商品: K + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 K2609270001)
+ */
+function generateProductId(sheet, currency, now) {
+  const cur = String(currency || 'JPY').toUpperCase();
+  const prefixChar = (cur === 'KRW' || cur.includes('韓') || cur.includes('KOR')) ? 'K' : 'J';
+  const datePart = Utilities.formatDate(now || new Date(), 'Asia/Taipei', 'yyMMdd');
+  const basePrefix = prefixChar + datePart; // 例如 J260927 或 K260927
+
+  let maxSeq = 0;
+  if (sheet) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const existingId = String(data[i][0] || '').trim();
+      if (existingId.startsWith(basePrefix)) {
+        const suffix = existingId.substring(basePrefix.length);
+        const seqNum = parseInt(suffix, 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      }
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  let seqStr = String(nextSeq);
+  while (seqStr.length < 4) {
+    seqStr = '0' + seqStr;
+  }
+  return basePrefix + seqStr;
 }
 
 /**
@@ -685,7 +783,20 @@ function handleAddProduct(data) {
   }
 
   const now = new Date();
-  const pid = (data.id && String(data.id).trim()) || ('P' + Utilities.formatDate(now, 'Asia/Taipei', 'MMddHHmm'));
+
+  // 判斷幣別 (優先取 data.currency，或從 costNote / name / category 判斷)
+  let cur = (data.currency || '').toUpperCase();
+  if (!cur) {
+    const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
+    if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
+      cur = 'KRW';
+    } else {
+      cur = 'JPY';
+    }
+  }
+
+  // 商品編號：若賣家有自訂則使用自訂，否則依「J/K + 西元年後2碼 + 日期 + 0001」自動跳號
+  const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
 
   // 規格處理 (支援陣列或逗號字串)
   let specsArray = [];
