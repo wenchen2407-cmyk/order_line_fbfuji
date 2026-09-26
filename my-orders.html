@@ -912,7 +912,7 @@
           await fetchUserData();
           switchMainTab('tabHistory');
         } else {
-          alert('結帳失敗：' + result.message);
+          alert('結帳失敗：' + (result.message || result.error || '系統處理異常'));
         }
       } catch (e) {
         console.error(e);

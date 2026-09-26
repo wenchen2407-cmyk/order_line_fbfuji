@@ -952,7 +952,7 @@
         if (result.success) {
           showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
         } else {
-          alert('登記失敗：' + result.message);
+          alert('登記失敗：' + (result.message || result.error || '系統處理異常'));
         }
       } catch (err) {
         console.error('送單錯誤:', err);
