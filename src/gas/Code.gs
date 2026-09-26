@@ -108,6 +108,9 @@ function doGet(e) {
     } else if (action === 'getOrdersByUserId') {
       const uid = e.parameter.userId;
       result = getOrdersForUser(uid);
+    } else if (action === 'checkCustomer') {
+      const uid = e.parameter.userId;
+      result = checkCustomerExists(uid);
     } else if (action === 'getSettings') {
       result = getSystemSettings();
     } else {
@@ -122,9 +125,11 @@ function doGet(e) {
 /**
  * 處理 POST 請求
  * 支援 actions:
- * - createOrder (下單寫入 + 庫存檢查防超賣)
+ * - createOrder (連線搶購登記下單)
+ * - checkoutOrders (出貨合併結帳：6大配送方式與收件資料)
  * - reportPayment (客人回填匯款後五碼)
  * - addProduct (賣家快速上架商品)
+ * - uploadImages (圖片上傳 Google Drive)
  */
 function doPost(e) {
   try {
@@ -134,6 +139,8 @@ function doPost(e) {
     let result = {};
     if (action === 'createOrder') {
       result = handleCreateOrder(postData.data);
+    } else if (action === 'checkoutOrders') {
+      result = handleCheckoutOrders(postData.data);
     } else if (action === 'reportPayment') {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
@@ -218,13 +225,39 @@ function getProductDetail(productId) {
 }
 
 /**
- * 下單處理（含防超賣排隊鎖 LockService）
+ * 檢查是否為已建檔之老顧客
+ */
+function checkCustomerExists(userId) {
+  if (!userId) return { success: false, exists: false };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!custSheet) return { success: true, exists: false };
+
+  const data = custSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === userId) {
+      return {
+        success: true,
+        exists: true,
+        profile: {
+          userId: data[i][0],
+          userName: data[i][1],
+          realName: data[i][2],
+          phone: data[i][3],
+          defaultAddress: data[i][4]
+        }
+      };
+    }
+  }
+  return { success: true, exists: false };
+}
+
+/**
+ * 1. 連線搶購下單處理（極速登記：不需填地址與運費，防超賣排隊鎖）
  */
 function handleCreateOrder(orderData) {
-  // 建立系統排隊鎖，防止同秒數搶購導致超賣
   const lock = LockService.getScriptLock();
   try {
-    // 最多等待 10 秒鎖定
     lock.waitLock(10000);
   } catch (e) {
     return { success: false, message: '下單人數過多，請稍候重試！' };
@@ -244,7 +277,7 @@ function handleCreateOrder(orderData) {
 
     for (let i = 1; i < prodData.length; i++) {
       if (prodData[i][0] === orderData.productId) {
-        productRowIndex = i + 1; // 1-based row index
+        productRowIndex = i + 1;
         targetProduct = prodData[i];
         currentStock = Number(prodData[i][5]);
         break;
@@ -267,18 +300,18 @@ function handleCreateOrder(orderData) {
       prodSheet.getRange(productRowIndex, 10).setValue('已售完');
     }
 
-    // 3. 產生訂單編號 (格式: OD + 年月日時分秒 + 隨機3碼)
+    // 3. 產生訂單編號
     const now = new Date();
     const timeStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyMMddHHmmss');
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const orderId = 'OD' + timeStr + randomSuffix;
 
-    const unitPrice = Number(targetProduct[4]); // 特價
+    const unitPrice = Number(targetProduct[4]); // 連線代購價
     const subtotal = unitPrice * buyQty;
-    const shippingFee = Number(orderData.shippingFee || 60);
-    const totalAmount = subtotal + shippingFee;
+    const shippingFee = 0; // 連線期間運費先設為 0，出貨結帳時統一合併計算
+    const totalAmount = subtotal;
 
-    // 4. 寫入訂單明細
+    // 4. 寫入訂單明細（狀態為「連線中待出貨」，地址為待出貨填寫）
     orderSheet.appendRow([
       orderId,
       now,
@@ -292,81 +325,157 @@ function handleCreateOrder(orderData) {
       subtotal,
       shippingFee,
       totalAmount,
-      orderData.recipientName || '',
+      orderData.realName || orderData.recipientName || '',
       orderData.phone || '',
-      `[${orderData.shippingMethod || '超商取貨'}] ${orderData.deliveryAddress || ''}`,
+      '[待出貨結帳填寫]',
       orderData.note || '',
-      '待付款',
-      '', // 匯款後五碼尚未回填
-      '未出貨',
+      '未結帳',
+      '',
+      '連線中待出貨', // 訂單處理狀態
       ''
     ]);
 
     // 5. 更新或建立顧客檔案歸戶
-    updateCustomerProfile(custSheet, orderData, totalAmount, now);
+    if (orderData.realName || orderData.phone) {
+      updateCustomerProfile(custSheet, orderData, totalAmount, now);
+    }
 
     return {
       success: true,
-      message: '下單成功！',
+      message: '🎉 搶購登記成功！已為您保留商品名額！',
       orderId: orderId,
-      totalAmount: totalAmount,
+      subtotal: subtotal,
       productName: targetProduct[1],
       remainingStock: newStock
     };
 
   } finally {
-    // 釋放鎖
     lock.releaseLock();
   }
 }
 
 /**
- * 顧客檔案歸戶更新
+ * 2. 回國出貨合併結帳處理（計算 6 大配送方式運費、統一寫入收件人與地址）
  */
-function updateCustomerProfile(custSheet, orderData, orderAmount, timestamp) {
-  if (!custSheet || !orderData.userId) return;
+function handleCheckoutOrders(checkoutData) {
+  const userId = checkoutData.userId;
+  if (!userId) return { success: false, message: '缺少買家 ID' };
 
-  const data = custSheet.getDataRange().getValues();
-  let foundRow = -1;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === orderData.userId) {
-      foundRow = i + 1;
-      break;
+  const rows = orderSheet.getDataRange().getValues();
+  const pendingIndices = []; // 紀錄所有「連線中待出貨」或「未結帳」的列號
+  let goodsTotal = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    // 比對 userId，且狀態為連線中待出貨或未結帳
+    if (row[2] === userId && (row[18] === '連線中待出貨' || row[16] === '未結帳')) {
+      pendingIndices.push(i + 1); // 1-based row index
+      goodsTotal += (Number(row[9]) || 0); // 累計商品小計
     }
   }
 
-  if (foundRow !== -1) {
-    // 更新既有客戶
-    const prevOrders = Number(custSheet.getRange(foundRow, 6).getValue()) || 0;
-    const prevSpent = Number(custSheet.getRange(foundRow, 7).getValue()) || 0;
-    
-    custSheet.getRange(foundRow, 2).setValue(orderData.userName || '');
-    if (orderData.recipientName) custSheet.getRange(foundRow, 3).setValue(orderData.recipientName);
-    if (orderData.phone) custSheet.getRange(foundRow, 4).setValue(orderData.phone);
-    if (orderData.deliveryAddress) custSheet.getRange(foundRow, 5).setValue(orderData.deliveryAddress);
-    custSheet.getRange(foundRow, 6).setValue(prevOrders + 1);
-    custSheet.getRange(foundRow, 7).setValue(prevSpent + orderAmount);
-    custSheet.getRange(foundRow, 9).setValue(timestamp);
+  if (pendingIndices.length === 0) {
+    return { success: false, message: '目前沒有待出貨結帳的連線商品！' };
+  }
+
+  // 計算運費 (6 大配送方式規則)
+  const method = checkoutData.shippingMethod; // 代碼
+  let shippingFee = 0;
+  let isPrepay = false; // 是否需先匯款
+
+  if (method === 'STORE_PICKUP_FREE') {
+    // 1. 超商純取貨 (需先匯款)：不限購買金額，運費0元
+    shippingFee = 0;
+    isPrepay = true;
+  } else if (method === '711_COD') {
+    // 2. 7-11超商貨到付款 (賣貨便)：運費38元/滿3000元運費0元
+    shippingFee = (goodsTotal >= 3000) ? 0 : 38;
+    isPrepay = false;
+  } else if (method === 'FAMI_COD') {
+    // 3. 全家超商貨到付款 (好賣+)：運費35元/滿3000元運費0元
+    shippingFee = (goodsTotal >= 3000) ? 0 : 35;
+    isPrepay = false;
+  } else if (method === 'POST_PREPAID') {
+    // 4. 郵局純寄件 (先匯款)：郵資80元
+    shippingFee = 80;
+    isPrepay = true;
+  } else if (method === 'POST_COD') {
+    // 5. 郵局貨到付款：郵資130元
+    shippingFee = 130;
+    isPrepay = false;
+  } else if (method === 'BLACKCAT_PREPAID') {
+    // 6. 黑貓宅配到府 (先匯款)：運費100元
+    shippingFee = 100;
+    isPrepay = true;
   } else {
-    // 新增顧客
-    custSheet.appendRow([
-      orderData.userId,
-      orderData.userName || '',
-      orderData.recipientName || '',
-      orderData.phone || '',
-      orderData.deliveryAddress || '',
-      1,
-      orderAmount,
-      timestamp,
-      timestamp,
-      '正常'
-    ]);
+    shippingFee = Number(checkoutData.shippingFee) || 0;
+  }
+
+  const finalTotalAmount = goodsTotal + shippingFee;
+  const payStatus = isPrepay ? '待付款' : '貨到付款待出貨';
+  const orderStatus = '已完成結帳待出貨';
+  const deliveryInfo = `[${checkoutData.shippingMethodName || method}] ${checkoutData.recipientAddress || ''}`;
+
+  // 更新所有待結帳列：第一筆記單筆運費，其餘記 0，避免運費重複加總
+  for (let idx = 0; idx < pendingIndices.length; idx++) {
+    const r = pendingIndices[idx];
+    const sub = Number(orderSheet.getRange(r, 10).getValue()) || 0;
+    const fee = (idx === 0) ? shippingFee : 0; // 只有第一張帶運費
+    const tot = sub + fee;
+
+    orderSheet.getRange(r, 11).setValue(fee); // 運費
+    orderSheet.getRange(r, 12).setValue(tot); // 總額
+    orderSheet.getRange(r, 13).setValue(checkoutData.recipientName || '');
+    orderSheet.getRange(r, 14).setValue(checkoutData.recipientPhone || '');
+    orderSheet.getRange(r, 15).setValue(deliveryInfo);
+    if (checkoutData.note) {
+      orderSheet.getRange(r, 16).setValue(checkoutData.note);
+    }
+    orderSheet.getRange(r, 17).setValue(payStatus);
+    orderSheet.getRange(r, 19).setValue(orderStatus);
+  }
+
+  // 更新顧客歸戶地址
+  if (custSheet && checkoutData.recipientAddress) {
+    updateCustomerAddress(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone, checkoutData.recipientAddress);
+  }
+
+  return {
+    success: true,
+    message: '出貨結帳資料已確認送出！',
+    orderCount: pendingIndices.length,
+    goodsTotal: goodsTotal,
+    shippingFee: shippingFee,
+    totalAmount: finalTotalAmount,
+    isPrepay: isPrepay,
+    shippingMethod: method,
+    shippingMethodName: checkoutData.shippingMethodName
+  };
+}
+
+/**
+ * 更新顧客常用地址電話
+ */
+function updateCustomerAddress(custSheet, userId, name, phone, address) {
+  const data = custSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === userId) {
+      const row = i + 1;
+      if (name) custSheet.getRange(row, 3).setValue(name);
+      if (phone) custSheet.getRange(row, 4).setValue(phone);
+      if (address) custSheet.getRange(row, 5).setValue(address);
+      break;
+    }
   }
 }
 
 /**
- * 客人回填匯款後五碼
+ * 3. 客人回填匯款後五碼（支援依 userId 一次性更新所有待付款訂單）
  */
 function handleReportPayment(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -374,56 +483,102 @@ function handleReportPayment(data) {
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
   const rows = orderSheet.getDataRange().getValues();
+  let updatedCount = 0;
+
   for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === data.orderId) {
+    const isTarget = (data.orderId && rows[i][0] === data.orderId) || 
+                     (data.userId && rows[i][2] === data.userId && (rows[i][16] === '待付款' || rows[i][16] === '未結帳'));
+    if (isTarget) {
       const rowIndex = i + 1;
-      // 填入後五碼與更新付款狀態為「已回報對帳中」
       orderSheet.getRange(rowIndex, 17).setValue('已回報待對帳');
       orderSheet.getRange(rowIndex, 18).setValue("'" + String(data.lastFiveDigits));
       if (data.note) {
         orderSheet.getRange(rowIndex, 20).setValue('買家留言: ' + data.note);
       }
-      return { success: true, message: '回報成功！賣家將於核對入帳後為您安排代購出貨。' };
+      updatedCount++;
     }
   }
 
-  return { success: false, message: '查無此訂單編號' };
+  if (updatedCount > 0) {
+    return { success: true, message: `已成功回報匯款後五碼 (${data.lastFiveDigits})！賣家核對入帳後將為您準備出貨包裹。` };
+  }
+
+  return { success: false, message: '查無符合條件的待付款訂單' };
 }
 
 /**
- * 查詢特定使用者的所有歷史訂單
+ * 4. 查詢使用者的訂單清單（區分待出貨結帳商品與歷史訂單，附帶顧客資訊與銀行帳戶）
  */
 function getOrdersForUser(userId) {
   if (!userId) return { success: false, message: '缺少 userId' };
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
   const rows = orderSheet.getDataRange().getValues();
-  const userOrders = [];
+  const pendingCheckoutOrders = []; // 待出貨結帳（連線中登記）
+  const completedOrders = [];       // 已完成結帳或歷史訂單
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row[2] === userId) {
-      userOrders.push({
+      const item = {
         orderId: row[0],
         orderDate: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : row[1],
         productId: row[4],
         productName: row[5],
         spec: row[6],
         quantity: row[7],
+        unitPrice: row[8],
         subtotal: row[9],
         shippingFee: row[10],
         totalAmount: row[11],
+        recipientName: row[12],
+        phone: row[13],
+        deliveryAddress: row[14],
+        note: row[15],
         paymentStatus: row[16],
         lastFive: row[17],
         shippingStatus: row[18]
-      });
+      };
+
+      if (row[18] === '連線中待出貨' || row[16] === '未結帳') {
+        pendingCheckoutOrders.push(item);
+      } else {
+        completedOrders.push(item);
+      }
     }
   }
 
-  return { success: true, data: userOrders.reverse() }; // 最新訂單排在前面
+  // 取得顧客檔案
+  let customerProfile = { userId: userId, realName: '', phone: '', defaultAddress: '' };
+  if (custSheet) {
+    const custData = custSheet.getDataRange().getValues();
+    for (let c = 1; c < custData.length; c++) {
+      if (custData[c][0] === userId) {
+        customerProfile.userName = custData[c][1];
+        customerProfile.realName = custData[c][2];
+        customerProfile.phone = custData[c][3];
+        customerProfile.defaultAddress = custData[c][4];
+        break;
+      }
+    }
+  }
+
+  // 取得系統設定
+  const settings = getSystemSettings().data || {};
+
+  return { 
+    success: true, 
+    data: {
+      pendingCheckoutOrders: pendingCheckoutOrders,
+      completedOrders: completedOrders.reverse(),
+      customerProfile: customerProfile,
+      settings: settings
+    }
+  };
 }
 
 /**

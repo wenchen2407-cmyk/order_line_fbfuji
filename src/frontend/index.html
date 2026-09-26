@@ -546,91 +546,70 @@
           <button type="button" class="qty-btn" id="btnPlus">+</button>
         </div>
       </div>
-    </div>
-
-    <!-- 物流方式選擇 -->
-    <div class="form-section">
-      <div class="section-title">選擇配送方式</div>
-      <div class="form-group">
-        <div class="shipping-options">
-          <label class="shipping-card active" id="shipOptStore">
-            <input type="radio" name="shippingMethod" value="STORE_PICKUP" checked onchange="changeShippingMethod('STORE_PICKUP', 60)">
-            <div class="shipping-info">
-              <div class="shipping-name">超商純取貨 (需先匯款)</div>
-              <div class="shipping-desc">7-11 / 全家 店到店</div>
-            </div>
-            <div class="shipping-price">NT$ 60</div>
-          </label>
-
-          <label class="shipping-card" id="shipOptCod">
-            <input type="radio" name="shippingMethod" value="COD_MART" onchange="changeShippingMethod('COD_MART', 38)">
-            <div class="shipping-info">
-              <div class="shipping-name">超商貨到付款 (賣貨便 / 好賣+)</div>
-              <div class="shipping-desc">下單後提供專屬賣場結帳</div>
-            </div>
-            <div class="shipping-price">NT$ 38</div>
-          </label>
-
-          <label class="shipping-card" id="shipOptHome">
-            <input type="radio" name="shippingMethod" value="HOME_DELIVERY" onchange="changeShippingMethod('HOME_DELIVERY', 100)">
-            <div class="shipping-info">
-              <div class="shipping-name">郵局 / 宅配到府 (先匯款)</div>
-              <div class="shipping-desc">黑貓宅配或郵局包裹直送到家</div>
-            </div>
-            <div class="shipping-price">NT$ 100</div>
-          </label>
-        </div>
+      <div class="form-group" style="margin-top: 14px;">
+        <label class="form-label">訂單備註 (選填)</label>
+        <textarea id="custNote" class="form-textarea" rows="2" placeholder="如有尺寸、顏色替補順位等特殊需求可備註"></textarea>
       </div>
     </div>
 
-    <!-- 寄件資料 (支援記憶功能) -->
-    <div class="form-section">
-      <div class="section-title">收件人資訊（下次自動帶入）</div>
-      <div class="form-group">
-        <label class="form-label">收件人真實姓名 *</label>
-        <input type="text" id="custName" class="form-input" placeholder="請填寫證件相符全名">
-      </div>
-      <div class="form-group">
-        <label class="form-label">手機號碼 *</label>
-        <input type="tel" id="custPhone" class="form-input" placeholder="09xxxxxxxx">
-      </div>
-      <div class="form-group" id="addressGroup">
-        <label class="form-label" id="addressLabel">取件超商門市名稱與店號 *</label>
-        <input type="text" id="custAddress" class="form-input" placeholder="例：7-11 鑫泰門市 (店號: 123456)">
-      </div>
-      <div class="form-group">
-        <label class="form-label">訂單備註</label>
-        <textarea id="custNote" class="form-textarea" rows="2" placeholder="如有特殊需求或賣貨便帳號請備註"></textarea>
-      </div>
+    <div style="background: #f1f5f9; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #64748b; line-height: 1.6;">
+      💡 <b>連線代購搶購須知</b>：連線期間僅需登記商品與數量，回國後統一於【出貨結帳清單】選擇配送方式（超商純取免運 / 貨到付款滿額免運等）並合併填寫收件地址！
     </div>
   </div>
 
-  <!-- 底部固定下單 Bar -->
+  <!-- 底部固定搶購 Bar -->
   <div class="bottom-bar">
     <div class="bottom-bar-inner">
       <div class="total-summary">
-        <span class="total-label">總金額 (含運費)</span>
+        <span class="total-label">商品金額小計</span>
         <span class="total-price" id="totalDisplay">NT$ 0</span>
       </div>
-      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>確認下單</button>
+      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>🚀 確認搶購登記</button>
     </div>
   </div>
 
-  <!-- 訂購成功彈跳視窗 -->
-  <div class="modal-overlay" id="successModal">
-    <div class="modal-content">
-      <div class="success-icon">✓</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">訂單成立！</h2>
-      <p style="font-size: 13px; color: #64748b;">感謝您的訂購，訂單明細已記錄至系統。</p>
-      
-      <div class="bank-card">
-        <div style="font-weight: 700; color: #1e293b; margin-bottom: 4px;">匯款帳號資料：</div>
-        <div id="bankInfoText" style="color: #334155; line-height: 1.5;">822 中國信託 12345-67890123</div>
-        <div style="margin-top: 8px; color: #e11d48; font-weight: 600;">應付總金額：<span id="modalTotal"></span></div>
+  <!-- 首次登記基本資料彈跳視窗 (新客只需填寫一次) -->
+  <div class="modal-overlay" id="firstTimeProfileModal">
+    <div class="modal-content" style="text-align: left;">
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">📝 首次連線身分登記</h2>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 16px; text-align: center;">僅需填寫一次！回國後將依此資料為您核對訂單與出貨：</p>
+
+      <div class="form-group">
+        <label class="form-label">LINE 顯示暱稱</label>
+        <input type="text" id="regLineName" class="form-input" placeholder="自動帶入中..." style="background: #f8fafc;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">真實姓名 *</label>
+        <input type="text" id="regRealName" class="form-input" placeholder="請填寫證件相符真實姓名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">手機號碼 *</label>
+        <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
       </div>
 
-      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">匯款後請至「我的訂單」回報後五碼以利出貨。</p>
-      <button type="button" class="btn-submit" style="width: 100%;" onclick="goToMyOrders()">查看我的訂單 / 回報五碼</button>
+      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">✓ 確認並送出搶購</button>
+      <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
+    </div>
+  </div>
+
+  <!-- 搶購登記成功彈跳視窗 -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-content">
+      <div class="success-icon">🎉</div>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">搶購登記成功！</h2>
+      <p style="font-size: 13px; color: #475569; line-height: 1.6;">已為您保留商品名額！本檔連線商品將於回國後統一出貨，屆時請至【出貨結帳清單】選擇配送方式並填寫地址即可！</p>
+
+      <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
+        <div>商品品名：<b id="modalProdName">-</b></div>
+        <div>預約規格：<span id="modalSpec">-</span></div>
+        <div>預約數量：<span id="modalQty">-</span> 件</div>
+        <div style="margin-top: 4px; color: var(--accent); font-weight: 700;">小計金額：<span id="modalSubtotal">NT$ 0</span></div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 16px;">
+        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #e2e8f0; color: #334155; border: none; font-weight: 700; cursor: pointer;" onclick="continueShopping()">繼續逛其他商品</button>
+        <button type="button" class="btn-submit" style="flex: 1;" onclick="goToMyOrders()">查看出貨清單</button>
+      </div>
     </div>
   </div>
 
@@ -832,7 +811,7 @@
       btnElement.classList.add('active');
     }
 
-    // 4. 數量增減與金額計算
+    // 4. 數量增減與金額計算 (純商品小計，運費留待回國出貨結帳)
     function setupEventListeners() {
       document.getElementById('btnMinus').onclick = () => {
         if (currentQty > 1) {
@@ -848,106 +827,116 @@
           document.getElementById('inputQty').value = currentQty;
           updateTotal();
         } else {
-          alert('已達到目前庫存上限！');
+          alert('已達到目前現貨/連線登記上限！');
         }
       };
 
-      document.getElementById('btnSubmitOrder').onclick = submitOrder;
+      document.getElementById('btnSubmitOrder').onclick = handleClickSubmit;
     }
 
     function updateTotal() {
       if (!currentProduct) return;
       const subtotal = currentProduct.price * currentQty;
-      const total = subtotal + currentShippingFee;
-      document.getElementById('totalDisplay').textContent = `NT$ ${total.toLocaleString()}`;
+      document.getElementById('totalDisplay').textContent = `NT$ ${subtotal.toLocaleString()}`;
     }
 
-    let currentShippingMethod = '超商純取貨 (7-11/全家)';
-
-    function changeShippingMethod(methodKey, fee) {
-      currentShippingFee = fee;
-      document.querySelectorAll('.shipping-card').forEach(c => c.classList.remove('active'));
-
-      const addressLabel = document.getElementById('addressLabel');
-      const addressInput = document.getElementById('custAddress');
-
-      if (methodKey === 'STORE_PICKUP') {
-        document.getElementById('shipOptStore').classList.add('active');
-        currentShippingMethod = '超商純取貨 (需先匯款)';
-        addressLabel.textContent = '取件超商門市名稱與店號 *';
-        addressInput.placeholder = '例：7-11 鑫泰門市 (店號: 123456)';
-      } else if (methodKey === 'COD_MART') {
-        document.getElementById('shipOptCod').classList.add('active');
-        currentShippingMethod = '超商貨到付款 (賣貨便/好賣+)';
-        addressLabel.textContent = '賣貨便/好賣+ 會員手機或超商門市 *';
-        addressInput.placeholder = '例：7-11 鑫泰門市，下單後將發送賣場連結';
-      } else if (methodKey === 'HOME_DELIVERY') {
-        document.getElementById('shipOptHome').classList.add('active');
-        currentShippingMethod = '郵局 / 宅配到府 (需先匯款)';
-        addressLabel.textContent = '宅配詳細收件地址 *';
-        addressInput.placeholder = '例：台北市信義區信義路五段7號89樓';
+    // 5. 顧客身分快取管理 (支援老客秒單)
+    function getSavedCustomerProfile() {
+      try {
+        const raw = localStorage.getItem('line_order_customer_profile');
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
       }
-      updateTotal();
     }
 
-    // 5. 記憶收件資料
+    function saveCustomerProfile(profile) {
+      localStorage.setItem('line_order_customer_profile', JSON.stringify(profile));
+    }
+
     function loadSavedCustomerInfo() {
-      const saved = localStorage.getItem('line_order_customer_cache');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          if (data.name) document.getElementById('custName').value = data.name;
-          if (data.phone) document.getElementById('custPhone').value = data.phone;
-          if (data.address) document.getElementById('custAddress').value = data.address;
-        } catch (e) {}
+      const profile = getSavedCustomerProfile();
+      if (profile) {
+        if (profile.realName) document.getElementById('regRealName').value = profile.realName;
+        if (profile.phone) document.getElementById('regPhone').value = profile.phone;
       }
     }
 
-    function saveCustomerInfo(name, phone, address) {
-      localStorage.setItem('line_order_customer_cache', JSON.stringify({ name, phone, address }));
+    // 6. 點擊「確認搶購登記」：新客跳彈窗，老客 0.5 秒光速送單！
+    function handleClickSubmit() {
+      const profile = getSavedCustomerProfile();
+      if (profile && profile.realName && profile.phone) {
+        // 已有完整資料之老客人：直接秒單！
+        executeCreateOrder(profile);
+      } else {
+        // 第一次參加連線之新客人：跳出彈窗登記姓名電話
+        document.getElementById('regLineName').value = currentUser.displayName || '';
+        document.getElementById('firstTimeProfileModal').classList.add('active');
+      }
     }
 
-    // 6. 提交訂單
-    async function submitOrder() {
-      const name = document.getElementById('custName').value.trim();
-      const phone = document.getElementById('custPhone').value.trim();
-      const address = document.getElementById('custAddress').value.trim();
-      const note = document.getElementById('custNote').value.trim();
+    function closeProfileModal() {
+      document.getElementById('firstTimeProfileModal').classList.remove('active');
+    }
 
-      if (!name || !phone || !address) {
-        alert('請填寫完整的收件人姓名、手機及取件門市/地址！');
+    // 新客確認身分並送出
+    function confirmProfileAndSubmit() {
+      const lineName = document.getElementById('regLineName').value.trim() || currentUser.displayName || '訪客';
+      const realName = document.getElementById('regRealName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+
+      if (!realName) {
+        alert('請填寫「真實姓名」，以利回國後核對訂單與寄件！');
+        document.getElementById('regRealName').focus();
         return;
       }
 
-      saveCustomerInfo(name, phone, address);
+      if (!phone || !/^09\d{8}$/.test(phone.replace(/[-\s]/g, ''))) {
+        alert('請填寫正確的手機號碼 (例如：0912345678)！');
+        document.getElementById('regPhone').focus();
+        return;
+      }
 
+      const profile = {
+        userId: currentUser.userId,
+        userName: lineName,
+        realName: realName,
+        phone: phone.replace(/[-\s]/g, '')
+      };
+
+      saveCustomerProfile(profile);
+      closeProfileModal();
+      executeCreateOrder(profile);
+    }
+
+    // 7. 真正執行送單至 Google 試算表 (狀態: 連線中待出貨)
+    async function executeCreateOrder(profile) {
       const submitBtn = document.getElementById('btnSubmitOrder');
       submitBtn.disabled = true;
-      submitBtn.textContent = '處理訂單中...';
+      submitBtn.textContent = '🚀 搶購登記中...';
 
+      const note = document.getElementById('custNote').value.trim();
       const orderPayload = {
         action: 'createOrder',
         data: {
           productId: currentProduct.id,
           spec: selectedSpec,
           quantity: currentQty,
-          shippingMethod: currentShippingMethod,
-          shippingFee: currentShippingFee,
           userId: currentUser.userId,
-          userName: currentUser.displayName,
-          recipientName: name,
-          phone: phone,
-          deliveryAddress: address,
+          userName: profile.userName || currentUser.displayName,
+          realName: profile.realName,
+          phone: profile.phone,
           note: note
         }
       };
 
       try {
-        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
-          // 模擬模式
+        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
           setTimeout(() => {
-            showSuccessModal('OD' + Date.now(), (currentProduct.price * currentQty) + currentShippingFee);
-          }, 800);
+            showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 確認搶購登記';
+          }, 600);
           return;
         }
 
@@ -957,28 +946,36 @@
         });
         const result = await res.json();
 
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 確認搶購登記';
+
         if (result.success) {
-          showSuccessModal(result.orderId, result.totalAmount);
+          showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
         } else {
-          alert('下單失敗：' + result.message);
-          submitBtn.disabled = false;
-          submitBtn.textContent = '確認下單';
+          alert('登記失敗：' + result.message);
         }
       } catch (err) {
-        console.error('送出錯誤:', err);
-        alert('網路連線異常，請稍後再試！');
+        console.error('送單錯誤:', err);
+        alert('網路連線逾時，請檢查網路或稍候再試！');
         submitBtn.disabled = false;
-        submitBtn.textContent = '確認下單';
+        submitBtn.textContent = '🚀 確認搶購登記';
       }
     }
 
-    function showSuccessModal(orderId, total) {
-      document.getElementById('modalTotal').textContent = `NT$ ${total.toLocaleString()}`;
+    function showSuccessModal(prodName, spec, qty, subtotal) {
+      document.getElementById('modalProdName').textContent = prodName;
+      document.getElementById('modalSpec').textContent = spec;
+      document.getElementById('modalQty').textContent = qty;
+      document.getElementById('modalSubtotal').textContent = `NT$ ${subtotal.toLocaleString()}`;
       document.getElementById('successModal').classList.add('active');
     }
 
+    function continueShopping() {
+      document.getElementById('successModal').classList.remove('active');
+    }
+
     function goToMyOrders() {
-      window.location.href = `my-orders.html?uid=${currentUser.userId}`;
+      window.location.href = `my-orders.html?uid=${encodeURIComponent(currentUser.userId)}`;
     }
   </script>
 </body>
