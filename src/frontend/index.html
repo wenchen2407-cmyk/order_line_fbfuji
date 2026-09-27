@@ -513,9 +513,14 @@
     </div>
 
     <!-- LINE 使用者資訊 (LIFF 自動帶入) -->
-    <div class="user-badge" id="userBadge">
-      <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
-      <span id="userName">正在驗證 LINE 帳號...</span>
+    <div class="user-badge" id="userBadge" style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
+        <span id="userName">正在驗證 LINE 帳號...</span>
+      </div>
+      <button type="button" onclick="manualResetProfile()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="手動清空快取以重新觸發首次建立彈窗">
+        🔄 重設資料測試
+      </button>
     </div>
 
     <!-- 商品主卡片 -->
@@ -654,8 +659,9 @@
       loadSavedCustomerInfo();
       setupEventListeners();
       await initLiff();
+      // 在 initLiff 完成後立即觸發新客彈窗檢查，並與商品載入並行
+      checkFirstTimeCustomerOnLoad();
       await fetchProductData();
-      await checkFirstTimeCustomerOnLoad();
     };
 
     // 1. 初始化 LINE LIFF
@@ -894,34 +900,67 @@
 
     let isSubmittingFromButton = false;
 
-    // 6. 第一次點開商品卡時，若無聯絡資料自動跳出彈窗建立
+    // 手動重設本地快取並重新跳出建立視窗 (方便賣家測試)
+    function manualResetProfile() {
+      localStorage.removeItem('line_order_customer_profile');
+      const rName = document.getElementById('regRealName');
+      const rPhone = document.getElementById('regPhone');
+      if (rName) rName.value = '';
+      if (rPhone) rPhone.value = '';
+      document.getElementById('regLineName').value = currentUser.displayName || '';
+      isSubmittingFromButton = false;
+      document.getElementById('firstTimeProfileModal').classList.add('active');
+    }
+
+    // 6. 第一次點開商品卡時，檢查是否為新客並自動跳出彈窗建立
     async function checkFirstTimeCustomerOnLoad() {
-      const profile = getSavedCustomerProfile();
-      if (profile && profile.realName && profile.phone) {
-        // 已有完整資料，不需跳出
-        return;
+      // (1) 支援網址參數強制重設 (?reset=1 或 ?new=1 或 ?clear=1)
+      const urlParams = new URLSearchParams(window.location.search);
+      const isForceReset = urlParams.get('reset') === '1' || urlParams.get('new') === '1' || urlParams.get('clear') === '1';
+      if (isForceReset) {
+        localStorage.removeItem('line_order_customer_profile');
+        const rName = document.getElementById('regRealName');
+        const rPhone = document.getElementById('regPhone');
+        if (rName) rName.value = '';
+        if (rPhone) rPhone.value = '';
       }
 
-      // 預填 LINE 暱稱
-      document.getElementById('regLineName').value = currentUser.displayName || '';
+      let profile = isForceReset ? null : getSavedCustomerProfile();
 
-      // 若有後端 GAS，嘗試查詢顧客檔案是否已存在於試算表
+      // (2) 以 Google 試算表【顧客歸戶】真實資料為準 (避免試算表已清空但手機仍殘留舊快取)
       if (currentUser.userId && currentUser.userId !== 'TEST_USER_999' && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
         try {
           const res = await fetch(`${CONFIG.GAS_API_URL}?action=checkCustomer&userId=${encodeURIComponent(currentUser.userId)}`);
           const json = await res.json();
-          if (json.success && json.exists && json.profile && json.profile.realName && json.profile.phone) {
-            saveCustomerProfile(json.profile);
-            loadSavedCustomerInfo();
-            return;
+          if (json.success) {
+            if (json.exists && json.profile && json.profile.realName && json.profile.phone) {
+              // 試算表確實有此顧客：同步更新本地快取，視為老客不彈窗
+              saveCustomerProfile(json.profile);
+              loadSavedCustomerInfo();
+              return;
+            } else {
+              // 試算表中查無此顧客（例如管理員剛清空了顧客表）：清除本地殘留快取！
+              localStorage.removeItem('line_order_customer_profile');
+              const rName = document.getElementById('regRealName');
+              const rPhone = document.getElementById('regPhone');
+              if (rName) rName.value = '';
+              if (rPhone) rPhone.value = '';
+              profile = null;
+            }
           }
         } catch (e) {
-          console.warn('線上顧客檢查略過:', e);
+          console.warn('線上顧客檢查異常:', e);
         }
       }
 
-      // 無顧客資料：在首次進入商品卡時立即彈跳視窗引導建立
+      // (3) 檢查本地資料完整性
+      if (profile && profile.realName && profile.phone) {
+        return; // 已有完整真實姓名與電話，不跳出
+      }
+
+      // (4) 判定為新客人：自動帶入 LINE 暱稱並跳出「首次使用，請建立聯絡資料」彈窗
       isSubmittingFromButton = false;
+      document.getElementById('regLineName').value = currentUser.displayName || '';
       document.getElementById('firstTimeProfileModal').classList.add('active');
     }
 

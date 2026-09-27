@@ -150,6 +150,40 @@ function setupSpreadsheet() {
 }
 
 /**
+ * 一鍵清空【訂單明細】與【顧客歸戶】所有資料（自動保留第 1 列標題列）
+ * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」
+ */
+function clearOrdersAndCustomers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. 清空訂單明細（保留第 1 列標題列）
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  if (orderSheet) {
+    const lastRow = orderSheet.getLastRow();
+    if (lastRow > 1) {
+      orderSheet.deleteRows(2, lastRow - 1);
+      console.log(`已清空【${SHEET_NAMES.ORDERS}】共 ${lastRow - 1} 筆資料`);
+    } else {
+      console.log(`【${SHEET_NAMES.ORDERS}】目前已無訂單資料`);
+    }
+  }
+
+  // 2. 清空顧客歸戶（保留第 1 列標題列）
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (custSheet) {
+    const lastRow = custSheet.getLastRow();
+    if (lastRow > 1) {
+      custSheet.deleteRows(2, lastRow - 1);
+      console.log(`已清空【${SHEET_NAMES.CUSTOMERS}】共 ${lastRow - 1} 筆資料`);
+    } else {
+      console.log(`【${SHEET_NAMES.CUSTOMERS}】目前已無顧客資料`);
+    }
+  }
+
+  return '✅ 已成功清空【訂單明細】與【顧客歸戶】所有資料！';
+}
+
+/**
  * 處理 GET 請求
  * 支援 actions: 
  * - getProducts (取得所有上架中商品)
