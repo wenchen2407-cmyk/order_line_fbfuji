@@ -235,7 +235,7 @@
         <div class="user-sub" id="displayUserSub">正在連線會員歸戶資料...</div>
       </div>
       <a href="catalog.html" class="btn-top-catalog" id="topCatalogLink">
-        🛍️ 商品清單
+        🛍️ 更多商品
       </a>
     </div>
 
@@ -272,7 +272,7 @@
         <div style="font-size: 40px; margin-bottom: 12px;">🛍️</div>
         <div style="font-weight: 800; color: #1e293b; font-size: 16px;">目前尚無連線訂購中的商品！</div>
         <p style="font-size: 13px; color: #64748b; margin-top: 6px; line-height: 1.6;">您可以在群組中登記喜歡商品，若沒有看到想要的商品也能到群組中用圖片許願！</p>
-        <a href="catalog.html" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 前往連線商品清單</a>
+        <a href="catalog.html" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 挑選更多商品</a>
       </div>
 
       <!-- 2. 連線採購進度與出貨須知說明卡片 -->
@@ -282,7 +282,7 @@
         </div>
         <div style="font-size: 12.5px; color: #475569; line-height: 1.8;">
           <div style="margin-bottom: 8px;">
-            <b>• ⏳ 連線登記中：</b>正在當地現場採購中
+            <b>• ⏳ 連線登記：</b>正在當地現場採購中
           </div>
           <div style="margin-bottom: 8px;">
             <b>• 🎉 採購成功：</b>已完成採買
@@ -298,10 +298,10 @@
           </div>
         </div>
 
-        <!-- 底部前往商品清單按鈕 -->
+        <!-- 底部前往更多商品按鈕 -->
         <div style="margin-top: 18px;">
           <a href="catalog.html" id="btnContinueShoppingOrders" style="display: block; width: 100%; box-sizing: border-box; background: var(--primary); color: #fff; text-align: center; padding: 13px; border-radius: 12px; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);">
-            🛍️ 繼續逛連線商品清單
+            🛍️ 繼續挑選更多商品
           </a>
         </div>
       </div>
@@ -414,7 +414,7 @@
       } else if (s.includes('完成') || s.includes('出貨') || s.includes('寄出')) {
         return `<span class="status-badge badge-info">🚚 已完成出貨</span>`;
       } else {
-        return `<span class="status-badge badge-pending">⏳ 連線登記中</span>`;
+        return `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
       }
     }
 

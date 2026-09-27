@@ -386,6 +386,14 @@
           <div id="loadingBox" style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px;">正在從 Google 試算表載入商品...</div>
           <div class="product-select-list" id="productListContainer"></div>
 
+          <div style="margin-top: 14px; margin-bottom: 8px;">
+            <label class="form-label" style="font-size: 12px; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
+              <span>📢 LINE 群組推播標題 (通知外層文字)</span>
+              <span style="font-size: 11px; color: #64748b; font-weight: normal;">可依連線情境自訂</span>
+            </label>
+            <input type="text" id="customPushTitle" class="input-text" style="padding: 9px 12px; font-size: 13px;" value="【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥" placeholder="例：【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥">
+          </div>
+
           <button type="button" class="btn-action" id="btnShareBatch" onclick="shareBatchCarousel()">
             <span id="shareBtnText">🚀 一鍵打包推播至 LINE 群組 (已選 0 件)</span>
           </button>
@@ -965,9 +973,13 @@
       const bubbles = selected.map(p => createBubbleJson(p));
 
       // 構建 Flex Message (單品用 bubble，多品用 carousel)
+      const titleInput = document.getElementById('customPushTitle');
+      const customTitle = titleInput ? titleInput.value.trim() : '';
+      const fallbackTitle = '【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥';
+
       const flexPayload = {
         type: 'flex',
-        altText: `【連線代購】今日主打 ${selected.length} 件精選好物推薦！`,
+        altText: customTitle || fallbackTitle,
         contents: selected.length === 1 ? bubbles[0] : {
           type: 'carousel',
           contents: bubbles

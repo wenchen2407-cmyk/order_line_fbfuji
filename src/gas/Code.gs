@@ -70,16 +70,16 @@ function setupSpreadsheet() {
   // 為 S 欄建立「採購狀態快速下拉選單」
   try {
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['連線登記中', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨'], true)
+      .requireValueInList(['連線登記', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨'], true)
       .setAllowInvalid(true)
       .build();
     orderSheet.getRange("S2:S1000").setDataValidation(statusRule);
 
-    // 既有訂單中，若有舊的「連線中待出貨」，自動替換為「連線登記中」
+    // 既有訂單中，若有舊的「連線中待出貨」或「連線登記中」，自動替換為「連線登記」
     const orderData = orderSheet.getDataRange().getValues();
     for (let r = 1; r < orderData.length; r++) {
-      if (orderData[r][18] === '連線中待出貨') {
-        orderSheet.getRange(r + 1, 19).setValue('連線登記中');
+      if (orderData[r][18] === '連線中待出貨' || orderData[r][18] === '連線登記中') {
+        orderSheet.getRange(r + 1, 19).setValue('連線登記');
       }
     }
   } catch (e) {
@@ -393,7 +393,7 @@ function handleCreateOrder(orderData) {
       orderData.note || '',
       '未結帳',
       '',
-      '連線登記中', // 訂單採購/出貨處理狀態
+      '連線登記', // 訂單採購/出貨處理狀態
       ''
     ]);
 

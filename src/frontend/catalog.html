@@ -550,9 +550,9 @@
       filtered.forEach(prod => {
         const card = document.createElement('a');
         card.className = 'prod-card';
-        // 點擊卡片跳轉至下單頁，帶入 pid 與 uid
+        // 點擊卡片跳轉至下單頁，帶入 p 與 uid
         const uidParam = currentUserId ? `&uid=${encodeURIComponent(currentUserId)}` : '';
-        card.href = `index.html?pid=${encodeURIComponent(prod.id)}${uidParam}`;
+        card.href = `index.html?p=${encodeURIComponent(prod.id)}${uidParam}`;
 
         const imgUrl = getSafeImageUrl(prod.imageUrl);
         const priceNum = Number(prod.price) || 0;

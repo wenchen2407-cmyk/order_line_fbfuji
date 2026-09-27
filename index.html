@@ -502,6 +502,16 @@
 <body>
 
   <div class="container">
+    <!-- 頂部快速導航 Bar (返回更多商品 / 訂購清單) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
+      <a href="catalog.html" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        🛍️ 更多商品
+      </a>
+      <a href="my-orders.html" id="linkToMyOrders" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        📦 訂購清單
+      </a>
+    </div>
+
     <!-- LINE 使用者資訊 (LIFF 自動帶入) -->
     <div class="user-badge" id="userBadge">
       <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
@@ -636,9 +646,9 @@
       pictureUrl: 'https://via.placeholder.com/40'
     };
 
-    // 網址參數取得指定商品 ID
+    // 網址參數取得指定商品 ID (相容 ?p=, ?pid=, ?productId=, ?id=)
     const urlParams = new URLSearchParams(window.location.search);
-    const targetProductId = urlParams.get('p') || 'P001';
+    const targetProductId = urlParams.get('p') || urlParams.get('pid') || urlParams.get('productId') || urlParams.get('id') || 'P001';
 
     // 初始化頁面
     window.onload = async () => {
@@ -665,6 +675,13 @@
 
           document.getElementById('userAvatar').src = currentUser.pictureUrl;
           document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
+
+          // 同步導航按鈕帶入 uid
+          const uidParam = `?uid=${encodeURIComponent(currentUser.userId)}`;
+          const catBtn = document.getElementById('linkBackToCatalog');
+          if (catBtn) catBtn.href = `catalog.html${uidParam}`;
+          const ordBtn = document.getElementById('linkToMyOrders');
+          if (ordBtn) ordBtn.href = `my-orders.html${uidParam}`;
         } else {
           liff.login();
         }
