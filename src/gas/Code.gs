@@ -738,6 +738,34 @@ function getOrdersForUser(userId) {
 }
 
 /**
+ * 檢查顧客是否已在試算表顧客資料庫建檔
+ */
+function checkCustomerExists(userId) {
+  if (!userId) return { success: false, exists: false };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!custSheet) return { success: false, exists: false };
+
+  const custData = custSheet.getDataRange().getValues();
+  for (let c = 1; c < custData.length; c++) {
+    if (custData[c][0] === userId) {
+      return {
+        success: true,
+        exists: true,
+        profile: {
+          userId: userId,
+          userName: custData[c][1] || '',
+          realName: custData[c][2] || '',
+          phone: custData[c][3] || '',
+          defaultAddress: custData[c][4] || ''
+        }
+      };
+    }
+  }
+  return { success: true, exists: false };
+}
+
+/**
  * 取得系統設定
  */
 function getSystemSettings() {

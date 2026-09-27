@@ -586,8 +586,8 @@
   <!-- 首次登記基本資料彈跳視窗 (新客只需填寫一次) -->
   <div class="modal-overlay" id="firstTimeProfileModal">
     <div class="modal-content" style="text-align: left;">
-      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">📝 首次連線身分登記</h2>
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 16px; text-align: center;">僅需填寫一次！回國後將依此資料為您核對訂單與出貨：</p>
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">首次使用，請建立聯絡資料</h2>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 16px; text-align: center;">僅需填寫一次</p>
 
       <div class="form-group">
         <label class="form-label">LINE 顯示暱稱</label>
@@ -602,7 +602,7 @@
         <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
       </div>
 
-      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">✓ 確認並火速登記</button>
+      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
       <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
     </div>
   </div>
@@ -612,7 +612,6 @@
     <div class="modal-content">
       <div class="success-icon">🎉</div>
       <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">登記成功！</h2>
-      <p style="font-size: 13px; color: #475569; line-height: 1.6;">連線商品將於回國後統一出貨，屆時請留意群組或私訊訊息等通知！</p>
 
       <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
         <div>商品品名：<b id="modalProdName">-</b></div>
@@ -622,7 +621,7 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;" onclick="continueShopping()">🛍️ 繼續逛其他商品</button>
+        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;" onclick="continueShopping()">🛍️ 繼續挑選更多商品</button>
         <button type="button" class="btn-submit" style="flex: 1;" onclick="goToMyOrders()">📦 查看訂購清單</button>
       </div>
     </div>
@@ -656,6 +655,7 @@
       setupEventListeners();
       await initLiff();
       await fetchProductData();
+      await checkFirstTimeCustomerOnLoad();
     };
 
     // 1. 初始化 LINE LIFF
@@ -892,24 +892,59 @@
       }
     }
 
-    // 6. 點擊「火速登記」：新客跳彈窗，老客 0.5 秒光速送單！
+    let isSubmittingFromButton = false;
+
+    // 6. 第一次點開商品卡時，若無聯絡資料自動跳出彈窗建立
+    async function checkFirstTimeCustomerOnLoad() {
+      const profile = getSavedCustomerProfile();
+      if (profile && profile.realName && profile.phone) {
+        // 已有完整資料，不需跳出
+        return;
+      }
+
+      // 預填 LINE 暱稱
+      document.getElementById('regLineName').value = currentUser.displayName || '';
+
+      // 若有後端 GAS，嘗試查詢顧客檔案是否已存在於試算表
+      if (currentUser.userId && currentUser.userId !== 'TEST_USER_999' && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
+        try {
+          const res = await fetch(`${CONFIG.GAS_API_URL}?action=checkCustomer&userId=${encodeURIComponent(currentUser.userId)}`);
+          const json = await res.json();
+          if (json.success && json.exists && json.profile && json.profile.realName && json.profile.phone) {
+            saveCustomerProfile(json.profile);
+            loadSavedCustomerInfo();
+            return;
+          }
+        } catch (e) {
+          console.warn('線上顧客檢查略過:', e);
+        }
+      }
+
+      // 無顧客資料：在首次進入商品卡時立即彈跳視窗引導建立
+      isSubmittingFromButton = false;
+      document.getElementById('firstTimeProfileModal').classList.add('active');
+    }
+
+    // 點擊「火速登記」：老客直接秒單，新客（或剛才取消者）跳彈窗登記
     function handleClickSubmit() {
       const profile = getSavedCustomerProfile();
       if (profile && profile.realName && profile.phone) {
         // 已有完整資料之老客人：直接秒單！
         executeCreateOrder(profile);
       } else {
-        // 第一次參加連線之新客人：跳出彈窗登記姓名電話
+        // 尚未建立聯絡資料：跳出視窗並標記為送單觸發
+        isSubmittingFromButton = true;
         document.getElementById('regLineName').value = currentUser.displayName || '';
         document.getElementById('firstTimeProfileModal').classList.add('active');
       }
     }
 
     function closeProfileModal() {
+      isSubmittingFromButton = false;
       document.getElementById('firstTimeProfileModal').classList.remove('active');
     }
 
-    // 新客確認身分並送出
+    // 確認送出聯絡資料
     function confirmProfileAndSubmit() {
       const lineName = document.getElementById('regLineName').value.trim() || currentUser.displayName || '訪客';
       const realName = document.getElementById('regRealName').value.trim();
@@ -936,7 +971,15 @@
 
       saveCustomerProfile(profile);
       closeProfileModal();
-      executeCreateOrder(profile);
+
+      if (isSubmittingFromButton) {
+        // 若是由點擊火速登記觸發的，儲存後直接執行下單
+        isSubmittingFromButton = false;
+        executeCreateOrder(profile);
+      } else {
+        // 首次點開商品卡時填寫完成：提示已建立，可繼續挑選規格登記
+        alert('✅ 聯絡資料建立完成！現在您可以挑選喜愛的商品規格並進行登記囉！');
+      }
     }
 
     // 7. 真正執行送單至 Google 試算表 (狀態: 連線中待出貨)
