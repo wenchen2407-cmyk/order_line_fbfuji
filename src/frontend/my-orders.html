@@ -278,20 +278,23 @@
       <!-- 2. 連線採購進度與出貨須知說明卡片 -->
       <div class="section-card" id="procureGuideCard" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0;">
         <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-          📌 連線採購進度說明
+          📌 連線狀態說明
         </div>
         <div style="font-size: 12.5px; color: #475569; line-height: 1.8;">
           <div style="margin-bottom: 8px;">
-            <b>• ⏳ 連線登記中：</b>小幫手正於當地專櫃現場採購中，已為您保留商品名額。
+            <b>• ⏳ 連線登記中：</b>正在當地現場採購中
           </div>
           <div style="margin-bottom: 8px;">
-            <b>• 🎉 採購成功：</b>專櫃已成功買到商品，回國後安排出貨。
+            <b>• 🎉 採購成功：</b>已完成採買
           </div>
           <div style="margin-bottom: 8px;">
-            <b>• ⚠️ 缺貨斷貨：</b>專櫃現場已無庫存或斷貨，小幫手將不另行收費。
+            <b>• ⚠️ 缺貨斷貨：</b>已無庫存或斷貨
+          </div>
+          <div style="margin-bottom: 8px;">
+            <b>• 🛒 通知結帳：</b>已聯繫、發專屬結帳賣場
           </div>
           <div>
-            <b>• 🛒 專屬超商賣場：</b>商品回國整理完畢後，管理員將於 <b>Google Sheets</b> 更新採購狀態，並發送專屬賣場連結（如 7-11 賣貨便 / 全家好賣+）至您的 LINE 私訊或群組，屆時請留意訊息通知並點擊連結完成配送下單！
+            <b>• 🚚 已完成出貨：</b>包裹已寄出，請留意取件通知
           </div>
         </div>
 
@@ -406,10 +409,10 @@
         return `<span class="status-badge badge-success">🎉 採購成功</span>`;
       } else if (s.includes('缺貨') || s.includes('斷貨') || s.includes('買不到')) {
         return `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
-      } else if (s.includes('專屬賣場') || s.includes('賣場') || s.includes('通知')) {
-        return `<span class="status-badge badge-purple">🛒 已發專屬賣場</span>`;
+      } else if (s.includes('專屬賣場') || s.includes('賣場') || s.includes('通知') || s.includes('結帳')) {
+        return `<span class="status-badge badge-purple">🛒 通知結帳</span>`;
       } else if (s.includes('完成') || s.includes('出貨') || s.includes('寄出')) {
-        return `<span class="status-badge badge-info">🚚 已出貨</span>`;
+        return `<span class="status-badge badge-info">🚚 已完成出貨</span>`;
       } else {
         return `<span class="status-badge badge-pending">⏳ 連線登記中</span>`;
       }

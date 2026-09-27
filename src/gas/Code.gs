@@ -70,7 +70,7 @@ function setupSpreadsheet() {
   // 為 S 欄建立「採購狀態快速下拉選單」
   try {
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['連線登記中', '採購成功', '缺貨斷貨', '已發專屬賣場', '已完成出貨'], true)
+      .requireValueInList(['連線登記中', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨'], true)
       .setAllowInvalid(true)
       .build();
     orderSheet.getRange("S2:S1000").setDataValidation(statusRule);
