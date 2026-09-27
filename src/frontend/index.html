@@ -612,8 +612,8 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #e2e8f0; color: #334155; border: none; font-weight: 700; cursor: pointer;" onclick="continueShopping()">繼續逛其他商品</button>
-        <button type="button" class="btn-submit" style="flex: 1;" onclick="goToMyOrders()">查看出貨清單</button>
+        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;" onclick="continueShopping()">🛍️ 繼續逛其他商品</button>
+        <button type="button" class="btn-submit" style="flex: 1;" onclick="goToMyOrders()">📦 查看訂購清單</button>
       </div>
     </div>
   </div>
@@ -984,11 +984,13 @@
     }
 
     function continueShopping() {
-      document.getElementById('successModal').classList.remove('active');
+      const uidParam = currentUser && currentUser.userId ? `?uid=${encodeURIComponent(currentUser.userId)}` : '';
+      window.location.href = `catalog.html${uidParam}`;
     }
 
     function goToMyOrders() {
-      window.location.href = `my-orders.html?uid=${encodeURIComponent(currentUser.userId)}`;
+      const uidParam = currentUser && currentUser.userId ? `?uid=${encodeURIComponent(currentUser.userId)}` : '';
+      window.location.href = `my-orders.html${uidParam}`;
     }
   </script>
 </body>

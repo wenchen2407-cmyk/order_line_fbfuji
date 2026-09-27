@@ -89,7 +89,7 @@ function setupSpreadsheet() {
     ['SHIP_FEE_POST_PREPAID', '80', '郵局純寄件 (需先匯款) 郵資 (NT$)'],
     ['SHIP_FEE_POST_COD', '130', '郵局貨到付款郵資 (NT$)'],
     ['SHIP_FEE_BLACKCAT', '100', '黑貓宅配到府 (需先匯款) 運費 (NT$)'],
-    ['STORE_NAME', '日韓嚴選連線代購', '商店名稱'],
+    ['STORE_NAME', 'W.W.連線代購', '商店名稱'],
     ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明']
   ];
 
@@ -358,7 +358,7 @@ function handleCreateOrder(orderData) {
       orderData.note || '',
       '未結帳',
       '',
-      '連線中待出貨', // 訂單處理狀態
+      '連線登記中', // 訂單採購/出貨處理狀態
       ''
     ]);
 
@@ -662,7 +662,10 @@ function getOrdersForUser(userId) {
         shippingStatus: row[18]
       };
 
-      if (row[18] === '連線中待出貨' || row[16] === '未結帳') {
+      const shipStatus = String(row[18] || '').trim();
+      const isCompleted = shipStatus.includes('已完成') || shipStatus.includes('已寄出') || shipStatus.includes('已取消') || shipStatus.includes('結案');
+
+      if (!isCompleted) {
         pendingCheckoutOrders.push(item);
       } else {
         completedOrders.push(item);
