@@ -48,21 +48,43 @@ function setupSpreadsheet() {
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
   }
 
-  // 2. 訂單明細工作表
+  // 2. 訂單明細工作表 (升級採購狀態表頭與專屬下拉選單)
   let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const orderHeaders = [
+    '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
+    '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
+    '訂單總額', '收件人姓名', '聯絡電話', '取件方式與地址', 
+    '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註'
+  ];
   if (!orderSheet) {
     orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
-    orderSheet.appendRow([
-      '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
-      '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
-      '訂單總額', '收件人姓名', '聯絡電話', '取件方式與地址', 
-      '買家備註', '付款狀態', '匯款後五碼', '出貨狀態', '處理備註'
-    ]);
-    orderSheet.getRange(1, 1, 1, 20).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
+    orderSheet.appendRow(orderHeaders);
+  } else {
+    // 既有表格：升級表頭第 19 欄為「採購/出貨狀態」
+    orderSheet.getRange(1, 19).setValue('採購/出貨狀態');
   }
-  // 將聯絡電話 (第14欄 N) 與 匯款後五碼 (第18欄 R) 設為純文字格式
+  orderSheet.getRange(1, 1, 1, 20).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
   orderSheet.getRange("N:N").setNumberFormat('@');
   orderSheet.getRange("R:R").setNumberFormat('@');
+
+  // 為 S 欄建立「採購狀態快速下拉選單」
+  try {
+    const statusRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['連線登記中', '採購成功', '缺貨斷貨', '已發專屬賣場', '已完成出貨'], true)
+      .setAllowInvalid(true)
+      .build();
+    orderSheet.getRange("S2:S1000").setDataValidation(statusRule);
+
+    // 既有訂單中，若有舊的「連線中待出貨」，自動替換為「連線登記中」
+    const orderData = orderSheet.getDataRange().getValues();
+    for (let r = 1; r < orderData.length; r++) {
+      if (orderData[r][18] === '連線中待出貨') {
+        orderSheet.getRange(r + 1, 19).setValue('連線登記中');
+      }
+    }
+  } catch (e) {
+    console.warn('建立下拉選單略過:', e);
+  }
 
   // 3. 顧客歸戶表
   let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
@@ -77,7 +99,7 @@ function setupSpreadsheet() {
   // 將電話欄 (第4欄 D) 設為純文字格式，避免開頭 0 被截斷
   custSheet.getRange("D:D").setNumberFormat('@');
 
-  // 4. 系統設定表 (升級版：支援分項銀行帳戶、6大配送方式與滿3000免運)
+  // 4. 系統設定表 (自動補齊新欄位並強制更新 STORE_NAME 為 W.W.連線代購)
   let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
   const defaultSettings = [
     ['BANK_NAME', '808 玉山銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
@@ -99,7 +121,7 @@ function setupSpreadsheet() {
     settSheet.getRange(1, 1, 1, 3).setBackground('#d83b01').setFontColor('#ffffff').setFontWeight('bold');
     defaultSettings.forEach(s => settSheet.appendRow(s));
   } else {
-    // 既有表格：將 B 欄設為純文字格式，並補齊缺少的新欄位 (不覆蓋賣家自訂值)
+    // 既有表格：將缺少的新欄位補齊，並自動將 STORE_NAME 更新為 W.W.連線代購
     const existingData = settSheet.getDataRange().getValues();
     const existingKeys = new Set(existingData.slice(1).map(r => String(r[0]).trim()));
     defaultSettings.forEach(s => {
@@ -107,11 +129,24 @@ function setupSpreadsheet() {
         settSheet.appendRow(s);
       }
     });
+
+    // 強制將 STORE_NAME 更新為「W.W.連線代購」
+    let foundStoreName = false;
+    for (let r = 1; r < existingData.length; r++) {
+      if (String(existingData[r][0]).trim() === 'STORE_NAME') {
+        settSheet.getRange(r + 1, 2).setValue('W.W.連線代購');
+        foundStoreName = true;
+        break;
+      }
+    }
+    if (!foundStoreName) {
+      settSheet.appendRow(['STORE_NAME', 'W.W.連線代購', '商店名稱']);
+    }
   }
   // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
   settSheet.getRange("B:B").setNumberFormat('@');
 
-  return '工作表初始化完成！';
+  return '工作表與採購狀態設定升級完成！';
 }
 
 /**
