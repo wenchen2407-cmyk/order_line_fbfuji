@@ -535,10 +535,20 @@
           <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">正在載入您的連線商品...</div>
         </div>
 
-        <!-- 金額統計行 -->
-        <div class="subtotal-row" id="goodsSubtotalRow" style="display: none; justify-content: space-between; align-items: center; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
-          <span style="font-weight: 700; color: #334155; font-size: 14px;">已採購商品合計 (<span id="totalItemsCountText">0</span> 件)</span>
-          <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
+        <!-- 金額統計與結帳明細卡片 -->
+        <div id="goodsSubtotalRow" style="display: none; flex-direction: column; gap: 8px; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: #334155; font-size: 14px;">已採購商品合計 (<span id="totalItemsCountText">0</span> 件)</span>
+            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
+          </div>
+          <div id="checkoutShipFeeRow" style="display: none; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b;">
+            <span>配送運費 (<span id="checkoutShipMethodLabel">已選配送</span>)</span>
+            <span style="font-weight: 700; color: #334155;" id="checkoutShipFeeText">免運 NT$ 0</span>
+          </div>
+          <div id="checkoutTotalRow" style="display: none; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 2px;">
+            <span style="font-weight: 800; color: #1e293b; font-size: 14.5px;" id="totalAmountLabelText">應付結帳總額</span>
+            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:21px; font-weight: 900;" id="finalCheckoutTotalText">NT$ 0</span>
+          </div>
         </div>
 
         <!-- 結帳按鈕 (開放結帳且有採購成功商品時亮起) -->
@@ -898,6 +908,8 @@
     let selectedShipFee = 0;
     let selectedIsPrepay = true;
     let successfulGoodsTotal = 0;
+    let currentShippingFee = 0;
+    let currentCheckoutMethodName = '';
 
     // 物流方式標準對照表
     const SHIPPING_METHOD_MAP = {
@@ -1039,18 +1051,49 @@
 
       container.innerHTML = '';
       successfulGoodsTotal = 0;
+      currentShippingFee = 0;
+      currentCheckoutMethodName = '';
       let totalQty = 0;
       let hasSuccessfulItems = false;
       let hasShippedItems = false;
       let hasPendingPayment = false;
       let hasCodPending = false;
       let hasAuditing = false;
+      let hasCheckedOutOrder = false;
+      let hasPrepayCheckedOut = false;
       let shippedItemData = null;
+
+      // 檢查是否有已送出結帳的訂單 (待付款、貨到付款待出貨、對帳中、已出貨配送中)
+      // 並取得其運費與配送方式
+      const checkedOutOrder = pendingOrders.find(it => {
+        const sst = String(it.shippingStatus || '').trim();
+        const pst = String(it.paymentStatus || '').trim();
+        const isOut = sst.includes('缺貨') || sst.includes('斷貨');
+        return !isOut && (pst.includes('貨到付款') || pst.includes('待付款') || pst.includes('對帳') || sst.includes('已完成結帳') || sst.includes('出貨') || pst === '已付款');
+      });
+
+      if (checkedOutOrder) {
+        hasCheckedOutOrder = true;
+        currentShippingFee = Number(checkedOutOrder.shippingFee) || 0;
+        const pst = String(checkedOutOrder.paymentStatus || '');
+        if (pst === '待付款' || pst.includes('對帳') || pst === '已付款') {
+          hasPrepayCheckedOut = true;
+        }
+        const rawAddr = String(checkedOutOrder.deliveryAddress || '');
+        const match = rawAddr.match(/\[(.*?)\]/);
+        if (match && match[1]) {
+          currentCheckoutMethodName = formatDeliveryInfo(match[1]).replace(/[\[\]]/g, '');
+        } else {
+          currentCheckoutMethodName = '已選配送';
+        }
+      }
 
       // 檢查訂單狀態
       pendingOrders.forEach(item => {
         const st = String(item.shippingStatus || '').trim();
         const paySt = String(item.paymentStatus || '').trim();
+        const isOut = st.includes('缺貨') || st.includes('斷貨');
+        if (isOut) return;
 
         // 只有狀態確實是「已完成出貨」或「已出貨」，且管理者已填寫包裹查詢碼時，才顯示物流追蹤卡！
         // 「對帳中，待出貨」、「貨到付款待出貨」或「待付款」絕不可顯示包裹查詢碼！
@@ -1146,9 +1189,13 @@
         const st = String(item.shippingStatus || '').trim();
         const paySt = String(item.paymentStatus || '').trim();
 
-        // 判斷是否為採購成功 (只有成功/結帳中的商品才計入總額)
-        const isSuccess = st.includes('成功') || st.includes('通知') || st.includes('結帳') || st.includes('待付款') || st.includes('對帳中') || st.includes('已出貨');
-        if (isSuccess) {
+        // 嚴格區分缺貨、結帳、採購成功、連線登記
+        const isOut = st.includes('缺貨') || st.includes('斷貨');
+        const isCheckedOut = !isOut && (st.includes('出貨') || st.includes('寄出') || paySt.includes('貨到付款') || paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳') || paySt === '待付款' || st === '待付款' || paySt === '已結帳' || st === '已結帳' || st.includes('已完成結帳'));
+        const isProcured = !isOut && !isCheckedOut && (st.includes('成功') || st.includes('通知'));
+
+        // 只有採購成功或已結帳且非缺貨的商品才計入總額
+        if (!isOut && (isProcured || isCheckedOut)) {
           successfulGoodsTotal += sub;
           totalQty += qty;
           hasSuccessfulItems = true;
@@ -1159,12 +1206,12 @@
         
         // 徽章樣式邏輯
         let badgeHtml = '';
-        if (st.includes('缺貨') || st.includes('斷貨')) {
+        if (isOut) {
           badgeHtml = `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
-        } else if (st.includes('出貨') || st.includes('寄出') || paySt.includes('貨到付款') || paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳') || paySt === '待付款' || st === '待付款' || paySt === '已結帳' || st === '已結帳' || st.includes('已完成結帳')) {
+        } else if (isCheckedOut) {
           // ④ 待付款、④-B 貨到付款、⑤ 對帳中待出貨、⑥ 出貨配送中：商品右側狀態統一顯示「已結帳」
           badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe;">已結帳</span>`;
-        } else if (st.includes('成功') || st.includes('買到') || st.includes('結帳')) {
+        } else if (isProcured) {
           if (isAllowCheckout) {
             // ⭐ 雙徽章呈現：既知道買到了，又知道要結帳！
             badgeHtml = `
@@ -1197,10 +1244,48 @@
         container.appendChild(card);
       });
 
-      // 統計行
+      // 統計行更新
       subtotalRow.style.display = 'flex';
       totalItemsCountText.textContent = totalQty;
       goodsSubtotalText.textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+
+      const shipFeeRow = document.getElementById('checkoutShipFeeRow');
+      const totalRow = document.getElementById('checkoutTotalRow');
+      const shipMethodLabel = document.getElementById('checkoutShipMethodLabel');
+      const shipFeeText = document.getElementById('checkoutShipFeeText');
+      const totalLabel = document.getElementById('totalAmountLabelText');
+      const totalText = document.getElementById('finalCheckoutTotalText');
+
+      if (hasCheckedOutOrder) {
+        if (goodsSubtotalText) {
+          goodsSubtotalText.style.color = '#334155';
+          goodsSubtotalText.style.fontSize = '16px';
+          goodsSubtotalText.style.fontWeight = '700';
+        }
+        if (shipFeeRow) {
+          shipFeeRow.style.display = 'flex';
+          if (shipMethodLabel) shipMethodLabel.textContent = currentCheckoutMethodName || '已選配送';
+          if (shipFeeText) shipFeeText.textContent = (currentShippingFee === 0) ? '免運 NT$ 0' : `NT$ ${currentShippingFee.toLocaleString()}`;
+        }
+        if (totalRow) {
+          totalRow.style.display = 'flex';
+          const totalPayable = successfulGoodsTotal + currentShippingFee;
+          if (totalLabel) {
+            totalLabel.textContent = hasPrepayCheckedOut ? '應付結帳總額 (含運費)' : '應付結帳總額';
+          }
+          if (totalText) {
+            totalText.textContent = `NT$ ${totalPayable.toLocaleString()}`;
+          }
+        }
+      } else {
+        if (goodsSubtotalText) {
+          goodsSubtotalText.style.color = 'var(--accent)';
+          goodsSubtotalText.style.fontSize = '20px';
+          goodsSubtotalText.style.fontWeight = '900';
+        }
+        if (shipFeeRow) shipFeeRow.style.display = 'none';
+        if (totalRow) totalRow.style.display = 'none';
+      }
 
       // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳待付款/貨到付款待出貨/對帳中/出貨時點亮)
       const isAlreadyCheckedOut = hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems;
@@ -1468,11 +1553,25 @@
       btn.disabled = true;
       btn.textContent = '資料傳輸中...';
 
+      // 收集本次欲結帳的有效採購成功商品訂單編號（排除缺貨斷貨與已結帳項目）
+      const targetOrderIds = pendingOrders
+        .filter(item => {
+          const st = String(item.shippingStatus || '').trim();
+          const paySt = String(item.paymentStatus || '').trim();
+          const isOut = st.includes('缺貨') || st.includes('斷貨') || st.includes('取消');
+          const isProcured = st.includes('成功') || st.includes('通知');
+          const isUnpaid = (paySt === '未結帳' || !paySt);
+          return !isOut && isProcured && isUnpaid;
+        })
+        .map(item => item.orderId)
+        .filter(Boolean);
+
       const methodInfo = SHIPPING_METHOD_MAP[selectedShipMethod] || { name: selectedShipMethod };
       const payload = {
         action: 'checkoutOrders',
         data: {
           userId: currentUserId,
+          orderIds: targetOrderIds,
           shippingMethod: selectedShipMethod,
           shippingMethodName: methodInfo.name,
           shippingFee: selectedShipFee,
@@ -1508,7 +1607,8 @@
     // ================= 回報匯款 Modal 控制 =================
     function openReportPaymentModal() {
       const modal = document.getElementById('reportPaymentModal');
-      document.getElementById('reportOrderAmountText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+      const totalPayable = successfulGoodsTotal + currentShippingFee;
+      document.getElementById('reportOrderAmountText').textContent = `NT$ ${totalPayable.toLocaleString()}`;
       
       // 自動填入當前時間
       const now = new Date();

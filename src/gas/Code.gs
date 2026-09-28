@@ -519,16 +519,37 @@ function handleCheckoutOrders(checkoutData) {
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
   const rows = orderSheet.getDataRange().getValues();
-  const pendingIndices = []; // 紀錄所有「連線中待出貨」或「未結帳」的列號
+  const pendingIndices = []; // 紀錄所有本次要結帳的列號
   let goodsTotal = 0;
+
+  const targetIds = (Array.isArray(checkoutData.orderIds) && checkoutData.orderIds.length > 0)
+    ? checkoutData.orderIds.map(String)
+    : null;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    // 比對 userId，且狀態為連線中待出貨或未結帳
-    if (row[2] === userId && (row[18] === '連線中待出貨' || row[16] === '未結帳')) {
-      pendingIndices.push(i + 1); // 1-based row index
-      goodsTotal += (Number(row[9]) || 0); // 累計商品小計
+    if (row[2] !== userId) continue;
+
+    const orderId = String(row[0] || '').trim();
+    const payStatus = String(row[16] || '').trim();
+    const shipStatus = String(row[18] || '').trim();
+
+    // 嚴格排除缺貨斷貨、已完成取貨、已取消等商品
+    const isOutOrCancelled = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消') || shipStatus.includes('完成取貨');
+    if (isOutOrCancelled) continue;
+
+    // 若前端有指定訂單清單，精準比對 orderId
+    if (targetIds) {
+      if (!targetIds.includes(orderId)) continue;
+    } else {
+      // 若未指定 orderId，僅納入採購成功且尚未結帳者
+      const isProcured = shipStatus.includes('成功') || shipStatus.includes('連線中待出貨') || shipStatus.includes('通知結帳');
+      const isUnpaid = (payStatus === '未結帳' || !payStatus);
+      if (!isProcured || !isUnpaid) continue;
     }
+
+    pendingIndices.push(i + 1); // 1-based row index
+    goodsTotal += (Number(row[9]) || 0); // 累計商品小計
   }
 
   if (pendingIndices.length === 0) {
@@ -752,8 +773,12 @@ function handleReportPayment(data) {
   const lastFive = data.lastFiveDigits ? "'" + String(data.lastFiveDigits).trim() : '';
 
   for (let i = 1; i < rows.length; i++) {
+    const shipStatus = String(rows[i][18] || '').trim();
+    // 嚴格排除缺貨斷貨、已取消商品
+    if (shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消')) continue;
+
     const isTarget = (data.orderId && rows[i][0] === data.orderId) || 
-                     (data.userId && rows[i][2] === data.userId && (rows[i][16] === '待付款' || rows[i][16] === '未結帳' || rows[i][16] === '已回報待對帳'));
+                     (data.userId && rows[i][2] === data.userId && (rows[i][16] === '待付款' || rows[i][16] === '已回報待對帳' || shipStatus === '已完成結帳待出貨'));
     if (isTarget) {
       const rowIndex = i + 1;
       orderSheet.getRange(rowIndex, 17).setValue('對帳中，待出貨'); // 付款狀態
