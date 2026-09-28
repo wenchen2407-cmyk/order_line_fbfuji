@@ -34,41 +34,6 @@
 
     .container { max-width: 540px; margin: 0 auto; }
 
-    /* 本地測試除錯工具列 */
-    .dev-toolbar {
-      background: #1e293b;
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 12px;
-      margin-bottom: 14px;
-      font-size: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .dev-toolbar-title {
-      font-weight: 800;
-      color: #38bdf8;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .dev-btn-group {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .dev-btn {
-      background: #334155;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-    .dev-btn:hover { background: #475569; }
-    .dev-btn.active { background: #0284c7; border-color: #38bdf8; font-weight: 700; }
-
     /* 買家會員簡介卡 */
     .user-profile-header {
       background: var(--card-bg);
@@ -406,24 +371,6 @@
 <body>
 
   <div class="container">
-
-    <!-- 本地測試除錯工具列 (預設隱藏，僅在 localhost 本地開發環境或網址帶 ?dev=1 時動態顯示) -->
-    <div class="dev-toolbar" id="devToolbarBox" style="display: none;">
-      <div class="dev-toolbar-title">
-        <span>🧪 本地模擬測試面板 (快速切換各階段)</span>
-        <span id="devCurrentModeText" style="color:#fde047;">連線登記中 (未開放結帳)</span>
-      </div>
-      <div class="dev-btn-group">
-        <button type="button" class="dev-btn active" id="btnMode1" onclick="setDevScenario('REGISTERING')">① 現場登記中</button>
-        <button type="button" class="dev-btn" id="btnMode2" onclick="setDevScenario('PROCURED_LOCKED')">② 採購成功(未開放)</button>
-        <button type="button" class="dev-btn" id="btnMode3" onclick="setDevScenario('ALLOW_CHECKOUT')">③ 開放結帳(雙徽章)</button>
-        <button type="button" class="dev-btn" id="btnMode4" onclick="setDevScenario('PENDING_PAYMENT')">④ 待付款(先匯款)</button>
-        <button type="button" class="dev-btn" id="btnMode4b" onclick="setDevScenario('COD_PENDING')">④-B 貨到付款(待出貨)</button>
-        <button type="button" class="dev-btn" id="btnMode5" onclick="setDevScenario('AUDITING')">⑤ 對帳待出貨</button>
-        <button type="button" class="dev-btn" id="btnMode6" onclick="setDevScenario('SHIPPED')">⑥ 出貨配送中(追蹤碼)</button>
-        <button type="button" class="dev-btn" id="btnMode7" onclick="setDevScenario('HISTORY')">⑦ 完成取貨(歷史單)</button>
-      </div>
-    </div>
 
     <!-- 買家身分簡介卡 -->
     <div class="user-profile-header">
@@ -941,20 +888,8 @@
     let selectedIsPrepay = true;
     let successfulGoodsTotal = 0;
 
-    // 本地除錯模式標記
-    let devScenarioMode = 'REGISTERING';
-
     window.onload = async () => {
-      // 只有在 localhost 本地開發環境，或網址有加 ?dev=1 時，才顯示「本地模擬測試面板」，正式環境絕對不顯示！
-      const isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const urlParams = new URLSearchParams(window.location.search);
-      const isDebug = isLocalhost || (urlParams.get('dev') === '1') || (urlParams.get('debug') === 'true');
-      
-      const devBar = document.getElementById('devToolbarBox');
-      if (devBar) {
-        devBar.style.display = isDebug ? 'block' : 'none';
-      }
-
       if (urlParams.get('uid')) {
         currentUserId = urlParams.get('uid');
       }
@@ -1004,127 +939,18 @@
           updateUserProfileUI();
           renderOrdersView();
         } else {
-          // 若無連線資料，使用本地展示情境
-          setupDefaultMockData();
+          pendingOrders = [];
+          completedOrders = [];
+          updateUserProfileUI();
           renderOrdersView();
         }
       } catch (e) {
-        console.warn('線上讀取訂單略過，套用本地模擬展示:', e);
-        setupDefaultMockData();
+        console.error('線上讀取訂單失敗:', e);
+        pendingOrders = [];
+        completedOrders = [];
+        updateUserProfileUI();
         renderOrdersView();
       }
-    }
-
-    // 本地模擬資料產生器 (方便本機測試)
-    function setupDefaultMockData() {
-      // 確保免運門檻鎖定為 3000 元 (防止被 Google Sheets 試算表設定頁既有的 1500 覆蓋)
-      systemSettings.FREE_SHIPPING_THRESHOLD = '3000';
-      systemSettings.BANK_NAME = '822 中國信託商業銀行';
-      systemSettings.BANK_ACCOUNT_HOLDER = '陳O雯';
-      systemSettings.BANK_ACCOUNT = '4175-402-49273';
-      systemSettings.LINEPAY_NAME = '粉絲團小編兼職小小幫手';
-      systemSettings.LINEPAY_ACCOUNT = 'https://line.me/ti/p/IUqKCB7dRU';
-      systemSettings.JKOPAY_NAME = 'Wen Wen Chen';
-      systemSettings.JKOPAY_ACCOUNT = '900459491';
-
-      customerProfile = {
-        userId: currentUserId,
-        userName: '王小美 (測試買家)',
-        realName: '王小美',
-        phone: '0912345678',
-        defaultAddress: '7-11 鑫東門市 (123456)'
-      };
-
-      if (devScenarioMode === 'REGISTERING') {
-        systemSettings.ALLOW_CHECKOUT = 'NO';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '連線登記' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '連線登記' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'PROCURED_LOCKED') {
-        systemSettings.ALLOW_CHECKOUT = 'NO';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '採購成功' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '缺貨斷貨' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'ALLOW_CHECKOUT') {
-        systemSettings.ALLOW_CHECKOUT = 'YES';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '採購成功' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '採購成功' },
-          { orderId: 'ORD-003', orderDate: '2026/09/27 16:30', productName: '日本製 羊毛圍巾', spec: '燕麥米', quantity: 1, unitPrice: 1200, subtotal: 1200, shippingStatus: '缺貨斷貨' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'PENDING_PAYMENT') {
-        // ④ 待付款狀態：已填寫收件門市，等待轉帳並回報
-        systemSettings.ALLOW_CHECKOUT = 'YES';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '待付款', paymentStatus: '待付款', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '待付款', paymentStatus: '待付款', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'COD_PENDING') {
-        // ④-B 貨到付款已結帳待出貨：已填寫超商取貨付款門市，免預先匯款，等待賣家寄出
-        systemSettings.ALLOW_CHECKOUT = 'YES';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '已完成結帳待出貨', paymentStatus: '貨到付款待出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '已完成結帳待出貨', paymentStatus: '貨到付款待出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'AUDITING') {
-        // ⑤ 對帳中待出貨：已回報匯款方式與後五碼
-        systemSettings.ALLOW_CHECKOUT = 'YES';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '對帳中，待出貨', paymentStatus: '對帳中，待出貨', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456', lastFive: '88621' },
-          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '對帳中，待出貨', paymentStatus: '對帳中，待出貨', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456', lastFive: '88621' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'SHIPPED') {
-        // ⑥ 出貨配送中：管理員已出貨並提供包裹查詢碼
-        systemSettings.ALLOW_CHECKOUT = 'YES';
-        pendingOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '已完成出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456', trackingNumber: '86312345678' }
-        ];
-        completedOrders = [];
-      } else if (devScenarioMode === 'HISTORY') {
-        // ⑦ 歷史訂單：出貨時間與包裹查詢碼
-        pendingOrders = [];
-        completedOrders = [
-          { orderId: 'ORD-001', orderDate: '2026/09/25 10:20', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, totalAmount: 1450, shippingStatus: '已完成取貨', paymentStatus: '已付款', deliveryAddress: '7-11 鑫東門市', shippedDate: '2026/09/26 11:30', trackingNumber: '86312345678' }
-        ];
-      }
-      updateUserProfileUI();
-    }
-
-    // 本地切換情境
-    function setDevScenario(mode) {
-      devScenarioMode = mode;
-      document.querySelectorAll('.dev-btn').forEach(b => b.classList.remove('active'));
-      const textMap = {
-        'REGISTERING': '① 現場連線中 (未開放結帳)',
-        'PROCURED_LOCKED': '② 採購成功 (未開放結帳)',
-        'ALLOW_CHECKOUT': '③ 回國開放結帳 (雙徽章與結帳按鈕)',
-        'PENDING_PAYMENT': '④ 待付款 (可測試回報匯款)',
-        'COD_PENDING': '④-B 貨到付款 (待出貨中)',
-        'AUDITING': '⑤ 對帳待出貨 (小幫手核對中)',
-        'SHIPPED': '⑥ 包裹配送中 (追蹤碼與官網查詢)',
-        'HISTORY': '⑦ 完成取貨 (移入歷史訂單)'
-      };
-      document.getElementById('devCurrentModeText').textContent = textMap[mode] || mode;
-
-      if (mode === 'REGISTERING') document.getElementById('btnMode1').classList.add('active');
-      if (mode === 'PROCURED_LOCKED') document.getElementById('btnMode2').classList.add('active');
-      if (mode === 'ALLOW_CHECKOUT') document.getElementById('btnMode3').classList.add('active');
-      if (mode === 'PENDING_PAYMENT') document.getElementById('btnMode4').classList.add('active');
-      if (mode === 'COD_PENDING') document.getElementById('btnMode4b').classList.add('active');
-      if (mode === 'AUDITING') document.getElementById('btnMode5').classList.add('active');
-      if (mode === 'SHIPPED') document.getElementById('btnMode6').classList.add('active');
-      if (mode === 'HISTORY') document.getElementById('btnMode7').classList.add('active');
-
-      setupDefaultMockData();
-      renderOrdersView();
     }
 
     function updateUserProfileUI() {
@@ -1390,9 +1216,9 @@
         console.warn('線上取件確認請求略過，在本地直接模擬移入歷史單:', e);
       }
 
-      // 本地同步更新
+      // 線上更新完畢後，重新整理使用者真實資料並切換至歷史訂單
       alert('🎉 感謝您的協助。\n欲查詢過往訂單，請點「📜 歷史訂單查詢」！');
-      setDevScenario('HISTORY');
+      await fetchUserData();
       switchMainTab('tabHistory');
     }
 
@@ -1618,11 +1444,10 @@
 
       if (selectedIsPrepay) {
         alert('🎉 送出成功，狀態：【待付款】！\n\n請於完成轉帳付款後，至訂購清單中點擊【💰 匯款/付款回報】，\n提供付款方式與帳號末五碼，小幫手核對入帳後將盡快為您安排出貨！');
-        setDevScenario('PENDING_PAYMENT');
       } else {
         alert('🎉 貨到付款送出成功！狀態：【待出貨】。\n\n小幫手將盡快為您安排出貨！\n屆時請留意取件通知簡訊至指定門市取貨付款！');
-        setDevScenario('COD_PENDING');
       }
+      await fetchUserData();
     }
 
     // ================= 回報匯款 Modal 控制 =================
@@ -1698,7 +1523,7 @@
       closeReportPaymentModal();
 
       alert(`🎉 匯款/付款資料送出成功！\n\n轉入到：${payMethod}\n轉帳時間：${payTime}\n後五碼：${lastFive}\n備註：${note || "無"}\n\n狀態：【對帳待出貨】\n待小幫手核對入帳後將盡快為您安排出貨！`);
-      setDevScenario('AUDITING');
+      await fetchUserData();
     }
 
     // 頁籤切換

@@ -532,19 +532,9 @@
     </div>
 
     <!-- LINE 使用者資訊 (LIFF 自動帶入) -->
-    <div class="user-badge" id="userBadge" style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
-        <span id="userName">正在驗證 LINE 帳號...</span>
-      </div>
-      <div style="display: flex; gap: 6px;">
-        <button type="button" onclick="toggleDeadlineTest()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="切換模擬倒數中與已截止">
-          ⏱️ 切換截止測試
-        </button>
-        <button type="button" onclick="manualResetProfile()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="手動清空快取以重新觸發首次建立彈窗">
-          🔄 重設資料測試
-        </button>
-      </div>
+    <div class="user-badge" id="userBadge" style="display: flex; align-items: center; gap: 8px;">
+      <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
+      <span id="userName">正在驗證 LINE 帳號...</span>
     </div>
 
     <!-- 商品主卡片 -->
@@ -738,17 +728,6 @@
     let orderDeadlineDate = null;
     let countdownTimer = null;
     let isDeadlineExpired = false;
-    let isSimulateExpired = false; // 測試切換開關
-
-    function toggleDeadlineTest() {
-      isSimulateExpired = !isSimulateExpired;
-      if (isSimulateExpired) {
-        alert('⏱️ 已切換為【模擬已截止】狀態！\n倒數晶片將顯示截止，按鈕自動鎖定禁用。');
-      } else {
-        alert('⏱️ 已切換為【正常倒數中】狀態！');
-      }
-      updateDeadlineUI();
-    }
 
     function initDeadlineCountdown(deadlineStr) {
       if (countdownTimer) clearInterval(countdownTimer);
@@ -776,7 +755,7 @@
       banner.style.display = 'flex';
       const now = new Date();
 
-      if (isSimulateExpired || (orderDeadlineDate && now >= orderDeadlineDate)) {
+      if (orderDeadlineDate && now >= orderDeadlineDate) {
         isDeadlineExpired = true;
         banner.classList.add('expired');
         textElem.textContent = '⛔ 本期連線已截止收單';
