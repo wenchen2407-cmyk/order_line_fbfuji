@@ -550,8 +550,7 @@
       <div class="product-details">
         <!-- 倒數收單晶片 -->
         <div id="deadlineBanner" class="deadline-banner" style="display: none;">
-          <span class="deadline-icon">⏳</span>
-          <span id="deadlineText">本期收單倒數計算中...</span>
+          <span id="deadlineText"></span>
         </div>
 
         <span id="productCategory" class="product-tag">2026.10月連線</span>
@@ -674,15 +673,55 @@
     const urlParams = new URLSearchParams(window.location.search);
     const targetProductId = urlParams.get('p') || urlParams.get('pid') || urlParams.get('productId') || urlParams.get('id') || 'P001';
 
-    // 初始化頁面
-    window.onload = async () => {
+    // 初始化頁面 (秒開並行架構)
+    window.onload = () => {
+      // 0. 恢復買家快取 (0 毫秒展示)
+      const cachedProfile = sessionStorage.getItem('liff_user_profile');
+      if (cachedProfile) {
+        try {
+          const p = JSON.parse(cachedProfile);
+          if (p.userId && !urlParams.get('uid')) currentUser.userId = p.userId;
+          if (p.displayName) {
+            currentUser.displayName = p.displayName;
+            document.getElementById('userName').textContent = `${p.displayName} (已連線)`;
+          }
+          if (p.pictureUrl) {
+            currentUser.pictureUrl = p.pictureUrl;
+            document.getElementById('userAvatar').src = p.pictureUrl;
+          }
+        } catch (e) {}
+      }
+
+      // 0. 嘗試從大廳快取中瞬間預先呈現商品詳情 (0 毫秒秒開商品)
+      restoreInstantProductCache();
+
       loadSavedCustomerInfo();
       setupEventListeners();
-      await initLiff();
-      // 在 initLiff 完成後立即觸發新客彈窗檢查，並與商品載入並行
+
+      // 1. 並行執行 LIFF、商品資料與新客檢查 (互不卡塞)
+      initLiff();
+      fetchProductData();
       checkFirstTimeCustomerOnLoad();
-      await fetchProductData();
     };
+
+    function restoreInstantProductCache() {
+      try {
+        const cached = sessionStorage.getItem('cached_catalog_data');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && Array.isArray(parsed.products)) {
+            const found = parsed.products.find(p => p.id === targetProductId);
+            if (found) {
+              currentProduct = found;
+              if (parsed.settings && parsed.settings.ORDER_DEADLINE) {
+                initDeadlineCountdown(parsed.settings.ORDER_DEADLINE);
+              }
+              renderProductUI();
+            }
+          }
+        }
+      } catch (e) {}
+    }
 
     // 1. 初始化 LINE LIFF
     async function initLiff() {
@@ -707,6 +746,15 @@
 
           document.getElementById('userAvatar').src = currentUser.pictureUrl;
           document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
+
+          // 寫入快取
+          try {
+            sessionStorage.setItem('liff_user_profile', JSON.stringify({
+              userId: profile.userId,
+              displayName: profile.displayName,
+              pictureUrl: profile.pictureUrl
+            }));
+          } catch (e) {}
         } else {
           // 一般外部瀏覽器 (如 Chrome / Safari / 本地 localhost 測試)
           // 絕不自動觸發 liff.login()，避免網址跳轉到 LINE 登入授權並重導向至正式線上網址
@@ -731,19 +779,24 @@
 
     function initDeadlineCountdown(deadlineStr) {
       if (countdownTimer) clearInterval(countdownTimer);
-      if (!deadlineStr) {
-        // 預設倒數：未來 3 天 23:59:59
-        const d = new Date();
-        d.setDate(d.getDate() + 3);
-        d.setHours(23, 59, 59, 0);
-        orderDeadlineDate = d;
-      } else {
-        const parsed = new Date(deadlineStr);
-        orderDeadlineDate = isNaN(parsed.getTime()) ? null : parsed;
-      }
+      orderDeadlineDate = parseDeadline(deadlineStr);
 
       updateDeadlineUI();
-      countdownTimer = setInterval(updateDeadlineUI, 1000);
+      if (orderDeadlineDate) {
+        countdownTimer = setInterval(updateDeadlineUI, 1000);
+      }
+    }
+
+    function parseDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      const s = String(str).trim().replace(/-/g, '/');
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+      const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      }
+      return null;
     }
 
     function updateDeadlineUI() {
@@ -752,24 +805,37 @@
       const submitBtn = document.getElementById('btnSubmitOrder');
       if (!banner || !textElem) return;
 
+      // 若未指定截止時間，視為目前無時間限制，自動隱藏倒數條，維持常態下單狀態
+      if (!orderDeadlineDate) {
+        banner.style.display = 'none';
+        isDeadlineExpired = false;
+        banner.classList.remove('expired');
+        if (submitBtn && submitBtn.textContent.includes('截止')) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 火速登記';
+          submitBtn.style.background = 'var(--primary)';
+          submitBtn.style.cursor = 'pointer';
+        }
+        return;
+      }
+
       banner.style.display = 'flex';
       const now = new Date();
 
-      if (orderDeadlineDate && now >= orderDeadlineDate) {
+      if (now >= orderDeadlineDate) {
         isDeadlineExpired = true;
         banner.classList.add('expired');
-        textElem.textContent = '⛔ 本期連線已截止收單';
+        textElem.textContent = '⛔ 本次連線已收單';
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.textContent = '🚫 本期連線已截止登記';
+          submitBtn.textContent = '🚫 已截止登記';
           submitBtn.style.background = '#94a3b8';
           submitBtn.style.cursor = 'not-allowed';
         }
       } else {
         isDeadlineExpired = false;
         banner.classList.remove('expired');
-        const target = orderDeadlineDate || new Date(Date.now() + 86400000);
-        const diffMs = Math.max(0, target - now);
+        const diffMs = Math.max(0, orderDeadlineDate - now);
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -778,7 +844,7 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = `⏳ 本期收單倒數：${timeStr}`;
+        textElem.textContent = `⏳ 本次連線收單倒數：${timeStr}`;
 
         if (submitBtn && submitBtn.textContent.includes('截止')) {
           submitBtn.disabled = false;

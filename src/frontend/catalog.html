@@ -383,12 +383,12 @@
   <main class="catalog-container">
     <!-- 收單截止動態倒數晶片 -->
     <div id="catalogDeadlineBanner" style="display:none; align-items:center; justify-content:center; background:linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border:1px solid #fecdd3; color:#e11d48; padding:8px 12px; border-radius:10px; font-size:12.5px; font-weight:700; margin-bottom:12px;">
-      <span id="catalogDeadlineText">⏳ 本期收單倒數計算中...</span>
+      <span id="catalogDeadlineText"></span>
     </div>
 
     <div class="stats-bar">
       <span id="productCountText">正在載入商品清單...</span>
-      <span style="font-size: 11px; color: #10b981;">● 現場即時連線中</span>
+      <span style="font-size: 11px; color: #10b981;">● 即時連線ing</span>
     </div>
 
     <!-- 載入中骨架屏 -->
@@ -437,17 +437,65 @@
     let searchKeyword = '';
     let currentUserId = '';
 
-    window.onload = async function() {
-      // 1. 初始化 LIFF
-      await initLiff();
-      // 2. 載入商品
-      await fetchProducts();
+    window.onload = function() {
+      // 0. 瞬間快取還原 (0 毫秒極速呈現上次畫面，消除等待白屏/骨架屏)
+      restoreInstantCache();
+
+      // 1. 雙軌並行發動 (LIFF 身分驗證 與 商品清單下載 同時出發，互不卡住)
+      initLiff();
+      fetchProducts();
     };
 
-    // 初始化 LINE LIFF
+    // 0 毫秒快取恢復機制 (SWR 模式)
+    function restoreInstantCache() {
+      try {
+        // A. 恢復買家資訊
+        const cachedProfile = sessionStorage.getItem('liff_user_profile');
+        if (cachedProfile) {
+          const p = JSON.parse(cachedProfile);
+          if (p.userId) currentUserId = p.userId;
+          if (p.displayName) document.getElementById('userNameText').textContent = p.displayName;
+          if (p.pictureUrl) document.getElementById('userAvatar').src = p.pictureUrl;
+          updateOrderLinks();
+        }
+
+        // B. 恢復商品列表與收單狀態
+        const cachedData = sessionStorage.getItem('cached_catalog_data');
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          if (parsed && Array.isArray(parsed.products) && parsed.products.length > 0) {
+            allProducts = parsed.products;
+            document.getElementById('skeletonLoader').style.display = 'none';
+            if (parsed.settings) {
+              initCatalogDeadline(parsed.settings.ORDER_DEADLINE);
+              if (parsed.settings.STORE_NAME) {
+                const brandElem = document.querySelector('.brand-title span:first-child');
+                if (brandElem) brandElem.textContent = parsed.settings.STORE_NAME;
+              }
+            }
+            renderProductList();
+          }
+        }
+      } catch (e) {
+        console.warn('快取還原略過:', e);
+      }
+    }
+
+    function updateOrderLinks() {
+      const uidQuery = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';
+      const topBtn = document.getElementById('topOrderBtn');
+      const bottomBtn = document.getElementById('bottomOrderBtn');
+      if (topBtn) topBtn.href = `my-orders.html${uidQuery}`;
+      if (bottomBtn) bottomBtn.href = `my-orders.html${uidQuery}`;
+    }
+
+    // 初始化 LINE LIFF (背景非同步執行，不阻礙商品載入)
     async function initLiff() {
       const urlParams = new URLSearchParams(window.location.search);
-      currentUserId = urlParams.get('uid') || '';
+      if (urlParams.get('uid')) {
+        currentUserId = urlParams.get('uid');
+        updateOrderLinks();
+      }
 
       if (CONFIG.LIFF_ID && !CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
         try {
@@ -459,16 +507,18 @@
             if (profile.pictureUrl) {
               document.getElementById('userAvatar').src = profile.pictureUrl;
             }
+            // 存入快取供下次瞬間使用
+            sessionStorage.setItem('liff_user_profile', JSON.stringify({
+              userId: profile.userId,
+              displayName: profile.displayName,
+              pictureUrl: profile.pictureUrl
+            }));
+            updateOrderLinks();
           }
         } catch (err) {
           console.warn('LIFF 初始化略過或非 LINE 瀏覽器環境:', err);
         }
       }
-
-      // 更新前往訂購清單之超連結參數
-      const uidQuery = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';
-      document.getElementById('topOrderBtn').href = `my-orders.html${uidQuery}`;
-      document.getElementById('bottomOrderBtn').href = `my-orders.html${uidQuery}`;
     }
 
     let catalogDeadlineDate = null;
@@ -477,18 +527,24 @@
 
     function initCatalogDeadline(deadlineStr) {
       if (catalogTimer) clearInterval(catalogTimer);
-      if (!deadlineStr) {
-        const d = new Date();
-        d.setDate(d.getDate() + 3);
-        d.setHours(23, 59, 59, 0);
-        catalogDeadlineDate = d;
-      } else {
-        const parsed = new Date(deadlineStr);
-        catalogDeadlineDate = isNaN(parsed.getTime()) ? null : parsed;
-      }
+      catalogDeadlineDate = parseDeadline(deadlineStr);
 
       updateCatalogDeadlineUI();
-      catalogTimer = setInterval(updateCatalogDeadlineUI, 1000);
+      if (catalogDeadlineDate) {
+        catalogTimer = setInterval(updateCatalogDeadlineUI, 1000);
+      }
+    }
+
+    function parseDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      const s = String(str).trim().replace(/-/g, '/');
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+      const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      }
+      return null;
     }
 
     function updateCatalogDeadlineUI() {
@@ -496,22 +552,31 @@
       const textElem = document.getElementById('catalogDeadlineText');
       if (!banner || !textElem) return;
 
+      // 若未指定截止時間，視為目前無時間限制，自動隱藏倒數條，維持常態開放下單
+      if (!catalogDeadlineDate) {
+        banner.style.display = 'none';
+        if (isCatalogExpired) {
+          isCatalogExpired = false;
+          renderProductList();
+        }
+        return;
+      }
+
       banner.style.display = 'flex';
       const now = new Date();
 
-      if (catalogDeadlineDate && now >= catalogDeadlineDate) {
+      if (now >= catalogDeadlineDate) {
         if (!isCatalogExpired) {
           isCatalogExpired = true;
           renderProductList();
         }
-        textElem.textContent = '⛔ 本期連線已截止收單';
+        textElem.textContent = '⛔ 本次連線已收單';
       } else {
         if (isCatalogExpired) {
           isCatalogExpired = false;
           renderProductList();
         }
-        const target = catalogDeadlineDate || new Date(Date.now() + 86400000);
-        const diffMs = Math.max(0, target - now);
+        const diffMs = Math.max(0, catalogDeadlineDate - now);
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -520,44 +585,61 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = `⏳ 本期收單倒數：${timeStr}`;
+        textElem.textContent = `⏳ 本次連線收單倒數：${timeStr}`;
       }
     }
 
-    // 載入商品資料
+    // 載入商品資料 (雙軌並行請求極速完成，100% 確保拿到 settings)
     async function fetchProducts() {
       try {
-        // 同步嘗試取得收單設定
-        try {
-          const settRes = await fetch(`${CONFIG.GAS_API_URL}?action=getSettings`);
-          const settJson = await settRes.json();
-          if (settJson.success && settJson.data) {
-            initCatalogDeadline(settJson.data.ORDER_DEADLINE);
-            if (settJson.data.STORE_NAME) {
-              const brandElem = document.querySelector('.brand-title span:first-child');
-              if (brandElem) brandElem.textContent = settJson.data.STORE_NAME;
-            }
-          } else {
-            initCatalogDeadline(null);
-          }
-        } catch (e) {
+        const [prodRes, settRes] = await Promise.allSettled([
+          fetch(`${CONFIG.GAS_API_URL}?action=getProducts`).then(r => r.json()),
+          fetch(`${CONFIG.GAS_API_URL}?action=getSettings`).then(r => r.json())
+        ]);
+
+        document.getElementById('skeletonLoader').style.display = 'none';
+
+        // 1. 處理設定 (收單截止日與商店名稱)
+        let sett = {};
+        if (settRes.status === 'fulfilled' && settRes.value && settRes.value.success && settRes.value.data) {
+          sett = settRes.value.data;
+        } else if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.settings) {
+          sett = prodRes.value.settings;
+        }
+
+        if (sett.ORDER_DEADLINE !== undefined) {
+          initCatalogDeadline(sett.ORDER_DEADLINE);
+        } else {
           initCatalogDeadline(null);
         }
 
-        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getProducts`);
-        const json = await res.json();
-        document.getElementById('skeletonLoader').style.display = 'none';
+        if (sett.STORE_NAME) {
+          const brandElem = document.querySelector('.brand-title span:first-child');
+          if (brandElem) brandElem.textContent = sett.STORE_NAME;
+        }
 
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          allProducts = json.data;
+        // 2. 處理商品
+        if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
+          allProducts = prodRes.value.data;
+
+          // 寫入快取，供下次秒開
+          try {
+            sessionStorage.setItem('cached_catalog_data', JSON.stringify({
+              products: allProducts,
+              settings: sett
+            }));
+          } catch (e) {}
+
           renderProductList();
         } else {
-          showNoProducts('目前本檔連線商品整理中，敬請期待！');
+          showNoProducts('目前連線商品整理中，敬請期待！');
         }
       } catch (err) {
         console.error('載入商品清單失敗:', err);
         document.getElementById('skeletonLoader').style.display = 'none';
-        showNoProducts('網路連線逾時，請重新整理頁面！');
+        if (!allProducts || allProducts.length === 0) {
+          showNoProducts('網路連線逾時，請重新整理頁面！');
+        }
       }
     }
 
@@ -616,7 +698,7 @@
         return nameMatch || idMatch || catMatch;
       });
 
-      countText.textContent = `共 ${filtered.length} 件連線商品`;
+      countText.textContent = `共 ${filtered.length} 件連線中的商品`;
 
       if (filtered.length === 0) {
         grid.style.display = 'none';

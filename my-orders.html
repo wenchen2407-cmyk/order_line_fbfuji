@@ -963,15 +963,61 @@
       return 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
     }
 
-    window.onload = async () => {
+    function parseDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      const s = String(str).trim().replace(/-/g, '/');
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+      const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      }
+      return null;
+    }
+
+    window.onload = () => {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('uid')) {
         currentUserId = urlParams.get('uid');
       }
 
-      await initLiff();
-      await fetchUserData();
+      // 0. 瞬間快取還原 (0 毫秒極速呈現上次訂單與身分)
+      restoreInstantOrdersCache();
+
+      // 1. 並行發動 (LIFF 身分驗證 與 訂單資料獲取 同時執行)
+      initLiff();
+      fetchUserData();
     };
+
+    // 0 毫秒訂單快取還原
+    function restoreInstantOrdersCache() {
+      try {
+        const cachedProfile = sessionStorage.getItem('liff_user_profile');
+        if (cachedProfile) {
+          const p = JSON.parse(cachedProfile);
+          if (p.userId && !currentUserId) currentUserId = p.userId;
+          if (p.displayName) document.getElementById('displayUserName').textContent = p.displayName;
+          if (p.pictureUrl) document.getElementById('userAvatar').src = p.pictureUrl;
+        }
+
+        const cachedOrders = sessionStorage.getItem(`cached_orders_${currentUserId}`);
+        if (cachedOrders) {
+          const data = JSON.parse(cachedOrders);
+          if (data) {
+            pendingOrders = data.pendingOrders || [];
+            completedOrders = data.completedOrders || [];
+            customerProfile = data.customerProfile || {};
+            if (data.systemSettings) {
+              systemSettings = Object.assign(systemSettings, data.systemSettings);
+            }
+            updateUserProfileUI();
+            renderOrdersView();
+          }
+        }
+      } catch (e) {
+        console.warn('訂單快取還原略過:', e);
+      }
+    }
 
     async function initLiff() {
       if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID.includes('YOUR_LIFF')) return;
@@ -979,9 +1025,22 @@
         await liff.init({ liffId: CONFIG.LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
+          const prevId = currentUserId;
           currentUserId = profile.userId;
           document.getElementById('userAvatar').src = profile.pictureUrl || 'https://via.placeholder.com/44';
           document.getElementById('displayUserName').textContent = profile.displayName;
+
+          // 存入快取
+          sessionStorage.setItem('liff_user_profile', JSON.stringify({
+            userId: profile.userId,
+            displayName: profile.displayName,
+            pictureUrl: profile.pictureUrl
+          }));
+
+          // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
+          if (prevId !== currentUserId) {
+            fetchUserData();
+          }
         }
       } catch (e) {
         console.error('LIFF Error:', e);
@@ -1011,6 +1070,17 @@
             }
             systemSettings = Object.assign(systemSettings, json.data.settings);
           }
+
+          // 寫入訂單快取，供下次秒開
+          try {
+            sessionStorage.setItem(`cached_orders_${currentUserId}`, JSON.stringify({
+              pendingOrders: pendingOrders,
+              completedOrders: completedOrders,
+              customerProfile: customerProfile,
+              systemSettings: systemSettings
+            }));
+          } catch (e) {}
+
           updateUserProfileUI();
           renderOrdersView();
         } else {
@@ -1041,11 +1111,9 @@
       const textElem = document.getElementById('liveStatusText');
       if (badgeElem && dotElem && textElem) {
         let isClosed = false;
-        if (systemSettings.ORDER_DEADLINE) {
-          const deadline = new Date(systemSettings.ORDER_DEADLINE);
-          if (!isNaN(deadline.getTime()) && new Date() >= deadline) {
-            isClosed = true;
-          }
+        const deadline = parseDeadline(systemSettings.ORDER_DEADLINE);
+        if (deadline && new Date() >= deadline) {
+          isClosed = true;
         }
         if (isClosed) {
           badgeElem.style.color = '#64748b';

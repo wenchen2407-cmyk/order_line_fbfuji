@@ -344,7 +344,8 @@ function getProductsList() {
     }
   }
 
-  return { success: true, data: products };
+  const settings = getSystemSettings().data || {};
+  return { success: true, data: products, settings: settings };
 }
 
 /**
