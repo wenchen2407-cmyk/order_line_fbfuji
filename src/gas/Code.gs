@@ -106,9 +106,13 @@ function setupSpreadsheet() {
   const defaultSettings = [
     ['ORDER_DEADLINE', '2026/10/05 23:59', '本次連線收單截止時間 (格式: YYYY/MM/DD HH:mm，逾期前台自動關單)'],
     ['ALLOW_CHECKOUT', 'NO', '是否開放回國結帳通道 (YES: 開放買家前往結帳與選配送 / NO: 連線採購中尚未開放)'],
-    ['BANK_NAME', '808 玉山銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
-    ['BANK_ACCOUNT_HOLDER', '陳小美', '賣家帳戶戶名'],
-    ['BANK_ACCOUNT', "'0123-4567-8901-2345", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
+    ['BANK_NAME', '822 中國信託商業銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
+    ['BANK_ACCOUNT_HOLDER', '陳O雯', '賣家帳戶戶名'],
+    ['BANK_ACCOUNT', "'4175-402-49273", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
+    ['LINEPAY_NAME', '粉絲團小編兼職小小幫手', 'LINE Pay 帳戶顯示名稱'],
+    ['LINEPAY_ACCOUNT', 'https://line.me/ti/p/IUqKCB7dRU', 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)'],
+    ['JKOPAY_NAME', 'Wen Wen Chen', '街口支付帳戶顯示名稱'],
+    ['JKOPAY_ACCOUNT', "'900459491", '街口支付帳號 (機構代碼396，支援一鍵複製)'],
     ['FREE_SHIPPING_THRESHOLD', '3000', '7-11 賣貨便 / 全家 好賣+ 滿額免運門檻金額 (NT$)'],
     ['SHIP_FEE_711_COD', '38', '7-11 超商貨到付款 (賣貨便) 未達門檻運費 (NT$)'],
     ['SHIP_FEE_FAMI_COD', '35', '全家 超商貨到付款 (好賣+) 未達門檻運費 (NT$)'],
@@ -125,7 +129,7 @@ function setupSpreadsheet() {
     settSheet.getRange(1, 1, 1, 3).setBackground('#d83b01').setFontColor('#ffffff').setFontWeight('bold');
     defaultSettings.forEach(s => settSheet.appendRow(s));
   } else {
-    // 既有表格：將缺少的新欄位補齊，並自動將 STORE_NAME 更新為 W.W.連線代購
+    // 既有表格：將缺少的新欄位補齊，並自動將 STORE_NAME 與最新收款資訊更新
     const existingData = settSheet.getDataRange().getValues();
     const existingKeys = new Set(existingData.slice(1).map(r => String(r[0]).trim()));
     defaultSettings.forEach(s => {
@@ -134,7 +138,7 @@ function setupSpreadsheet() {
       }
     });
 
-    // 強制將 STORE_NAME 更新為「W.W.連線代購」
+    // 強制將 STORE_NAME 與最新收款帳號戶名同步更新
     let foundStoreName = false;
     for (let r = 1; r < existingData.length; r++) {
       const key = String(existingData[r][0]).trim();
@@ -147,6 +151,20 @@ function setupSpreadsheet() {
         settSheet.getRange(r + 1, 2).setValue('38');
       } else if (key === 'SHIP_FEE_FAMI_COD') {
         settSheet.getRange(r + 1, 2).setValue('35');
+      } else if (key === 'BANK_NAME') {
+        settSheet.getRange(r + 1, 2).setValue('822 中國信託商業銀行');
+      } else if (key === 'BANK_ACCOUNT_HOLDER') {
+        settSheet.getRange(r + 1, 2).setValue('陳O雯');
+      } else if (key === 'BANK_ACCOUNT') {
+        settSheet.getRange(r + 1, 2).setValue("'4175-402-49273");
+      } else if (key === 'LINEPAY_NAME') {
+        settSheet.getRange(r + 1, 2).setValue('粉絲團小編兼職小小幫手');
+      } else if (key === 'LINEPAY_ACCOUNT') {
+        settSheet.getRange(r + 1, 2).setValue('https://line.me/ti/p/IUqKCB7dRU');
+      } else if (key === 'JKOPAY_NAME') {
+        settSheet.getRange(r + 1, 2).setValue('Wen Wen Chen');
+      } else if (key === 'JKOPAY_ACCOUNT') {
+        settSheet.getRange(r + 1, 2).setValue("'900459491");
       }
     }
     if (!foundStoreName) {
@@ -904,13 +922,44 @@ function getSystemSettings() {
     }
     if (!settings.BANK_ACCOUNT) {
       const accMatch = info.match(/帳號[:：\s]*([0-9-]+)/);
-      settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '123-4567-8901-2345';
+      settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '4175-402-49273';
     }
     if (!settings.BANK_ACCOUNT_HOLDER) {
       const holderMatch = info.match(/戶名[:：\s]*([^\s]+)/);
-      settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '陳小美';
+      settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '陳O雯';
     }
   }
+
+  // 檢查試算表既有設定列並自動校正回寫 Google 試算表
+  try {
+    for (let i = 1; i < rows.length; i++) {
+      const key = String(rows[i][0] || '').trim();
+      const val = String(rows[i][1] || '').trim();
+      if (key === 'BANK_ACCOUNT_HOLDER' && (val === '陳小美' || !val)) {
+        sheet.getRange(i + 1, 2).setValue('陳O雯');
+        settings.BANK_ACCOUNT_HOLDER = '陳O雯';
+      } else if (key === 'BANK_ACCOUNT' && (!val || val.includes('123-4567') || val.includes('0123-4567') || val.includes('12345-6789'))) {
+        sheet.getRange(i + 1, 2).setValue("'4175-402-49273");
+        settings.BANK_ACCOUNT = '4175-402-49273';
+      }
+    }
+  } catch (err) {
+    console.warn('自動校正試算表失敗(可能無寫入權限):', err);
+  }
+
+  // 3種付款方式預設值保障與舊測試假帳號自動校正 (中國信託、LINE Pay、街口支付)
+  if (!settings.BANK_NAME) settings.BANK_NAME = '822 中國信託商業銀行';
+  if (!settings.BANK_ACCOUNT_HOLDER || settings.BANK_ACCOUNT_HOLDER === '陳小美') settings.BANK_ACCOUNT_HOLDER = '陳O雯';
+  if (!settings.BANK_ACCOUNT || 
+      settings.BANK_ACCOUNT.includes('123-4567') || 
+      settings.BANK_ACCOUNT.includes('0123-4567') || 
+      settings.BANK_ACCOUNT.includes('12345-6789')) {
+    settings.BANK_ACCOUNT = '4175-402-49273';
+  }
+  if (!settings.LINEPAY_NAME) settings.LINEPAY_NAME = '粉絲團小編兼職小小幫手';
+  if (!settings.LINEPAY_ACCOUNT) settings.LINEPAY_ACCOUNT = 'https://line.me/ti/p/IUqKCB7dRU';
+  if (!settings.JKOPAY_NAME) settings.JKOPAY_NAME = 'Wen Wen Chen';
+  if (!settings.JKOPAY_ACCOUNT) settings.JKOPAY_ACCOUNT = '900459491';
 
   // 系統規則校正：超商純取貨 0 元免運，貨到付款滿 3,000 元免運
   if (!settings.FREE_SHIPPING_THRESHOLD || Number(settings.FREE_SHIPPING_THRESHOLD) < 3000) {
@@ -921,6 +970,57 @@ function getSystemSettings() {
   if (!settings.SHIP_FEE_FAMI_COD) settings.SHIP_FEE_FAMI_COD = '35';
 
   return { success: true, data: settings };
+}
+
+/**
+ * 專門一鍵更新 Google 試算表【系統設定】中的 3 大收款帳戶資訊
+ * 可直接於 Apps Script 編輯器上方選擇此函式並點擊「執行」
+ */
+function updatePaymentSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+  if (!settSheet) return '系統設定表不存在';
+
+  const paymentConfigs = {
+    'BANK_NAME': '822 中國信託商業銀行',
+    'BANK_ACCOUNT_HOLDER': '陳O雯',
+    'BANK_ACCOUNT': "'4175-402-49273",
+    'LINEPAY_NAME': '粉絲團小編兼職小小幫手',
+    'LINEPAY_ACCOUNT': 'https://line.me/ti/p/IUqKCB7dRU',
+    'JKOPAY_NAME': 'Wen Wen Chen',
+    'JKOPAY_ACCOUNT': "'900459491"
+  };
+
+  const data = settSheet.getDataRange().getValues();
+  const updatedKeys = new Set();
+
+  for (let r = 1; r < data.length; r++) {
+    const key = String(data[r][0] || '').trim();
+    if (paymentConfigs[key]) {
+      settSheet.getRange(r + 1, 2).setValue(paymentConfigs[key]);
+      updatedKeys.add(key);
+    }
+  }
+
+  // 若試算表中尚無該欄位則自動 append 補齊
+  const descriptions = {
+    'BANK_NAME': '賣家收款銀行與代碼 (顯示於匯款卡片)',
+    'BANK_ACCOUNT_HOLDER': '賣家帳戶戶名',
+    'BANK_ACCOUNT': '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)',
+    'LINEPAY_NAME': 'LINE Pay 帳戶顯示名稱',
+    'LINEPAY_ACCOUNT': 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)',
+    'JKOPAY_NAME': '街口支付帳戶顯示名稱',
+    'JKOPAY_ACCOUNT': '街口支付帳號 (機構代碼396，支援一鍵複製)'
+  };
+
+  for (const [key, val] of Object.entries(paymentConfigs)) {
+    if (!updatedKeys.has(key)) {
+      settSheet.appendRow([key, val, descriptions[key] || '']);
+    }
+  }
+
+  settSheet.getRange("B:B").setNumberFormat('@');
+  return 'Google Sheets 系統設定資料 (中國信託/LINE Pay/街口支付) 已成功更新完畢！';
 }
 
 /**

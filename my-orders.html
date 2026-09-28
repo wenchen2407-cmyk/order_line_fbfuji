@@ -407,8 +407,8 @@
 
   <div class="container">
 
-    <!-- 本地測試除錯工具列 (可於本地隨時切換模擬各階段狀態) -->
-    <div class="dev-toolbar">
+    <!-- 本地測試除錯工具列 (預設隱藏，僅在 localhost 本地開發環境或網址帶 ?dev=1 時動態顯示) -->
+    <div class="dev-toolbar" id="devToolbarBox" style="display: none;">
       <div class="dev-toolbar-title">
         <span>🧪 本地模擬測試面板 (快速切換各階段)</span>
         <span id="devCurrentModeText" style="color:#fde047;">連線登記中 (未開放結帳)</span>
@@ -419,7 +419,7 @@
         <button type="button" class="dev-btn" id="btnMode3" onclick="setDevScenario('ALLOW_CHECKOUT')">③ 開放結帳(雙徽章)</button>
         <button type="button" class="dev-btn" id="btnMode4" onclick="setDevScenario('PENDING_PAYMENT')">④ 待付款(先匯款)</button>
         <button type="button" class="dev-btn" id="btnMode4b" onclick="setDevScenario('COD_PENDING')">④-B 貨到付款(待出貨)</button>
-        <button type="button" class="dev-btn" id="btnMode5" onclick="setDevScenario('AUDITING')">⑤ 對帳中待出貨</button>
+        <button type="button" class="dev-btn" id="btnMode5" onclick="setDevScenario('AUDITING')">⑤ 對帳待出貨</button>
         <button type="button" class="dev-btn" id="btnMode6" onclick="setDevScenario('SHIPPED')">⑥ 出貨配送中(追蹤碼)</button>
         <button type="button" class="dev-btn" id="btnMode7" onclick="setDevScenario('HISTORY')">⑦ 完成取貨(歷史單)</button>
       </div>
@@ -455,12 +455,83 @@
 
       <!-- A-1. 待付款提醒與回報匯款按鈕卡片 (待付款狀態時呈現) -->
       <div id="pendingPaymentNoticeBox" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);">
-        <div style="font-weight: 800; color: #b45309; font-size: 14.5px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-          💳 已結帳完成，待轉帳付款
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+          <div style="font-weight: 800; color: #b45309; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
+            💳 已結帳完成，待轉帳付款
+          </div>
+          <a href="javascript:void(0)" onclick="togglePendingAccountsBox()" id="btnTogglePendingAccounts" style="font-size: 12.5px; color: #0284c7; text-decoration: underline; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+            🔗 賣家收款帳戶資訊
+          </a>
         </div>
         <div style="font-size: 12.5px; color: #78350f; line-height: 1.6; margin-bottom: 12px;">
           完成轉帳付款後，請點擊下方【💰 匯款/付款回報】填寫轉帳時間與帳號末五碼，待小幫手確認完成後將盡快為您安排出貨！
         </div>
+
+        <!-- 點擊超連結展開的賣家收款帳戶資訊區塊 -->
+        <div id="pendingAccountsDropdown" style="display: none; margin-bottom: 14px; background: #fff; border-radius: 10px; border: 1px solid #fde68a; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span>🏦 賣家收款帳戶資訊 (支援 3 種付款方式)：</span>
+            <span onclick="togglePendingAccountsBox()" style="cursor: pointer; color: #94a3b8; font-size: 12px; padding: 2px 6px; background: #f1f5f9; border-radius: 4px;">✕ 收合</span>
+          </div>
+
+          <!-- 方式 1: 中國信託 -->
+          <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #0284c7; font-size: 13px; margin-bottom: 4px;">💳 中國信託銀行轉帳</div>
+            <div style="font-size: 12px; color: #334155; line-height: 1.5;">
+              銀行：<b id="pendingBankNameDisplay">822 中國信託商業銀行</b> ｜ 分行：<b>板新分行 (0417)</b><br>
+              戶名：<b id="pendingBankHolderDisplay">陳O雯</b>
+            </div>
+            <div class="bank-account-num" style="margin-top: 6px;">
+              <span id="pendingBankAccountDisplay">4175-402-49273</span>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('pendingBankAccountDisplay', '中國信託')">📋 複製帳號</button>
+                <button type="button" onclick="togglePendingCtbcQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+              </div>
+            </div>
+            <div id="pendingCtbcQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/ctbc-qrcode.jpg" alt="中國信託 TWQR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳 (支援 TWQR 跨機構轉帳)</div>
+            </div>
+          </div>
+
+          <!-- 方式 2: LINE Pay -->
+          <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #16a34a; font-size: 13px; margin-bottom: 4px;">🟢 LINE Pay 好友轉帳</div>
+            <div style="font-size: 12px; color: #334155; line-height: 1.5; margin-bottom: 6px;">
+              收款對象：<b id="pendingLinepayHolderDisplay">粉絲團小編兼職小小幫手</b><br>
+              <span style="color: #64748b; font-size: 11px;">請先將小編加為 LINE 好友，再直接於 LINE 聊天室中 Pay (轉帳) 給小編！</span>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+              <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="pendingLinepayFriendLink" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 12px;">💬 點此前往加 LINE 好友</a>
+              <button type="button" onclick="togglePendingLinePayQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+            </div>
+            <div id="pendingLinepayQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/linepay-qrcode.jpg" alt="LINE 好友 QR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃描上方 QR Code 加入小編好友</div>
+            </div>
+          </div>
+
+          <!-- 方式 3: 街口支付 -->
+          <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #dc2626; font-size: 13px; margin-bottom: 4px;">🔴 街口支付 (JKOPAY)</div>
+            <div style="font-size: 12px; color: #334155; line-height: 1.5; margin-bottom: 6px;">
+              收款對象：<b id="pendingJkoHolderDisplay">Wen Wen Chen</b> ｜ 街口代碼：<b>396</b><br>
+              <span style="color: #64748b; font-size: 11px;">請先加街口好友，再進行轉帳（亦支援 TWQR 跨機構轉帳）！</span>
+            </div>
+            <div class="bank-account-num" style="margin-top: 6px;">
+              <span id="pendingJkoAccountDisplay">900459491</span>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('pendingJkoAccountDisplay', '街口')">📋 複製帳號</button>
+                <button type="button" onclick="togglePendingJkoQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+              </div>
+            </div>
+            <div id="pendingJkoQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/jko-qrcode.jpg" alt="街口支付 QR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR 跨機構轉帳)</div>
+            </div>
+          </div>
+        </div>
+
         <button type="button" onclick="openReportPaymentModal()" style="display: block; width: 100%; background: #f59e0b; color: #fff; text-align: center; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 14px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);">
           💰 匯款/付款回報 👉
         </button>
@@ -677,15 +748,90 @@
         <input type="text" id="inputRecipientAddress" class="form-input" placeholder="例：7-11 鑫東門市 123456 / 全家 新光門市 012345">
       </div>
 
-      <!-- 匯款轉帳資訊卡 (先匯款時顯示) -->
+      <!-- 匯款/支付方式資訊卡 (先匯款時顯示，提供 3 種支付方式) -->
       <div id="prepayBankBox" class="bank-box" style="display: block;">
-        <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">🏦 賣家收款帳戶資訊：</div>
-        <div>銀行名稱：<b id="bankNameDisplay">822 中國信託商業銀行</b></div>
-        <div>帳戶戶名：<b id="bankHolderDisplay">陳小美</b></div>
-        <div class="bank-account-num">
-          <span id="bankAccountDisplay">123-4567-8901-2345</span>
-          <button type="button" class="btn-copy-acc" onclick="copyBankAccount()">📋 複製帳號</button>
+        <div style="font-weight: 800; color: #1e293b; margin-bottom: 8px; font-size: 13.5px;">🏦 賣家收款帳戶資訊 (支援 3 種付款方式)：</div>
+        
+        <!-- 方式 1: 中國信託商業銀行 -->
+        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; color: #0284c7; font-size: 13.5px; margin-bottom: 6px;">
+            💳 中國信託銀行轉帳
+          </div>
+          <div style="font-size: 12px; color: #334155; line-height: 1.6; margin-bottom: 8px;">
+            銀行：<b id="bankNameDisplay">822 中國信託商業銀行</b> ｜ 分行：<b>板新分行 (0417)</b><br>
+            戶名：<b id="bankHolderDisplay">陳O雯</b>
+          </div>
+          <div class="bank-account-num" style="margin-top: 6px;">
+            <span id="bankAccountDisplay">4175-402-49273</span>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('bankAccountDisplay', '中國信託')">📋 複製帳號</button>
+              <button type="button" onclick="toggleCtbcQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                📱 QR Code
+              </button>
+            </div>
+          </div>
+
+          <!-- 中信 QR Code 展開展示區塊 -->
+          <div id="ctbcQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/ctbc-qrcode.jpg" alt="中國信託 TWQR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳 (支援 TWQR 跨機構轉帳)</div>
+          </div>
         </div>
+
+        <!-- 方式 2: LINE Pay (好友轉帳) -->
+        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; color: #16a34a; font-size: 13.5px; margin-bottom: 6px;">
+            🟢 LINE Pay 好友轉帳
+          </div>
+          <div style="font-size: 12px; color: #334155; line-height: 1.6; margin-bottom: 8px;">
+            收款對象：<b id="linepayHolderDisplay" style="color: #0f172a;">粉絲團小編兼職小小幫手</b><br>
+            <span style="color: #64748b; font-size: 11.5px;">請先將小編加為 LINE 好友，再直接於 LINE 聊天室中 Pay (轉帳) 給小編！</span>
+          </div>
+
+          <!-- 動作按鈕：加好友連結與 QR Code 預覽 -->
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="linepayFriendLink" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 9px 10px; border-radius: 8px; font-weight: 700; font-size: 12.5px; box-shadow: 0 2px 6px rgba(6, 199, 85, 0.2);">
+              💬 點此前往加 LINE 好友
+            </a>
+            <button type="button" onclick="toggleLinePayQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;">
+              📱 QR Code
+            </button>
+          </div>
+
+          <!-- QR Code 展開展示區塊 -->
+          <div id="linepayQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/linepay-qrcode.jpg" alt="LINE 好友 QR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃描上方 QR Code 加入【粉絲團小編兼職小小幫手】好友</div>
+          </div>
+        </div>
+
+        <!-- 方式 3: 街口支付 -->
+        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; color: #dc2626; font-size: 13.5px; margin-bottom: 6px;">
+            🔴 街口支付 (JKOPAY)
+          </div>
+          <div style="font-size: 12px; color: #334155; line-height: 1.6; margin-bottom: 8px;">
+            收款對象：<b id="jkoHolderDisplay" style="color: #0f172a;">Wen Wen Chen</b> ｜ 街口代碼：<b>396</b><br>
+            <span style="color: #64748b; font-size: 11.5px;">請先加街口好友，再進行轉帳（亦支援 TWQR 跨機構掃碼轉帳）！</span>
+          </div>
+
+          <div class="bank-account-num" style="margin-top: 6px;">
+            <span id="jkoAccountDisplay">900459491</span>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('jkoAccountDisplay', '街口')">📋 複製帳號</button>
+              <button type="button" onclick="toggleJkoQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
+                📱 QR Code
+              </button>
+            </div>
+          </div>
+
+          <!-- 街口 QR Code 展開展示區塊 -->
+          <div id="jkoQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/jko-qrcode.jpg" alt="街口支付 QR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR 跨機構轉帳)</div>
+          </div>
+        </div>
+
         <div style="margin-top: 10px; font-size: 12px; color: #64748b; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.6;">
           💡 <b>轉帳流程說明：</b><br>
           送出結帳後訂單狀態為【待付款】。<br>
@@ -782,8 +928,12 @@
       SHIP_FEE_711_COD: '38',
       SHIP_FEE_FAMI_COD: '35',
       BANK_NAME: '822 中國信託商業銀行',
-      BANK_ACCOUNT_HOLDER: '陳小美',
-      BANK_ACCOUNT: '123-4567-8901-2345'
+      BANK_ACCOUNT_HOLDER: '陳O雯',
+      BANK_ACCOUNT: '4175-402-49273',
+      LINEPAY_NAME: '粉絲團小編兼職小小幫手',
+      LINEPAY_ACCOUNT: 'https://line.me/ti/p/IUqKCB7dRU',
+      JKOPAY_NAME: 'Wen Wen Chen',
+      JKOPAY_ACCOUNT: '900459491'
     };
 
     let selectedShipMethod = '711_PREPAID';
@@ -795,7 +945,16 @@
     let devScenarioMode = 'REGISTERING';
 
     window.onload = async () => {
+      // 只有在 localhost 本地開發環境，或網址有加 ?dev=1 時，才顯示「本地模擬測試面板」，正式環境絕對不顯示！
+      const isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const urlParams = new URLSearchParams(window.location.search);
+      const isDebug = isLocalhost || (urlParams.get('dev') === '1') || (urlParams.get('debug') === 'true');
+      
+      const devBar = document.getElementById('devToolbarBox');
+      if (devBar) {
+        devBar.style.display = isDebug ? 'block' : 'none';
+      }
+
       if (urlParams.get('uid')) {
         currentUserId = urlParams.get('uid');
       }
@@ -830,6 +989,16 @@
           completedOrders = json.data.completedOrders || [];
           customerProfile = json.data.customerProfile || {};
           if (json.data.settings) {
+            // 若試算表仍保留先前測試用舊假帳號/舊戶名，自動校正為最新真實設定
+            if (!json.data.settings.BANK_ACCOUNT || 
+                json.data.settings.BANK_ACCOUNT.includes('123-4567') || 
+                json.data.settings.BANK_ACCOUNT.includes('0123-4567') || 
+                json.data.settings.BANK_ACCOUNT.includes('12345-6789')) {
+              json.data.settings.BANK_ACCOUNT = '4175-402-49273';
+            }
+            if (!json.data.settings.BANK_ACCOUNT_HOLDER || json.data.settings.BANK_ACCOUNT_HOLDER === '陳小美') {
+              json.data.settings.BANK_ACCOUNT_HOLDER = '陳O雯';
+            }
             systemSettings = Object.assign(systemSettings, json.data.settings);
           }
           updateUserProfileUI();
@@ -850,6 +1019,13 @@
     function setupDefaultMockData() {
       // 確保免運門檻鎖定為 3000 元 (防止被 Google Sheets 試算表設定頁既有的 1500 覆蓋)
       systemSettings.FREE_SHIPPING_THRESHOLD = '3000';
+      systemSettings.BANK_NAME = '822 中國信託商業銀行';
+      systemSettings.BANK_ACCOUNT_HOLDER = '陳O雯';
+      systemSettings.BANK_ACCOUNT = '4175-402-49273';
+      systemSettings.LINEPAY_NAME = '粉絲團小編兼職小小幫手';
+      systemSettings.LINEPAY_ACCOUNT = 'https://line.me/ti/p/IUqKCB7dRU';
+      systemSettings.JKOPAY_NAME = 'Wen Wen Chen';
+      systemSettings.JKOPAY_ACCOUNT = '900459491';
 
       customerProfile = {
         userId: currentUserId,
@@ -1018,6 +1194,7 @@
       // 1. 待付款提示卡展示 (先匯款)
       if (hasPendingPayment && !hasShippedItems) {
         pendingPaymentBox.style.display = 'block';
+        updatePendingPaymentAccountsUI();
       } else {
         pendingPaymentBox.style.display = 'none';
       }
@@ -1229,10 +1406,18 @@
       document.getElementById('inputRecipientPhone').value = customerProfile.phone || '';
       document.getElementById('inputRecipientAddress').value = customerProfile.defaultAddress || '';
 
-      // 銀行資訊帶入
+      // 收款資訊帶入 (支援 3 種付款管道：中信、LINE Pay、街口)
       document.getElementById('bankNameDisplay').textContent = systemSettings.BANK_NAME || '822 中國信託商業銀行';
-      document.getElementById('bankHolderDisplay').textContent = systemSettings.BANK_ACCOUNT_HOLDER || '陳小美';
-      document.getElementById('bankAccountDisplay').textContent = (systemSettings.BANK_ACCOUNT || '').replace(/'/g, '');
+      document.getElementById('bankHolderDisplay').textContent = systemSettings.BANK_ACCOUNT_HOLDER || '陳O雯';
+      document.getElementById('bankAccountDisplay').textContent = (systemSettings.BANK_ACCOUNT || '4175-402-49273').replace(/'/g, '');
+
+      document.getElementById('linepayHolderDisplay').textContent = systemSettings.LINEPAY_NAME || '粉絲團小編兼職小小幫手';
+      const lpLink = systemSettings.LINEPAY_ACCOUNT || 'https://line.me/ti/p/IUqKCB7dRU';
+      const lpLinkEl = document.getElementById('linepayFriendLink');
+      if (lpLinkEl) lpLinkEl.href = lpLink;
+
+      document.getElementById('jkoHolderDisplay').textContent = systemSettings.JKOPAY_NAME || 'Wen Wen Chen';
+      document.getElementById('jkoAccountDisplay').textContent = (systemSettings.JKOPAY_ACCOUNT || '900459491').replace(/'/g, '');
 
       // 計算免運 (7-11 / 全家 貨到付款專屬：滿 3,000 免運)
       const freeThreshold = Number(systemSettings.FREE_SHIPPING_THRESHOLD) || 3000;
@@ -1297,14 +1482,84 @@
       document.getElementById('modalFinalTotalText').textContent = `NT$ ${finalTot.toLocaleString()}`;
     }
 
-    // 複製銀行帳號
-    function copyBankAccount() {
-      const acc = document.getElementById('bankAccountDisplay').textContent.trim();
+    // 複製付款帳號
+    function copyPaymentAccount(elementId, labelName) {
+      const el = document.getElementById(elementId);
+      const acc = el ? el.textContent.trim() : '';
+      if (!acc) return;
       navigator.clipboard.writeText(acc).then(() => {
-        alert('✓ 已成功複製');
+        alert(`✓ 已成功複製 ${labelName || ''}帳號：${acc}`);
       }).catch(() => {
-        alert(`帳號：${acc}`);
+        alert(`${labelName || '帳號'}：${acc}`);
       });
+    }
+
+    function copyBankAccount() {
+      copyPaymentAccount('bankAccountDisplay', '中國信託');
+    }
+
+    // 切換中國信託 TWQR Code 展開顯示
+    function toggleCtbcQr() {
+      const box = document.getElementById('ctbcQrBox');
+      if (box) {
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+      }
+    }
+
+    // 切換 LINE Pay 好友 QR Code 展開顯示
+    function toggleLinePayQr() {
+      const box = document.getElementById('linepayQrBox');
+      if (box) {
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+      }
+    }
+
+    // 切換街口支付 QR Code 展開顯示
+    function toggleJkoQr() {
+      const box = document.getElementById('jkoQrBox');
+      if (box) {
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+      }
+    }
+
+    // 切換待付款卡片中的賣家收款帳戶資訊展開/收合
+    function togglePendingAccountsBox() {
+      const box = document.getElementById('pendingAccountsDropdown');
+      if (box) {
+        const isHidden = (box.style.display === 'none');
+        box.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) updatePendingPaymentAccountsUI();
+      }
+    }
+    function togglePendingCtbcQr() {
+      const box = document.getElementById('pendingCtbcQrBox');
+      if (box) box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+    function togglePendingLinePayQr() {
+      const box = document.getElementById('pendingLinepayQrBox');
+      if (box) box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+    function togglePendingJkoQr() {
+      const box = document.getElementById('pendingJkoQrBox');
+      if (box) box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+    function updatePendingPaymentAccountsUI() {
+      const bh = document.getElementById('pendingBankHolderDisplay');
+      if (bh) bh.textContent = systemSettings.BANK_ACCOUNT_HOLDER || '陳O雯';
+      const ba = document.getElementById('pendingBankAccountDisplay');
+      if (ba) ba.textContent = (systemSettings.BANK_ACCOUNT || '4175-402-49273').replace(/'/g, '');
+      const bn = document.getElementById('pendingBankNameDisplay');
+      if (bn) bn.textContent = systemSettings.BANK_NAME || '822 中國信託商業銀行';
+
+      const lh = document.getElementById('pendingLinepayHolderDisplay');
+      if (lh) lh.textContent = systemSettings.LINEPAY_NAME || '粉絲團小編兼職小小幫手';
+      const ll = document.getElementById('pendingLinepayFriendLink');
+      if (ll) ll.href = systemSettings.LINEPAY_ACCOUNT || 'https://line.me/ti/p/IUqKCB7dRU';
+
+      const jh = document.getElementById('pendingJkoHolderDisplay');
+      if (jh) jh.textContent = systemSettings.JKOPAY_NAME || 'Wen Wen Chen';
+      const ja = document.getElementById('pendingJkoAccountDisplay');
+      if (ja) ja.textContent = (systemSettings.JKOPAY_ACCOUNT || '900459491').replace(/'/g, '');
     }
 
     // 送出結帳表單
