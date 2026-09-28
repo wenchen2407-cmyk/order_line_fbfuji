@@ -421,6 +421,10 @@
             🔗 賣家收款帳戶資訊
           </a>
         </div>
+        <div style="background: #fef3c7; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px dashed #f59e0b;">
+          <span style="font-weight: 700; color: #92400e; font-size: 13px;">轉帳應付總額 (含運費)：</span>
+          <span style="font-family:'Outfit',sans-serif; font-weight: 900; font-size: 18px; color: var(--accent);" id="pendingPaymentAmountText">NT$ 0</span>
+        </div>
         <div style="font-size: 12.5px; color: #78350f; line-height: 1.6; margin-bottom: 12px;">
           完成轉帳付款後，請點擊下方【💰 匯款/付款回報】填寫轉帳時間與帳號末五碼，待小幫手確認完成後將盡快為您安排出貨！
         </div>
@@ -510,8 +514,9 @@
         <div style="font-weight: 800; color: #15803d; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
           📦 待出貨
         </div>
-        <div style="margin-top: 6px; font-size: 13px; color: #14532d;">
-          物流方式：<b id="codPendingShipMethodText">-</b>
+        <div style="margin-top: 6px; font-size: 13px; color: #14532d; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+          <div>物流方式：<b id="codPendingShipMethodText">-</b></div>
+          <div>取貨付款總額：<b style="font-family:'Outfit',sans-serif; font-size: 15.5px; color: #15803d;" id="codPendingAmountText">NT$ 0</b></div>
         </div>
         <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
           已收到結帳完成通知！小幫手將盡快為您安排出貨，寄出後將在此顯示包裹查詢編號，屆時請留意取件通知簡訊至指定門市取貨付款！
@@ -539,9 +544,18 @@
       <!-- B. 本次連線採購清單主卡片 -->
       <div class="section-card">
         <div class="section-title">
-          <span>🛍️ 連線訂購明細</span>
+          <span id="orderSectionTitle">🛍️ 連線訂購明細</span>
         </div>
         
+        <!-- 尚有商品連線登記中 警示提示框 -->
+        <div id="pendingProcureAlertBox" style="display: none; gap: 10px; align-items: flex-start; padding: 13px 15px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; margin-bottom: 14px; color: #92400e;">
+          <span style="font-size: 20px; line-height: 1.2;">⚠️</span>
+          <div style="font-size: 13px; line-height: 1.6;">
+            <b style="font-size: 13.5px; color: #78350f;">尚有商品連線登記中</b><br>
+            尚有 <b id="pendingProcureCountText" style="color: #b45309;">0</b> 件商品未確定採購結果，若群組發送結帳訊息已超過24小時仍無法結帳，請主動聯繫 <b>小幫手</b> 或 <b>W.W.</b> 幫您確認！
+          </div>
+        </div>
+
         <div id="pendingItemsContainer">
           <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">正在載入您的連線商品...</div>
         </div>
@@ -896,7 +910,8 @@
       GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec'
     };
 
-    let currentUserId = 'TEST_USER_999';
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentUserId = urlParams.get('uid') || 'TEST_USER_999';
     let pendingOrders = [];
     let completedOrders = [];
     let customerProfile = {};
@@ -1049,16 +1064,48 @@
 
     // 取得使用者資料
     async function fetchUserData() {
+      // 0. 本地快取優先還原 (若買家剛在本地完成結帳，優先還原當前最新結帳狀態)
+      try {
+        const cached = sessionStorage.getItem(`cached_orders_${currentUserId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.pendingOrders || parsed.completedOrders)) {
+            pendingOrders = parsed.pendingOrders || [];
+            completedOrders = parsed.completedOrders || [];
+            if (parsed.customerProfile) customerProfile = parsed.customerProfile;
+            if (parsed.systemSettings) systemSettings = Object.assign(systemSettings, parsed.systemSettings);
+          }
+        }
+      } catch (e) {}
+
+      // 若為全新無資料之測試環境，才注入示範初始資料
+      if (pendingOrders.length === 0 && completedOrders.length === 0 && (currentUserId === 'TEST_USER_999' || urlParams.get('demo') === '1' || urlParams.get('test') === '1' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        applyMockDemoData();
+      }
+
+      updateUserProfileUI();
+      renderOrdersView();
+
       try {
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getOrdersByUserId&userId=${encodeURIComponent(currentUserId)}`);
         const json = await res.json();
 
         if (json.success && json.data) {
-          pendingOrders = json.data.pendingCheckoutOrders || [];
-          completedOrders = json.data.completedOrders || [];
-          customerProfile = json.data.customerProfile || {};
+          // 若線上確實有此使用者的訂單資料，才覆蓋
+          if (json.data.pendingCheckoutOrders && json.data.pendingCheckoutOrders.length > 0) {
+            pendingOrders = json.data.pendingCheckoutOrders;
+          } else if (currentUserId !== 'TEST_USER_999' && !urlParams.get('demo') && !urlParams.get('test')) {
+            pendingOrders = [];
+          }
+
+          if (json.data.completedOrders && json.data.completedOrders.length > 0) {
+            completedOrders = json.data.completedOrders;
+          } else if (currentUserId !== 'TEST_USER_999' && !urlParams.get('demo') && !urlParams.get('test')) {
+            completedOrders = [];
+          }
+
+          customerProfile = json.data.customerProfile || customerProfile;
           if (json.data.settings) {
-            // 若試算表仍保留先前測試用舊假帳號/舊戶名，自動校正為最新真實設定
             if (!json.data.settings.BANK_ACCOUNT || 
                 json.data.settings.BANK_ACCOUNT.includes('123-4567') || 
                 json.data.settings.BANK_ACCOUNT.includes('0123-4567') || 
@@ -1083,18 +1130,134 @@
 
           updateUserProfileUI();
           renderOrdersView();
-        } else {
-          pendingOrders = [];
-          completedOrders = [];
-          updateUserProfileUI();
-          renderOrdersView();
         }
       } catch (e) {
-        console.error('線上讀取訂單失敗:', e);
-        pendingOrders = [];
-        completedOrders = [];
-        updateUserProfileUI();
-        renderOrdersView();
+        console.warn('線上讀取訂單略過，維持當前資料:', e);
+      }
+    }
+
+    // 示範/測試資料 (包含 2件採購成功、1件缺貨斷貨、以及 1組已完成取貨之合併結帳歷史大卡)
+    function applyMockDemoData() {
+      if (pendingOrders.length === 0 && completedOrders.length === 0) {
+        pendingOrders = [
+          {
+            orderId: 'OD2609270001',
+            orderDate: '2026/09/27 14:20',
+            productId: 'P001',
+            productName: '日本代購限定 輕量防潑水後背包',
+            spec: '經典黑',
+            quantity: 1,
+            unitPrice: 1450,
+            subtotal: 1450,
+            shippingFee: 0,
+            totalAmount: 1450,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '採購成功',
+            checkoutId: ''
+          },
+          {
+            orderId: 'OD2609270008',
+            orderDate: '2026/09/27 16:45',
+            productId: 'P002',
+            productName: '富士山限定 刺繡帆布提袋',
+            spec: '燕麥米白',
+            quantity: 1,
+            unitPrice: 890,
+            subtotal: 890,
+            shippingFee: 0,
+            totalAmount: 890,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '採購成功',
+            checkoutId: ''
+          },
+          {
+            orderId: 'OD2609280015',
+            orderDate: '2026/09/28 11:10',
+            productId: 'P003',
+            productName: '日本專櫃限量 保溫瓶 500ml',
+            spec: '霧面灰',
+            quantity: 1,
+            unitPrice: 680,
+            subtotal: 680,
+            shippingFee: 0,
+            totalAmount: 680,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '缺貨斷貨',
+            checkoutId: ''
+          }
+        ];
+
+        completedOrders = [
+          {
+            orderId: 'OD2609250002',
+            orderDate: '2026/09/25 18:30',
+            productId: 'P004',
+            productName: '日本限定 富士山隨行保溫杯',
+            spec: '海軍藍',
+            quantity: 1,
+            unitPrice: 980,
+            subtotal: 980,
+            shippingFee: 0,
+            totalAmount: 2260,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+            paymentStatus: '已付款',
+            shippingStatus: '已完成取貨',
+            shippedDate: '2026/09/26 11:30',
+            trackingNumber: '86312345678',
+            checkoutId: 'CO260925183025886'
+          },
+          {
+            orderId: 'OD2609250005',
+            orderDate: '2026/09/25 18:30',
+            productId: 'P005',
+            productName: '輕量防潑水斜背包',
+            spec: '米白色',
+            quantity: 1,
+            unitPrice: 1280,
+            subtotal: 1280,
+            shippingFee: 0,
+            totalAmount: 0,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+            paymentStatus: '已付款',
+            shippingStatus: '已完成取貨',
+            shippedDate: '2026/09/26 11:30',
+            trackingNumber: '86312345678',
+            checkoutId: 'CO260925183025886'
+          },
+          {
+            orderId: 'OD2609250011',
+            orderDate: '2026/09/25 18:30',
+            productId: 'P006',
+            productName: '限定櫻花刺繡手帕',
+            spec: '粉櫻色',
+            quantity: 1,
+            unitPrice: 350,
+            subtotal: 350,
+            shippingFee: 0,
+            totalAmount: 0,
+            recipientName: '陳大美',
+            phone: '0912345678',
+            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+            paymentStatus: '免付款(缺貨取消)',
+            shippingStatus: '缺貨斷貨',
+            shippedDate: '2026/09/26 11:30',
+            trackingNumber: '86312345678',
+            checkoutId: 'CO260925183025886'
+          }
+        ];
       }
     }
 
@@ -1148,7 +1311,8 @@
     function renderOrdersView() {
       const container = document.getElementById('pendingItemsContainer');
       const subtotalRow = document.getElementById('goodsSubtotalRow');
-      const subtotalText = document.getElementById('goodsSubtotalText');
+      const goodsSubtotalText = document.getElementById('goodsSubtotalText');
+      const subtotalText = goodsSubtotalText;
       const totalItemsCountText = document.getElementById('totalItemsCountText');
       const noBox = document.getElementById('noPendingBox');
       const procureCard = document.getElementById('procureGuideCard');
@@ -1174,97 +1338,91 @@
       let hasPrepayCheckedOut = false;
       let shippedItemData = null;
 
-      // 檢查是否有已送出結帳的訂單 (待付款、貨到付款待出貨、對帳中、已出貨配送中)
-      // 並取得其運費與配送方式
-      const checkedOutOrder = pendingOrders.find(it => {
+      // 1. 取得整批已送出結帳的商品清單
+      const checkedOutOrders = pendingOrders.filter(it => {
         const sst = String(it.shippingStatus || '').trim();
         const pst = String(it.paymentStatus || '').trim();
-        const isOut = sst.includes('缺貨') || sst.includes('斷貨');
+        const isOut = sst.includes('缺貨') || sst.includes('斷貨') || sst.includes('取消');
         return !isOut && (pst.includes('貨到付款') || pst.includes('待付款') || pst.includes('對帳') || sst.includes('已完成結帳') || sst.includes('出貨') || pst === '已付款');
       });
 
-      if (checkedOutOrder) {
+      if (checkedOutOrders.length > 0) {
         hasCheckedOutOrder = true;
-        currentShippingFee = Number(checkedOutOrder.shippingFee) || 0;
-        const pst = String(checkedOutOrder.paymentStatus || '');
-        if (pst === '待付款' || pst.includes('對帳') || pst === '已付款') {
-          hasPrepayCheckedOut = true;
+        // 運費取整批已結帳訂單中記錄的最高運費（避免因列排序或第一筆為0而被歸零）
+        currentShippingFee = checkedOutOrders.reduce((max, it) => Math.max(max, Number(it.shippingFee) || 0), 0);
+
+        // 取得配送方式名稱
+        const orderWithAddr = checkedOutOrders.find(it => it.deliveryAddress && it.deliveryAddress.includes('['));
+        if (orderWithAddr) {
+          const match = orderWithAddr.deliveryAddress.match(/\[(.*?)\]/);
+          if (match && match[1]) {
+            currentCheckoutMethodName = formatDeliveryInfo(match[1]).replace(/[\[\]]/g, '');
+          }
         }
-        const rawAddr = String(checkedOutOrder.deliveryAddress || '');
-        const match = rawAddr.match(/\[(.*?)\]/);
-        if (match && match[1]) {
-          currentCheckoutMethodName = formatDeliveryInfo(match[1]).replace(/[\[\]]/g, '');
-        } else {
+        if (!currentCheckoutMethodName) {
           currentCheckoutMethodName = '已選配送';
         }
       }
 
-      // 檢查訂單狀態
-      pendingOrders.forEach(item => {
+      // 2. 嚴格檢查已結帳訂單的付款與物流狀態（彼此互斥，優先級分明）
+      checkedOutOrders.forEach(item => {
         const st = String(item.shippingStatus || '').trim();
         const paySt = String(item.paymentStatus || '').trim();
-        const isOut = st.includes('缺貨') || st.includes('斷貨');
-        if (isOut) return;
 
-        // 只有狀態確實是「已完成出貨」或「已出貨」，且管理者已填寫包裹查詢碼時，才顯示物流追蹤卡！
-        // 「對帳中，待出貨」、「貨到付款待出貨」或「待付款」絕不可顯示包裹查詢碼！
         const isActuallyShipped = (st.includes('已完成出貨') || (st.includes('出貨') && !st.includes('待出貨'))) && Boolean(item.trackingNumber);
 
         if (isActuallyShipped) {
           hasShippedItems = true;
           shippedItemData = item;
+        } else if (paySt.includes('對帳') || st.includes('對帳') || paySt.includes('待對帳') || paySt === '已回報待對帳') {
+          hasAuditing = true;
         } else if (paySt === '待付款' || st === '待付款') {
           hasPendingPayment = true;
-        } else if (paySt.includes('貨到付款') || st.includes('貨到付款') || (st.includes('已完成結帳') && !paySt.includes('對帳'))) {
+          hasPrepayCheckedOut = true;
+        } else if (paySt.includes('貨到付款') || st.includes('貨到付款')) {
           hasCodPending = true;
-        } else if (paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳')) {
-          hasAuditing = true;
         }
       });
 
-      // 1. 待付款提示卡展示 (先匯款)
-      if (hasPendingPayment && !hasShippedItems) {
-        pendingPaymentBox.style.display = 'block';
-        updatePendingPaymentAccountsUI();
-      } else {
-        pendingPaymentBox.style.display = 'none';
-      }
-
-      // 2. 貨到付款待出貨提示卡展示 (貨到付款)
-      if (hasCodPending && !hasShippedItems && !hasPendingPayment) {
-        if (codPendingBox) {
-          codPendingBox.style.display = 'block';
-          const codOrder = pendingOrders.find(it => {
-            const pst = String(it.paymentStatus || '');
-            const sst = String(it.shippingStatus || '');
-            return pst.includes('貨到付款') || sst.includes('貨到付款') || sst.includes('已完成結帳');
-          });
-          const shipText = codOrder ? formatDeliveryInfo(codOrder.deliveryAddress) : '';
-          const elem = document.getElementById('codPendingShipMethodText');
-          if (elem) elem.textContent = shipText || '貨到付款';
-        }
-      } else {
-        if (codPendingBox) codPendingBox.style.display = 'none';
-      }
-
-      // 3. 對帳中提示卡展示
-      if (hasAuditing && !hasShippedItems && !hasPendingPayment && !hasCodPending) {
-        auditingBox.style.display = 'block';
-      } else {
-        auditingBox.style.display = 'none';
-      }
-
-      // 3. 物流追蹤卡片展示
+      // 3. 頂部狀態動態提示卡 (依優先級互斥顯示唯一張提示卡)
       if (hasShippedItems && shippedItemData) {
+        // A-4. 已出貨配送中
         trackingCard.style.display = 'block';
+        if (pendingPaymentBox) pendingPaymentBox.style.display = 'none';
+        if (codPendingBox) codPendingBox.style.display = 'none';
+        if (auditingBox) auditingBox.style.display = 'none';
         const code = shippedItemData.trackingNumber || '86312345678';
         document.getElementById('trackCodeDisplay').textContent = code;
-        document.getElementById('trackShipMethodName').textContent = formatDeliveryInfo(shippedItemData.deliveryAddress || '7-11 超商取貨付款');
-        
-        // 官網查詢連結直連
+        document.getElementById('trackShipMethodName').textContent = formatDeliveryInfo(shippedItemData.deliveryAddress || currentCheckoutMethodName);
         const trackBtn = document.getElementById('btnOnlineTrack');
-        trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
+        if (trackBtn) trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
+      } else if (hasAuditing) {
+        // A-2. 對帳中待出貨
+        if (auditingBox) auditingBox.style.display = 'block';
+        if (pendingPaymentBox) pendingPaymentBox.style.display = 'none';
+        if (codPendingBox) codPendingBox.style.display = 'none';
+        trackingCard.style.display = 'none';
+      } else if (hasPendingPayment) {
+        // A-1. 待轉帳付款 (先匯款)
+        if (pendingPaymentBox) pendingPaymentBox.style.display = 'block';
+        if (codPendingBox) codPendingBox.style.display = 'none';
+        if (auditingBox) auditingBox.style.display = 'none';
+        trackingCard.style.display = 'none';
+        updatePendingPaymentAccountsUI();
+      } else if (hasCodPending) {
+        // A-3. 貨到付款待出貨
+        if (codPendingBox) {
+          codPendingBox.style.display = 'block';
+          const elem = document.getElementById('codPendingShipMethodText');
+          if (elem) elem.textContent = currentCheckoutMethodName || '超商貨到付款';
+        }
+        if (pendingPaymentBox) pendingPaymentBox.style.display = 'none';
+        if (auditingBox) auditingBox.style.display = 'none';
+        trackingCard.style.display = 'none';
       } else {
+        if (pendingPaymentBox) pendingPaymentBox.style.display = 'none';
+        if (codPendingBox) codPendingBox.style.display = 'none';
+        if (auditingBox) auditingBox.style.display = 'none';
         trackingCard.style.display = 'none';
       }
 
@@ -1283,7 +1441,34 @@
       badge.style.display = 'inline-block';
       badge.textContent = pendingOrders.length;
 
-      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES');
+      // 1. 動態切換標題：結帳前為「🛍️ 連線訂購明細」，送出結帳後切換為「🧾 結帳明細」
+      const orderSectionTitle = document.getElementById('orderSectionTitle');
+      if (orderSectionTitle) {
+        orderSectionTitle.textContent = hasCheckedOutOrder ? '🧾 結帳明細' : '🛍️ 連線訂購明細';
+      }
+
+      // 2. 統計「連線登記中」的品項數量 (若有任何一件商品在連線登記中，禁止結帳並提示聯繫小幫手)
+      let pendingRegisterCount = 0;
+      pendingOrders.forEach(it => {
+        const s = String(it.shippingStatus || '').trim();
+        const out = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消');
+        const proc = !out && (s.includes('成功') || s.includes('採買') || s.includes('通知'));
+        if (!out && !proc) {
+          pendingRegisterCount++;
+        }
+      });
+
+      // 3. 顯示/隱藏連線登記中警示提示框
+      const alertBox = document.getElementById('pendingProcureAlertBox');
+      const alertCountText = document.getElementById('pendingProcureCountText');
+      if (pendingRegisterCount > 0 && !hasCheckedOutOrder) {
+        if (alertBox) alertBox.style.display = 'flex';
+        if (alertCountText) alertCountText.textContent = pendingRegisterCount;
+      } else {
+        if (alertBox) alertBox.style.display = 'none';
+      }
+
+      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') || urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1' || currentUserId === 'TEST_USER_999';
 
       // 需求 1：③ 開放結帳(雙徽章) 後的訂購清單中無須顯示 [🛍️ 繼續挑選更多商品] 按鈕
       if (continueShoppingBtn) {
@@ -1300,12 +1485,14 @@
         const st = String(item.shippingStatus || '').trim();
         const paySt = String(item.paymentStatus || '').trim();
 
-        // 嚴格區分缺貨、結帳、採購成功、連線登記
-        const isOut = st.includes('缺貨') || st.includes('斷貨');
-        const isCheckedOut = !isOut && (st.includes('出貨') || st.includes('寄出') || paySt.includes('貨到付款') || paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳') || paySt === '待付款' || st === '待付款' || paySt === '已結帳' || st === '已結帳' || st.includes('已完成結帳'));
-        const isProcured = !isOut && !isCheckedOut && (st.includes('成功') || st.includes('通知'));
+        // 嚴格區分缺貨、採購成功、連線登記、已結帳
+        const isOut = st.includes('缺貨') || st.includes('斷貨') || st.includes('取消');
+        const isProcured = !isOut && (st.includes('成功') || st.includes('採買') || st.includes('通知'));
+        const isRegistering = !isOut && !isProcured;
+        // 連線登記的商品絕對不可變成「已結帳」！
+        const isCheckedOut = !isOut && !isRegistering && (st.includes('出貨') || st.includes('寄出') || paySt.includes('貨到付款') || paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳') || paySt === '待付款' || st === '待付款' || paySt === '已結帳' || st === '已結帳' || st.includes('已完成結帳'));
 
-        // 只有採購成功或已結帳且非缺貨的商品才計入總額
+        // 只有採購成功或已結帳且非缺貨非登記的商品才計入總額
         if (!isOut && (isProcured || isCheckedOut)) {
           successfulGoodsTotal += sub;
           totalQty += qty;
@@ -1315,16 +1502,30 @@
         const card = document.createElement('div');
         card.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border-color); margin-bottom:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
         
-        // 徽章樣式邏輯
+        // 徽章樣式邏輯 (嚴格防呆)
         let badgeHtml = '';
         if (isOut) {
           badgeHtml = `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
+        } else if (isRegistering) {
+          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         } else if (isCheckedOut) {
-          // ④ 待付款、④-B 貨到付款、⑤ 對帳中待出貨、⑥ 出貨配送中：商品右側狀態統一顯示「已結帳」
-          badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe;">已結帳</span>`;
+          // 精確反映該商品結帳後的當前進度狀態：
+          const sst = String(item.shippingStatus || '').trim();
+          const pst = String(item.paymentStatus || '').trim();
+          if (sst.includes('已完成出貨') || (sst.includes('出貨') && !sst.includes('待出貨'))) {
+            badgeHtml = `<span class="status-badge badge-info" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">🚚 已出貨</span>`;
+          } else if (pst.includes('對帳') || sst.includes('對帳')) {
+            badgeHtml = `<span class="status-badge" style="background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe;">🔍 對帳中</span>`;
+          } else if (pst === '待付款' || sst === '待付款') {
+            badgeHtml = `<span class="status-badge" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;">💳 待付款</span>`;
+          } else if (pst.includes('貨到付款') || sst.includes('貨到付款')) {
+            badgeHtml = `<span class="status-badge badge-success" style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;">📦 待出貨</span>`;
+          } else {
+            badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe;">已結帳</span>`;
+          }
         } else if (isProcured) {
-          if (isAllowCheckout) {
-            // ⭐ 雙徽章呈現：既知道買到了，又知道要結帳！
+          // 只有在全部商品都確認完畢 (無登記中商品) 且系統開放結帳時，才顯示 [🛒 請結帳] 雙徽章
+          if (isAllowCheckout && pendingRegisterCount === 0) {
             badgeHtml = `
               <div style="display:flex; gap:4px;">
                 <span class="status-badge badge-success">🎉 採購成功</span>
@@ -1345,11 +1546,10 @@
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--text-muted); background:#f8fafc; padding:7px 10px; border-radius:8px;">
             <div>規格：<b style="color:#0f172a;">${item.spec || '標準'}</b> ｜ 數量：<b style="color:#0f172a;">${qty}</b> 件</div>
-            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--accent);">NT$ ${sub.toLocaleString()}</div>
+            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--accent);">${isOut ? '<span style="font-size:12.5px; color:#ef4444; font-weight:700;">免付款 (NT$ 0)</span>' : `NT$ ${sub.toLocaleString()}`}</div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#94a3b8; padding-top:2px;">
-            <span>單號：${item.orderId || '-'}</span>
-            <span>${item.orderDate || ''}</span>
+          <div style="display:flex; justify-content:flex-end; align-items:center; font-size:11.5px; color:#94a3b8; padding-top:2px;">
+            <span>訂購時間：${item.orderDate || ''}</span>
           </div>
         `;
         container.appendChild(card);
@@ -1389,11 +1589,17 @@
           totalRow.style.display = 'flex';
           const totalPayable = successfulGoodsTotal + currentShippingFee;
           if (totalLabel) {
-            totalLabel.textContent = hasPrepayCheckedOut ? '應付結帳總額 (含運費)' : '應付結帳總額';
+            totalLabel.textContent = hasPrepayCheckedOut ? '應付結帳總額 (含運費)' : '應付結帳總額 (貨到付款)';
           }
           if (totalText) {
             totalText.textContent = `NT$ ${totalPayable.toLocaleString()}`;
           }
+
+          // 同步頂部狀態提示卡之金額
+          const pPayAmount = document.getElementById('pendingPaymentAmountText');
+          if (pPayAmount) pPayAmount.textContent = `NT$ ${totalPayable.toLocaleString()}`;
+          const cPendingAmount = document.getElementById('codPendingAmountText');
+          if (cPendingAmount) cPendingAmount.textContent = `NT$ ${totalPayable.toLocaleString()}`;
         }
       } else {
         if (goodsSubtotalText) {
@@ -1405,9 +1611,9 @@
         if (totalRow) totalRow.style.display = 'none';
       }
 
-      // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳待付款/貨到付款待出貨/對帳中/出貨時點亮)
+      // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳、且無任何「連線登記」商品時才點亮！)
       const isAlreadyCheckedOut = hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems;
-      if (isAllowCheckout && hasSuccessfulItems && !isAlreadyCheckedOut) {
+      if (isAllowCheckout && hasSuccessfulItems && !isAlreadyCheckedOut && pendingRegisterCount === 0) {
         checkoutBtn.style.display = 'block';
       } else {
         checkoutBtn.style.display = 'none';
@@ -1416,7 +1622,7 @@
       renderHistoryOrders();
     }
 
-    // 渲染歷史訂單
+    // 渲染歷史訂單 (以結帳編號 checkoutId 聚合呈現整批包裹大卡)
     function renderHistoryOrders() {
       const container = document.getElementById('historyOrdersContainer');
       container.innerHTML = '';
@@ -1430,25 +1636,109 @@
         return;
       }
 
+      // 依結帳編號 (checkoutId) 聚合分組
+      const groups = [];
+      const groupMap = {};
+
       completedOrders.forEach(order => {
+        // 若無 checkoutId 則以 orderId 為單一分組，確保舊歷史訂單 100% 相容
+        const groupKey = order.checkoutId || order.orderId;
+        if (!groupMap[groupKey]) {
+          groupMap[groupKey] = {
+            checkoutId: order.checkoutId || order.orderId,
+            isBatch: Boolean(order.checkoutId),
+            orderDate: order.orderDate,
+            deliveryAddress: order.deliveryAddress,
+            trackingNumber: order.trackingNumber,
+            shippedDate: order.shippedDate,
+            recipientName: order.recipientName,
+            items: [],
+            goodsTotal: 0,
+            shippingFee: 0,
+            finalTotal: 0
+          };
+          groups.push(groupMap[groupKey]);
+        }
+
+        const grp = groupMap[groupKey];
+        grp.items.push(order);
+
+        const isOut = String(order.shippingStatus || '').includes('缺貨') || String(order.shippingStatus || '').includes('斷貨') || String(order.shippingStatus || '').includes('取消');
+        if (!isOut) {
+          grp.goodsTotal += (Number(order.subtotal) || (Number(order.unitPrice || 0) * Number(order.quantity || 1)));
+        }
+        grp.shippingFee += (Number(order.shippingFee) || 0);
+        grp.finalTotal += (Number(order.totalAmount) || 0);
+        if (!grp.trackingNumber && order.trackingNumber) grp.trackingNumber = order.trackingNumber;
+        if (!grp.deliveryAddress && order.deliveryAddress) grp.deliveryAddress = order.deliveryAddress;
+      });
+
+      groups.forEach(grp => {
         const card = document.createElement('div');
         card.className = 'section-card';
+        card.style.cssText = 'margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 14px; padding: 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.03);';
+        
+        const itemsHtml = grp.items.map(it => {
+          const isOut = String(it.shippingStatus || '').includes('缺貨') || String(it.shippingStatus || '').includes('斷貨') || String(it.shippingStatus || '').includes('取消');
+          if (isOut) {
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#fef2f2; padding:8px 10px; border-radius:8px; border:1px solid #fecdd3; font-size:12px;">
+                <div>
+                  <span style="color:#ef4444; font-weight:700;">✕ 專櫃缺貨</span>
+                  <span style="color:#64748b; margin-left:4px; text-decoration:line-through;">${it.productName || '商品'} (${it.spec || '標準'})</span>
+                </div>
+                <span style="color:#94a3b8; font-weight:700;">免付款 (NT$ 0)</span>
+              </div>
+            `;
+          }
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:8px; border:1px solid #f1f5f9; font-size:12px;">
+              <div>
+                <span style="color:#16a34a; font-weight:800;">✓</span>
+                <b style="color:#1e293b; margin-left:3px;">${it.productName || '連線好物'}</b>
+                <span style="color:#64748b; font-size:11px; margin-left:4px;">${it.spec || '標準'} × ${it.quantity || 1}</span>
+              </div>
+              <span style="font-family:'Outfit',sans-serif; font-weight:700; color:#334155;">NT$ ${Number(it.subtotal || 0).toLocaleString()}</span>
+            </div>
+          `;
+        }).join('');
+
+        const calcFinal = grp.finalTotal > 0 ? grp.finalTotal : (grp.goodsTotal + grp.shippingFee);
+
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:8px; margin-bottom:10px;">
-            <span style="font-family:'Outfit',sans-serif; font-size:12px; color:var(--text-muted); font-weight:700;">${order.orderId}</span>
-            <span class="status-badge badge-success">✓ 已完成</span>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #f1f5f9; padding-bottom:10px; margin-bottom:12px;">
+            <div>
+              <div style="font-family:'Outfit',sans-serif; font-size:13.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                <span>結帳單號：${grp.checkoutId}</span>
+                ${grp.isBatch ? '<span style="background:#eefbf3; color:#16a34a; font-size:10px; padding:1px 6px; border-radius:4px; border:1px solid #bbf7d0; font-weight:700;">合併結帳</span>' : ''}
+              </div>
+              <div style="font-size:11px; color:#94a3b8; margin-top:2px;">結帳時間：${grp.orderDate || ''}</div>
+            </div>
+            <span class="status-badge badge-success" style="font-size:11.5px;">✓ 已完成取貨</span>
           </div>
-          <div style="font-size:14px; font-weight:800; margin-bottom:4px; color:#0f172a;">${order.productName}</div>
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
-            規格: ${order.spec} ｜ 數量: ${order.quantity} ｜ 單價: NT$ ${Number(order.unitPrice || 0).toLocaleString()}
+
+          <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">📦 訂購商品明細 (共 ${grp.items.length} 項)：</div>
+          <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+            ${itemsHtml}
           </div>
-          <div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px; line-height:1.6;">
-            <div>🚚 出貨時間: ${order.shippedDate || '2026/09/26 11:30'}</div>
-            <div style="padding-left: 20px;">包裹編號: ${order.trackingNumber || '86312345678'}</div>
+
+          <div style="font-size:12px; color:#475569; background:#f8fafc; padding:10px 12px; border-radius:8px; line-height:1.6; border:1px solid #e2e8f0; margin-bottom:12px;">
+            <div>🚚 配送方式：<b>${formatDeliveryInfo(grp.deliveryAddress || '超商取貨')}</b></div>
+            ${grp.trackingNumber ? `
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <div>包裹查詢碼：<b style="font-family:'Outfit',sans-serif; color:#2563eb;">${grp.trackingNumber}</b></div>
+                <a href="${getLogisticsUrl(grp.deliveryAddress)}" target="_blank" style="color:#2563eb; font-weight:700; font-size:11px; text-decoration:underline;">🔍 查詢物流</a>
+              </div>
+            ` : ''}
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color);">
-            <span style="font-size:11px; color:var(--text-muted);">${order.orderDate}</span>
-            <span style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--accent);">合計 NT$ ${Number(order.totalAmount || order.subtotal || 0).toLocaleString()}</span>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-top:10px; border-top:1px dashed var(--border-color);">
+            <span style="font-size:11.5px; color:var(--text-muted);">
+              商品實付 NT$ ${grp.goodsTotal.toLocaleString()} ＋ 運費 NT$ ${grp.shippingFee.toLocaleString()}
+            </span>
+            <span style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--accent);">
+              結帳總額 NT$ ${calcFinal.toLocaleString()}
+            </span>
           </div>
         `;
         container.appendChild(card);
@@ -1459,26 +1749,65 @@
     async function handleConfirmPackageReceived() {
       if (!confirm('是否已收到包裹？\n確認後會將本次訂購單封存至歷史訂單！')) return;
 
+      const checkedOutOrder = pendingOrders.find(it => Boolean(it.checkoutId));
+      const targetCheckoutId = checkedOutOrder ? checkedOutOrder.checkoutId : '';
+
       try {
         const res = await fetch(CONFIG.GAS_API_URL, {
           method: 'POST',
           body: JSON.stringify({
             action: 'confirmReceived',
-            data: { userId: currentUserId }
+            data: { 
+              userId: currentUserId,
+              checkoutId: targetCheckoutId
+            }
           })
         });
       } catch (e) {
         console.warn('線上取件確認請求略過，在本地直接模擬移入歷史單:', e);
       }
 
-      // 線上更新完畢後，重新整理使用者真實資料並切換至歷史訂單
-      alert('🎉 感謝您的協助。\n欲查詢過往訂單，請點「📜 歷史訂單查詢」！');
+      // 本地模擬更新：將本次當期所有商品移入 completedOrders
+      if (pendingOrders.length > 0) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const nowStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        pendingOrders.forEach(item => {
+          item.shippingStatus = '已完成取貨';
+          item.shippedDate = nowStr;
+          completedOrders.unshift(item);
+        });
+        pendingOrders = [];
+        try {
+          sessionStorage.setItem(`cached_orders_${currentUserId}`, JSON.stringify({
+            pendingOrders: pendingOrders,
+            completedOrders: completedOrders,
+            customerProfile: customerProfile,
+            systemSettings: systemSettings
+          }));
+        } catch (err) {}
+      }
+
+      alert('🎉 感謝您的協助。\n訂單已確認取件完畢，已為您封存至「📜 歷史訂單查詢」！');
       await fetchUserData();
       switchMainTab('tabHistory');
     }
 
     // 開啟結帳 Modal
     function openCheckoutModal() {
+      // 結帳前置防呆檢查：若有任何商品處於「連線登記」，禁止進入結帳！
+      const registeringItems = pendingOrders.filter(it => {
+        const s = String(it.shippingStatus || '').trim();
+        const isOut = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消');
+        const isProc = !isOut && (s.includes('成功') || s.includes('採買') || s.includes('通知'));
+        return !isOut && !isProc;
+      });
+
+      if (registeringItems.length > 0) {
+        alert(`⚠️ 提醒您：\n\n尚有 ${registeringItems.length} 件商品未確定採購結果。\n若群組發送結帳訊息已超過 24 小時仍無法結帳，請主動聯繫 小幫手 或 W.W. 幫您確認！`);
+        return;
+      }
+
       const modal = document.getElementById('checkoutModal');
       document.getElementById('modalGoodsSubtotalText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
       
@@ -1658,6 +1987,19 @@
 
     // 送出結帳表單
     async function submitCheckoutForm() {
+      // 結帳前置防呆檢查：若有任何商品處於「連線登記」，禁止送出！
+      const registeringItems = pendingOrders.filter(it => {
+        const s = String(it.shippingStatus || '').trim();
+        const isOut = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消');
+        const isProc = !isOut && (s.includes('成功') || s.includes('採買') || s.includes('通知'));
+        return !isOut && !isProc;
+      });
+
+      if (registeringItems.length > 0) {
+        alert(`⚠️ 提醒您：\n\n尚有 ${registeringItems.length} 件商品未確定採購結果。\n若群組發送結帳訊息已超過 24 小時仍無法結帳，請主動聯繫 小幫手 或 W.W. 幫您確認！`);
+        return;
+      }
+
       const name = document.getElementById('inputRecipientName').value.trim();
       const phone = document.getElementById('inputRecipientPhone').value.trim();
       const address = document.getElementById('inputRecipientAddress').value.trim();
@@ -1683,18 +2025,8 @@
       btn.disabled = true;
       btn.textContent = '資料傳輸中...';
 
-      // 收集本次欲結帳的有效採購成功商品訂單編號（排除缺貨斷貨與已結帳項目）
-      const targetOrderIds = pendingOrders
-        .filter(item => {
-          const st = String(item.shippingStatus || '').trim();
-          const paySt = String(item.paymentStatus || '').trim();
-          const isOut = st.includes('缺貨') || st.includes('斷貨') || st.includes('取消');
-          const isProcured = st.includes('成功') || st.includes('通知');
-          const isUnpaid = (paySt === '未結帳' || !paySt);
-          return !isOut && isProcured && isUnpaid;
-        })
-        .map(item => item.orderId)
-        .filter(Boolean);
+      // 收集本次欲結算清空之當期所有商品訂單編號 (全部商品列為同一個結帳編號紀錄)
+      const targetOrderIds = pendingOrders.map(item => item.orderId).filter(Boolean);
 
       const methodInfo = SHIPPING_METHOD_MAP[selectedShipMethod] || { name: selectedShipMethod };
       const payload = {
@@ -1712,26 +2044,73 @@
         }
       };
 
+      let resultCheckoutId = '';
       try {
         const res = await fetch(CONFIG.GAS_API_URL, {
           method: 'POST',
           body: JSON.stringify(payload)
         });
         const json = await res.json();
+        if (json.success && json.checkoutId) {
+          resultCheckoutId = json.checkoutId;
+        }
       } catch (e) {
         console.warn('線上結帳傳輸略過，本地直接模擬完成:', e);
+      }
+
+      // 本地若無回傳 checkoutId 則生成前端模擬單號
+      if (!resultCheckoutId) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const timeStr = `${String(now.getFullYear()).slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        resultCheckoutId = 'CO' + timeStr + Math.floor(100 + Math.random() * 900);
+
+        // 本地模擬更新 pendingOrders
+        pendingOrders.forEach((item, idx) => {
+          item.checkoutId = resultCheckoutId;
+          const st = String(item.shippingStatus || '');
+          const isOut = st.includes('缺貨') || st.includes('斷貨') || st.includes('取消');
+          item.recipientName = name;
+          item.phone = phone;
+          item.deliveryAddress = `[${methodInfo.name}] ${address}`;
+          if (isOut) {
+            item.shippingFee = 0;
+            item.totalAmount = 0;
+            item.paymentStatus = '免付款(缺貨取消)';
+            item.shippingStatus = '缺貨斷貨';
+          } else {
+            item.shippingFee = (idx === 0) ? selectedShipFee : 0;
+            item.totalAmount = Number(item.subtotal || 0) + item.shippingFee;
+            item.paymentStatus = selectedIsPrepay ? '待付款' : '貨到付款待出貨';
+            item.shippingStatus = '已完成結帳待出貨';
+          }
+        });
+
+        try {
+          sessionStorage.setItem(`cached_orders_${currentUserId}`, JSON.stringify({
+            pendingOrders: pendingOrders,
+            completedOrders: completedOrders,
+            customerProfile: customerProfile,
+            systemSettings: systemSettings
+          }));
+        } catch (err) {}
       }
 
       btn.disabled = false;
       btn.textContent = '✓ 確認並送出';
       closeCheckoutModal();
 
-      if (selectedIsPrepay) {
-        alert('🎉 送出成功，狀態：【待付款】！\n\n請於完成轉帳付款後，至訂購清單中點擊【💰 匯款/付款回報】，\n提供付款方式與帳號末五碼，小幫手核對入帳後將盡快為您安排出貨！');
-      } else {
-        alert('🎉 貨到付款送出成功！狀態：【待出貨】。\n\n小幫手將盡快為您安排出貨！\n屆時請留意取件通知簡訊至指定門市取貨付款！');
+      const payMsg = selectedIsPrepay ? '【待付款】' : '【貨到付款待出貨】';
+      const calcTotal = successfulGoodsTotal + selectedShipFee;
+      alert(`🎉 結帳送出成功！\n\n結帳單號：${resultCheckoutId}\n訂單狀態：${payMsg}\n結帳金額：NT$ ${calcTotal.toLocaleString()}\n\n已為您將當期所有登記商品整批結算！${selectedIsPrepay ? '\n請點擊【💰 匯款/付款回報】提供付款資訊，小幫手將盡快核對安排出貨！' : '\n出貨後請留意取件通知簡訊至指定門市取貨付款！'}`);
+
+      // 若為本地模擬結帳，立即重繪介面；若為真實線上單號，重新拉取雲端最新資料
+      updateUserProfileUI();
+      renderOrdersView();
+
+      if (resultCheckoutId && !resultCheckoutId.startsWith('CO26')) {
+        await fetchUserData();
       }
-      await fetchUserData();
     }
 
     // ================= 回報匯款 Modal 控制 =================

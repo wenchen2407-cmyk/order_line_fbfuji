@@ -55,7 +55,7 @@ function setupSpreadsheet() {
     '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
     '訂單總額', '收件人姓名', '聯絡電話', '取件方式與地址', 
     '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
-    '包裹追蹤編號'
+    '包裹追蹤編號', '結帳編號'
   ];
   if (!orderSheet) {
     orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
@@ -68,6 +68,7 @@ function setupSpreadsheet() {
   orderSheet.getRange("N:N").setNumberFormat('@');
   orderSheet.getRange("R:R").setNumberFormat('@');
   orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
+  orderSheet.getRange("V:V").setNumberFormat('@'); // 結帳編號 (Checkout_ID) 純文字格式
 
   // 為 S 欄建立「採購狀態快速下拉選單」
   try {
@@ -481,7 +482,9 @@ function handleCreateOrder(orderData) {
       '未結帳',
       '',
       '連線登記', // 訂單採購/出貨處理狀態
-      ''
+      '',         // 處理備註
+      '',         // 包裹追蹤編號
+      ''          // 結帳編號 (待回國合併結帳時產生)
     ]);
 
     // 5. 更新或建立顧客檔案歸戶
@@ -520,40 +523,70 @@ function handleCheckoutOrders(checkoutData) {
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
   const rows = orderSheet.getDataRange().getValues();
-  const pendingIndices = []; // 紀錄所有本次要結帳的列號
-  let goodsTotal = 0;
+
+  // 生成本次合併結帳專屬結帳編號 (CO = Checkout Order)
+  const now = new Date();
+  const timeStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyMMddHHmmss');
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  const checkoutId = 'CO' + timeStr + randomSuffix;
 
   const targetIds = (Array.isArray(checkoutData.orderIds) && checkoutData.orderIds.length > 0)
     ? checkoutData.orderIds.map(String)
     : null;
+
+  const batchIndices = [];       // 當期結算整批商品列號 (全部綁定同一 checkoutId)
+  const successfulIndices = [];  // 當中採購成功需計費之列號
+  const outOfStockIndices = [];  // 缺貨斷貨免付款列號
+  const pendingRegisterOrders = []; // 尚在連線登記中的商品
+  let goodsTotal = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row[2] !== userId) continue;
 
     const orderId = String(row[0] || '').trim();
-    const payStatus = String(row[16] || '').trim();
     const shipStatus = String(row[18] || '').trim();
 
-    // 嚴格排除缺貨斷貨、已完成取貨、已取消等商品
-    const isOutOrCancelled = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消') || shipStatus.includes('完成取貨');
-    if (isOutOrCancelled) continue;
+    // 嚴格排除已經完成取貨結案的歷史訂單
+    const isAlreadyFinished = shipStatus.includes('完成取貨') || shipStatus.includes('結案');
+    if (isAlreadyFinished) continue;
 
-    // 若前端有指定訂單清單，精準比對 orderId
+    // 若前端有指定訂單清單，比對 orderId；若無指定，則納入所有尚未結案的當期商品
     if (targetIds) {
       if (!targetIds.includes(orderId)) continue;
-    } else {
-      // 若未指定 orderId，僅納入採購成功且尚未結帳者
-      const isProcured = shipStatus.includes('成功') || shipStatus.includes('連線中待出貨') || shipStatus.includes('通知結帳');
-      const isUnpaid = (payStatus === '未結帳' || !payStatus);
-      if (!isProcured || !isUnpaid) continue;
     }
 
-    pendingIndices.push(i + 1); // 1-based row index
-    goodsTotal += (Number(row[9]) || 0); // 累計商品小計
+    const rowIndex = i + 1;
+
+    // 嚴格區分：缺貨斷貨、採購成功、連線登記
+    const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消');
+    const isProcured = !isOut && (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('通知'));
+    const isRegistering = !isOut && !isProcured;
+
+    if (isRegistering) {
+      pendingRegisterOrders.push(orderId);
+      continue;
+    }
+
+    batchIndices.push(rowIndex);
+
+    if (isProcured) {
+      successfulIndices.push(rowIndex);
+      goodsTotal += (Number(row[9]) || 0); // 累計採購成功之商品小計
+    } else if (isOut) {
+      outOfStockIndices.push(rowIndex);
+    }
   }
 
-  if (pendingIndices.length === 0) {
+  // 核心業務規則：若訂單中有任何一件商品仍處於「連線登記」，嚴禁結帳！
+  if (pendingRegisterOrders.length > 0) {
+    return {
+      success: false,
+      message: '尚有 ' + pendingRegisterOrders.length + ' 件商品未確定採購結果，若群組發送結帳訊息已超過24小時仍無法結帳，請主動聯繫 小幫手 或 W.W. 幫您確認！'
+    };
+  }
+
+  if (batchIndices.length === 0) {
     return { success: false, message: '目前沒有待出貨結帳的連線商品！' };
   }
 
@@ -615,9 +648,9 @@ function handleCheckoutOrders(checkoutData) {
   const orderStatus = '已完成結帳待出貨';
   const deliveryInfo = `[${methodName}] ${checkoutData.recipientAddress || ''}`;
 
-  // 更新所有待結帳列：第一筆記單筆運費，其餘記 0，避免運費重複加總
-  for (let idx = 0; idx < pendingIndices.length; idx++) {
-    const r = pendingIndices[idx];
+  // 1. 更新所有採購成功列：第一筆記單筆運費，其餘記 0，寫入同一結帳編號 (第22欄)
+  for (let idx = 0; idx < successfulIndices.length; idx++) {
+    const r = successfulIndices[idx];
     const sub = Number(orderSheet.getRange(r, 10).getValue()) || 0;
     const fee = (idx === 0) ? shippingFee : 0; // 只有第一張帶運費
     const tot = sub + fee;
@@ -639,6 +672,22 @@ function handleCheckoutOrders(checkoutData) {
       orderSheet.getRange(r, 17).setValue(payStatus);
     }
     orderSheet.getRange(r, 19).setValue(orderStatus);
+    orderSheet.getRange(r, 22).setValue(checkoutId); // 第 22 欄：結帳編號
+  }
+
+  // 2. 更新缺貨/斷貨/取消列：同樣綁定同一結帳編號，運費為0，總額為0，標記免付款，結算時排除
+  for (let i = 0; i < batchIndices.length; i++) {
+    const r = batchIndices[i];
+    if (successfulIndices.includes(r)) continue;
+
+    orderSheet.getRange(r, 11).setValue(0); // 運費 0
+    orderSheet.getRange(r, 12).setValue(0); // 應付總額 0 (缺貨免付)
+    orderSheet.getRange(r, 13).setValue(checkoutData.recipientName || '');
+    orderSheet.getRange(r, 14).setValue(formatPhoneAsText(checkoutData.recipientPhone));
+    orderSheet.getRange(r, 15).setValue(deliveryInfo);
+    orderSheet.getRange(r, 17).setValue('免付款(缺貨取消)');
+    orderSheet.getRange(r, 19).setValue('缺貨斷貨');
+    orderSheet.getRange(r, 22).setValue(checkoutId); // 第 22 欄：同樣綁定本批結帳編號！
   }
 
   // 更新顧客歸戶 (姓名與電話，不另外紀錄常用寄送地址)
@@ -649,7 +698,9 @@ function handleCheckoutOrders(checkoutData) {
   return {
     success: true,
     message: '出貨結帳資料已確認送出！',
-    orderCount: pendingIndices.length,
+    checkoutId: checkoutId,
+    batchCount: batchIndices.length,
+    successfulCount: successfulIndices.length,
     goodsTotal: goodsTotal,
     shippingFee: shippingFee,
     totalAmount: finalTotalAmount,
@@ -812,6 +863,7 @@ function handleReportPayment(data) {
 function handleConfirmReceived(data) {
   const userId = data.userId;
   const orderId = data.orderId;
+  const checkoutId = data.checkoutId;
   if (!userId) return { success: false, message: '缺少買家 ID' };
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -822,8 +874,17 @@ function handleConfirmReceived(data) {
   let updatedCount = 0;
 
   for (let i = 1; i < rows.length; i++) {
-    // 依指定 orderId 或該買家所有「已完成出貨」的項目
-    const isTarget = (orderId && rows[i][0] === orderId) || (!orderId && rows[i][2] === userId && rows[i][18] === '已完成出貨');
+    const rUserId = String(rows[i][2] || '').trim();
+    if (rUserId !== userId) continue;
+
+    const rOrderId = String(rows[i][0] || '').trim();
+    const rCheckoutId = String(rows[i][21] || '').trim();
+    const shipStatus = String(rows[i][18] || '').trim();
+
+    // 匹配條件：指定 checkoutId，或指定 orderId，或該買家所有「已完成出貨」項目
+    const isTarget = (checkoutId && rCheckoutId === checkoutId) || 
+                     (orderId && rOrderId === orderId) || 
+                     (!checkoutId && !orderId && (shipStatus.includes('已完成出貨') || shipStatus.includes('出貨') || shipStatus.includes('配送')));
     if (isTarget) {
       orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
       updatedCount++;
@@ -838,7 +899,7 @@ function handleConfirmReceived(data) {
 }
 
 /**
- * 5. 查詢使用者的訂單清單（區分待出貨結帳/配送中商品與歷史訂單，附帶顧客資訊、系統設定與包裹追蹤碼）
+ * 5. 查詢使用者的訂單清單（區分待出貨結帳/配送中商品與歷史訂單，附帶顧客資訊、系統設定、包裹追蹤碼與結帳單號）
  */
 function getOrdersForUser(userId) {
   if (!userId) return { success: false, message: '缺少 userId' };
@@ -887,7 +948,8 @@ function getOrdersForUser(userId) {
         lastFive: row[17],
         shippingStatus: row[18],
         processNote: row[19] || '',
-        trackingNumber: String(row[20] || '').trim() // 第 21 欄 U 欄：包裹追蹤編號
+        trackingNumber: String(row[20] || '').trim(), // 第 21 欄 U 欄：包裹追蹤編號
+        checkoutId: String(row[21] || '').trim()       // 第 22 欄 V 欄：結帳編號 (Checkout_ID)
       };
 
       const shipStatus = String(row[18] || '').trim();
