@@ -544,7 +544,19 @@ function handleCheckoutOrders(checkoutData) {
   const feePostCod = Number(settings.SHIP_FEE_POST_COD) || 130;
   const feeBlackcat = Number(settings.SHIP_FEE_BLACKCAT) || 100;
 
+  const METHOD_NAMES = {
+    '711_PREPAID': '7-11 超商純取貨',
+    'FAMI_PREPAID': '全家 超商純取貨',
+    '711_COD': '7-11 超商取貨付款',
+    'FAMI_COD': '全家 超商取貨付款',
+    'POST_PREPAID': '郵局純寄件',
+    'POST_COD': '郵局貨到付款',
+    'BLACKCAT_PREPAID': '黑貓宅配到府',
+    'STORE_PICKUP_FREE': '門市自取'
+  };
+
   const method = checkoutData.shippingMethod; // 代碼
+  const methodName = checkoutData.shippingMethodName || METHOD_NAMES[method] || method;
   let shippingFee = 0;
   let isPrepay = false; // 是否需先匯款
 
@@ -579,7 +591,7 @@ function handleCheckoutOrders(checkoutData) {
   const finalTotalAmount = goodsTotal + shippingFee;
   const payStatus = isPrepay ? '待付款' : '貨到付款待出貨';
   const orderStatus = '已完成結帳待出貨';
-  const deliveryInfo = `[${checkoutData.shippingMethodName || method}] ${checkoutData.recipientAddress || ''}`;
+  const deliveryInfo = `[${methodName}] ${checkoutData.recipientAddress || ''}`;
 
   // 更新所有待結帳列：第一筆記單筆運費，其餘記 0，避免運費重複加總
   for (let idx = 0; idx < pendingIndices.length; idx++) {
@@ -814,6 +826,19 @@ function getOrdersForUser(userId) {
   const pendingCheckoutOrders = []; // 待出貨結帳或配送中（連線中登記/採購成功/已完成出貨配送中）
   const completedOrders = [];       // 已完成取貨結案之歷史訂單
 
+  function formatDeliveryText(raw) {
+    if (!raw) return '';
+    let text = String(raw).trim();
+    text = text.replace(/\[711_COD\]/gi, '[7-11 超商取貨付款]');
+    text = text.replace(/\[FAMI_COD\]/gi, '[全家 超商取貨付款]');
+    text = text.replace(/\[POST_COD\]/gi, '[郵局貨到付款]');
+    text = text.replace(/\[711_PREPAID\]/gi, '[7-11 超商純取貨]');
+    text = text.replace(/\[FAMI_PREPAID\]/gi, '[全家 超商純取貨]');
+    text = text.replace(/\[POST_PREPAID\]/gi, '[郵局純寄件]');
+    text = text.replace(/\[BLACKCAT_PREPAID\]/gi, '[黑貓宅配到府]');
+    return text;
+  }
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row[2] === userId) {
@@ -830,7 +855,7 @@ function getOrdersForUser(userId) {
         totalAmount: row[11],
         recipientName: row[12],
         phone: row[13],
-        deliveryAddress: row[14],
+        deliveryAddress: formatDeliveryText(row[14]),
         note: row[15],
         paymentStatus: row[16],
         lastFive: row[17],

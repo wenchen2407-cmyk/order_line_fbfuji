@@ -417,7 +417,7 @@
         <!-- 點擊超連結展開的賣家收款帳戶資訊區塊 -->
         <div id="pendingAccountsDropdown" style="display: none; margin-bottom: 14px; background: #fff; border-radius: 10px; border: 1px solid #fde68a; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
           <div style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <span>🏦 賣家收款帳戶資訊 (支援 3 種付款方式)：</span>
+            <span>🏦 賣家收款帳戶資訊：</span>
             <span onclick="togglePendingAccountsBox()" style="cursor: pointer; color: #94a3b8; font-size: 12px; padding: 2px 6px; background: #f1f5f9; border-radius: 4px;">✕ 收合</span>
           </div>
 
@@ -498,6 +498,9 @@
       <div id="codPendingNoticeBox" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);">
         <div style="font-weight: 800; color: #15803d; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
           📦 待出貨
+        </div>
+        <div style="margin-top: 6px; font-size: 13px; color: #14532d;">
+          物流方式：<b id="codPendingShipMethodText">-</b>
         </div>
         <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
           已收到結帳完成通知！小幫手將盡快為您安排出貨，寄出後將在此顯示包裹查詢編號，屆時請留意取件通知簡訊至指定門市取貨付款！
@@ -697,7 +700,7 @@
 
       <!-- 匯款/支付方式資訊卡 (先匯款時顯示，提供 3 種支付方式) -->
       <div id="prepayBankBox" class="bank-box" style="display: block;">
-        <div style="font-weight: 800; color: #1e293b; margin-bottom: 8px; font-size: 13.5px;">🏦 賣家收款帳戶資訊 (支援 3 種付款方式)：</div>
+        <div style="font-weight: 800; color: #1e293b; margin-bottom: 8px; font-size: 13.5px;">🏦 賣家收款帳戶資訊：</div>
         
         <!-- 方式 1: 中國信託商業銀行 -->
         <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
@@ -786,11 +789,19 @@
         </div>
       </div>
 
-      <!-- 貨到付款提示卡 -->
-      <div id="codNoticeBox" class="bank-box" style="display: none; background: #f0fdf4; border-color: #bbf7d0;">
-        <div style="font-weight: 700; color: #15803d;">📦 超商取貨時付款說明：</div>
-        <div style="font-size: 12.5px; color: #166534; margin-top: 4px;">
-          小幫手將依您填寫的超商門市為您安排出貨，屆時請留意取件通知並於門市付款取貨！
+      <!-- 超商貨到付款專屬提示卡 (選 7-11 賣貨便 / 全家好賣+ 時顯示) -->
+      <div id="codMartNoticeBox" class="bank-box" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0;">
+        <div style="font-weight: 700; color: #15803d; font-size: 13.5px;">📦 超商取貨付款：</div>
+        <div style="font-size: 12.5px; color: #166534; margin-top: 4px; line-height: 1.6;">
+          將依提供之配送資料為您安排出貨，屆時再請留意取件通知並於指定門市完成取貨付款！
+        </div>
+      </div>
+
+      <!-- 郵局貨到付款專屬提示卡 (選 郵局貨到付款 時顯示) -->
+      <div id="codPostNoticeBox" class="bank-box" style="display: none; background: #eff6ff; border: 1.5px solid #bfdbfe;">
+        <div style="font-weight: 700; color: #1d4ed8; font-size: 13.5px;">📦 郵局取貨付款：</div>
+        <div style="font-size: 12.5px; color: #1e40af; margin-top: 4px; line-height: 1.6;">
+          將依提供之配送資料為您安排出貨，屆時再請留意郵差先生/小姐配送時間與付款！
         </div>
       </div>
 
@@ -887,6 +898,46 @@
     let selectedShipFee = 0;
     let selectedIsPrepay = true;
     let successfulGoodsTotal = 0;
+
+    // 物流方式標準對照表
+    const SHIPPING_METHOD_MAP = {
+      '711_PREPAID': { name: '7-11 超商純取貨', url: 'https://eservice.7-11.com.tw/e-tracking/search.aspx' },
+      'FAMI_PREPAID': { name: '全家 超商純取貨', url: 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx' },
+      '711_COD': { name: '7-11 超商取貨付款', url: 'https://eservice.7-11.com.tw/e-tracking/search.aspx' },
+      'FAMI_COD': { name: '全家 超商取貨付款', url: 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx' },
+      'POST_PREPAID': { name: '郵局純寄件', url: 'https://postserv.post.gov.tw/pstmail/main_result.html' },
+      'POST_COD': { name: '郵局貨到付款', url: 'https://postserv.post.gov.tw/pstmail/main_result.html' },
+      'BLACKCAT_PREPAID': { name: '黑貓宅配到府', url: 'https://www.t-cat.com.tw/Inquiry/Trace.aspx' }
+    };
+
+    // 將代碼或舊版資訊轉為標準繁體中文物流名稱
+    function formatDeliveryInfo(raw) {
+      if (!raw) return '';
+      let text = String(raw).trim();
+      text = text.replace(/\[711_COD\]/gi, '[7-11 超商取貨付款]');
+      text = text.replace(/\[FAMI_COD\]/gi, '[全家 超商取貨付款]');
+      text = text.replace(/\[POST_COD\]/gi, '[郵局貨到付款]');
+      text = text.replace(/\[711_PREPAID\]/gi, '[7-11 超商純取貨]');
+      text = text.replace(/\[FAMI_PREPAID\]/gi, '[全家 超商純取貨]');
+      text = text.replace(/\[POST_PREPAID\]/gi, '[郵局純寄件]');
+      text = text.replace(/\[BLACKCAT_PREPAID\]/gi, '[黑貓宅配到府]');
+      return text;
+    }
+
+    // 依據物流方式取得官網即時追蹤查詢網址
+    function getLogisticsUrl(deliveryAddressStr) {
+      const str = String(deliveryAddressStr || '');
+      if (str.includes('全家') || str.includes('FAMI')) {
+        return 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx';
+      } else if (str.includes('郵局') || str.includes('POST')) {
+        return 'https://postserv.post.gov.tw/pstmail/main_result.html';
+      } else if (str.includes('黑貓') || str.includes('BLACKCAT') || str.includes('宅配')) {
+        return 'https://www.t-cat.com.tw/Inquiry/Trace.aspx';
+      } else if (str.includes('7-11') || str.includes('711') || str.includes('統一')) {
+        return 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
+      }
+      return 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
+    }
 
     window.onload = async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -1027,7 +1078,17 @@
 
       // 2. 貨到付款待出貨提示卡展示 (貨到付款)
       if (hasCodPending && !hasShippedItems && !hasPendingPayment) {
-        if (codPendingBox) codPendingBox.style.display = 'block';
+        if (codPendingBox) {
+          codPendingBox.style.display = 'block';
+          const codOrder = pendingOrders.find(it => {
+            const pst = String(it.paymentStatus || '');
+            const sst = String(it.shippingStatus || '');
+            return pst.includes('貨到付款') || sst.includes('貨到付款') || sst.includes('已完成結帳');
+          });
+          const shipText = codOrder ? formatDeliveryInfo(codOrder.deliveryAddress) : '';
+          const elem = document.getElementById('codPendingShipMethodText');
+          if (elem) elem.textContent = shipText || '貨到付款';
+        }
       } else {
         if (codPendingBox) codPendingBox.style.display = 'none';
       }
@@ -1044,20 +1105,11 @@
         trackingCard.style.display = 'block';
         const code = shippedItemData.trackingNumber || '86312345678';
         document.getElementById('trackCodeDisplay').textContent = code;
-        document.getElementById('trackShipMethodName').textContent = shippedItemData.deliveryAddress || '7-11 超商取貨付款';
+        document.getElementById('trackShipMethodName').textContent = formatDeliveryInfo(shippedItemData.deliveryAddress || '7-11 超商取貨付款');
         
         // 官網查詢連結直連
         const trackBtn = document.getElementById('btnOnlineTrack');
-        const addr = String(shippedItemData.deliveryAddress || '');
-        if (addr.includes('全家')) {
-          trackBtn.href = 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx';
-        } else if (addr.includes('郵局')) {
-          trackBtn.href = 'https://postserv.post.gov.tw/pstmail/main_result.html';
-        } else if (addr.includes('黑貓')) {
-          trackBtn.href = 'https://www.t-cat.com.tw/Inquiry/Trace.aspx';
-        } else {
-          trackBtn.href = 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
-        }
+        trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
       } else {
         trackingCard.style.display = 'none';
       }
@@ -1298,9 +1350,10 @@
         addrInput.placeholder = '例：台北市信義區信義路五段7號89樓';
       }
 
-      // 顯示匯款卡或貨到付款提示
+      // 顯示匯款卡或專屬貨到付款提示卡
       document.getElementById('prepayBankBox').style.display = isPrepay ? 'block' : 'none';
-      document.getElementById('codNoticeBox').style.display = isPrepay ? 'none' : 'block';
+      document.getElementById('codMartNoticeBox').style.display = (methodKey === '711_COD' || methodKey === 'FAMI_COD') ? 'block' : 'none';
+      document.getElementById('codPostNoticeBox').style.display = (methodKey === 'POST_COD') ? 'block' : 'none';
 
       // 更新總金額
       const finalTot = successfulGoodsTotal + selectedShipFee;
@@ -1415,11 +1468,13 @@
       btn.disabled = true;
       btn.textContent = '資料傳輸中...';
 
+      const methodInfo = SHIPPING_METHOD_MAP[selectedShipMethod] || { name: selectedShipMethod };
       const payload = {
         action: 'checkoutOrders',
         data: {
           userId: currentUserId,
           shippingMethod: selectedShipMethod,
+          shippingMethodName: methodInfo.name,
           shippingFee: selectedShipFee,
           recipientName: name,
           recipientPhone: phone.replace(/[-\s]/g, ''),
