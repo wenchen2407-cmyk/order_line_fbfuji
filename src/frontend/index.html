@@ -497,6 +497,25 @@
       text-align: left;
       font-size: 13px;
     }
+    /* 收單截止動態倒數晶片 */
+    .deadline-banner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
+      border: 1px solid #fecdd3;
+      color: #e11d48;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .deadline-banner.expired {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #64748b;
+    }
   </style>
 </head>
 <body>
@@ -518,9 +537,14 @@
         <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
         <span id="userName">正在驗證 LINE 帳號...</span>
       </div>
-      <button type="button" onclick="manualResetProfile()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="手動清空快取以重新觸發首次建立彈窗">
-        🔄 重設資料測試
-      </button>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" onclick="toggleDeadlineTest()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="切換模擬倒數中與已截止">
+          ⏱️ 切換截止測試
+        </button>
+        <button type="button" onclick="manualResetProfile()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; color: #64748b; font-size: 11px; cursor: pointer;" title="手動清空快取以重新觸發首次建立彈窗">
+          🔄 重設資料測試
+        </button>
+      </div>
     </div>
 
     <!-- 商品主卡片 -->
@@ -534,6 +558,12 @@
       <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
 
       <div class="product-details">
+        <!-- 倒數收單晶片 -->
+        <div id="deadlineBanner" class="deadline-banner" style="display: none;">
+          <span class="deadline-icon">⏳</span>
+          <span id="deadlineText">本期收單倒數計算中...</span>
+        </div>
+
         <span id="productCategory" class="product-tag">2026.10月連線</span>
         <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
         <div class="price-box">
@@ -567,13 +597,13 @@
       </div>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12px; color: #475569; line-height: 1.7;">
-      <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13px;">✈️ 連線代購必讀</div>
-      <div style="margin-bottom: 4px;">• 🚫 <b>下單即確定採買，不可取消或刪改</b>，下單前請確認規格數量。</div>
-      <div style="margin-bottom: 4px;">• ⚡ <b>現場依下單順序配貨</b>，若遇專櫃缺貨將主動通知取消退款。</div>
-      <div style="margin-bottom: 4px;">• ⏰ <b>收單截止時間</b>：以群組最後公告之截單時間為準。</div>
-      <div style="margin-bottom: 4px;">• 📦 <b>回國確認出貨</b>：商品整理完畢後，將於群組或私訊確認訂單資料並發送專屬賣場連結供下單出貨。</div>
-      <div>• 🚚 <b>出貨運費</b>：超商純取 0 元免運；賣貨便/好賣+ 滿 3,000 元免運；亦支援郵寄與宅配。</div>
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12.5px; color: #475569; line-height: 1.75;">
+      <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13.5px;">✈️ 連線代購必讀</div>
+      <div style="margin-bottom: 6px;">• 🚫 <b>下單即確定購買，不可取消或刪改</b>，下單前請確認規格、數量。</div>
+      <div style="margin-bottom: 6px;">• ⚡ <b>依下單順序配貨</b>，若遇缺貨將主動變更狀態。</div>
+      <div style="margin-bottom: 6px;">• ⏰ <b>收單截止時間</b>以群組最後公告之截單時間為主。確認結單時間也會同步於商品清單頁上。</div>
+      <div style="margin-bottom: 6px;">• 📦 <b>待清查完畢後</b>，將於群組或私訊確認訂單資料並發送專屬賣場連結供下單出貨。</div>
+      <div>• 🚚 <b>出貨運費</b>：超商純取 0 元免運；賣貨便/好賣+ 滿 3,000 元免運；亦支援郵寄與宅配（依選擇之寄送方式計費）。</div>
     </div>
   </div>
 
@@ -666,7 +696,13 @@
 
     // 1. 初始化 LINE LIFF
     async function initLiff() {
-      if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === 'YOUR_LIFF_ID_HERE') {
+      // 優先讀取網址列的 uid (方便本地測試或網頁間傳遞)
+      const urlUid = urlParams.get('uid');
+      if (urlUid) {
+        currentUser.userId = urlUid;
+      }
+
+      if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
         document.getElementById('userName').textContent = '未啟用 LIFF (本機測試模式)';
         return;
       }
@@ -681,23 +717,100 @@
 
           document.getElementById('userAvatar').src = currentUser.pictureUrl;
           document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
-
-          // 同步導航按鈕帶入 uid
-          const uidParam = `?uid=${encodeURIComponent(currentUser.userId)}`;
-          const catBtn = document.getElementById('linkBackToCatalog');
-          if (catBtn) catBtn.href = `catalog.html${uidParam}`;
-          const ordBtn = document.getElementById('linkToMyOrders');
-          if (ordBtn) ordBtn.href = `my-orders.html${uidParam}`;
         } else {
-          liff.login();
+          // 一般外部瀏覽器 (如 Chrome / Safari / 本地 localhost 測試)
+          // 絕不自動觸發 liff.login()，避免網址跳轉到 LINE 登入授權並重導向至正式線上網址
+          document.getElementById('userName').textContent = `${currentUser.displayName} (訪客預覽)`;
         }
+
+        // 同步導航按鈕帶入 uid
+        const uidParam = `?uid=${encodeURIComponent(currentUser.userId)}`;
+        const catBtn = document.getElementById('linkBackToCatalog');
+        if (catBtn) catBtn.href = `catalog.html${uidParam}`;
+        const ordBtn = document.getElementById('linkToMyOrders');
+        if (ordBtn) ordBtn.href = `my-orders.html${uidParam}`;
       } catch (err) {
-        console.error('LIFF Init Error:', err);
-        document.getElementById('userName').textContent = '訪客模式';
+        console.warn('LIFF Init 略過或非 LINE 內部環境:', err);
+        document.getElementById('userName').textContent = `${currentUser.displayName} (本機模式)`;
       }
     }
 
-    // 2. 取得商品資訊
+    let orderDeadlineDate = null;
+    let countdownTimer = null;
+    let isDeadlineExpired = false;
+    let isSimulateExpired = false; // 測試切換開關
+
+    function toggleDeadlineTest() {
+      isSimulateExpired = !isSimulateExpired;
+      if (isSimulateExpired) {
+        alert('⏱️ 已切換為【模擬已截止】狀態！\n倒數晶片將顯示截止，按鈕自動鎖定禁用。');
+      } else {
+        alert('⏱️ 已切換為【正常倒數中】狀態！');
+      }
+      updateDeadlineUI();
+    }
+
+    function initDeadlineCountdown(deadlineStr) {
+      if (countdownTimer) clearInterval(countdownTimer);
+      if (!deadlineStr) {
+        // 預設倒數：未來 3 天 23:59:59
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        d.setHours(23, 59, 59, 0);
+        orderDeadlineDate = d;
+      } else {
+        const parsed = new Date(deadlineStr);
+        orderDeadlineDate = isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      updateDeadlineUI();
+      countdownTimer = setInterval(updateDeadlineUI, 1000);
+    }
+
+    function updateDeadlineUI() {
+      const banner = document.getElementById('deadlineBanner');
+      const textElem = document.getElementById('deadlineText');
+      const submitBtn = document.getElementById('btnSubmitOrder');
+      if (!banner || !textElem) return;
+
+      banner.style.display = 'flex';
+      const now = new Date();
+
+      if (isSimulateExpired || (orderDeadlineDate && now >= orderDeadlineDate)) {
+        isDeadlineExpired = true;
+        banner.classList.add('expired');
+        textElem.textContent = '⛔ 本期連線已截止收單';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = '🚫 本期連線已截止登記';
+          submitBtn.style.background = '#94a3b8';
+          submitBtn.style.cursor = 'not-allowed';
+        }
+      } else {
+        isDeadlineExpired = false;
+        banner.classList.remove('expired');
+        const target = orderDeadlineDate || new Date(Date.now() + 86400000);
+        const diffMs = Math.max(0, target - now);
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+        let timeStr = '';
+        if (days > 0) timeStr += `${days}天 `;
+        timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
+        textElem.textContent = `⏳ 本期收單倒數：${timeStr}`;
+
+        if (submitBtn && submitBtn.textContent.includes('截止')) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 火速登記';
+          submitBtn.style.background = 'var(--primary)';
+          submitBtn.style.cursor = 'pointer';
+        }
+      }
+    }
+
+    // 2. 取得商品資訊與系統設定
     async function fetchProductData() {
       try {
         let apiUrl = `${CONFIG.GAS_API_URL}?action=getProductById&productId=${targetProductId}`;
@@ -715,7 +828,21 @@
             imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
             description: '日本專櫃限量代購！輕盈防潑水尼龍材質，多隔層設計，大容量通勤與出遊都超百搭。'
           };
+          initDeadlineCountdown(null);
         } else {
+          // 同步嘗試取得設定 (包含收單截止日)
+          try {
+            const settRes = await fetch(`${CONFIG.GAS_API_URL}?action=getSettings`);
+            const settJson = await settRes.json();
+            if (settJson.success && settJson.data) {
+              initDeadlineCountdown(settJson.data.ORDER_DEADLINE);
+            } else {
+              initDeadlineCountdown(null);
+            }
+          } catch (e) {
+            initDeadlineCountdown(null);
+          }
+
           const res = await fetch(apiUrl);
           const json = await res.json();
           if (json.success) {

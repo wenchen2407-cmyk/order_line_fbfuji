@@ -350,6 +350,11 @@
       text-decoration: none;
       box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
     }
+    .btn-buy-now.disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -376,6 +381,14 @@
 
   <!-- 主內容區 -->
   <main class="catalog-container">
+    <!-- 收單截止動態倒數晶片 -->
+    <div id="catalogDeadlineBanner" style="display:none; align-items:center; justify-content:space-between; background:linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border:1px solid #fecdd3; color:#e11d48; padding:8px 12px; border-radius:10px; font-size:12.5px; font-weight:700; margin-bottom:12px;">
+      <span id="catalogDeadlineText">⏳ 本期收單倒數計算中...</span>
+      <button type="button" onclick="toggleDeadlineTestCatalog()" style="background:#fff; border:1px solid #fca5a5; border-radius:6px; padding:2px 8px; font-size:11px; color:#b91c1c; cursor:pointer;" title="本地切換模擬倒數中與已截止">
+        ⏱️ 模擬切換
+      </button>
+    </div>
+
     <div class="stats-bar">
       <span id="productCountText">正在載入商品清單...</span>
       <span style="font-size: 11px; color: #10b981;">● 現場即時連線中</span>
@@ -461,9 +474,87 @@
       document.getElementById('bottomOrderBtn').href = `my-orders.html${uidQuery}`;
     }
 
+    let catalogDeadlineDate = null;
+    let catalogTimer = null;
+    let isCatalogExpired = false;
+    let isSimulateExpiredCatalog = false;
+
+    function toggleDeadlineTestCatalog() {
+      isSimulateExpiredCatalog = !isSimulateExpiredCatalog;
+      if (isSimulateExpiredCatalog) {
+        alert('⏱️ 已切換為【模擬已截止】狀態！\n所有商品卡將標記為已截止。');
+      } else {
+        alert('⏱️ 已切換為【正常倒數中】狀態！');
+      }
+      updateCatalogDeadlineUI();
+      renderProductList();
+    }
+
+    function initCatalogDeadline(deadlineStr) {
+      if (catalogTimer) clearInterval(catalogTimer);
+      if (!deadlineStr) {
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        d.setHours(23, 59, 59, 0);
+        catalogDeadlineDate = d;
+      } else {
+        const parsed = new Date(deadlineStr);
+        catalogDeadlineDate = isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      updateCatalogDeadlineUI();
+      catalogTimer = setInterval(updateCatalogDeadlineUI, 1000);
+    }
+
+    function updateCatalogDeadlineUI() {
+      const banner = document.getElementById('catalogDeadlineBanner');
+      const textElem = document.getElementById('catalogDeadlineText');
+      if (!banner || !textElem) return;
+
+      banner.style.display = 'flex';
+      const now = new Date();
+
+      if (isSimulateExpiredCatalog || (catalogDeadlineDate && now >= catalogDeadlineDate)) {
+        if (!isCatalogExpired) {
+          isCatalogExpired = true;
+          renderProductList();
+        }
+        textElem.textContent = '⛔ 本期連線已截止收單';
+      } else {
+        if (isCatalogExpired) {
+          isCatalogExpired = false;
+          renderProductList();
+        }
+        const target = catalogDeadlineDate || new Date(Date.now() + 86400000);
+        const diffMs = Math.max(0, target - now);
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+        let timeStr = '';
+        if (days > 0) timeStr += `${days}天 `;
+        timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
+        textElem.textContent = `⏳ 本期收單倒數：${timeStr}`;
+      }
+    }
+
     // 載入商品資料
     async function fetchProducts() {
       try {
+        // 同步嘗試取得收單設定
+        try {
+          const settRes = await fetch(`${CONFIG.GAS_API_URL}?action=getSettings`);
+          const settJson = await settRes.json();
+          if (settJson.success && settJson.data) {
+            initCatalogDeadline(settJson.data.ORDER_DEADLINE);
+          } else {
+            initCatalogDeadline(null);
+          }
+        } catch (e) {
+          initCatalogDeadline(null);
+        }
+
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getProducts`);
         const json = await res.json();
         document.getElementById('skeletonLoader').style.display = 'none';
@@ -572,7 +663,7 @@
               <span class="card-current-price">NT$ ${priceNum.toLocaleString()}</span>
               ${origPriceHtml}
             </div>
-            <div class="btn-buy-now">🛒 立即下單</div>
+            <div class="${isCatalogExpired ? 'btn-buy-now disabled' : 'btn-buy-now'}">${isCatalogExpired ? '🚫 已截止' : '🛒 立即下單'}</div>
           </div>
         `;
         grid.appendChild(card);

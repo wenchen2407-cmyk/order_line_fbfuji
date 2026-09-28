@@ -361,6 +361,7 @@
     <div class="tabs-nav">
       <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 勾選商品發群組 (多選輪播)</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 電腦快速建檔</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabNotifyCustomer', this)">📢 顧客結帳通知 (1對1免額度)</button>
     </div>
 
     <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
@@ -550,6 +551,23 @@
       </div>
     </div>
 
+    <!-- ================= 分頁 3：顧客結帳通知 (1 對 1 免額度推播) ================= -->
+    <div id="tabNotifyCustomer" class="tab-content">
+      <div class="panel" style="max-width: 720px; margin: 0 auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div class="panel-title" style="margin-bottom:0;">📢 顧客專屬採購清單推播 (0 額度消耗)</div>
+          <button type="button" style="font-size:12px; color:var(--primary-dark); background:none; border:none; cursor:pointer; font-weight:700;" onclick="loadCustomerNotifyList()">🔄 重新整理名單</button>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+          系統自動彙整試算表中有成功採購的顧客，點擊「🚀 發送個人結帳卡片」即可在 LINE 中挑選該好友，傳送專屬 Flex 結帳卡片（完全不扣官方帳號額度，終生免費！）。
+        </p>
+
+        <div id="customerNotifyList" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px;">正在載入顧客結帳名單...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -608,7 +626,8 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
-      const tabIdx = (tabId === 'tabPublish') ? 0 : 1;
+      const tabMap = { 'tabPublish': 0, 'tabCreate': 1, 'tabNotifyCustomer': 2 };
+      const tabIdx = tabMap[tabId] || 0;
       const allBtns = document.querySelectorAll('.tab-btn');
 
       if (btnElement) {
@@ -620,6 +639,174 @@
       const targetContent = document.getElementById(tabId);
       if (targetContent) {
         targetContent.classList.add('active');
+      }
+
+      if (tabId === 'tabNotifyCustomer') {
+        loadCustomerNotifyList();
+      }
+    }
+
+    let notifyCustomers = [];
+
+    async function loadCustomerNotifyList() {
+      const container = document.getElementById('customerNotifyList');
+      if (!container) return;
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">正在讀取顧客採購資料...</div>';
+
+      notifyCustomers = [
+        { userId: 'U111222333', name: '王小美', phone: '0912345678', successCount: 2, outOfStockCount: 1, totalAmount: 2450 },
+        { userId: 'U444555666', name: '陳大明', phone: '0987654321', successCount: 1, outOfStockCount: 0, totalAmount: 890 }
+      ];
+
+      renderCustomerNotifyList();
+    }
+
+    function renderCustomerNotifyList() {
+      const container = document.getElementById('customerNotifyList');
+      container.innerHTML = '';
+
+      if (notifyCustomers.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;">目前沒有待通知結帳的顧客名單</div>';
+        return;
+      }
+
+      notifyCustomers.forEach(cust => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.02);';
+        item.innerHTML = `
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#0f172a;">${cust.name} <span style="font-size:12px; color:#64748b; font-weight:normal;">(${cust.phone || '無電話'})</span></div>
+            <div style="font-size:12.5px; color:#475569; margin-top:4px;">
+              <span style="color:#15803d; font-weight:700;">🎉 成功 ${cust.successCount} 件</span> ｜ 
+              <span style="color:#b91c1c;">⚠️ 缺貨 ${cust.outOfStockCount} 件</span> ｜ 
+              <b>應付：NT$ ${cust.totalAmount.toLocaleString()}</b>
+            </div>
+          </div>
+          <button type="button" class="btn-action" style="width:auto; padding:8px 14px; font-size:12.5px; margin-top:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+            🚀 發送 1 對 1 卡片
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    async function sendSingleCustomerNotify(userId, name, successCount, outCount, totalAmount) {
+      if (!liff.isApiAvailable('shareTargetPicker')) {
+        alert('⚠️ 您的環境目前無法使用「好友分享」功能！請在手機 LINE 內部開啟。');
+        return;
+      }
+
+      const targetUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?action=orders&uid=${encodeURIComponent(userId)}`;
+
+      const flexPayload = {
+        type: 'flex',
+        altText: `【W.W.連線代購】${name} 您好，您的專屬採購清單已出爐！`,
+        contents: {
+          type: 'bubble',
+          size: 'kilo',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#0f172a',
+            paddingAll: '16px',
+            contents: [
+              {
+                type: 'text',
+                text: '🌸 W.W. 連線代購 採購確認',
+                color: '#4ade80',
+                weight: 'bold',
+                size: 'xs'
+              },
+              {
+                type: 'text',
+                text: `${name} 您的專屬清單已備妥！`,
+                color: '#ffffff',
+                weight: 'bold',
+                size: 'md',
+                margin: 'xs'
+              }
+            ]
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            paddingAll: '16px',
+            contents: [
+              {
+                type: 'box',
+                layout: 'vertical',
+                backgroundColor: '#f8fafc',
+                paddingAll: '12px',
+                cornerRadius: '10px',
+                contents: [
+                  {
+                    type: 'text',
+                    text: `• 🎉 採購成功：${successCount} 件`,
+                    size: 'sm',
+                    color: '#15803d',
+                    weight: 'bold'
+                  },
+                  {
+                    type: 'text',
+                    text: `• ⚠️ 缺貨斷貨：${outCount} 件`,
+                    size: 'sm',
+                    color: '#b91c1c',
+                    margin: 'xs'
+                  },
+                  {
+                    type: 'separator',
+                    margin: 'sm'
+                  },
+                  {
+                    type: 'text',
+                    text: `應付總額：NT$ ${totalAmount.toLocaleString()}`,
+                    size: 'md',
+                    color: '#e11d48',
+                    weight: 'bold',
+                    margin: 'sm'
+                  }
+                ]
+              },
+              {
+                type: 'text',
+                text: '小幫手已在整理打包包裹囉！請點擊下方按鈕確認配送門市與結帳：',
+                size: 'xs',
+                color: '#64748b',
+                wrap: true,
+                margin: 'md'
+              }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            paddingAll: '16px',
+            paddingTop: '0px',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '💳 點此開啟清單完成結帳',
+                  uri: targetUrl
+                },
+                style: 'primary',
+                color: '#06c755',
+                height: 'sm'
+              }
+            ]
+          }
+        }
+      };
+
+      try {
+        const res = await liff.shareTargetPicker([flexPayload]);
+        if (res) {
+          alert(`🎉 已成功發送 1 對 1 結帳卡片給【${name}】！`);
+        }
+      } catch (e) {
+        console.error('推播失敗:', e);
+        alert('推播失敗：' + (e.message || JSON.stringify(e)));
       }
     }
 

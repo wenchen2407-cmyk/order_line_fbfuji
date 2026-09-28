@@ -48,29 +48,31 @@ function setupSpreadsheet() {
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
   }
 
-  // 2. 訂單明細工作表 (升級採購狀態表頭與專屬下拉選單)
+  // 2. 訂單明細工作表 (升級採購狀態表頭與專屬下拉選單、包裹追蹤碼欄位)
   let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
   const orderHeaders = [
     '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
     '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
     '訂單總額', '收件人姓名', '聯絡電話', '取件方式與地址', 
-    '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註'
+    '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
+    '包裹追蹤編號'
   ];
   if (!orderSheet) {
     orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
     orderSheet.appendRow(orderHeaders);
   } else {
-    // 既有表格：升級表頭第 19 欄為「採購/出貨狀態」
-    orderSheet.getRange(1, 19).setValue('採購/出貨狀態');
+    // 既有表格：升級表頭
+    orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
   }
-  orderSheet.getRange(1, 1, 1, 20).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
+  orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
   orderSheet.getRange("N:N").setNumberFormat('@');
   orderSheet.getRange("R:R").setNumberFormat('@');
+  orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
 
   // 為 S 欄建立「採購狀態快速下拉選單」
   try {
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['連線登記', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨'], true)
+      .requireValueInList(['連線登記', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨', '已完成取貨'], true)
       .setAllowInvalid(true)
       .build();
     orderSheet.getRange("S2:S1000").setDataValidation(statusRule);
@@ -102,6 +104,8 @@ function setupSpreadsheet() {
   // 4. 系統設定表 (自動補齊新欄位並強制更新 STORE_NAME 為 W.W.連線代購)
   let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
   const defaultSettings = [
+    ['ORDER_DEADLINE', '2026/10/05 23:59', '本次連線收單截止時間 (格式: YYYY/MM/DD HH:mm，逾期前台自動關單)'],
+    ['ALLOW_CHECKOUT', 'NO', '是否開放回國結帳通道 (YES: 開放買家前往結帳與選配送 / NO: 連線採購中尚未開放)'],
     ['BANK_NAME', '808 玉山銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
     ['BANK_ACCOUNT_HOLDER', '陳小美', '賣家帳戶戶名'],
     ['BANK_ACCOUNT', "'0123-4567-8901-2345", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
@@ -133,10 +137,16 @@ function setupSpreadsheet() {
     // 強制將 STORE_NAME 更新為「W.W.連線代購」
     let foundStoreName = false;
     for (let r = 1; r < existingData.length; r++) {
-      if (String(existingData[r][0]).trim() === 'STORE_NAME') {
+      const key = String(existingData[r][0]).trim();
+      if (key === 'STORE_NAME') {
         settSheet.getRange(r + 1, 2).setValue('W.W.連線代購');
         foundStoreName = true;
-        break;
+      } else if (key === 'FREE_SHIPPING_THRESHOLD') {
+        settSheet.getRange(r + 1, 2).setValue('3000');
+      } else if (key === 'SHIP_FEE_711_COD') {
+        settSheet.getRange(r + 1, 2).setValue('38');
+      } else if (key === 'SHIP_FEE_FAMI_COD') {
+        settSheet.getRange(r + 1, 2).setValue('35');
       }
     }
     if (!foundStoreName) {
@@ -146,7 +156,7 @@ function setupSpreadsheet() {
   // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
   settSheet.getRange("B:B").setNumberFormat('@');
 
-  return '工作表與採購狀態設定升級完成！';
+  return '工作表與系統設定更新升級完成！';
 }
 
 /**
@@ -237,6 +247,8 @@ function doPost(e) {
       result = handleCreateOrder(postData.data);
     } else if (action === 'checkoutOrders') {
       result = handleCheckoutOrders(postData.data);
+    } else if (action === 'confirmReceived') {
+      result = handleConfirmReceived(postData.data);
     } else if (action === 'reportPayment') {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
@@ -364,6 +376,18 @@ function handleCreateOrder(orderData) {
     const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
     const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
     const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+
+    // 0. 檢查收單截止時間防呆
+    const settings = getSystemSettings().data || {};
+    if (settings.ORDER_DEADLINE) {
+      const deadline = new Date(settings.ORDER_DEADLINE);
+      if (!isNaN(deadline.getTime()) && new Date() > deadline) {
+        return { 
+          success: false, 
+          message: `⚠️ 很抱歉，本次連線已於 ${settings.ORDER_DEADLINE} 截止收單囉！` 
+        };
+      }
+    }
 
     // 1. 檢查商品庫存
     const prodData = prodSheet.getDataRange().getValues();
@@ -496,28 +520,28 @@ function handleCheckoutOrders(checkoutData) {
   let shippingFee = 0;
   let isPrepay = false; // 是否需先匯款
 
-  if (method === 'STORE_PICKUP_FREE') {
-    // 1. 超商純取貨 (需先匯款)：不限購買金額，運費0元
+  if (method === '711_PREPAID' || method === 'FAMI_PREPAID' || method === 'STORE_PICKUP_FREE') {
+    // 1 & 2. 7-11 或全家 超商純取貨 (需先匯款)：提供免運費 (NT$ 0)
     shippingFee = 0;
     isPrepay = true;
   } else if (method === '711_COD') {
-    // 2. 7-11超商貨到付款 (賣貨便)：滿額免運
+    // 3. 7-11超商貨到付款 (賣貨便)：滿額免運
     shippingFee = (goodsTotal >= freeThreshold) ? 0 : fee711;
     isPrepay = false;
   } else if (method === 'FAMI_COD') {
-    // 3. 全家超商貨到付款 (好賣+)：滿額免運
+    // 4. 全家超商貨到付款 (好賣+)：滿額免運
     shippingFee = (goodsTotal >= freeThreshold) ? 0 : feeFami;
     isPrepay = false;
   } else if (method === 'POST_PREPAID') {
-    // 4. 郵局純寄件 (先匯款)
+    // 5. 郵局純寄件 (先匯款)
     shippingFee = feePostPrepaid;
     isPrepay = true;
   } else if (method === 'POST_COD') {
-    // 5. 郵局貨到付款
+    // 6. 郵局貨到付款
     shippingFee = feePostCod;
     isPrepay = false;
   } else if (method === 'BLACKCAT_PREPAID') {
-    // 6. 黑貓宅配到府 (先匯款)
+    // 7. 黑貓宅配到府 (先匯款)
     shippingFee = feeBlackcat;
     isPrepay = true;
   } else {
@@ -544,7 +568,14 @@ function handleCheckoutOrders(checkoutData) {
     if (checkoutData.note) {
       orderSheet.getRange(r, 16).setValue(checkoutData.note);
     }
-    orderSheet.getRange(r, 17).setValue(payStatus);
+    
+    // 若填寫了匯款後五碼，直接記錄並切換為已回報待對帳
+    if (checkoutData.lastFive) {
+      orderSheet.getRange(r, 17).setValue('已回報待對帳');
+      orderSheet.getRange(r, 18).setValue("'" + String(checkoutData.lastFive).trim());
+    } else {
+      orderSheet.getRange(r, 17).setValue(payStatus);
+    }
     orderSheet.getRange(r, 19).setValue(orderStatus);
   }
 
@@ -662,7 +693,8 @@ function formatPhoneAsText(phone) {
 }
 
 /**
- * 3. 客人回填匯款後五碼（支援依 userId 一次性更新所有待付款訂單）
+ * 3. 客人回報匯款資料（支援匯款方式：LinePay、街口支付、中國信託轉帳、轉帳時間與後五碼）
+ * 送出後將狀態更新為「對帳中，待出貨」
  */
 function handleReportPayment(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -672,29 +704,72 @@ function handleReportPayment(data) {
   const rows = orderSheet.getDataRange().getValues();
   let updatedCount = 0;
 
+  const payMethod = data.payMethod || '中國信託轉帳';
+  const transferTime = data.transferTime || Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm');
+  const lastFive = data.lastFiveDigits ? "'" + String(data.lastFiveDigits).trim() : '';
+
   for (let i = 1; i < rows.length; i++) {
     const isTarget = (data.orderId && rows[i][0] === data.orderId) || 
-                     (data.userId && rows[i][2] === data.userId && (rows[i][16] === '待付款' || rows[i][16] === '未結帳'));
+                     (data.userId && rows[i][2] === data.userId && (rows[i][16] === '待付款' || rows[i][16] === '未結帳' || rows[i][16] === '已回報待對帳'));
     if (isTarget) {
       const rowIndex = i + 1;
-      orderSheet.getRange(rowIndex, 17).setValue('已回報待對帳');
-      orderSheet.getRange(rowIndex, 18).setValue("'" + String(data.lastFiveDigits));
-      if (data.note) {
-        orderSheet.getRange(rowIndex, 20).setValue('買家留言: ' + data.note);
+      orderSheet.getRange(rowIndex, 17).setValue('對帳中，待出貨'); // 付款狀態
+      if (lastFive) {
+        orderSheet.getRange(rowIndex, 18).setValue(lastFive);       // 匯款後五碼
       }
+      orderSheet.getRange(rowIndex, 19).setValue('對帳中，待出貨'); // 出貨狀態同步標記
+
+      // 處理備註記錄：匯款方式、轉帳時間與備註
+      const noteText = `[付款回報: ${payMethod}] 時間: ${transferTime}` + (data.note ? ` 備註: ${data.note}` : '');
+      orderSheet.getRange(rowIndex, 20).setValue(noteText);
+
       updatedCount++;
     }
   }
 
   if (updatedCount > 0) {
-    return { success: true, message: `已成功回報匯款後五碼 (${data.lastFiveDigits})！賣家核對入帳後將為您準備出貨包裹。` };
+    return { 
+      success: true, 
+      message: `🎉 已成功送出匯款回報！方式：${payMethod}，狀態已更新為「對帳中，待出貨」，小幫手確認入帳後將立即安排出貨！` 
+    };
   }
 
   return { success: false, message: '查無符合條件的待付款訂單' };
 }
 
 /**
- * 4. 查詢使用者的訂單清單（區分待出貨結帳商品與歷史訂單，附帶顧客資訊與銀行帳戶）
+ * 4. 買家確認完成取貨（將狀態改為「已完成取貨」，正式歸檔至歷史訂單）
+ */
+function handleConfirmReceived(data) {
+  const userId = data.userId;
+  const orderId = data.orderId;
+  if (!userId) return { success: false, message: '缺少買家 ID' };
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  if (!orderSheet) return { success: false, message: '訂單表不存在' };
+
+  const rows = orderSheet.getDataRange().getValues();
+  let updatedCount = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    // 依指定 orderId 或該買家所有「已完成出貨」的項目
+    const isTarget = (orderId && rows[i][0] === orderId) || (!orderId && rows[i][2] === userId && rows[i][18] === '已完成出貨');
+    if (isTarget) {
+      orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
+      updatedCount++;
+    }
+  }
+
+  if (updatedCount > 0) {
+    return { success: true, message: '🎉 感謝您的回報！訂單已確認取件完畢並封存至歷史紀錄！' };
+  }
+
+  return { success: false, message: '查無符合條件的配送中訂單' };
+}
+
+/**
+ * 5. 查詢使用者的訂單清單（區分待出貨結帳/配送中商品與歷史訂單，附帶顧客資訊、系統設定與包裹追蹤碼）
  */
 function getOrdersForUser(userId) {
   if (!userId) return { success: false, message: '缺少 userId' };
@@ -705,8 +780,8 @@ function getOrdersForUser(userId) {
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
   const rows = orderSheet.getDataRange().getValues();
-  const pendingCheckoutOrders = []; // 待出貨結帳（連線中登記）
-  const completedOrders = [];       // 已完成結帳或歷史訂單
+  const pendingCheckoutOrders = []; // 待出貨結帳或配送中（連線中登記/採購成功/已完成出貨配送中）
+  const completedOrders = [];       // 已完成取貨結案之歷史訂單
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -728,13 +803,17 @@ function getOrdersForUser(userId) {
         note: row[15],
         paymentStatus: row[16],
         lastFive: row[17],
-        shippingStatus: row[18]
+        shippingStatus: row[18],
+        processNote: row[19] || '',
+        trackingNumber: String(row[20] || '').trim() // 第 21 欄 U 欄：包裹追蹤編號
       };
 
       const shipStatus = String(row[18] || '').trim();
-      const isCompleted = shipStatus.includes('已完成') || shipStatus.includes('已寄出') || shipStatus.includes('已取消') || shipStatus.includes('結案');
+      // 只有「已完成取貨」、「結案」或「已取消」才進入歷史訂單！
+      // 「已完成出貨」依然保留在 pendingCheckoutOrders，以便買家前台能看見物流追蹤卡與一鍵查詢按鈕！
+      const isClosed = shipStatus.includes('已完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已取消');
 
-      if (!isCompleted) {
+      if (!isClosed) {
         pendingCheckoutOrders.push(item);
       } else {
         completedOrders.push(item);
@@ -821,17 +900,25 @@ function getSystemSettings() {
     const info = String(settings.BANK_INFO);
     if (!settings.BANK_NAME) {
       const bankMatch = info.match(/^([^\s]+(?:\s+[^\s]+)?)/);
-      settings.BANK_NAME = bankMatch ? bankMatch[1] : '808 玉山銀行';
+      settings.BANK_NAME = bankMatch ? bankMatch[1] : '822 中國信託商業銀行';
     }
     if (!settings.BANK_ACCOUNT) {
       const accMatch = info.match(/帳號[:：\s]*([0-9-]+)/);
-      settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '0123-4567-8901-2345';
+      settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '123-4567-8901-2345';
     }
     if (!settings.BANK_ACCOUNT_HOLDER) {
       const holderMatch = info.match(/戶名[:：\s]*([^\s]+)/);
-      settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '連線小幫手';
+      settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '陳小美';
     }
   }
+
+  // 系統規則校正：超商純取貨 0 元免運，貨到付款滿 3,000 元免運
+  if (!settings.FREE_SHIPPING_THRESHOLD || Number(settings.FREE_SHIPPING_THRESHOLD) < 3000) {
+    settings.FREE_SHIPPING_THRESHOLD = '3000';
+  }
+  settings.SHIP_FEE_STORE_PREPAID = '0'; // 超商純取貨一律免運
+  if (!settings.SHIP_FEE_711_COD) settings.SHIP_FEE_711_COD = '38';
+  if (!settings.SHIP_FEE_FAMI_COD) settings.SHIP_FEE_FAMI_COD = '35';
 
   return { success: true, data: settings };
 }

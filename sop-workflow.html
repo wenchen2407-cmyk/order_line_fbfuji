@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>W.W. 連線代購 完整營運標準作業程序 (SOP) 手冊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #05a847;
+      --accent: #ff4757;
+      --purple: #8b5cf6;
+      --blue: #2563eb;
+      --dark: #0f172a;
+      --gray-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f1f5f9;
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 24px 16px 80px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* 頂部 Header */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 36px 28px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header-banner::after {
+      content: 'SOP';
+      position: absolute;
+      right: 20px;
+      bottom: -15px;
+      font-size: 110px;
+      font-weight: 900;
+      font-family: 'Outfit', sans-serif;
+      color: rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(6, 199, 85, 0.2);
+      color: #4ade80;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    .header-title {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .header-desc {
+      font-size: 14px;
+      color: #94a3b8;
+      max-width: 640px;
+    }
+
+    /* 流程導航卡 */
+    .phase-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      position: relative;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .phase-num {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--dark);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .phase-num.green { background: #059669; }
+    .phase-num.blue { background: #2563eb; }
+    .phase-num.purple { background: #7c3aed; }
+    .phase-num.orange { background: #ea580c; }
+    .phase-num.teal { background: #0d9488; }
+
+    .phase-title-group h2 {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .phase-title-group p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* 角色對照欄位 */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 680px) {
+      .role-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .role-box {
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13.5px;
+    }
+
+    .role-admin {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+    }
+
+    .role-customer {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .role-title {
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .role-admin .role-title { color: #1e293b; }
+    .role-customer .role-title { color: #15803d; }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .step-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+
+    .role-customer .step-dot { background: #16a34a; }
+
+    /* 關鍵醒目標籤 */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-red { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    /* 重點提示 Box */
+    .pro-tip {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 16px;
+      border-radius: 0 10px 10px 0;
+      margin-top: 14px;
+      font-size: 13px;
+      color: #92400e;
+    }
+
+    .pro-tip strong {
+      color: #78350f;
+    }
+
+    /* 配送方式表格 */
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 模擬卡片預覽 */
+    .flex-preview {
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      border: 1px dashed #cbd5e1;
+    }
+
+    .flex-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .btn-preview {
+      display: block;
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      padding: 11px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      margin-top: 12px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- 頂部 Header -->
+    <div class="header-banner">
+      <span class="header-badge">✨ 官方標準作業準則 (SOP)</span>
+      <h1 class="header-title">W.W. 連線代購 全流程標準作業手冊</h1>
+      <p class="header-desc">
+        本手冊統整連線收單、採購判定、全站一鍵開放結帳、雙軌推播通知（0額度）、6大配送與物流追蹤結案之標準作業步驟。
+      </p>
+    </div>
+
+    <!-- ================= 階段一 ================= -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num blue">1</div>
+        <div class="phase-title-group">
+          <h2>第一階段：連線收單與倒數自動關單</h2>
+          <p>開檔期設定 ➔ 動態倒數計時 ➔ 時間一到自動關單防呆</p>
+        </div>
+      </div>
+
+      <div class="role-grid">
+        <div class="role-box role-admin">
+          <div class="role-title">👤 管理人操作 (Google 試算表)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>開啟【系統設定】工作表。</li>
+            <li><span class="step-dot"></span>在 <b>ORDER_DEADLINE</b> 填入截止時間（例：<code>2026/10/05 23:59</code>）。</li>
+            <li><span class="step-dot"></span>將 <b>ALLOW_CHECKOUT</b> 維持為 <code>NO</code>（連線中禁止提前結帳）。</li>
+          </ul>
+        </div>
+        <div class="role-box role-customer">
+          <div class="role-title">👥 客戶端畫面 (手機 LINE)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>進入商品卡或商品清單，頂部看見動態倒數晶片：<br><code>⏳ 本期連線倒數：02天 05小時 30分</code></li>
+            <li><span class="step-dot"></span>正常點擊綠色按鈕「🚀 火速登記」搶購預約。</li>
+            <li><span class="step-dot"></span><b>截止時間一到</b>：按鈕自動反灰變為「🚫 已截止收單」，無法點擊。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pro-tip">
+        <strong>💡 管理人省心點：</strong>若臨時決定延長連線時間 1 天，只需在試算表修改時間，全系統商品卡與清單立刻自動延長，程式碼 0 負擔！
+      </div>
+    </div>
+
+    <!-- ================= 階段二 ================= -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num green">2</div>
+        <div class="phase-title-group">
+          <h2>第二階段：專櫃現場採購與結果標記</h2>
+          <p>現場採買中 ➔ 標記買到或缺貨 ➔ 客人即時獲悉進度</p>
+        </div>
+      </div>
+
+      <div class="role-grid">
+        <div class="role-box role-admin">
+          <div class="role-title">👤 管理人操作 (Google 試算表)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>在專櫃採買時，打開【訂單明細】第 19 欄 (S 欄)。</li>
+            <li><span class="step-dot"></span>現場專櫃已買到 ➔ 選 <span class="badge badge-green">🎉 採購成功</span></li>
+            <li><span class="step-dot"></span>專櫃已斷貨/買不到 ➔ 選 <span class="badge badge-red">⚠️ 缺貨斷貨</span></li>
+            <li><span class="step-dot"></span><b>此時完全不用去點「通知結帳」！專心採購即可！</b></li>
+          </ul>
+        </div>
+        <div class="role-box role-customer">
+          <div class="role-title">👥 客戶端畫面 (手機 LINE)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>客戶隨時點開「📦 訂購清單」，即時看見商品採購徽章。</li>
+            <li><span class="step-dot"></span>看到 <span class="badge badge-green">🎉 採購成功</span> 知道小幫手已買到，踏實安心。</li>
+            <li><span class="step-dot"></span>因為 <code>ALLOW_CHECKOUT</code> 仍為 NO，底部不會出現結帳按鈕，避免連線中提早付款混亂。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 階段三 ================= -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num purple">3</div>
+        <div class="phase-title-group">
+          <h2>第三階段：回國開放結帳與雙軌通知 (徹底解決點選痛點)</h2>
+          <p>試算表改 1 格開放結帳 ➔ LINE 群組大公告 ➔ LIFF 個人專屬推播卡 (0額度)</p>
+        </div>
+      </div>
+
+      <div class="role-grid">
+        <div class="role-box role-admin">
+          <div class="role-title">👤 管理人操作 (試算表改 1 格搞定)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>回國整理包裹完畢後，打開【系統設定】工作表。</li>
+            <li><span class="step-dot"></span><b>只需把 ALLOW_CHECKOUT 從 NO 改成 YES！(只改 1 格！)</b></li>
+            <li><span class="step-dot"></span>全體客人的採購成功商品，瞬間全部開放結帳通道！</li>
+            <li><span class="step-dot"></span>免去對 100 筆訂單逐一修改「通知結帳」的巨大痛苦！</li>
+          </ul>
+        </div>
+        <div class="role-box role-customer">
+          <div class="role-title">👥 客戶端畫面 (雙徽章與結帳按鈕)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>客戶開啟「📦 訂購清單」，採購成功的商品自動呈現：<br>
+              <span class="badge badge-green">🎉 採購成功</span> ＋ <span class="badge badge-purple">🛒 請結帳</span> 雙徽章！</li>
+            <li><span class="step-dot"></span>缺貨商品不計入總額，總計僅計算成功商品。</li>
+            <li><span class="step-dot"></span>清單底部亮起專屬綠色按鈕：<br>
+              <b>💳 前往結帳與選擇配送方式 👉</b></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 雙軌推播說明 -->
+      <div style="margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 16px;">
+        <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 8px; color: #1e293b;">📢 管理人通知買家的雙軌操作（完全 0 額度消耗、免付費）：</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">管道 ①：LINE 連線群組大公告 (免費)</div>
+            <p style="font-size: 12.5px; color: var(--text-muted);">在連線群組直接喊話：「<i>各位朋友，本期採購已完成！請大家點擊『📦 訂購清單』進行出貨結帳與選超商囉！</i>」➔ <b>0 額度消耗！</b></p>
+          </div>
+          <div style="background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="font-weight: 700; color: #7c3aed; margin-bottom: 4px;">管道 ②：LIFF 手動推播個人結帳卡 (免費)</div>
+            <p style="font-size: 12.5px; color: var(--text-muted);">使用管理工具，對指定客人點擊「發送個人結帳卡」，在 LINE 中挑選該好友一鍵傳送專屬 Flex 卡片 ➔ <b>0 額度消耗！無上限！</b></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模擬卡片預覽 -->
+      <div class="flex-preview">
+        <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-align: center;">📱 顧客收到之 1 對 1 個人專屬 Flex 卡片外觀</div>
+        <div class="flex-card">
+          <div style="font-size: 12px; color: var(--primary); font-weight: 800; letter-spacing: 0.5px;">W.W. 連線代購 採購確認通知</div>
+          <div style="font-size: 16px; font-weight: 800; margin: 6px 0 10px; color: #0f172a;">林小美 您好：</div>
+          <div style="font-size: 13px; color: #334155; line-height: 1.6; background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+            <div>• 🎉 採購成功：<b>2</b> 件</div>
+            <div>• ⚠️ 缺貨斷貨：<b>1</b> 件</div>
+            <div style="margin-top: 4px; color: var(--accent); font-weight: 800; font-size: 14px;">應付總金額：NT$ 2,450</div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; line-height: 1.4;">包裹已在整理打包中，請點擊下方按鈕選擇配送門市與結帳！</div>
+          <a href="#" class="btn-preview">💳 立即確認配送方式與結帳 (專屬直連)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 階段四 ================= -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num orange">4</div>
+        <div class="phase-title-group">
+          <h2>第四階段：買家結帳填單與 6 大配送方式</h2>
+          <p>點擊前往結帳 ➔ 選 6 大配送與免運 ➔ 轉帳/貨到付款 ➔ 試算表自動合併</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>配送方式</th>
+              <th>運費 (系統設定預設)</th>
+              <th>付款模式</th>
+              <th>買家填寫資訊</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>① 超商純取貨 (需先匯款)</b></td>
+              <td><span class="badge badge-green">NT$ 0 (免運)</span></td>
+              <td>先轉帳 (顯示銀行帳號/一鍵複製)</td>
+              <td>收件人姓名、電話、取件超商門市/代號、匯款後五碼</td>
+            </tr>
+            <tr>
+              <td><b>② 7-11 貨到付款 (賣貨便)</b></td>
+              <td>NT$ 38 (滿 3,000 免運)</td>
+              <td>取貨付款 (免預先匯款)</td>
+              <td>收件人姓名、電話、7-11 取件門市與代號</td>
+            </tr>
+            <tr>
+              <td><b>③ 全家 貨到付款 (好賣+)</b></td>
+              <td>NT$ 35 (滿 3,000 免運)</td>
+              <td>取貨付款 (免預先匯款)</td>
+              <td>收件人姓名、電話、全家 取件門市與代號</td>
+            </tr>
+            <tr>
+              <td><b>④ 郵局純寄件</b></td>
+              <td>NT$ 80</td>
+              <td>先轉帳</td>
+              <td>收件人姓名、電話、完整送達地址、匯款後五碼</td>
+            </tr>
+            <tr>
+              <td><b>⑤ 郵局貨到付款</b></td>
+              <td>NT$ 130</td>
+              <td>郵差送達付款</td>
+              <td>收件人姓名、電話、完整送達地址</td>
+            </tr>
+            <tr>
+              <td><b>⑥ 黑貓宅配到府</b></td>
+              <td>NT$ 100</td>
+              <td>先轉帳</td>
+              <td>收件人姓名、電話、完整送達地址、匯款後五碼</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pro-tip" style="margin-top: 14px;">
+        <strong>🤖 系統後端自動處理：</strong>
+        買家送出結帳後，同一買家的多筆訂單會自動合併，<b>運費只算一次（第一筆帶運費，其餘記 0）</b>，試算表 Q 欄自動更新為 <code>已回報待對帳</code> 或 <code>貨到付款待出貨</code>。
+      </div>
+    </div>
+
+    <!-- ================= 階段五 ================= -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num teal">5</div>
+        <div class="phase-title-group">
+          <h2>第五階段：出貨配送、物流動態追蹤與完成取貨結案</h2>
+          <p>填寫包裹追蹤碼 ➔ 前台動態追蹤 ➔ 買家完成取貨 ➔ 移入歷史訂單</p>
+        </div>
+      </div>
+
+      <div class="role-grid">
+        <div class="role-box role-admin">
+          <div class="role-title">👤 管理人操作 (出貨與填單)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>對帳無誤後，依客人選擇的超商門市或地址打包寄出。</li>
+            <li><span class="step-dot"></span>在【訂單明細】第 21 欄 (U 欄) 填入<b>包裹追蹤查詢碼</b>（如 7-11 店到店代碼 <code>86312345678</code>）。</li>
+            <li><span class="step-dot"></span>將 S 欄改為 <span class="badge badge-blue">🚚 已完成出貨</span>。</li>
+          </ul>
+        </div>
+        <div class="role-box role-customer">
+          <div class="role-title">👥 客戶端畫面 (即時物流追蹤)</div>
+          <ul class="step-list">
+            <li><span class="step-dot"></span>訂購清單顯示 <b>🚚 包裹配送中進度卡片</b>。</li>
+            <li><span class="step-dot"></span>清楚看見配送方式與包裹查詢號碼（附一鍵複製）。</li>
+            <li><span class="step-dot"></span>點擊 <b>🔍 點此查詢包裹即時動態</b>，直接跳轉 7-11 / 全家 / 郵局 / 黑貓 官方物流進度頁面！</li>
+            <li><span class="step-dot"></span><b>取貨完成結案</b>：買家拿到包裹後點擊 <b>「✓ 我已完成取貨」</b>，訂單正式移入「📜 歷史訂單查詢」！</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pro-tip">
+        <strong>✨ 貼心體驗：</strong>商品出貨後不會瞬間從訂購清單消失，而是保持配送追蹤狀態，讓買家掌握包裹何時到門市，取貨完成才封存至歷史訂單！
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

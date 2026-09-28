@@ -2,19 +2,20 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>連線訂購清單中心</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>W.W.連線代購 ｜ 訂單查詢與合併結帳</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary: #06c755;
-      --primary-dark: #059b43;
-      --accent: #e11d48;
-      --bg-color: #f8fafc;
+      --primary-dark: #05a847;
+      --accent: #ff4757;
+      --purple: #8b5cf6;
+      --blue: #2563eb;
+      --bg: #f8fafc;
       --card-bg: #ffffff;
       --text-main: #0f172a;
       --text-muted: #64748b;
@@ -22,217 +23,417 @@
       --radius: 16px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
       font-family: 'Noto Sans TC', sans-serif;
-      background-color: var(--bg-color);
+      background: var(--bg);
       color: var(--text-main);
-      padding: 14px;
-      padding-bottom: 50px;
+      padding: 14px 14px 90px;
       line-height: 1.5;
     }
 
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
-    }
+    .container { max-width: 540px; margin: 0 auto; }
 
-    /* 頂部買家卡片 */
+    /* 本地測試除錯工具列 */
+    .dev-toolbar {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .dev-toolbar-title {
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .dev-btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .dev-btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .dev-btn:hover { background: #475569; }
+    .dev-btn.active { background: #0284c7; border-color: #38bdf8; font-weight: 700; }
+
+    /* 買家會員簡介卡 */
     .user-profile-header {
-      background: #ffffff;
+      background: var(--card-bg);
       border-radius: var(--radius);
       padding: 14px 16px;
-      margin-bottom: 16px;
-      border: 1px solid var(--border-color);
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
-
     .user-avatar {
       width: 44px;
       height: 44px;
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid #e2e8f0;
+      background: #e2e8f0;
+      flex-shrink: 0;
     }
-
-    .user-meta {
-      flex: 1;
-      min-width: 0;
-    }
-
+    .user-meta { flex: 1; min-width: 0; }
     .user-name {
-      font-size: 15px;
       font-weight: 800;
-      color: var(--text-main);
+      font-size: 15px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-
     .user-sub {
       font-size: 12px;
       color: var(--text-muted);
       margin-top: 2px;
     }
-
     .btn-top-catalog {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+      background: #eff6ff;
+      color: var(--blue);
+      border: 1px solid #bfdbfe;
+      padding: 6px 12px;
+      border-radius: 20px;
       font-size: 12px;
       font-weight: 700;
-      color: #2563eb;
-      background: #eff6ff;
-      padding: 7px 12px;
-      border-radius: 10px;
       text-decoration: none;
-      border: 1px solid #bfdbfe;
-      transition: all 0.2s;
       white-space: nowrap;
     }
 
-    .btn-top-catalog:active {
-      transform: scale(0.96);
-      background: #dbeafe;
-    }
-
-    /* Tab 切換導航 */
+    /* 頁籤導航 */
     .tab-nav {
       display: flex;
       background: #e2e8f0;
-      padding: 4px;
       border-radius: 12px;
-      margin-bottom: 16px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 3px;
     }
-
     .tab-btn {
       flex: 1;
-      text-align: center;
-      padding: 8px 12px;
-      font-size: 13px;
-      font-weight: 700;
+      padding: 9px;
       border: none;
       background: none;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 13.5px;
       color: var(--text-muted);
-      border-radius: 8px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       transition: all 0.2s;
     }
-
     .tab-btn.active {
-      background: #ffffff;
+      background: #fff;
       color: var(--text-main);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
     }
-
     .badge-count {
-      display: inline-block;
       background: var(--accent);
-      color: #ffffff;
+      color: #fff;
       font-size: 11px;
+      font-weight: 800;
       padding: 1px 6px;
       border-radius: 10px;
-      margin-left: 4px;
     }
 
-    /* 卡片通用區塊 */
+    /* 主卡片區塊 */
     .section-card {
       background: var(--card-bg);
       border-radius: var(--radius);
-      border: 1px solid var(--border-color);
       padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      border: 1px solid var(--border-color);
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+    .section-title {
+      font-weight: 800;
+      font-size: 14px;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .section-title {
-      font-size: 15px;
+    /* 狀態徽章 */
+    .status-badge {
+      font-size: 11px;
       font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .badge-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .badge-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+
+    /* 包裹物流即時追蹤卡片 */
+    .tracking-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 1.5px solid #93c5fd;
+      border-radius: var(--radius);
+      padding: 16px;
       margin-bottom: 14px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+    }
+    .tracking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .tracking-title {
+      font-weight: 900;
+      font-size: 15px;
+      color: #1d4ed8;
       display: flex;
       align-items: center;
       gap: 6px;
-      color: var(--text-main);
     }
-
-    .section-title::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 16px;
-      background: var(--primary);
-      border-radius: 2px;
+    .tracking-body {
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      border: 1px solid #dbeafe;
+      margin-bottom: 12px;
     }
-
-    /* 採購狀態徽章 */
-    .status-badge {
+    .tracking-code {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      color: #0f172a;
+      letter-spacing: 1px;
+    }
+    .btn-track-online {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-size: 11px;
+      justify-content: center;
+      gap: 6px;
+      background: var(--blue);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
       font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 20px;
-      white-space: nowrap;
+      font-size: 13.5px;
+      text-decoration: none;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
     }
-    .badge-pending {
-      background: #eff6ff;
-      color: #2563eb;
-      border: 1px solid #bfdbfe;
-    }
-    .badge-success {
-      background: #ecfdf5;
-      color: #059669;
-      border: 1px solid #a7f3d0;
-    }
-    .badge-danger {
-      background: #fef2f2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-    }
-    .badge-purple {
-      background: #f5f3ff;
-      color: #7c3aed;
-      border: 1px solid #ddd6fe;
-    }
-    .badge-info {
-      background: #f0fdfa;
-      color: #0d9488;
-      border: 1px solid #99f6e4;
+    .btn-confirm-received {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #fff;
+      color: #15803d;
+      border: 1.5px solid #16a34a;
+      padding: 9px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
     }
 
-    /* 歷史訂單標籤 */
-    .badge-status {
+    /* 結帳按鈕 (底部亮起) */
+    .btn-action-checkout {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, #06c755 0%, #05a847 100%);
+      color: #fff;
+      text-align: center;
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 900;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(6, 199, 85, 0.35);
+      animation: pulseBtn 2s infinite;
+      margin-top: 14px;
+    }
+    @keyframes pulseBtn {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.015); }
+    }
+
+    /* 結帳抽屜/視窗 Modal */
+    .checkout-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 300;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .checkout-modal.active { display: flex; }
+    .checkout-content {
+      background: #fff;
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 40px;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+    .modal-title-bar h3 { font-size: 18px; font-weight: 900; color: #0f172a; }
+    .btn-close-modal {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* 配送方式選項 */
+    .shipping-option {
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s;
+    }
+    .shipping-option.selected {
+      border-color: var(--primary);
+      background: #f0fdf4;
+    }
+    .ship-name { font-weight: 700; font-size: 13.5px; }
+    .ship-fee {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    /* 表單元件 */
+    .form-group { margin-bottom: 12px; text-align: left; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 13.5px;
+      outline: none;
+      background: #fff;
+    }
+    .form-input:focus { border-color: var(--primary); }
+
+    /* 匯款卡片 */
+    .bank-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 14px 0;
+      font-size: 13px;
+    }
+    .bank-account-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 1px;
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-copy-acc {
+      background: #e2e8f0;
+      border: none;
+      color: #334155;
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 6px;
+      cursor: pointer;
     }
-    .status-unpaid { background: #fee2e2; color: #ef4444; }
-    .status-checking { background: #fef3c7; color: #d97706; }
-    .status-paid { background: #dcfce7; color: #15803d; }
   </style>
 </head>
 <body>
 
   <div class="container">
+
+    <!-- 本地測試除錯工具列 (可於本地隨時切換模擬各階段狀態) -->
+    <div class="dev-toolbar">
+      <div class="dev-toolbar-title">
+        <span>🧪 本地模擬測試面板 (快速切換各階段)</span>
+        <span id="devCurrentModeText" style="color:#fde047;">連線登記中 (未開放結帳)</span>
+      </div>
+      <div class="dev-btn-group">
+        <button type="button" class="dev-btn active" id="btnMode1" onclick="setDevScenario('REGISTERING')">① 現場登記中</button>
+        <button type="button" class="dev-btn" id="btnMode2" onclick="setDevScenario('PROCURED_LOCKED')">② 採購成功(未開放)</button>
+        <button type="button" class="dev-btn" id="btnMode3" onclick="setDevScenario('ALLOW_CHECKOUT')">③ 開放結帳(雙徽章)</button>
+        <button type="button" class="dev-btn" id="btnMode4" onclick="setDevScenario('PENDING_PAYMENT')">④ 待付款(先匯款)</button>
+        <button type="button" class="dev-btn" id="btnMode4b" onclick="setDevScenario('COD_PENDING')">④-B 貨到付款(待出貨)</button>
+        <button type="button" class="dev-btn" id="btnMode5" onclick="setDevScenario('AUDITING')">⑤ 對帳中待出貨</button>
+        <button type="button" class="dev-btn" id="btnMode6" onclick="setDevScenario('SHIPPED')">⑥ 出貨配送中(追蹤碼)</button>
+        <button type="button" class="dev-btn" id="btnMode7" onclick="setDevScenario('HISTORY')">⑦ 完成取貨(歷史單)</button>
+      </div>
+    </div>
+
     <!-- 買家身分簡介卡 -->
     <div class="user-profile-header">
       <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/44" alt="頭像">
       <div class="user-meta">
         <div class="user-name">
           <span id="displayUserName">LINE 買家</span>
-          <span style="font-size: 11px; font-weight: normal; color: #10b981; background: #eefbf3; padding: 2px 6px; border-radius: 4px;">連線會員</span>
+          <span style="font-size: 11px; font-weight: normal; color: #10b981; background: #eefbf3; padding: 2px 6px; border-radius: 4px;">連線貴賓</span>
         </div>
-        <div class="user-sub" id="displayUserSub">正在連線會員歸戶資料...</div>
+        <div class="user-sub" id="displayUserSub">會員歸戶連線中...</div>
       </div>
       <a href="catalog.html" class="btn-top-catalog" id="topCatalogLink">
         🛍️ 更多商品
@@ -249,22 +450,80 @@
       </button>
     </div>
 
-    <!-- ================= 頁籤 1：📦 訂購清單 (僅提供本次連線採購清單) ================= -->
+    <!-- ================= 頁籤 1：📦 訂購清單 ================= -->
     <div id="tabCheckout" style="display: block;">
-      
-      <!-- 1. 本次連線採購清單主卡片 -->
+
+      <!-- A-1. 待付款提醒與回報匯款按鈕卡片 (待付款狀態時呈現) -->
+      <div id="pendingPaymentNoticeBox" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);">
+        <div style="font-weight: 800; color: #b45309; font-size: 14.5px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+          💳 已結帳完成，待轉帳付款
+        </div>
+        <div style="font-size: 12.5px; color: #78350f; line-height: 1.6; margin-bottom: 12px;">
+          完成轉帳付款後，請點擊下方【💰 匯款/付款回報】填寫轉帳時間與帳號末五碼，待小幫手確認完成後將盡快為您安排出貨！
+        </div>
+        <button type="button" onclick="openReportPaymentModal()" style="display: block; width: 100%; background: #f59e0b; color: #fff; text-align: center; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 14px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);">
+          💰 匯款/付款回報 👉
+        </button>
+      </div>
+
+      <!-- A-2. 對帳待出貨提示卡片 (先匯款回報後呈現) -->
+      <div id="auditingNoticeBox" style="display: none; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;">
+        <div style="font-weight: 800; color: #6d28d9; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
+          🔍 對帳待出貨
+        </div>
+        <div style="font-size: 12.5px; color: #5b21b6; margin-top: 6px; line-height: 1.6;">
+          已收到您的匯款/付款資料！待小幫手核對入帳後將盡快為您安排出貨！
+        </div>
+      </div>
+
+      <!-- A-3. 貨到付款待出貨提示卡片 (超商貨到付款結帳後呈現) -->
+      <div id="codPendingNoticeBox" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);">
+        <div style="font-weight: 800; color: #15803d; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
+          📦 待出貨
+        </div>
+        <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
+          已收到結帳完成通知！小幫手將盡快為您安排出貨，寄出後將在此顯示包裹查詢編號，屆時請留意取件通知簡訊至指定門市取貨付款！
+        </div>
+      </div>
+
+      <!-- A-4. 包裹即時配送動態卡片 (已完成出貨時呈現) -->
+      <div class="tracking-card" id="parcelTrackingCard" style="display: none;">
+        <div class="tracking-header">
+          <div class="tracking-title">🚚 已出貨，包裹配送中！</div>
+        </div>
+        <div class="tracking-body">
+          <div>物流方式：<b id="trackShipMethodName">7-11 超商取貨付款</b></div>
+          <div style="margin-top: 6px; display: flex; align-items: center; gap: 4px;">包裹查詢碼：<span class="tracking-code" id="trackCodeDisplay">86312345678</span></div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.5;">包裹已寄出，依選擇之物流項目約 1~3 天送達指定超商/地址，請留意取件通知簡訊或配送員通知！</div>
+        </div>
+        <a href="#" target="_blank" class="btn-track-online" id="btnOnlineTrack">
+          🔍 點此前往物流官網查詢即時進度
+        </a>
+        <button type="button" class="btn-confirm-received" onclick="handleConfirmPackageReceived()">
+          ✓ 已完成取貨
+        </button>
+      </div>
+
+      <!-- B. 本次連線採購清單主卡片 -->
       <div class="section-card">
-        <div class="section-title">🛍️ 本次連線採購清單</div>
+        <div class="section-title">
+          <span>🛍️ 本次連線採購商品明細</span>
+        </div>
         
         <div id="pendingItemsContainer">
           <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">正在載入您的連線商品...</div>
         </div>
 
-        <!-- 合計金額統計行 -->
+        <!-- 金額統計行 -->
         <div class="subtotal-row" id="goodsSubtotalRow" style="display: none; justify-content: space-between; align-items: center; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
-          <span style="font-weight: 700; color: #334155; font-size: 14px;">登記商品合計 (<span id="totalItemsCountText">0</span> 件)</span>
+          <span style="font-weight: 700; color: #334155; font-size: 14px;">已採購商品合計 (<span id="totalItemsCountText">0</span> 件)</span>
           <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
         </div>
+
+        <!-- 結帳按鈕 (開放結帳且有採購成功商品時亮起) -->
+        <button type="button" class="btn-action-checkout" id="btnOpenCheckoutDrawer" style="display: none;" onclick="openCheckoutModal()">
+          💳 前往結帳與選擇配送方式 👉
+        </button>
       </div>
 
       <!-- 如果沒有登記商品時顯示提示 -->
@@ -275,23 +534,23 @@
         <a href="catalog.html" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 挑選更多商品</a>
       </div>
 
-      <!-- 2. 連線採購進度與出貨須知說明卡片 -->
+      <!-- C. 連線採購進度與出貨須知說明卡片 -->
       <div class="section-card" id="procureGuideCard" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0;">
         <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
           📌 連線狀態說明
         </div>
         <div style="font-size: 12.5px; color: #475569; line-height: 1.8;">
-          <div style="margin-bottom: 8px;">
-            <b>• ⏳ 連線登記：</b>正在當地現場採購中
+          <div style="margin-bottom: 6px;">
+            <b>• ⏳ 連線登記中：</b>正在當地現場採購中
           </div>
-          <div style="margin-bottom: 8px;">
+          <div style="margin-bottom: 6px;">
             <b>• 🎉 採購成功：</b>已完成採買
           </div>
-          <div style="margin-bottom: 8px;">
+          <div style="margin-bottom: 6px;">
             <b>• ⚠️ 缺貨斷貨：</b>已無庫存或斷貨
           </div>
-          <div style="margin-bottom: 8px;">
-            <b>• 🛒 通知結帳：</b>已聯繫、發專屬結帳賣場
+          <div style="margin-bottom: 6px;">
+            <b>• 🛒 通知結帳：</b>已聯繫結帳、發專屬結帳賣場
           </div>
           <div>
             <b>• 🚚 已完成出貨：</b>包裹已寄出，請留意取件通知
@@ -299,8 +558,8 @@
         </div>
 
         <!-- 底部前往更多商品按鈕 -->
-        <div style="margin-top: 18px;">
-          <a href="catalog.html" id="btnContinueShoppingOrders" style="display: block; width: 100%; box-sizing: border-box; background: var(--primary); color: #fff; text-align: center; padding: 13px; border-radius: 12px; font-weight: 800; font-size: 15px; text-decoration: none; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);">
+        <div style="margin-top: 16px;">
+          <a href="catalog.html" id="btnContinueShoppingOrders" style="display: block; width: 100%; box-sizing: border-box; background: #fff; color: #334155; border: 1px solid #cbd5e1; text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none;">
             🛍️ 繼續挑選更多商品
           </a>
         </div>
@@ -317,6 +576,195 @@
 
   </div>
 
+  <!-- ================= 結帳表單 Modal ================= -->
+  <div class="checkout-modal" id="checkoutModal">
+    <div class="checkout-content">
+      <div class="modal-title-bar">
+        <h3>💳 選擇配送方式與結帳</h3>
+        <button type="button" class="btn-close-modal" onclick="closeCheckoutModal()">✕</button>
+      </div>
+
+      <!-- 商品金額結算 -->
+      <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>採購成功商品小計：</span>
+          <b id="modalGoodsSubtotalText">NT$ 0</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>配送運費：</span>
+          <b id="modalShippingFeeText" style="color:var(--accent);">NT$ 0</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-size:15px; font-weight:800;">
+          <span>應付結帳總額：</span>
+          <span style="color:var(--accent); font-family:'Outfit',sans-serif;" id="modalFinalTotalText">NT$ 0</span>
+        </div>
+      </div>
+
+      <!-- 7 大配送方式選擇 -->
+      <div class="form-group">
+        <label class="form-label">選擇配送方式 (超商純取 0 元免運 ｜ 貨到付款滿 3,000 免運)</label>
+        
+        <div class="shipping-option selected" id="opt_711_PREPAID" onclick="selectShipping('711_PREPAID', 0, true)">
+          <div>
+            <div class="ship-name">① 7-11 超商純取貨 (需先匯款)</div>
+            <div style="font-size:11px; color:#64748b;">先轉帳匯款，包裹寄至 7-11 門市純取件 (免運費)</div>
+          </div>
+          <div class="ship-fee" style="color:#16a34a;">免運 NT$ 0</div>
+        </div>
+
+        <div class="shipping-option" id="opt_FAMI_PREPAID" onclick="selectShipping('FAMI_PREPAID', 0, true)">
+          <div>
+            <div class="ship-name">② 全家 超商純取貨 (需先匯款)</div>
+            <div style="font-size:11px; color:#64748b;">先轉帳匯款，包裹寄至 全家 門市純取件 (免運費)</div>
+          </div>
+          <div class="ship-fee" style="color:#16a34a;">免運 NT$ 0</div>
+        </div>
+
+        <div class="shipping-option" id="opt_711_COD" onclick="selectShipping('711_COD', 38, false)">
+          <div>
+            <div class="ship-name">③ 7-11 超商貨到付款 (賣貨便)</div>
+            <div style="font-size:11px; color:#64748b;">取貨時付款，滿 3,000 免運</div>
+          </div>
+          <div class="ship-fee" id="fee_711_COD">NT$ 38</div>
+        </div>
+
+        <div class="shipping-option" id="opt_FAMI_COD" onclick="selectShipping('FAMI_COD', 35, false)">
+          <div>
+            <div class="ship-name">④ 全家 超商貨到付款 (好賣+)</div>
+            <div style="font-size:11px; color:#64748b;">取貨時付款，滿 3,000 免運</div>
+          </div>
+          <div class="ship-fee" id="fee_FAMI_COD">NT$ 35</div>
+        </div>
+
+        <div class="shipping-option" id="opt_POST_PREPAID" onclick="selectShipping('POST_PREPAID', 80, true)">
+          <div>
+            <div class="ship-name">⑤ 郵局純寄件 (需先匯款)</div>
+            <div style="font-size:11px; color:#64748b;">包裹投遞指定地點或郵政信箱</div>
+          </div>
+          <div class="ship-fee">NT$ 80</div>
+        </div>
+
+        <div class="shipping-option" id="opt_POST_COD" onclick="selectShipping('POST_COD', 130, false)">
+          <div>
+            <div class="ship-name">⑥ 郵局貨到付款</div>
+            <div style="font-size:11px; color:#64748b;">郵差送達現場收款</div>
+          </div>
+          <div class="ship-fee">NT$ 130</div>
+        </div>
+
+        <div class="shipping-option" id="opt_BLACKCAT_PREPAID" onclick="selectShipping('BLACKCAT_PREPAID', 100, true)">
+          <div>
+            <div class="ship-name">⑦ 黑貓宅配到府 (需先匯款)</div>
+            <div style="font-size:11px; color:#64748b;">送到指定地點或超商，配送時間約1~2天(不包含假日)</div>
+          </div>
+          <div class="ship-fee">NT$ 100</div>
+        </div>
+      </div>
+
+      <!-- 收件資料輸入 -->
+      <div class="form-group">
+        <label class="form-label">收件人姓名 *</label>
+        <input type="text" id="inputRecipientName" class="form-input" placeholder="請填寫證件相符真實姓名">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">收件人手機號碼 *</label>
+        <input type="tel" id="inputRecipientPhone" class="form-input" placeholder="09xxxxxxxx">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" id="labelAddress">取件超商門市 (超商名稱與 6 碼門市代號) *</label>
+        <input type="text" id="inputRecipientAddress" class="form-input" placeholder="例：7-11 鑫東門市 123456 / 全家 新光門市 012345">
+      </div>
+
+      <!-- 匯款轉帳資訊卡 (先匯款時顯示) -->
+      <div id="prepayBankBox" class="bank-box" style="display: block;">
+        <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">🏦 賣家收款帳戶資訊：</div>
+        <div>銀行名稱：<b id="bankNameDisplay">822 中國信託商業銀行</b></div>
+        <div>帳戶戶名：<b id="bankHolderDisplay">陳小美</b></div>
+        <div class="bank-account-num">
+          <span id="bankAccountDisplay">123-4567-8901-2345</span>
+          <button type="button" class="btn-copy-acc" onclick="copyBankAccount()">📋 複製帳號</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #64748b; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.6;">
+          💡 <b>轉帳流程說明：</b><br>
+          送出結帳後訂單狀態為【待付款】。<br>
+          完成轉帳付款後，請點選【💰 匯款/付款回報】填寫資料，小幫手確認後將立即安排出貨！
+        </div>
+      </div>
+
+      <!-- 貨到付款提示卡 -->
+      <div id="codNoticeBox" class="bank-box" style="display: none; background: #f0fdf4; border-color: #bbf7d0;">
+        <div style="font-weight: 700; color: #15803d;">📦 超商取貨時付款說明：</div>
+        <div style="font-size: 12.5px; color: #166534; margin-top: 4px;">
+          小幫手將依您填寫的超商門市為您安排出貨，屆時請留意取件通知並於門市付款取貨！
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">訂單備註留言 (選填)</label>
+        <input type="text" id="inputOrderNote" class="form-input" placeholder="例如：需拆盒、平日白天配送等">
+      </div>
+
+      <button type="button" class="btn-action-checkout" id="btnSubmitCheckoutForm" onclick="submitCheckoutForm()">
+        ✓ 確認並送出
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= 匯款/付款回報 Modal ================= -->
+  <div class="checkout-modal" id="reportPaymentModal">
+    <div class="checkout-content">
+      <div class="modal-title-bar">
+        <h3>匯款/付款回報</h3>
+        <button type="button" class="btn-close-modal" onclick="closeReportPaymentModal()">✕</button>
+      </div>
+
+      <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>應付款金額：</span>
+          <b id="reportOrderAmountText" style="color:var(--accent); font-family:'Outfit',sans-serif; font-size:16px;">NT$ 0</b>
+        </div>
+        <div style="font-size:11.5px; color:#64748b;">
+          請核對您的轉帳明細並提供以下資料，方便小幫手進行對帳。
+        </div>
+      </div>
+
+      <!-- 匯款方式選單 -->
+      <div class="form-group">
+        <label class="form-label">轉入到 *</label>
+        <select id="reportPayMethodSelect" class="form-input" style="background:#fff;">
+          <option value="">請選擇</option>
+          <option value="中國信託帳號">中國信託帳號</option>
+          <option value="LinePay">LinePay</option>
+          <option value="街口支付">街口支付</option>
+        </select>
+      </div>
+
+      <!-- 轉帳時間 -->
+      <div class="form-group">
+        <label class="form-label">轉帳付款時間 *</label>
+        <input type="text" id="reportPayTimeInput" class="form-input" placeholder="例如：2026/09/28 14:30">
+      </div>
+
+      <!-- 匯款後五碼 -->
+      <div class="form-group">
+        <label class="form-label" id="labelReportLastFive">匯款或付款帳號後五碼 *</label>
+        <input type="text" id="reportPayLastFiveInput" class="form-input" maxlength="10" placeholder="例如：12345 (LinePay/街口請填帳號末五碼)">
+      </div>
+
+      <!-- 備註 -->
+      <div class="form-group">
+        <label class="form-label">備註說明 (選填)</label>
+        <input type="text" id="reportPayNoteInput" class="form-input" placeholder="例如：轉帳戶名或特殊備註">
+      </div>
+
+      <button type="button" class="btn-action-checkout" id="btnSubmitReportPayment" onclick="submitReportPaymentForm()">
+        ✓ 確認送出
+      </button>
+    </div>
+  </div>
+
   <script>
     const CONFIG = {
       LIFF_ID: '2011732923-rcjz7Igd',
@@ -327,8 +775,24 @@
     let pendingOrders = [];
     let completedOrders = [];
     let customerProfile = {};
-    let systemSettings = {};
-    let goodsTotal = 0;
+    let systemSettings = {
+      ORDER_DEADLINE: '2026/10/05 23:59',
+      ALLOW_CHECKOUT: 'NO',
+      FREE_SHIPPING_THRESHOLD: '3000',
+      SHIP_FEE_711_COD: '38',
+      SHIP_FEE_FAMI_COD: '35',
+      BANK_NAME: '822 中國信託商業銀行',
+      BANK_ACCOUNT_HOLDER: '陳小美',
+      BANK_ACCOUNT: '123-4567-8901-2345'
+    };
+
+    let selectedShipMethod = '711_PREPAID';
+    let selectedShipFee = 0;
+    let selectedIsPrepay = true;
+    let successfulGoodsTotal = 0;
+
+    // 本地除錯模式標記
+    let devScenarioMode = 'REGISTERING';
 
     window.onload = async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -355,7 +819,7 @@
       }
     }
 
-    // 取得使用者全部資料 (連線訂購中商品、歷史訂單、客戶檔案、設定)
+    // 取得使用者資料
     async function fetchUserData() {
       try {
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getOrdersByUserId&userId=${encodeURIComponent(currentUserId)}`);
@@ -365,151 +829,367 @@
           pendingOrders = json.data.pendingCheckoutOrders || [];
           completedOrders = json.data.completedOrders || [];
           customerProfile = json.data.customerProfile || {};
-          systemSettings = json.data.settings || {};
-
+          if (json.data.settings) {
+            systemSettings = Object.assign(systemSettings, json.data.settings);
+          }
           updateUserProfileUI();
-          renderPendingCheckoutList();
-          renderHistoryOrdersList();
+          renderOrdersView();
+        } else {
+          // 若無連線資料，使用本地展示情境
+          setupDefaultMockData();
+          renderOrdersView();
         }
-      } catch (err) {
-        console.error('載入資料錯誤:', err);
+      } catch (e) {
+        console.warn('線上讀取訂單略過，套用本地模擬展示:', e);
+        setupDefaultMockData();
+        renderOrdersView();
       }
     }
 
-    // 更新買家檔案與外部導航連結
+    // 本地模擬資料產生器 (方便本機測試)
+    function setupDefaultMockData() {
+      // 確保免運門檻鎖定為 3000 元 (防止被 Google Sheets 試算表設定頁既有的 1500 覆蓋)
+      systemSettings.FREE_SHIPPING_THRESHOLD = '3000';
+
+      customerProfile = {
+        userId: currentUserId,
+        userName: '王小美 (測試買家)',
+        realName: '王小美',
+        phone: '0912345678',
+        defaultAddress: '7-11 鑫東門市 (123456)'
+      };
+
+      if (devScenarioMode === 'REGISTERING') {
+        systemSettings.ALLOW_CHECKOUT = 'NO';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '連線登記' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '連線登記' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'PROCURED_LOCKED') {
+        systemSettings.ALLOW_CHECKOUT = 'NO';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '採購成功' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '缺貨斷貨' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'ALLOW_CHECKOUT') {
+        systemSettings.ALLOW_CHECKOUT = 'YES';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '採購成功' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '採購成功' },
+          { orderId: 'ORD-003', orderDate: '2026/09/27 16:30', productName: '日本製 羊毛圍巾', spec: '燕麥米', quantity: 1, unitPrice: 1200, subtotal: 1200, shippingStatus: '缺貨斷貨' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'PENDING_PAYMENT') {
+        // ④ 待付款狀態：已填寫收件門市，等待轉帳並回報
+        systemSettings.ALLOW_CHECKOUT = 'YES';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '待付款', paymentStatus: '待付款', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '待付款', paymentStatus: '待付款', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'COD_PENDING') {
+        // ④-B 貨到付款已結帳待出貨：已填寫超商取貨付款門市，免預先匯款，等待賣家寄出
+        systemSettings.ALLOW_CHECKOUT = 'YES';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '已完成結帳待出貨', paymentStatus: '貨到付款待出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '已完成結帳待出貨', paymentStatus: '貨到付款待出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'AUDITING') {
+        // ⑤ 對帳中待出貨：已回報匯款方式與後五碼
+        systemSettings.ALLOW_CHECKOUT = 'YES';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '對帳中，待出貨', paymentStatus: '對帳中，待出貨', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456', lastFive: '88621' },
+          { orderId: 'ORD-002', orderDate: '2026/09/27 16:10', productName: '日本膳魔師 漸層保溫瓶 500ml', spec: '櫻花粉', quantity: 1, unitPrice: 890, subtotal: 890, shippingStatus: '對帳中，待出貨', paymentStatus: '對帳中，待出貨', deliveryAddress: '[7-11純取貨] 7-11 鑫東門市 123456', lastFive: '88621' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'SHIPPED') {
+        // ⑥ 出貨配送中：管理員已出貨並提供包裹查詢碼
+        systemSettings.ALLOW_CHECKOUT = 'YES';
+        pendingOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/27 15:30', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, shippingStatus: '已完成出貨', deliveryAddress: '[7-11超商取貨付款] 7-11 鑫東門市 123456', trackingNumber: '86312345678' }
+        ];
+        completedOrders = [];
+      } else if (devScenarioMode === 'HISTORY') {
+        // ⑦ 歷史訂單：出貨時間與包裹查詢碼
+        pendingOrders = [];
+        completedOrders = [
+          { orderId: 'ORD-001', orderDate: '2026/09/25 10:20', productName: '日本代購限定 輕量防潑水後背包', spec: '經典黑', quantity: 1, unitPrice: 1450, subtotal: 1450, totalAmount: 1450, shippingStatus: '已完成取貨', paymentStatus: '已付款', deliveryAddress: '7-11 鑫東門市', shippedDate: '2026/09/26 11:30', trackingNumber: '86312345678' }
+        ];
+      }
+      updateUserProfileUI();
+    }
+
+    // 本地切換情境
+    function setDevScenario(mode) {
+      devScenarioMode = mode;
+      document.querySelectorAll('.dev-btn').forEach(b => b.classList.remove('active'));
+      const textMap = {
+        'REGISTERING': '① 現場連線中 (未開放結帳)',
+        'PROCURED_LOCKED': '② 採購成功 (未開放結帳)',
+        'ALLOW_CHECKOUT': '③ 回國開放結帳 (雙徽章與結帳按鈕)',
+        'PENDING_PAYMENT': '④ 待付款 (可測試回報匯款)',
+        'COD_PENDING': '④-B 貨到付款 (待出貨中)',
+        'AUDITING': '⑤ 對帳待出貨 (小幫手核對中)',
+        'SHIPPED': '⑥ 包裹配送中 (追蹤碼與官網查詢)',
+        'HISTORY': '⑦ 完成取貨 (移入歷史訂單)'
+      };
+      document.getElementById('devCurrentModeText').textContent = textMap[mode] || mode;
+
+      if (mode === 'REGISTERING') document.getElementById('btnMode1').classList.add('active');
+      if (mode === 'PROCURED_LOCKED') document.getElementById('btnMode2').classList.add('active');
+      if (mode === 'ALLOW_CHECKOUT') document.getElementById('btnMode3').classList.add('active');
+      if (mode === 'PENDING_PAYMENT') document.getElementById('btnMode4').classList.add('active');
+      if (mode === 'COD_PENDING') document.getElementById('btnMode4b').classList.add('active');
+      if (mode === 'AUDITING') document.getElementById('btnMode5').classList.add('active');
+      if (mode === 'SHIPPED') document.getElementById('btnMode6').classList.add('active');
+      if (mode === 'HISTORY') document.getElementById('btnMode7').classList.add('active');
+
+      setupDefaultMockData();
+      renderOrdersView();
+    }
+
     function updateUserProfileUI() {
       const subElem = document.getElementById('displayUserSub');
-      const realName = customerProfile.realName || '';
-      const phone = customerProfile.phone || '';
-
-      if (realName || phone) {
-        subElem.textContent = `${realName} ｜ ${phone}`;
+      const rName = customerProfile.realName || '';
+      const rPhone = customerProfile.phone || '';
+      if (rName || rPhone) {
+        subElem.textContent = `${rName} ｜ ${rPhone}`;
       } else {
         subElem.textContent = 'LINE 連線已就緒';
       }
 
-      // 同步更新導向 catalog.html 的按鈕帶入 uid
       const uidParam = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';
-      const catalogHref = `catalog.html${uidParam}`;
-      
-      const topLink = document.getElementById('topCatalogLink');
-      if (topLink) topLink.href = catalogHref;
-      
+      const catBtn = document.getElementById('topCatalogLink');
+      if (catBtn) catBtn.href = `catalog.html${uidParam}`;
       const emptyBtn = document.getElementById('emptyCatalogBtn');
-      if (emptyBtn) emptyBtn.href = catalogHref;
-      
-      const continueBtn = document.getElementById('btnContinueShoppingOrders');
-      if (continueBtn) continueBtn.href = catalogHref;
+      if (emptyBtn) emptyBtn.href = `catalog.html${uidParam}`;
     }
 
-    // 根據 Google Sheets 回應的採購/出貨狀態解析徽章樣式
-    function getStatusBadge(status) {
-      const s = String(status || '連線登記中').trim();
-      if (s.includes('成功') || s.includes('已採購') || s.includes('已買到')) {
-        return `<span class="status-badge badge-success">🎉 採購成功</span>`;
-      } else if (s.includes('缺貨') || s.includes('斷貨') || s.includes('買不到')) {
-        return `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
-      } else if (s.includes('專屬賣場') || s.includes('賣場') || s.includes('通知') || s.includes('結帳')) {
-        return `<span class="status-badge badge-purple">🛒 通知結帳</span>`;
-      } else if (s.includes('完成') || s.includes('出貨') || s.includes('寄出')) {
-        return `<span class="status-badge badge-info">🚚 已完成出貨</span>`;
-      } else {
-        return `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
-      }
-    }
-
-    // 渲染【📦 訂購清單】（僅提供本次連線採購清單）
-    function renderPendingCheckoutList() {
+    // 核心渲染訂單介面
+    function renderOrdersView() {
       const container = document.getElementById('pendingItemsContainer');
       const subtotalRow = document.getElementById('goodsSubtotalRow');
+      const subtotalText = document.getElementById('goodsSubtotalText');
+      const totalItemsCountText = document.getElementById('totalItemsCountText');
       const noBox = document.getElementById('noPendingBox');
       const procureCard = document.getElementById('procureGuideCard');
       const badge = document.getElementById('pendingCountBadge');
+      const trackingCard = document.getElementById('parcelTrackingCard');
+      const pendingPaymentBox = document.getElementById('pendingPaymentNoticeBox');
+      const codPendingBox = document.getElementById('codPendingNoticeBox');
+      const auditingBox = document.getElementById('auditingNoticeBox');
+      const checkoutBtn = document.getElementById('btnOpenCheckoutDrawer');
+      const continueShoppingBtn = document.getElementById('btnContinueShoppingOrders');
 
       container.innerHTML = '';
-      goodsTotal = 0;
+      successfulGoodsTotal = 0;
       let totalQty = 0;
+      let hasSuccessfulItems = false;
+      let hasShippedItems = false;
+      let hasPendingPayment = false;
+      let hasCodPending = false;
+      let hasAuditing = false;
+      let shippedItemData = null;
+
+      // 檢查訂單狀態
+      pendingOrders.forEach(item => {
+        const st = String(item.shippingStatus || '').trim();
+        const paySt = String(item.paymentStatus || '').trim();
+
+        // 只有狀態確實是「已完成出貨」或「已出貨」，且管理者已填寫包裹查詢碼時，才顯示物流追蹤卡！
+        // 「對帳中，待出貨」、「貨到付款待出貨」或「待付款」絕不可顯示包裹查詢碼！
+        const isActuallyShipped = (st.includes('已完成出貨') || (st.includes('出貨') && !st.includes('待出貨'))) && Boolean(item.trackingNumber);
+
+        if (isActuallyShipped) {
+          hasShippedItems = true;
+          shippedItemData = item;
+        } else if (paySt === '待付款' || st === '待付款') {
+          hasPendingPayment = true;
+        } else if (paySt.includes('貨到付款') || st.includes('貨到付款') || (st.includes('已完成結帳') && !paySt.includes('對帳'))) {
+          hasCodPending = true;
+        } else if (paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳')) {
+          hasAuditing = true;
+        }
+      });
+
+      // 1. 待付款提示卡展示 (先匯款)
+      if (hasPendingPayment && !hasShippedItems) {
+        pendingPaymentBox.style.display = 'block';
+      } else {
+        pendingPaymentBox.style.display = 'none';
+      }
+
+      // 2. 貨到付款待出貨提示卡展示 (貨到付款)
+      if (hasCodPending && !hasShippedItems && !hasPendingPayment) {
+        if (codPendingBox) codPendingBox.style.display = 'block';
+      } else {
+        if (codPendingBox) codPendingBox.style.display = 'none';
+      }
+
+      // 3. 對帳中提示卡展示
+      if (hasAuditing && !hasShippedItems && !hasPendingPayment && !hasCodPending) {
+        auditingBox.style.display = 'block';
+      } else {
+        auditingBox.style.display = 'none';
+      }
+
+      // 3. 物流追蹤卡片展示
+      if (hasShippedItems && shippedItemData) {
+        trackingCard.style.display = 'block';
+        const code = shippedItemData.trackingNumber || '86312345678';
+        document.getElementById('trackCodeDisplay').textContent = code;
+        document.getElementById('trackShipMethodName').textContent = shippedItemData.deliveryAddress || '7-11 超商取貨付款';
+        
+        // 官網查詢連結直連
+        const trackBtn = document.getElementById('btnOnlineTrack');
+        const addr = String(shippedItemData.deliveryAddress || '');
+        if (addr.includes('全家')) {
+          trackBtn.href = 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx';
+        } else if (addr.includes('郵局')) {
+          trackBtn.href = 'https://postserv.post.gov.tw/pstmail/main_result.html';
+        } else if (addr.includes('黑貓')) {
+          trackBtn.href = 'https://www.t-cat.com.tw/Inquiry/Trace.aspx';
+        } else {
+          trackBtn.href = 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
+        }
+      } else {
+        trackingCard.style.display = 'none';
+      }
 
       if (!pendingOrders || pendingOrders.length === 0) {
         noBox.style.display = 'block';
         if (procureCard) procureCard.style.display = 'none';
         subtotalRow.style.display = 'none';
         badge.style.display = 'none';
+        checkoutBtn.style.display = 'none';
+        renderHistoryOrders();
         return;
       }
 
       noBox.style.display = 'none';
       if (procureCard) procureCard.style.display = 'block';
-      subtotalRow.style.display = 'flex';
       badge.style.display = 'inline-block';
       badge.textContent = pendingOrders.length;
+
+      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES');
+
+      // 需求 1：③ 開放結帳(雙徽章) 後的訂購清單中無須顯示 [🛍️ 繼續挑選更多商品] 按鈕
+      if (continueShoppingBtn) {
+        if (isAllowCheckout || hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems) {
+          continueShoppingBtn.style.display = 'none';
+        } else {
+          continueShoppingBtn.style.display = 'block';
+        }
+      }
 
       pendingOrders.forEach(item => {
         const qty = Number(item.quantity || 1);
         const sub = Number(item.subtotal) || (Number(item.unitPrice || 0) * qty);
-        goodsTotal += sub;
-        totalQty += qty;
+        const st = String(item.shippingStatus || '').trim();
+        const paySt = String(item.paymentStatus || '').trim();
 
-        const row = document.createElement('div');
-        row.className = 'item-card';
-        row.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border-color); margin-bottom:12px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);';
+        // 判斷是否為採購成功 (只有成功/結帳中的商品才計入總額)
+        const isSuccess = st.includes('成功') || st.includes('通知') || st.includes('結帳') || st.includes('待付款') || st.includes('對帳中') || st.includes('已出貨');
+        if (isSuccess) {
+          successfulGoodsTotal += sub;
+          totalQty += qty;
+          hasSuccessfulItems = true;
+        }
+
+        const card = document.createElement('div');
+        card.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border-color); margin-bottom:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
         
-        row.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-            <div style="font-weight: 800; font-size: 15px; color: var(--text-main); flex: 1; line-height: 1.4;">${item.productName || '連線好物'}</div>
-            ${getStatusBadge(item.shippingStatus)}
+        // 徽章樣式邏輯
+        let badgeHtml = '';
+        if (st.includes('缺貨') || st.includes('斷貨')) {
+          badgeHtml = `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
+        } else if (st.includes('出貨') || st.includes('寄出') || paySt.includes('貨到付款') || paySt.includes('對帳中') || st.includes('對帳中') || paySt.includes('待對帳') || paySt === '待付款' || st === '待付款' || paySt === '已結帳' || st === '已結帳' || st.includes('已完成結帳')) {
+          // ④ 待付款、④-B 貨到付款、⑤ 對帳中待出貨、⑥ 出貨配送中：商品右側狀態統一顯示「已結帳」
+          badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe;">已結帳</span>`;
+        } else if (st.includes('成功') || st.includes('買到') || st.includes('結帳')) {
+          if (isAllowCheckout) {
+            // ⭐ 雙徽章呈現：既知道買到了，又知道要結帳！
+            badgeHtml = `
+              <div style="display:flex; gap:4px;">
+                <span class="status-badge badge-success">🎉 採購成功</span>
+                <span class="status-badge badge-purple">🛒 請結帳</span>
+              </div>
+            `;
+          } else {
+            badgeHtml = `<span class="status-badge badge-success">🎉 採購成功</span>`;
+          }
+        } else {
+          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
+        }
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="font-weight:800; font-size:14.5px; color:#1e293b; flex:1; line-height:1.4;">${item.productName || '連線好物'}</div>
+            ${badgeHtml}
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); background: #f8fafc; padding: 8px 10px; border-radius: 8px;">
-            <div>款式規格：<b style="color: #1e293b;">${item.spec || '標準'}</b> ｜ 數量：<b style="color: #1e293b;">${qty}</b> 件</div>
-            <div style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: var(--accent);">NT$ ${sub.toLocaleString()}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--text-muted); background:#f8fafc; padding:7px 10px; border-radius:8px;">
+            <div>規格：<b style="color:#0f172a;">${item.spec || '標準'}</b> ｜ 數量：<b style="color:#0f172a;">${qty}</b> 件</div>
+            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--accent);">NT$ ${sub.toLocaleString()}</div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; padding-top: 2px;">
-            <span>單號：<span style="font-family:'Outfit',sans-serif;">${item.orderId || '-'}</span></span>
-            <span>登記時間：${item.orderDate || '-'}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#94a3b8; padding-top:2px;">
+            <span>單號：${item.orderId || '-'}</span>
+            <span>${item.orderDate || ''}</span>
           </div>
         `;
-        container.appendChild(row);
+        container.appendChild(card);
       });
 
-      document.getElementById('totalItemsCountText').textContent = totalQty;
-      document.getElementById('goodsSubtotalText').textContent = `NT$ ${goodsTotal.toLocaleString()}`;
+      // 統計行
+      subtotalRow.style.display = 'flex';
+      totalItemsCountText.textContent = totalQty;
+      goodsSubtotalText.textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+
+      // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳待付款/貨到付款待出貨/對帳中/出貨時點亮)
+      const isAlreadyCheckedOut = hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems;
+      if (isAllowCheckout && hasSuccessfulItems && !isAlreadyCheckedOut) {
+        checkoutBtn.style.display = 'block';
+      } else {
+        checkoutBtn.style.display = 'none';
+      }
+
+      renderHistoryOrders();
     }
 
-    // 渲染歷史訂單清單
-    function renderHistoryOrdersList() {
+    // 渲染歷史訂單
+    function renderHistoryOrders() {
       const container = document.getElementById('historyOrdersContainer');
       container.innerHTML = '';
 
       if (!completedOrders || completedOrders.length === 0) {
         container.innerHTML = `
           <div style="text-align:center; padding:40px; color:#94a3b8; font-size:13px;">
-            目前尚無歷史出貨訂單紀錄
+            目前尚無歷史出貨或完成取貨紀錄
           </div>
         `;
         return;
       }
 
       completedOrders.forEach(order => {
-        let badgeClass = 'status-unpaid';
-        if (order.paymentStatus === '已回報待對帳') badgeClass = 'status-checking';
-        if (order.paymentStatus === '已付款' || order.paymentStatus === '貨到付款待出貨' || order.shippingStatus === '已完成出貨') badgeClass = 'status-paid';
-
         const card = document.createElement('div');
         card.className = 'section-card';
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px;">
-            <span style="font-family:'Outfit',sans-serif; font-size:12px; color:var(--text-muted); font-weight:600;">${order.orderId}</span>
-            <span class="badge-status ${badgeClass}">${order.shippingStatus || order.paymentStatus || '已結案'}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:8px; margin-bottom:10px;">
+            <span style="font-family:'Outfit',sans-serif; font-size:12px; color:var(--text-muted); font-weight:700;">${order.orderId}</span>
+            <span class="status-badge badge-success">✓ 已完成</span>
           </div>
-          <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">${order.productName}</div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+          <div style="font-size:14px; font-weight:800; margin-bottom:4px; color:#0f172a;">${order.productName}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
             規格: ${order.spec} ｜ 數量: ${order.quantity} ｜ 單價: NT$ ${Number(order.unitPrice || 0).toLocaleString()}
           </div>
-          <div style="font-size: 12px; color: #475569; background: #f8fafc; padding: 8px 10px; border-radius: 8px; line-height: 1.5;">
-            <div>🚚 配送備註：${order.deliveryAddress || '專屬賣場出貨'}</div>
+          <div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px; line-height:1.6;">
+            <div>🚚 出貨時間: ${order.shippedDate || '2026/09/26 11:30'}</div>
+            <div style="padding-left: 20px;">包裹編號: ${order.trackingNumber || '86312345678'}</div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color);">
-            <span style="font-size: 11px; color: var(--text-muted);">${order.orderDate}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color);">
+            <span style="font-size:11px; color:var(--text-muted);">${order.orderDate}</span>
             <span style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--accent);">合計 NT$ ${Number(order.totalAmount || order.subtotal || 0).toLocaleString()}</span>
           </div>
         `;
@@ -517,11 +1197,259 @@
       });
     }
 
-    // 主 Tab 切換
+    // 買家點擊「✓ 已完成取貨」
+    async function handleConfirmPackageReceived() {
+      if (!confirm('是否已收到包裹？\n確認後會將本次訂購單封存至歷史訂單！')) return;
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'confirmReceived',
+            data: { userId: currentUserId }
+          })
+        });
+      } catch (e) {
+        console.warn('線上取件確認請求略過，在本地直接模擬移入歷史單:', e);
+      }
+
+      // 本地同步更新
+      alert('🎉 感謝您的協助。\n欲查詢過往訂單，請點「📜 歷史訂單查詢」！');
+      setDevScenario('HISTORY');
+      switchMainTab('tabHistory');
+    }
+
+    // 開啟結帳 Modal
+    function openCheckoutModal() {
+      const modal = document.getElementById('checkoutModal');
+      document.getElementById('modalGoodsSubtotalText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+      
+      // 預設自動帶入資料
+      document.getElementById('inputRecipientName').value = customerProfile.realName || '';
+      document.getElementById('inputRecipientPhone').value = customerProfile.phone || '';
+      document.getElementById('inputRecipientAddress').value = customerProfile.defaultAddress || '';
+
+      // 銀行資訊帶入
+      document.getElementById('bankNameDisplay').textContent = systemSettings.BANK_NAME || '822 中國信託商業銀行';
+      document.getElementById('bankHolderDisplay').textContent = systemSettings.BANK_ACCOUNT_HOLDER || '陳小美';
+      document.getElementById('bankAccountDisplay').textContent = (systemSettings.BANK_ACCOUNT || '').replace(/'/g, '');
+
+      // 計算免運 (7-11 / 全家 貨到付款專屬：滿 3,000 免運)
+      const freeThreshold = Number(systemSettings.FREE_SHIPPING_THRESHOLD) || 3000;
+      const isFree = successfulGoodsTotal >= freeThreshold;
+      const f711 = isFree ? 0 : (Number(systemSettings.SHIP_FEE_711_COD) || 38);
+      const fFami = isFree ? 0 : (Number(systemSettings.SHIP_FEE_FAMI_COD) || 35);
+
+      document.getElementById('fee_711_COD').textContent = isFree ? '免運 NT$ 0' : `NT$ ${f711}`;
+      document.getElementById('fee_FAMI_COD').textContent = isFree ? '免運 NT$ 0' : `NT$ ${fFami}`;
+
+      // 預設選中第一個 7-11 超商純取貨 (免運費 NT$ 0)
+      selectShipping('711_PREPAID', 0, true);
+
+      modal.classList.add('active');
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkoutModal').classList.remove('active');
+    }
+
+    // 切換配送方式
+    function selectShipping(methodKey, fee, isPrepay) {
+      selectedShipMethod = methodKey;
+      selectedIsPrepay = isPrepay;
+
+      const freeThreshold = Number(systemSettings.FREE_SHIPPING_THRESHOLD) || 3000;
+      const isFree = successfulGoodsTotal >= freeThreshold;
+
+      if (methodKey === '711_PREPAID' || methodKey === 'FAMI_PREPAID') {
+        selectedShipFee = 0; // 超商純取貨不限金額一律免運
+      } else if ((methodKey === '711_COD' || methodKey === 'FAMI_COD') && isFree) {
+        selectedShipFee = 0; // 貨到付款滿 3,000 免運
+      } else {
+        selectedShipFee = fee;
+      }
+
+      document.querySelectorAll('.shipping-option').forEach(el => el.classList.remove('selected'));
+      const activeEl = document.getElementById(`opt_${methodKey}`);
+      if (activeEl) activeEl.classList.add('selected');
+
+      const isStore = (methodKey === '711_PREPAID' || methodKey === 'FAMI_PREPAID' || methodKey === '711_COD' || methodKey === 'FAMI_COD');
+      const addrInput = document.getElementById('inputRecipientAddress');
+
+      if (methodKey === '711_PREPAID' || methodKey === '711_COD') {
+        document.getElementById('labelAddress').textContent = '取件 7-11 門市 (門市名稱與 6 碼店號) *';
+        addrInput.placeholder = '例：7-11 鑫東門市 (123456)';
+      } else if (methodKey === 'FAMI_PREPAID' || methodKey === 'FAMI_COD') {
+        document.getElementById('labelAddress').textContent = '取件 全家 門市 (門市名稱與 6 碼服務代號) *';
+        addrInput.placeholder = '例：全家 新光門市 (012345)';
+      } else {
+        document.getElementById('labelAddress').textContent = '詳細送達地址 (含縣市區路巷號樓) *';
+        addrInput.placeholder = '例：台北市信義區信義路五段7號89樓';
+      }
+
+      // 顯示匯款卡或貨到付款提示
+      document.getElementById('prepayBankBox').style.display = isPrepay ? 'block' : 'none';
+      document.getElementById('codNoticeBox').style.display = isPrepay ? 'none' : 'block';
+
+      // 更新總金額
+      const finalTot = successfulGoodsTotal + selectedShipFee;
+      document.getElementById('modalShippingFeeText').textContent = (selectedShipFee === 0) ? '免運 NT$ 0' : `NT$ ${selectedShipFee}`;
+      document.getElementById('modalFinalTotalText').textContent = `NT$ ${finalTot.toLocaleString()}`;
+    }
+
+    // 複製銀行帳號
+    function copyBankAccount() {
+      const acc = document.getElementById('bankAccountDisplay').textContent.trim();
+      navigator.clipboard.writeText(acc).then(() => {
+        alert('✓ 已成功複製');
+      }).catch(() => {
+        alert(`帳號：${acc}`);
+      });
+    }
+
+    // 送出結帳表單
+    async function submitCheckoutForm() {
+      const name = document.getElementById('inputRecipientName').value.trim();
+      const phone = document.getElementById('inputRecipientPhone').value.trim();
+      const address = document.getElementById('inputRecipientAddress').value.trim();
+      const note = document.getElementById('inputOrderNote').value.trim();
+
+      if (!name) {
+        alert('請填寫收件人真實姓名 (取件時需核對證件)！');
+        document.getElementById('inputRecipientName').focus();
+        return;
+      }
+      if (!phone || !/^09\d{8}$/.test(phone.replace(/[-\s]/g, ''))) {
+        alert('請填寫正確的手機號碼 (例如：0912345678)！');
+        document.getElementById('inputRecipientPhone').focus();
+        return;
+      }
+      if (!address) {
+        alert('請填寫取件門市或配送地址！');
+        document.getElementById('inputRecipientAddress').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitCheckoutForm');
+      btn.disabled = true;
+      btn.textContent = '資料傳輸中...';
+
+      const payload = {
+        action: 'checkoutOrders',
+        data: {
+          userId: currentUserId,
+          shippingMethod: selectedShipMethod,
+          shippingFee: selectedShipFee,
+          recipientName: name,
+          recipientPhone: phone.replace(/[-\s]/g, ''),
+          recipientAddress: address,
+          note: note
+        }
+      };
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+      } catch (e) {
+        console.warn('線上結帳傳輸略過，本地直接模擬完成:', e);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '✓ 確認並送出';
+      closeCheckoutModal();
+
+      if (selectedIsPrepay) {
+        alert('🎉 送出成功，狀態：【待付款】！\n\n請於完成轉帳付款後，至訂購清單中點擊【💰 匯款/付款回報】，\n提供付款方式與帳號末五碼，小幫手核對入帳後將盡快為您安排出貨！');
+        setDevScenario('PENDING_PAYMENT');
+      } else {
+        alert('🎉 貨到付款送出成功！狀態：【待出貨】。\n\n小幫手將盡快為您安排出貨！\n屆時請留意取件通知簡訊至指定門市取貨付款！');
+        setDevScenario('COD_PENDING');
+      }
+    }
+
+    // ================= 回報匯款 Modal 控制 =================
+    function openReportPaymentModal() {
+      const modal = document.getElementById('reportPaymentModal');
+      document.getElementById('reportOrderAmountText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+      
+      // 自動填入當前時間
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const timeStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      document.getElementById('reportPayMethodSelect').value = '';
+      document.getElementById('reportPayTimeInput').value = timeStr;
+      document.getElementById('reportPayLastFiveInput').value = '';
+      document.getElementById('reportPayNoteInput').value = '';
+
+      modal.classList.add('active');
+    }
+
+    function closeReportPaymentModal() {
+      document.getElementById('reportPaymentModal').classList.remove('active');
+    }
+
+    async function submitReportPaymentForm() {
+      const payMethod = document.getElementById('reportPayMethodSelect').value;
+      const payTime = document.getElementById('reportPayTimeInput').value.trim();
+      const lastFive = document.getElementById('reportPayLastFiveInput').value.trim();
+      const note = document.getElementById('reportPayNoteInput').value.trim();
+
+      if (!payMethod) {
+        alert('請選擇轉入到帳號或支付方式！');
+        document.getElementById('reportPayMethodSelect').focus();
+        return;
+      }
+      if (!payTime) {
+        alert('請填寫轉帳付款時間！');
+        document.getElementById('reportPayTimeInput').focus();
+        return;
+      }
+      if (!lastFive) {
+        alert('請填寫匯款或付款帳號後五碼（若為 LinePay/街口請填帳號末五碼）！');
+        document.getElementById('reportPayLastFiveInput').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitReportPayment');
+      btn.disabled = true;
+      btn.textContent = '資料傳輸中...';
+
+      const payload = {
+        action: 'reportPayment',
+        data: {
+          userId: currentUserId,
+          payMethod: payMethod,
+          transferTime: payTime,
+          lastFiveDigits: lastFive,
+          note: note
+        }
+      };
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+      } catch (e) {
+        console.warn('線上匯款回報傳輸略過，本地直接模擬完成:', e);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '✓ 確認送出';
+      closeReportPaymentModal();
+
+      alert(`🎉 匯款/付款資料送出成功！\n\n轉入到：${payMethod}\n轉帳時間：${payTime}\n後五碼：${lastFive}\n備註：${note || "無"}\n\n狀態：【對帳待出貨】\n待小幫手核對入帳後將盡快為您安排出貨！`);
+      setDevScenario('AUDITING');
+    }
+
+    // 頁籤切換
     function switchMainTab(tabId) {
       document.getElementById('tabCheckout').style.display = (tabId === 'tabCheckout') ? 'block' : 'none';
       document.getElementById('tabHistory').style.display = (tabId === 'tabHistory') ? 'block' : 'none';
-
       document.getElementById('tabBtnCheckout').classList.toggle('active', tabId === 'tabCheckout');
       document.getElementById('tabBtnHistory').classList.toggle('active', tabId === 'tabHistory');
     }
