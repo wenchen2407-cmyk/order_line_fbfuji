@@ -640,9 +640,9 @@ function handleCheckoutOrders(checkoutData) {
     orderSheet.getRange(r, 19).setValue(orderStatus);
   }
 
-  // 更新顧客歸戶地址
-  if (custSheet && checkoutData.recipientAddress) {
-    updateCustomerAddress(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone, checkoutData.recipientAddress);
+  // 更新顧客歸戶 (姓名與電話，不另外紀錄常用寄送地址)
+  if (custSheet) {
+    updateCustomerAddress(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone);
   }
 
   return {
@@ -724,9 +724,9 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
 }
 
 /**
- * 更新顧客常用地址電話 (純文字格式防止 0 被吃掉)
+ * 更新顧客歸戶姓名電話 (純文字格式防止 0 被吃掉，不另外紀錄常用寄送地址)
  */
-function updateCustomerAddress(custSheet, userId, name, phone, address) {
+function updateCustomerAddress(custSheet, userId, name, phone) {
   try {
     if (!custSheet) return;
     const cleanPhone = formatPhoneAsText(phone);
@@ -736,12 +736,12 @@ function updateCustomerAddress(custSheet, userId, name, phone, address) {
         const row = i + 1;
         if (name) custSheet.getRange(row, 3).setValue(name);
         if (cleanPhone) custSheet.getRange(row, 4).setValue(cleanPhone);
-        if (address) custSheet.getRange(row, 5).setValue(address);
+        // 不另外紀錄常用寄送地址
         break;
       }
     }
   } catch (err) {
-    console.error('更新顧客地址失敗: ' + err.toString());
+    console.error('更新顧客歸戶失敗: ' + err.toString());
   }
 }
 

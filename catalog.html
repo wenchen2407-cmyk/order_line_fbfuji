@@ -533,6 +533,10 @@
           const settJson = await settRes.json();
           if (settJson.success && settJson.data) {
             initCatalogDeadline(settJson.data.ORDER_DEADLINE);
+            if (settJson.data.STORE_NAME) {
+              const brandElem = document.querySelector('.brand-title span:first-child');
+              if (brandElem) brandElem.textContent = settJson.data.STORE_NAME;
+            }
           } else {
             initCatalogDeadline(null);
           }

@@ -372,6 +372,17 @@
 
   <div class="container">
 
+    <!-- 頂部導航列 (品牌與連線狀態指示燈) -->
+    <div class="top-nav-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px 14px 4px;">
+      <div style="font-weight: 800; font-size: 16px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+        <span id="displayStoreName">✈️ W.W.連線代購</span>
+      </div>
+      <div id="liveStatusBadge" style="font-size: 11px; font-weight: 700; color: #10b981; background: #eefbf3; padding: 4px 8px; border-radius: 20px; display: flex; align-items: center; gap: 5px;">
+        <span id="liveStatusDot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
+        <span id="liveStatusText">連線中</span>
+      </div>
+    </div>
+
     <!-- 買家身分簡介卡 -->
     <div class="user-profile-header">
       <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/44" alt="頭像">
@@ -528,7 +539,7 @@
       <!-- B. 本次連線採購清單主卡片 -->
       <div class="section-card">
         <div class="section-title">
-          <span>🛍️ 本次連線採購商品明細</span>
+          <span>🛍️ 連線訂購明細</span>
         </div>
         
         <div id="pendingItemsContainer">
@@ -542,7 +553,7 @@
             <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
           </div>
           <div id="checkoutShipFeeRow" style="display: none; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b;">
-            <span>配送運費 (<span id="checkoutShipMethodLabel">已選配送</span>)</span>
+            <span>運費 (<span id="checkoutShipMethodLabel">已選配送</span>)</span>
             <span style="font-weight: 700; color: #334155;" id="checkoutShipFeeText">免運 NT$ 0</span>
           </div>
           <div id="checkoutTotalRow" style="display: none; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 2px;">
@@ -553,7 +564,7 @@
 
         <!-- 結帳按鈕 (開放結帳且有採購成功商品時亮起) -->
         <button type="button" class="btn-action-checkout" id="btnOpenCheckoutDrawer" style="display: none;" onclick="openCheckoutModal()">
-          💳 前往結帳與選擇配送方式 👉
+          💳 前往結帳 👉
         </button>
       </div>
 
@@ -562,7 +573,7 @@
         <div style="font-size: 40px; margin-bottom: 12px;">🛍️</div>
         <div style="font-weight: 800; color: #1e293b; font-size: 16px;">目前尚無連線訂購中的商品！</div>
         <p style="font-size: 13px; color: #64748b; margin-top: 6px; line-height: 1.6;">您可以在群組中登記喜歡商品，若沒有看到想要的商品也能到群組中用圖片許願！</p>
-        <a href="catalog.html" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 挑選更多商品</a>
+        <a href="catalog.html" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 來去逛逛</a>
       </div>
 
       <!-- C. 連線採購進度與出貨須知說明卡片 -->
@@ -622,7 +633,7 @@
           <b id="modalGoodsSubtotalText">NT$ 0</b>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-          <span>配送運費：</span>
+          <span>運費：</span>
           <b id="modalShippingFeeText" style="color:var(--accent);">NT$ 0</b>
         </div>
         <div style="display:flex; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-size:15px; font-weight:800;">
@@ -704,8 +715,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label" id="labelAddress">取件超商門市 (超商名稱與 6 碼門市代號) *</label>
-        <input type="text" id="inputRecipientAddress" class="form-input" placeholder="例：7-11 鑫東門市 123456 / 全家 新光門市 012345">
+        <label class="form-label" id="labelAddress">取件 7-11 門市 (門市名稱與 6 碼門市店號) *</label>
+        <input type="text" id="inputRecipientAddress" class="form-input" placeholder="例：OOO門市 (123456)">
       </div>
 
       <!-- 匯款/支付方式資訊卡 (先匯款時顯示，提供 3 種支付方式) -->
@@ -890,6 +901,7 @@
     let completedOrders = [];
     let customerProfile = {};
     let systemSettings = {
+      STORE_NAME: 'W.W.連線代購',
       ORDER_DEADLINE: '2026/10/05 23:59',
       ALLOW_CHECKOUT: 'NO',
       FREE_SHIPPING_THRESHOLD: '3000',
@@ -914,12 +926,12 @@
     // 物流方式標準對照表
     const SHIPPING_METHOD_MAP = {
       '711_PREPAID': { name: '7-11 超商純取貨', url: 'https://eservice.7-11.com.tw/e-tracking/search.aspx' },
-      'FAMI_PREPAID': { name: '全家 超商純取貨', url: 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx' },
+      'FAMI_PREPAID': { name: '全家 超商純取貨', url: 'https://fmec.famiport.com.tw/FP_Entrance/QueryBox' },
       '711_COD': { name: '7-11 超商取貨付款', url: 'https://eservice.7-11.com.tw/e-tracking/search.aspx' },
-      'FAMI_COD': { name: '全家 超商取貨付款', url: 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx' },
-      'POST_PREPAID': { name: '郵局純寄件', url: 'https://postserv.post.gov.tw/pstmail/main_result.html' },
-      'POST_COD': { name: '郵局貨到付款', url: 'https://postserv.post.gov.tw/pstmail/main_result.html' },
-      'BLACKCAT_PREPAID': { name: '黑貓宅配到府', url: 'https://www.t-cat.com.tw/Inquiry/Trace.aspx' }
+      'FAMI_COD': { name: '全家 超商取貨付款', url: 'https://fmec.famiport.com.tw/FP_Entrance/QueryBox' },
+      'POST_PREPAID': { name: '郵局純寄件', url: 'https://postserv.post.gov.tw/pstmail/' },
+      'POST_COD': { name: '郵局貨到付款', url: 'https://postserv.post.gov.tw/pstmail/' },
+      'BLACKCAT_PREPAID': { name: '黑貓宅配到府', url: 'https://www.t-cat.com.tw/inquire/trace.aspx' }
     };
 
     // 將代碼或舊版資訊轉為標準繁體中文物流名稱
@@ -940,11 +952,11 @@
     function getLogisticsUrl(deliveryAddressStr) {
       const str = String(deliveryAddressStr || '');
       if (str.includes('全家') || str.includes('FAMI')) {
-        return 'https://www.famiport.com.tw/Web_Famiport/page/process.aspx';
+        return 'https://fmec.famiport.com.tw/FP_Entrance/QueryBox';
       } else if (str.includes('郵局') || str.includes('POST')) {
-        return 'https://postserv.post.gov.tw/pstmail/main_result.html';
+        return 'https://postserv.post.gov.tw/pstmail/';
       } else if (str.includes('黑貓') || str.includes('BLACKCAT') || str.includes('宅配')) {
-        return 'https://www.t-cat.com.tw/Inquiry/Trace.aspx';
+        return 'https://www.t-cat.com.tw/inquire/trace.aspx';
       } else if (str.includes('7-11') || str.includes('711') || str.includes('統一')) {
         return 'https://eservice.7-11.com.tw/e-tracking/search.aspx';
       }
@@ -1017,6 +1029,37 @@
     }
 
     function updateUserProfileUI() {
+      const storeName = systemSettings.STORE_NAME || 'W.W.連線代購';
+      const storeElem = document.getElementById('displayStoreName');
+      if (storeElem) {
+        storeElem.textContent = `✈️ ${storeName}`;
+      }
+
+      // 同步收單截止時間與連線狀態指示燈 (關單則顯示已截止收單)
+      const badgeElem = document.getElementById('liveStatusBadge');
+      const dotElem = document.getElementById('liveStatusDot');
+      const textElem = document.getElementById('liveStatusText');
+      if (badgeElem && dotElem && textElem) {
+        let isClosed = false;
+        if (systemSettings.ORDER_DEADLINE) {
+          const deadline = new Date(systemSettings.ORDER_DEADLINE);
+          if (!isNaN(deadline.getTime()) && new Date() >= deadline) {
+            isClosed = true;
+          }
+        }
+        if (isClosed) {
+          badgeElem.style.color = '#64748b';
+          badgeElem.style.background = '#f1f5f9';
+          dotElem.style.background = '#94a3b8';
+          textElem.textContent = '已截止';
+        } else {
+          badgeElem.style.color = '#10b981';
+          badgeElem.style.background = '#eefbf3';
+          dotElem.style.background = '#10b981';
+          textElem.textContent = '連線中';
+        }
+      }
+
       const subElem = document.getElementById('displayUserSub');
       const rName = customerProfile.realName || '';
       const rPhone = customerProfile.phone || '';
@@ -1265,7 +1308,14 @@
         if (shipFeeRow) {
           shipFeeRow.style.display = 'flex';
           if (shipMethodLabel) shipMethodLabel.textContent = currentCheckoutMethodName || '已選配送';
-          if (shipFeeText) shipFeeText.textContent = (currentShippingFee === 0) ? '免運 NT$ 0' : `NT$ ${currentShippingFee.toLocaleString()}`;
+          if (shipFeeText) {
+            if (currentShippingFee === 0) {
+              const isCod = currentCheckoutMethodName.includes('貨到付款') || currentCheckoutMethodName.includes('COD') || currentCheckoutMethodName.includes('賣貨便') || currentCheckoutMethodName.includes('好賣');
+              shipFeeText.textContent = isCod ? '滿$3000，免運 NT$ 0' : '取貨不付款，免運 NT$ 0';
+            } else {
+              shipFeeText.textContent = `NT$ ${currentShippingFee.toLocaleString()}`;
+            }
+          }
         }
         if (totalRow) {
           totalRow.style.display = 'flex';
@@ -1364,10 +1414,10 @@
       const modal = document.getElementById('checkoutModal');
       document.getElementById('modalGoodsSubtotalText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
       
-      // 預設自動帶入資料
+      // 預設自動帶入資料 (不另外紀錄常用寄送地址，每次依配送方式輸入)
       document.getElementById('inputRecipientName').value = customerProfile.realName || '';
       document.getElementById('inputRecipientPhone').value = customerProfile.phone || '';
-      document.getElementById('inputRecipientAddress').value = customerProfile.defaultAddress || '';
+      document.getElementById('inputRecipientAddress').value = '';
 
       // 收款資訊帶入 (支援 3 種付款管道：中信、LINE Pay、街口)
       document.getElementById('bankNameDisplay').textContent = systemSettings.BANK_NAME || '822 中國信託商業銀行';
@@ -1388,8 +1438,16 @@
       const f711 = isFree ? 0 : (Number(systemSettings.SHIP_FEE_711_COD) || 38);
       const fFami = isFree ? 0 : (Number(systemSettings.SHIP_FEE_FAMI_COD) || 35);
 
-      document.getElementById('fee_711_COD').textContent = isFree ? '免運 NT$ 0' : `NT$ ${f711}`;
-      document.getElementById('fee_FAMI_COD').textContent = isFree ? '免運 NT$ 0' : `NT$ ${fFami}`;
+      const el711 = document.getElementById('fee_711_COD');
+      if (el711) {
+        el711.textContent = isFree ? '免運 NT$ 0' : `NT$ ${f711}`;
+        el711.style.color = isFree ? '#16a34a' : 'inherit';
+      }
+      const elFami = document.getElementById('fee_FAMI_COD');
+      if (elFami) {
+        elFami.textContent = isFree ? '免運 NT$ 0' : `NT$ ${fFami}`;
+        elFami.style.color = isFree ? '#16a34a' : 'inherit';
+      }
 
       // 預設選中第一個 7-11 超商純取貨 (免運費 NT$ 0)
       selectShipping('711_PREPAID', 0, true);
@@ -1425,13 +1483,13 @@
       const addrInput = document.getElementById('inputRecipientAddress');
 
       if (methodKey === '711_PREPAID' || methodKey === '711_COD') {
-        document.getElementById('labelAddress').textContent = '取件 7-11 門市 (門市名稱與 6 碼店號) *';
-        addrInput.placeholder = '例：7-11 鑫東門市 (123456)';
+        document.getElementById('labelAddress').textContent = '取件 7-11 門市 (門市名稱與 6 碼門市店號) *';
+        addrInput.placeholder = '例：OOO門市 (123456)';
       } else if (methodKey === 'FAMI_PREPAID' || methodKey === 'FAMI_COD') {
-        document.getElementById('labelAddress').textContent = '取件 全家 門市 (門市名稱與 6 碼服務代號) *';
-        addrInput.placeholder = '例：全家 新光門市 (012345)';
+        document.getElementById('labelAddress').textContent = '取件 全家 門市 (門市名稱與 6 碼店舖號) *';
+        addrInput.placeholder = '例：OOO店 (012345)';
       } else {
-        document.getElementById('labelAddress').textContent = '詳細送達地址 (含縣市區路巷號樓) *';
+        document.getElementById('labelAddress').textContent = '收件地址 (含縣市區路巷號樓) *';
         addrInput.placeholder = '例：台北市信義區信義路五段7號89樓';
       }
 
@@ -1442,7 +1500,11 @@
 
       // 更新總金額
       const finalTot = successfulGoodsTotal + selectedShipFee;
-      document.getElementById('modalShippingFeeText').textContent = (selectedShipFee === 0) ? '免運 NT$ 0' : `NT$ ${selectedShipFee}`;
+      let freeFeeLabel = '取貨不付款，免運 NT$ 0';
+      if (methodKey === '711_COD' || methodKey === 'FAMI_COD') {
+        freeFeeLabel = '滿$3000，免運 NT$ 0';
+      }
+      document.getElementById('modalShippingFeeText').textContent = (selectedShipFee === 0) ? freeFeeLabel : `NT$ ${selectedShipFee}`;
       document.getElementById('modalFinalTotalText').textContent = `NT$ ${finalTot.toLocaleString()}`;
     }
 
@@ -1544,7 +1606,7 @@
         return;
       }
       if (!address) {
-        alert('請填寫取件門市或配送地址！');
+        alert('請填寫取件門市或收件地址！');
         document.getElementById('inputRecipientAddress').focus();
         return;
       }
