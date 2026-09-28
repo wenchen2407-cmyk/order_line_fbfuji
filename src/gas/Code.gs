@@ -170,6 +170,14 @@ function setupSpreadsheet() {
     if (!foundStoreName) {
       settSheet.appendRow(['STORE_NAME', 'W.W.連線代購', '商店名稱']);
     }
+
+    // 自動檢查並移除舊版單一欄位 BANK_INFO 列
+    for (let r = existingData.length - 1; r >= 1; r--) {
+      const key = String(existingData[r][0] || '').trim();
+      if (key === 'BANK_INFO') {
+        settSheet.deleteRow(r + 1);
+      }
+    }
   }
   // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
   settSheet.getRange("B:B").setNumberFormat('@');
@@ -930,12 +938,14 @@ function getSystemSettings() {
     }
   }
 
-  // 檢查試算表既有設定列並自動校正回寫 Google 試算表
+  // 檢查試算表既有設定列並自動校正回寫 Google 試算表 (並刪除舊版 BANK_INFO 列)
   try {
-    for (let i = 1; i < rows.length; i++) {
+    for (let i = rows.length - 1; i >= 1; i--) {
       const key = String(rows[i][0] || '').trim();
       const val = String(rows[i][1] || '').trim();
-      if (key === 'BANK_ACCOUNT_HOLDER' && (val === '陳小美' || !val)) {
+      if (key === 'BANK_INFO') {
+        sheet.deleteRow(i + 1);
+      } else if (key === 'BANK_ACCOUNT_HOLDER' && (val === '陳小美' || !val)) {
         sheet.getRange(i + 1, 2).setValue('陳O雯');
         settings.BANK_ACCOUNT_HOLDER = '陳O雯';
       } else if (key === 'BANK_ACCOUNT' && (!val || val.includes('123-4567') || val.includes('0123-4567') || val.includes('12345-6789'))) {
@@ -1019,8 +1029,16 @@ function updatePaymentSettings() {
     }
   }
 
+  // 自動檢查並移除舊版單一欄位 BANK_INFO 列
+  for (let r = data.length - 1; r >= 1; r--) {
+    const key = String(data[r][0] || '').trim();
+    if (key === 'BANK_INFO') {
+      settSheet.deleteRow(r + 1);
+    }
+  }
+
   settSheet.getRange("B:B").setNumberFormat('@');
-  return 'Google Sheets 系統設定資料 (中國信託/LINE Pay/街口支付) 已成功更新完畢！';
+  return 'Google Sheets 系統設定資料已成功更新，且舊版 BANK_INFO 列已自動移除！';
 }
 
 /**
