@@ -271,6 +271,8 @@ function doPost(e) {
     let result = {};
     if (action === 'createOrder') {
       result = handleCreateOrder(postData.data);
+    } else if (action === 'registerCustomer') {
+      result = handleRegisterCustomer(postData.data);
     } else if (action === 'checkoutOrders') {
       result = handleCheckoutOrders(postData.data);
     } else if (action === 'confirmReceived') {
@@ -661,6 +663,9 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         const currentSpend = Number(data[i][6]) || 0;
         custSheet.getRange(row, 6).setValue(currentOrders + 1);
         custSheet.getRange(row, 7).setValue(currentSpend + (Number(totalAmount) || 0));
+        if (!data[i][7]) {
+          custSheet.getRange(row, 8).setValue(now);
+        }
         custSheet.getRange(row, 9).setValue(now);
         break;
       }
@@ -877,31 +882,73 @@ function getOrdersForUser(userId) {
 }
 
 /**
- * 檢查顧客是否已在試算表顧客資料庫建檔
+ * 首次填寫聯絡資料彈窗時，立即正式建立/更新顧客檔案歸戶至試算表
  */
-function checkCustomerExists(userId) {
-  if (!userId) return { success: false, exists: false };
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-  if (!custSheet) return { success: false, exists: false };
+function handleRegisterCustomer(data) {
+  if (!data) return { success: false, message: '缺少資料' };
+  const userId = data.userId || 'LINE_GUEST';
+  const userName = data.userName || '訪客';
+  const realName = (data.realName || '').trim();
+  const rawPhone = data.phone ? String(data.phone).trim() : '';
+  const phone = formatPhoneAsText(rawPhone);
 
-  const custData = custSheet.getDataRange().getValues();
-  for (let c = 1; c < custData.length; c++) {
-    if (custData[c][0] === userId) {
-      return {
-        success: true,
-        exists: true,
-        profile: {
-          userId: userId,
-          userName: custData[c][1] || '',
-          realName: custData[c][2] || '',
-          phone: custData[c][3] || '',
-          defaultAddress: custData[c][4] || ''
-        }
-      };
+  if (!realName || !rawPhone) {
+    return { success: false, message: '真實姓名與電話為必填' };
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!custSheet) {
+    custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
+    custSheet.appendRow([
+      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
+      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記'
+    ]);
+    custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange("D:D").setNumberFormat('@');
+  }
+
+  const now = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+  const values = custSheet.getDataRange().getValues();
+  let found = false;
+
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0] === userId) {
+      found = true;
+      const row = i + 1;
+      if (userName) custSheet.getRange(row, 2).setValue(userName);
+      custSheet.getRange(row, 3).setValue(realName);
+      custSheet.getRange(row, 4).setValue(phone);
+      custSheet.getRange(row, 9).setValue(now);
+      break;
     }
   }
-  return { success: true, exists: false };
+
+  if (!found) {
+    custSheet.appendRow([
+      userId,
+      userName,
+      realName,
+      phone,
+      '',
+      0,
+      0,
+      '',
+      now,
+      ''
+    ]);
+  }
+
+  return {
+    success: true,
+    message: '✅ 顧客資料已成功建立歸戶！',
+    profile: {
+      userId: userId,
+      userName: userName,
+      realName: realName,
+      phone: rawPhone
+    }
+  };
 }
 
 /**

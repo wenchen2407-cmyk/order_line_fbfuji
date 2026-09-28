@@ -627,7 +627,7 @@
         <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
       </div>
 
-      <button type="button" class="btn-submit" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
+      <button type="button" class="btn-submit" id="btnConfirmProfile" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
       <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
     </div>
   </div>
@@ -1089,8 +1089,8 @@
       document.getElementById('firstTimeProfileModal').classList.remove('active');
     }
 
-    // 確認送出聯絡資料
-    function confirmProfileAndSubmit() {
+    // 確認送出聯絡資料 (立即正式寫入試算表【顧客歸戶】)
+    async function confirmProfileAndSubmit() {
       const lineName = document.getElementById('regLineName').value.trim() || currentUser.displayName || '訪客';
       const realName = document.getElementById('regRealName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
@@ -1107,14 +1107,48 @@
         return;
       }
 
+      const cleanPhone = phone.replace(/[-\s]/g, '');
       const profile = {
         userId: currentUser.userId,
         userName: lineName,
         realName: realName,
-        phone: phone.replace(/[-\s]/g, '')
+        phone: cleanPhone
       };
 
+      const btnConfirm = document.getElementById('btnConfirmProfile');
+      if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.textContent = '建立歸戶中...';
+      }
+
+      // 1. 同步快取至本地瀏覽器
       saveCustomerProfile(profile);
+
+      // 2. 立即正式寫入 Google 試算表【顧客歸戶】工作表
+      if (CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
+        try {
+          await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'registerCustomer',
+              data: {
+                userId: currentUser.userId,
+                userName: lineName,
+                realName: realName,
+                phone: cleanPhone
+              }
+            })
+          });
+        } catch (e) {
+          console.warn('線上建立顧客歸戶略過 (已暫存本地):', e);
+        }
+      }
+
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = '確認送出';
+      }
+
       closeProfileModal();
 
       if (isSubmittingFromButton) {
@@ -1123,7 +1157,7 @@
         executeCreateOrder(profile);
       } else {
         // 首次點開商品卡時填寫完成：提示已建立，可繼續挑選規格登記
-        alert('✅ 聯絡資料建立完成！現在您可以挑選喜愛的商品規格並進行登記囉！');
+        alert('✅ 聯絡資料已成功建立並歸戶！現在您可以挑選喜愛的商品規格並進行登記囉！');
       }
     }
 
