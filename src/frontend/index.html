@@ -516,6 +516,44 @@
       border-color: #cbd5e1;
       color: #64748b;
     }
+    /* 彈跳成功按鈕組 (左右高度、字體、圓角完美對齊) */
+    .modal-btn-action {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 14px;
+      border-radius: 12px;
+      font-size: 14.5px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    .modal-btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1.5px solid #cbd5e1;
+    }
+    .modal-btn-secondary:active {
+      background: #e2e8f0;
+      transform: scale(0.97);
+    }
+    .modal-btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border: 1.5px solid var(--primary);
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
+    }
+    .modal-btn-primary:active {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+      transform: scale(0.97);
+    }
   </style>
 </head>
 <body>
@@ -645,8 +683,8 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;" onclick="continueShopping()">🛍️ 繼續逛</button>
-        <button type="button" class="btn-submit" style="flex: 1;" onclick="goToMyOrders()">📦 查看訂購清單</button>
+        <button type="button" class="modal-btn-action modal-btn-secondary" onclick="continueShopping()">🛍️ 繼續挑選</button>
+        <button type="button" class="modal-btn-action modal-btn-primary" onclick="goToMyOrders()">📦 查看訂購清單</button>
       </div>
     </div>
   </div>
