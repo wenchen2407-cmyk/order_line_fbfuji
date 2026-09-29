@@ -1179,16 +1179,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const demoParam = urlParams.get('demo') || urlParams.get('test') || urlParams.get('state');
 
-      // 若帶有 clear=1，不讀取快取，直接以空資料呈現
-      if (urlParams.get('clear') === '1') {
-        pendingOrders = [];
-        completedOrders = [];
-        updateUserProfileUI();
-        renderOrdersView();
-        return;
-      }
-
-      // 🌟 核心修復：若處於 demo / 測試模式，直接載入對應情境資料，並阻斷遠端空資料覆蓋！
+      // 🌟 核心最優先：若處於 demo / 測試模式，直接載入對應情境資料，並阻斷遠端空資料覆蓋！
       if (demoParam) {
         const switcher = document.getElementById('demoScenarioSwitcher');
         if (switcher) switcher.style.display = 'block';
@@ -1206,6 +1197,15 @@
           switchMainTab('tabHistory');
         }
         return; // 測試模式下直接呈現對應畫面，不再向 GAS 發送覆蓋空資料
+      }
+
+      // 若帶有 clear=1 且非 demo 模式，不讀取快取，直接以空資料呈現
+      if (urlParams.get('clear') === '1') {
+        pendingOrders = [];
+        completedOrders = [];
+        updateUserProfileUI();
+        renderOrdersView();
+        return;
       }
 
       // 0. 本地快取優先還原 (若買家剛在本地完成結帳，優先還原當前最新結帳狀態)
