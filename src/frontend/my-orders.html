@@ -617,7 +617,7 @@
         <!-- 金額統計與結帳明細卡片 -->
         <div id="goodsSubtotalRow" style="display: none; flex-direction: column; gap: 8px; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 700; color: #334155; font-size: 14px;">已採購商品合計 (<span id="totalItemsCountText">0</span> 件)</span>
+            <span style="font-weight: 700; color: #334155; font-size: 14px;"><span id="goodsSubtotalLabelText">連線訂購商品合計</span> (<span id="totalItemsCountText">0</span> 件)</span>
             <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
           </div>
           <div id="checkoutShipFeeRow" style="display: none; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b;">
@@ -1619,7 +1619,9 @@
       successfulGoodsTotal = 0;
       currentShippingFee = 0;
       currentCheckoutMethodName = '';
-      let totalQty = 0;
+      let totalRegisteredQty = 0;
+      let totalRegisteredAmount = 0;
+      let successfulQty = 0;
       let hasSuccessfulItems = false;
       let hasShippedItems = false;
       let hasPendingPayment = false;
@@ -1903,10 +1905,16 @@
         const isProcured = !isOut && !isCheckedOut && (st.includes('成功') || st.includes('採買') || st.includes('通知'));
         const isRegistering = !isOut && !isCheckedOut && !isProcured;
 
-        // 只有採購成功或已結帳且非缺貨非登記的商品才計入實付商品總額
+        // 🌟 核心規範：只要不是缺貨斷貨，連線中登記的商品就全部計入登記件數與金額！
+        if (!isOut) {
+          totalRegisteredAmount += sub;
+          totalRegisteredQty += qty;
+        }
+
+        // 採購成功或已結帳且非缺貨的商品計入採購成功總額 (供截單結算使用)
         if (!isOut && (isProcured || isCheckedOut)) {
           successfulGoodsTotal += sub;
-          totalQty += qty;
+          successfulQty += qty;
           hasSuccessfulItems = true;
         }
 
@@ -1954,10 +1962,19 @@
         container.appendChild(card);
       });
 
-      // 統計行更新
+      // 統計行更新：結帳後或截單無登記品項時呈現「已採購商品合計」，連線中只要加入進來就呈現「連線訂購商品合計」並統計金額
       subtotalRow.style.display = 'flex';
-      totalItemsCountText.textContent = totalQty;
-      goodsSubtotalText.textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
+      const isShowProcuredSubtotal = hasCheckedOutOrder || (isAfterCutoff && pendingRegisterCount === 0);
+      const displayTotalAmount = isShowProcuredSubtotal ? successfulGoodsTotal : totalRegisteredAmount;
+      const displayTotalQty = isShowProcuredSubtotal ? successfulQty : totalRegisteredQty;
+
+      totalItemsCountText.textContent = displayTotalQty;
+      goodsSubtotalText.textContent = `NT$ ${displayTotalAmount.toLocaleString()}`;
+
+      const subtotalLabelText = document.getElementById('goodsSubtotalLabelText');
+      if (subtotalLabelText) {
+        subtotalLabelText.textContent = isShowProcuredSubtotal ? '已採購商品合計' : '連線訂購商品合計';
+      }
 
       const shipFeeRow = document.getElementById('checkoutShipFeeRow');
       const totalRow = document.getElementById('checkoutTotalRow');
