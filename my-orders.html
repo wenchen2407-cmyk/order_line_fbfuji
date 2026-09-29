@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>W.W.連線代購 ｜ 訂單查詢與合併結帳</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -398,6 +401,24 @@
       </a>
     </div>
 
+        <!-- 測試模式專屬快速切換工具列 (僅在 URL 帶有 demo 參數時顯示) -->
+    <div id="demoScenarioSwitcher" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+      <div style="font-weight: 800; font-size: 13px; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+        <span>🧪 結帳後版面快速切換驗測</span>
+        <span style="font-size: 11px; color: #64748b; font-weight: normal;">(點擊一鍵即時切換狀態)</span>
+      </div>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="demoBtnGroup">
+        <button type="button" onclick="switchDemoScenario('prepay_711')" id="demo_prepay_711" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳 1. 先匯款-超商純取</button>
+        <button type="button" onclick="switchDemoScenario('prepay_post')" id="demo_prepay_post" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳 2. 先匯款-郵局寄件</button>
+        <button type="button" onclick="switchDemoScenario('cod_711')" id="demo_cod_711" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦 3. 貨到付款-7-11</button>
+        <button type="button" onclick="switchDemoScenario('cod_fami')" id="demo_cod_fami" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦 4. 貨到付款-全家</button>
+        <button type="button" onclick="switchDemoScenario('audit')" id="demo_audit" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #6d28d9; font-weight: 700; cursor: pointer;">🔍 5. 回報對帳中</button>
+        <button type="button" onclick="switchDemoScenario('shipped')" id="demo_shipped" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; font-weight: 700; cursor: pointer;">🚚 6. 包裹配送中</button>
+        <button type="button" onclick="switchDemoScenario('history')" id="demo_history" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #e2e8f0; background: #f1f5f9; color: #475569; font-weight: 700; cursor: pointer;">📜 7. 歷史訂單</button>
+        <button type="button" onclick="switchDemoScenario('unpaid')" id="demo_unpaid" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; cursor: pointer;">🛍️ 8. 結帳前清單</button>
+      </div>
+    </div>
+
     <!-- 功能頁籤 -->
     <div class="tab-nav">
       <button type="button" class="tab-btn active" id="tabBtnCheckout" onclick="switchMainTab('tabCheckout')">
@@ -421,10 +442,7 @@
             🔗 賣家收款帳戶資訊
           </a>
         </div>
-        <div style="background: #fef3c7; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px dashed #f59e0b;">
-          <span style="font-weight: 700; color: #92400e; font-size: 13px;">轉帳應付總額 (含運費)：</span>
-          <span style="font-family:'Outfit',sans-serif; font-weight: 900; font-size: 18px; color: var(--accent);" id="pendingPaymentAmountText">NT$ 0</span>
-        </div>
+        
         <div style="font-size: 12.5px; color: #78350f; line-height: 1.6; margin-bottom: 12px;">
           完成轉帳付款後，請點擊下方【💰 匯款/付款回報】填寫轉帳時間與帳號末五碼，待小幫手確認完成後將盡快為您安排出貨！
         </div>
@@ -527,6 +545,7 @@
         <div class="tracking-body">
           <div>物流方式：<b id="trackShipMethodName">7-11 超商取貨付款</b></div>
           <div style="margin-top: 6px; display: flex; align-items: center; gap: 4px;">包裹查詢編號：<span class="tracking-code" id="trackCodeDisplay">86312345678</span></div>
+          <div id="trackCodAmountRow" style="margin-top: 6px; display: none; font-size: 13px; color: #1e293b;">貨到付款金額：<b style="font-family:'Outfit',sans-serif; color:var(--accent); font-weight:800; font-size:15px;" id="trackCodAmountText">NT$ 0</b></div>
           <div style="font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.5;">包裹已寄出，依選擇之物流項目約 1~3 天送達指定超商/地址，請留意取件通知簡訊或配送員通知！</div>
         </div>
         <a href="#" target="_blank" class="btn-track-online" id="btnOnlineTrack">
@@ -544,6 +563,14 @@
         </div>
 
         <!-- 本次合併結帳包裹資訊卡 (結帳後呈現，對齊實際結帳資料) -->
+        <!-- 已出貨配送中專屬：精簡單號與時間列 (格式同歷史訂單，取代包裹大卡) -->
+        <div id="shippedOrderInfoRow" style="display: none; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 6px;">
+          <div style="font-family:'Outfit',sans-serif; font-size: 13.5px; font-weight: 800; color: #0f172a;">
+            <span>結帳單號：<span id="shippedCheckoutIdText">-</span></span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8;" id="shippedCheckoutTimeText">結帳時間：-</div>
+        </div>
+
         <div id="checkoutSummaryCard" style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
             <div style="font-family:'Outfit',sans-serif; font-size: 13.5px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
@@ -556,8 +583,8 @@
             <div>📱 聯絡電話：<b id="csRecipientPhoneText">-</b></div>
             <div>🚚 配送方式：<b id="csDeliveryMethodText">-</b></div>
             <div>📍 門市/地址：<b id="csDeliveryAddressText">-</b></div>
-            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 700; color: #475569;">💰 結帳應付總額：</span>
+            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; display: none; justify-content: space-between; align-items: center;" id="csTotalAmountRow">
+              <span style="font-weight: 700; color: #475569;" id="csTotalAmountLabel">💰 匯款金額：</span>
               <span style="font-family:'Outfit',sans-serif; font-size: 16.5px; font-weight: 900; color: var(--accent);" id="csTotalAmountText">NT$ 0</span>
             </div>
           </div>
@@ -1114,6 +1141,7 @@
     // 取得使用者資料
     async function fetchUserData() {
       const urlParams = new URLSearchParams(window.location.search);
+      const demoParam = urlParams.get('demo') || urlParams.get('test') || urlParams.get('state');
 
       // 若帶有 clear=1，不讀取快取，直接以空資料呈現
       if (urlParams.get('clear') === '1') {
@@ -1122,6 +1150,26 @@
         updateUserProfileUI();
         renderOrdersView();
         return;
+      }
+
+      // 🌟 核心修復：若處於 demo / 測試模式，直接載入對應情境資料，並阻斷遠端空資料覆蓋！
+      if (demoParam) {
+        const switcher = document.getElementById('demoScenarioSwitcher');
+        if (switcher) switcher.style.display = 'block';
+        const key = demoParam === '1' ? 'unpaid' : demoParam;
+        const activeBtn = document.getElementById('demo_' + key);
+        if (activeBtn) {
+          activeBtn.style.outline = '2.5px solid #2563eb';
+          activeBtn.style.outlineOffset = '1px';
+        }
+
+        applyMockDemoData(demoParam);
+        updateUserProfileUI();
+        renderOrdersView();
+        if (demoParam === 'history') {
+          switchMainTab('tabHistory');
+        }
+        return; // 測試模式下直接呈現對應畫面，不再向 GAS 發送覆蓋空資料
       }
 
       // 0. 本地快取優先還原 (若買家剛在本地完成結帳，優先還原當前最新結帳狀態)
@@ -1137,12 +1185,6 @@
           }
         }
       } catch (e) {}
-
-      // 只有在明確指定 ?demo=1 或 ?test=1 時，才在無資料時注入示範資料
-      const isDemoMode = urlParams.get('demo') === '1' || urlParams.get('test') === '1';
-      if (pendingOrders.length === 0 && completedOrders.length === 0 && isDemoMode) {
-        applyMockDemoData();
-      }
 
       updateUserProfileUI();
       renderOrdersView();
@@ -1204,129 +1246,191 @@
       }
     }
 
-    // 示範/測試資料 (包含 2件採購成功、1件缺貨斷貨、以及 1組已完成取貨之合併結帳歷史大卡)
-    function applyMockDemoData() {
-      if (pendingOrders.length === 0 && completedOrders.length === 0) {
-        pendingOrders = [
-          {
-            orderId: 'OD2609270001',
-            orderDate: '2026/09/27 14:20',
-            productId: 'P001',
-            productName: '日本代購限定 輕量防潑水後背包',
-            spec: '經典黑',
-            quantity: 1,
-            unitPrice: 1450,
-            subtotal: 1450,
-            shippingFee: 0,
-            totalAmount: 1450,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '採購成功',
-            checkoutId: ''
-          },
-          {
-            orderId: 'OD2609270008',
-            orderDate: '2026/09/27 16:45',
-            productId: 'P002',
-            productName: '富士山限定 刺繡帆布提袋',
-            spec: '燕麥米白',
-            quantity: 1,
-            unitPrice: 890,
-            subtotal: 890,
-            shippingFee: 0,
-            totalAmount: 890,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '採購成功',
-            checkoutId: ''
-          },
-          {
-            orderId: 'OD2609280015',
-            orderDate: '2026/09/28 11:10',
-            productId: 'P003',
-            productName: '日本專櫃限量 保溫瓶 500ml',
-            spec: '霧面灰',
-            quantity: 1,
-            unitPrice: 680,
-            subtotal: 680,
-            shippingFee: 0,
-            totalAmount: 680,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '缺貨斷貨',
-            checkoutId: ''
-          }
-        ];
+            // 測試情境一鍵即時切換 (零延遲、免重整、抗快取)
+    function switchDemoScenario(scenario) {
+      const s = String(scenario || 'unpaid');
+      const allBtns = document.querySelectorAll('#demoBtnGroup .demo-tag');
+      allBtns.forEach(b => {
+        b.style.outline = 'none';
+        b.style.boxShadow = 'none';
+      });
+      const activeBtn = document.getElementById('demo_' + (s === '1' ? 'unpaid' : s));
+      if (activeBtn) {
+        activeBtn.style.outline = '2.5px solid #2563eb';
+        activeBtn.style.outlineOffset = '1px';
+      }
 
-        completedOrders = [
-          {
-            orderId: 'OD2609250002',
-            orderDate: '2026/09/25 18:30',
-            productId: 'P004',
-            productName: '日本限定 富士山隨行保溫杯',
-            spec: '海軍藍',
-            quantity: 1,
-            unitPrice: 980,
-            subtotal: 980,
-            shippingFee: 38,
-            totalAmount: 1018,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
-            paymentStatus: '已付款',
-            shippingStatus: '已完成取貨',
-            shippedDate: '2026/09/26 11:30',
-            trackingNumber: '86312345678',
-            checkoutId: 'CO260925183025886'
-          },
-          {
-            orderId: 'OD2609250005',
-            orderDate: '2026/09/25 18:30',
-            productId: 'P005',
-            productName: '輕量防潑水斜背包',
-            spec: '米白色',
-            quantity: 1,
-            unitPrice: 1280,
-            subtotal: 1280,
-            shippingFee: 0,
-            totalAmount: 1280,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
-            paymentStatus: '已付款',
-            shippingStatus: '已完成取貨',
-            shippedDate: '2026/09/26 11:30',
-            trackingNumber: '86312345678',
-            checkoutId: 'CO260925183025886'
-          },
-          {
-            orderId: 'OD2609250011',
-            orderDate: '2026/09/25 18:30',
-            productId: 'P006',
-            productName: '限定櫻花刺繡手帕',
-            spec: '粉櫻色',
-            quantity: 1,
-            unitPrice: 350,
-            subtotal: 350,
-            shippingFee: 0,
-            totalAmount: 0,
-            recipientName: '陳大美',
-            phone: '0912345678',
-            deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
-            paymentStatus: '免付款(缺貨取消)',
-            shippingStatus: '已完成取貨(缺貨免付)',
-            shippedDate: '2026/09/26 11:30',
-            trackingNumber: '86312345678',
-            checkoutId: 'CO260925183025886'
-          }
+      applyMockDemoData(s);
+      updateUserProfileUI();
+      renderOrdersView();
+      if (s === 'history') {
+        switchMainTab('tabHistory');
+      } else {
+        switchMainTab('tabCheckout');
+      }
+
+      if (window.history && window.history.replaceState) {
+        const newUrl = window.location.pathname + '?demo=' + s;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+
+    // 示範/測試資料：支援「結帳後各類方式」一鍵秒切模擬
+    function applyMockDemoData(scenario) {
+      const defaultCheckoutId = 'CO260929183012886';
+      const defaultCheckoutTime = '2026/09/29 18:30';
+      const s = String(scenario || 'unpaid').toLowerCase();
+
+      const item1 = {
+        orderId: 'OD2609270001',
+        orderDate: '2026/09/27 14:20',
+        productId: 'P001',
+        productName: '日本代購限定 輕量防潑水後背包',
+        spec: '經典黑',
+        quantity: 1,
+        unitPrice: 1450,
+        subtotal: 1450,
+        recipientName: '陳大美',
+        phone: '0912345678'
+      };
+      const item2 = {
+        orderId: 'OD2609270008',
+        orderDate: '2026/09/27 16:45',
+        productId: 'P002',
+        productName: '富士山限定 刺繡帆布提袋',
+        spec: '燕麥米白',
+        quantity: 1,
+        unitPrice: 890,
+        subtotal: 890,
+        recipientName: '陳大美',
+        phone: '0912345678'
+      };
+      const itemOut = {
+        orderId: 'OD2609280015',
+        orderDate: '2026/09/28 11:10',
+        productId: 'P003',
+        productName: '日本專櫃限量 保溫瓶 500ml',
+        spec: '霧面灰',
+        quantity: 1,
+        unitPrice: 680,
+        subtotal: 680,
+        recipientName: '陳大美',
+        phone: '0912345678'
+      };
+
+      if (s === 'prepay_711' || s === 'prepay') {
+        // 1. 先匯款-超商純取貨 (免運)
+        pendingOrders = [
+          { ...item1, shippingFee: 0, totalAmount: 1450, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '待付款', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '待付款', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else if (s === 'prepay_post') {
+        // 2. 先匯款-郵局純寄件 (運費80)
+        pendingOrders = [
+          { ...item1, shippingFee: 80, totalAmount: 1530, deliveryAddress: '[郵局純寄件] 台北市大安區信義路四段100號5樓', paymentStatus: '待付款', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[郵局純寄件] 台北市大安區信義路四段100號5樓', paymentStatus: '待付款', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[郵局純寄件] 台北市大安區信義路四段100號5樓', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else if (s === 'cod_711' || s === 'cod') {
+        // 3. 貨到付款-7-11超商取貨付款 (運費38)
+        pendingOrders = [
+          { ...item1, shippingFee: 38, totalAmount: 1488, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '貨到付款待出貨', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '貨到付款待出貨', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else if (s === 'cod_fami') {
+        // 4. 貨到付款-全家超商取貨付款 (運費35)
+        pendingOrders = [
+          { ...item1, shippingFee: 35, totalAmount: 1485, deliveryAddress: '[全家 超商取貨付款] 全家新光門市 (店號: 654321)', paymentStatus: '貨到付款待出貨', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[全家 超商取貨付款] 全家新光門市 (店號: 654321)', paymentStatus: '貨到付款待出貨', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[全家 超商取貨付款] 全家新光門市 (店號: 654321)', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else if (s === 'audit') {
+        // 5. 匯款回報對帳中 (已回報後五碼)
+        pendingOrders = [
+          { ...item1, shippingFee: 0, totalAmount: 1450, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '已回報待對帳', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime, lastFive: '88623' },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '已回報待對帳', shippingStatus: '已完成結帳待出貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime, lastFive: '88623' },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else if (s === 'shipped') {
+        // 6. 包裹配送中 (已出貨附包裹查詢編號)
+        pendingOrders = [
+          { ...item1, shippingFee: 38, totalAmount: 1488, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '貨到付款待出貨', shippingStatus: '已出貨配送中', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime, trackingNumber: '86312345678' },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '貨到付款待出貨', shippingStatus: '已出貨配送中', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime, trackingNumber: '86312345678' },
+          { ...itemOut, shippingFee: 0, totalAmount: 0, deliveryAddress: '[7-11 超商取貨付款] 7-11松山門市 (門市店號: 123456)', paymentStatus: '免付款(缺貨取消)', shippingStatus: '缺貨斷貨', checkoutId: defaultCheckoutId, checkoutDate: defaultCheckoutTime }
+        ];
+      } else {
+        // 7. 預設未結帳 (連線登記已採買成功，可直接體驗手動結帳按鈕)
+        pendingOrders = [
+          { ...item1, shippingFee: 0, totalAmount: 1450, deliveryAddress: '[待出貨結帳填寫]', paymentStatus: '未結帳', shippingStatus: '採購成功', checkoutId: '' },
+          { ...item2, shippingFee: 0, totalAmount: 890, deliveryAddress: '[待出貨結帳填寫]', paymentStatus: '未結帳', shippingStatus: '採購成功', checkoutId: '' },
+          { ...itemOut, shippingFee: 0, totalAmount: 680, deliveryAddress: '[待出貨結帳填寫]', paymentStatus: '未結帳', shippingStatus: '缺貨斷貨', checkoutId: '' }
         ];
       }
+
+      completedOrders = [
+        {
+          orderId: 'OD2609250002',
+          orderDate: '2026/09/25 18:30',
+          productId: 'P004',
+          productName: '日本限定 富士山隨行保溫杯',
+          spec: '海軍藍',
+          quantity: 1,
+          unitPrice: 980,
+          subtotal: 980,
+          shippingFee: 38,
+          totalAmount: 1018,
+          recipientName: '陳大美',
+          phone: '0912345678',
+          deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+          paymentStatus: '已付款',
+          shippingStatus: '已完成取貨',
+          shippedDate: '2026/09/26 11:30',
+          trackingNumber: '86312345678',
+          checkoutId: 'CO260925183025886'
+        },
+        {
+          orderId: 'OD2609250005',
+          orderDate: '2026/09/25 18:30',
+          productId: 'P005',
+          productName: '輕量防潑水斜背包',
+          spec: '米白色',
+          quantity: 1,
+          unitPrice: 1280,
+          subtotal: 1280,
+          shippingFee: 0,
+          totalAmount: 1280,
+          recipientName: '陳大美',
+          phone: '0912345678',
+          deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+          paymentStatus: '已付款',
+          shippingStatus: '已完成取貨',
+          shippedDate: '2026/09/26 11:30',
+          trackingNumber: '86312345678',
+          checkoutId: 'CO260925183025886'
+        },
+        {
+          orderId: 'OD2609250011',
+          orderDate: '2026/09/25 18:30',
+          productId: 'P006',
+          productName: '限定櫻花刺繡手帕',
+          spec: '粉櫻色',
+          quantity: 1,
+          unitPrice: 350,
+          subtotal: 350,
+          shippingFee: 0,
+          totalAmount: 0,
+          recipientName: '陳大美',
+          phone: '0912345678',
+          deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
+          paymentStatus: '免付款(缺貨取消)',
+          shippingStatus: '已完成取貨(缺貨免付)',
+          shippedDate: '2026/09/26 11:30',
+          trackingNumber: '86312345678',
+          checkoutId: 'CO260925183025886'
+        }
+      ];
     }
 
     function updateUserProfileUI() {
@@ -1464,6 +1568,15 @@
         document.getElementById('trackShipMethodName').textContent = formatDeliveryInfo(shippedItemData.deliveryAddress || currentCheckoutMethodName);
         const trackBtn = document.getElementById('btnOnlineTrack');
         if (trackBtn) trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
+
+        const isShippedCod = String(shippedItemData.deliveryAddress || '').includes('取貨付款') ||
+                             String(shippedItemData.deliveryAddress || '').includes('貨到付款') ||
+                             String(shippedItemData.paymentStatus || '').includes('貨到付款') ||
+                             (currentCheckoutMethodName && currentCheckoutMethodName.includes('貨到付款'));
+        const codRow = document.getElementById('trackCodAmountRow');
+        if (codRow) {
+          codRow.style.display = isShippedCod ? 'block' : 'none';
+        }
       } else if (hasAuditing) {
         // A-2. 對帳中待出貨
         if (auditingBox) auditingBox.style.display = 'block';
@@ -1517,45 +1630,90 @@
         orderSectionTitle.textContent = hasCheckedOutOrder ? '🧾 結帳明細' : '🛍️ 連線訂購明細';
       }
 
-      // 1-1. 結帳後呈現【本次合併結帳包裹資訊大卡】，完整對齊實際結帳資料
+      // 1-1. 結帳後呈現【本次合併結帳包裹資訊大卡】或已出貨專屬【精簡單號與時間列】
       const csCard = document.getElementById('checkoutSummaryCard');
-      if (csCard) {
-        if (hasCheckedOutOrder) {
-          csCard.style.display = 'block';
-          const firstChecked = checkedOutOrders.find(it => Boolean(it.checkoutId)) || checkedOutOrders[0] || {};
-          const cid = firstChecked.checkoutId || 'CO-已結帳';
-          const rName = firstChecked.recipientName || customerProfile.realName || '已登記收件人';
-          const rPhone = firstChecked.phone || customerProfile.phone || '-';
-          const rawDelivery = String(firstChecked.deliveryAddress || currentCheckoutMethodName || '');
-          let shipMethod = currentCheckoutMethodName || '已選配送';
-          let pureAddr = rawDelivery;
-          const matchMethod = rawDelivery.match(/^\[(.*?)\]\s*(.*)$/);
-          if (matchMethod) {
-            shipMethod = formatDeliveryInfo(matchMethod[1]).replace(/[\[\]]/g, '');
-            pureAddr = matchMethod[2] || '-';
-          } else {
-            pureAddr = formatDeliveryInfo(rawDelivery);
-          }
+      const shippedInfoRow = document.getElementById('shippedOrderInfoRow');
 
-          const csCid = document.getElementById('csCheckoutIdText');
-          if (csCid) csCid.textContent = cid;
-          const csName = document.getElementById('csRecipientNameText');
-          if (csName) csName.textContent = rName;
-          const csPhone = document.getElementById('csRecipientPhoneText');
-          if (csPhone) csPhone.textContent = rPhone;
-          const csMethod = document.getElementById('csDeliveryMethodText');
-          if (csMethod) csMethod.textContent = shipMethod;
-          const csAddr = document.getElementById('csDeliveryAddressText');
-          if (csAddr) csAddr.textContent = pureAddr;
+      if (hasCheckedOutOrder) {
+        const firstChecked = checkedOutOrders.find(it => Boolean(it.checkoutId)) || checkedOutOrders[0] || {};
+        const cid = firstChecked.checkoutId || 'CO-已結帳';
+        const rName = firstChecked.recipientName || customerProfile.realName || '已登記收件人';
+        const rPhone = firstChecked.phone || customerProfile.phone || '-';
+        const rawDelivery = String(firstChecked.deliveryAddress || currentCheckoutMethodName || '');
+        const formattedDelivery = formatDeliveryInfo(rawDelivery);
+        let shipMethod = currentCheckoutMethodName || '';
+        let pureAddr = formattedDelivery;
 
-          const csTimeElem = document.getElementById('csCheckoutTimeText');
-          if (csTimeElem) {
-            const timeVal = formatCheckoutTime(firstChecked.checkoutDate || firstChecked.orderDate, cid);
-            csTimeElem.textContent = `結帳時間：${timeVal}`;
+        const matchMethod = formattedDelivery.match(/^\[(.*?)\]\s*(.*)$/);
+        if (matchMethod) {
+          if (!shipMethod || shipMethod === '已選配送') shipMethod = matchMethod[1].trim();
+          pureAddr = matchMethod[2].trim() || '-';
+        } else {
+          pureAddr = formattedDelivery.replace(/^\[.*?\]\s*/, '').trim() || '-';
+        }
+
+        if (!shipMethod || shipMethod === '已選配送') {
+          if (rawDelivery.includes('711_COD') || (rawDelivery.includes('7-11') && rawDelivery.includes('取貨付款'))) shipMethod = '7-11 超商取貨付款';
+          else if (rawDelivery.includes('FAMI_COD') || (rawDelivery.includes('全家') && rawDelivery.includes('取貨付款'))) shipMethod = '全家 超商取貨付款';
+          else if (rawDelivery.includes('POST_COD') || rawDelivery.includes('郵局貨到付款')) shipMethod = '郵局貨到付款';
+          else if (rawDelivery.includes('711_PREPAID') || rawDelivery.includes('7-11 超商純取貨')) shipMethod = '7-11 超商純取貨';
+          else if (rawDelivery.includes('FAMI_PREPAID') || rawDelivery.includes('全家 超商純取貨')) shipMethod = '全家 超商純取貨';
+          else if (rawDelivery.includes('POST_PREPAID') || rawDelivery.includes('郵局純寄件')) shipMethod = '郵局純寄件';
+          else if (rawDelivery.includes('BLACKCAT') || rawDelivery.includes('黑貓宅配')) shipMethod = '黑貓宅配到府';
+          else shipMethod = '已選配送';
+        }
+
+        const timeVal = formatCheckoutTime(firstChecked.checkoutDate || firstChecked.orderDate, cid);
+
+        if (hasShippedItems) {
+          // 🚚 已出貨，包裹配送中！這一頁的結帳明細下方大卡移除，改為左邊單號右邊時間
+          if (csCard) csCard.style.display = 'none';
+          if (shippedInfoRow) {
+            shippedInfoRow.style.display = 'flex';
+            const sCid = document.getElementById('shippedCheckoutIdText');
+            if (sCid) sCid.textContent = cid;
+            const sTime = document.getElementById('shippedCheckoutTimeText');
+            if (sTime) sTime.textContent = `結帳時間：${timeVal}`;
           }
         } else {
-          csCard.style.display = 'none';
+          // 其他結帳後階段：呈現包裹大卡
+          if (shippedInfoRow) shippedInfoRow.style.display = 'none';
+          if (csCard) {
+            csCard.style.display = 'block';
+            const csCid = document.getElementById('csCheckoutIdText');
+            if (csCid) csCid.textContent = cid;
+            const csName = document.getElementById('csRecipientNameText');
+            if (csName) csName.textContent = rName;
+            const csPhone = document.getElementById('csRecipientPhoneText');
+            if (csPhone) csPhone.textContent = rPhone;
+            const csMethod = document.getElementById('csDeliveryMethodText');
+            if (csMethod) csMethod.textContent = shipMethod;
+            const csAddr = document.getElementById('csDeliveryAddressText');
+            if (csAddr) csAddr.textContent = pureAddr;
+
+            const csTimeElem = document.getElementById('csCheckoutTimeText');
+            if (csTimeElem) csTimeElem.textContent = `結帳時間：${timeVal}`;
+
+            const csTotRow = document.getElementById('csTotalAmountRow');
+            const csTotLabel = document.getElementById('csTotalAmountLabel');
+            if (csTotRow) {
+              csTotRow.style.display = hasAuditing ? 'none' : 'flex';
+            }
+            if (csTotLabel && !hasAuditing) {
+              const isCodMethod = shipMethod.includes('貨到付款') || 
+                                  shipMethod.includes('COD') || 
+                                  shipMethod.includes('賣貨便') || 
+                                  shipMethod.includes('好賣') ||
+                                  String(firstChecked.paymentStatus || '').includes('貨到付款') || 
+                                  String(firstChecked.deliveryAddress || '').includes('取貨付款') ||
+                                  hasCodPending;
+              csTotLabel.textContent = isCodMethod ? '💰 貨到付款金額：' : '💰 匯款金額：';
+            }
+          }
         }
+      } else {
+        if (csCard) csCard.style.display = 'none';
+        if (shippedInfoRow) shippedInfoRow.style.display = 'none';
       }
 
       // 2. 統計「連線登記中」的品項數量 (排除已結帳與缺貨斷貨，若有任何一件未確定商品在連線登記中，禁止結帳並提示聯繫小幫手)
@@ -1654,7 +1812,7 @@
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--text-muted); background:#f8fafc; padding:7px 10px; border-radius:8px;">
             <div>規格：<b style="color:#0f172a;">${item.spec || '標準'}</b> ｜ 數量：<b style="color:#0f172a;">${qty}</b> 件</div>
-            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--accent);">${isOut ? '<span style="font-size:12.5px; color:#ef4444; font-weight:700;">免付款 (NT$ 0)</span>' : `NT$ ${sub.toLocaleString()}`}</div>
+            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--accent);">${isOut ? '<span style="font-size:12.5px; color:#ef4444; font-weight:700;">NT$ 0</span>' : `NT$ ${sub.toLocaleString()}`}</div>
           </div>
           <div style="display:flex; justify-content:flex-end; align-items:center; font-size:11.5px; color:#94a3b8; padding-top:2px;">
             <span>訂購時間：${item.orderDate || ''}</span>
@@ -1712,6 +1870,9 @@
           // 同步本次合併結帳包裹資訊大卡之結帳應付總額
           const csTot = document.getElementById('csTotalAmountText');
           if (csTot) csTot.textContent = `NT$ ${totalPayable.toLocaleString()}`;
+          const trackCodAmt = document.getElementById('trackCodAmountText');
+          if (trackCodAmt) trackCodAmt.textContent = `NT$ ${totalPayable.toLocaleString()}`;
+
         }
       } else {
         if (goodsSubtotalText) {
