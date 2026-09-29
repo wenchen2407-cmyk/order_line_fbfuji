@@ -1856,17 +1856,27 @@
         }
       });
 
-      // 3. 顯示/隱藏連線登記中警示提示框
+      // 3. 判定是否已經截單 (已過收單截止時間，或賣家在後台開放通知結帳)
+      let isCutoffExpired = false;
+      const deadline = parseDeadline(systemSettings.ORDER_DEADLINE);
+      if (deadline && new Date() >= deadline) {
+        isCutoffExpired = true;
+      }
+      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') || 
+                              urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1';
+
+      const isAfterCutoff = isCutoffExpired || isAllowCheckout;
+
+      // 顯示/隱藏連線登記中警示提示框
+      // 🌟 嚴格規範：僅在「截單後」且尚有商品未確定採購結果時才呈現，連線採購期間正常隱藏！
       const alertBox = document.getElementById('pendingProcureAlertBox');
       const alertCountText = document.getElementById('pendingProcureCountText');
-      if (pendingRegisterCount > 0 && !hasCheckedOutOrder) {
+      if (isAfterCutoff && pendingRegisterCount > 0 && !hasCheckedOutOrder) {
         if (alertBox) alertBox.style.display = 'flex';
         if (alertCountText) alertCountText.textContent = pendingRegisterCount;
       } else {
         if (alertBox) alertBox.style.display = 'none';
       }
-
-      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') || urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1' || currentUserId === 'TEST_USER_999';
 
       // 需求 1：③ 開放結帳(雙徽章) 後的訂購清單中無須顯示 [🛍️ 繼續挑選更多商品] 按鈕
       if (continueShoppingBtn) {
