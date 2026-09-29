@@ -1219,10 +1219,11 @@
         return; // 已有完整真實姓名與電話，不跳出
       }
 
-      // (4) 判定為新客人：自動帶入 LINE 暱稱並跳出「首次使用，請建立聯絡資料」彈窗
-      isSubmittingFromButton = false;
-      document.getElementById('regLineName').value = currentUser.displayName || '';
-      document.getElementById('firstTimeProfileModal').classList.add('active');
+      // (4) 若為新客人：在背景預先將 LINE 暱稱填妥，絕不主動彈窗打擾客人看商品！
+      // 堅持「點擊火速登記時才跳出填寫基本資料」
+      isSubmittingFromButton = true;
+      const regLine = document.getElementById('regLineName');
+      if (regLine) regLine.value = currentUser.displayName || '';
     }
 
     // 點擊「火速登記」：老客直接秒單，新客（或剛才取消者）跳彈窗登記
