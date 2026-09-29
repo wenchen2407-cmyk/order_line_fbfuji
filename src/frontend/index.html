@@ -1393,6 +1393,7 @@
       if (uid) params.set('uid', uid);
       if (name) params.set('name', name);
       if (avatar) params.set('avatar', avatar);
+      params.set('t', Date.now());
 
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       window.location.href = `my-orders.html${queryStr}`;

@@ -1235,13 +1235,10 @@
         return; // 測試模式下直接呈現對應畫面，不再向 GAS 發送覆蓋空資料
       }
 
-      // 若帶有 clear=1 且非 demo 模式，不讀取快取，直接以空資料呈現
+      // 若帶有 clear=1，清空記憶體中的舊暫存，確保強制從雲端重新拉取最新資料（絕不中途 return！）
       if (urlParams.get('clear') === '1') {
         pendingOrders = [];
         completedOrders = [];
-        updateUserProfileUI();
-        renderOrdersView();
-        return;
       }
 
       // 搶救 currentUserId：從 localStorage 或 sessionStorage 快取中讀取
