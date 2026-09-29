@@ -543,7 +543,8 @@
           <div class="tracking-title">🚚 已出貨，包裹配送中！</div>
         </div>
         <div class="tracking-body">
-          <div>物流方式：<b id="trackShipMethodName">7-11 超商取貨付款</b></div>
+          <div>🚚 配送方式：<b id="trackShipMethodName">7-11 超商取貨付款</b></div>
+          <div style="margin-top: 4px;">📍 門市/地址：<b id="trackDeliveryAddressText">7-11松山門市 (門市店號: 123456)</b></div>
           <div style="margin-top: 6px; display: flex; align-items: center; gap: 4px;">包裹查詢編號：<span class="tracking-code" id="trackCodeDisplay">86312345678</span></div>
           <div id="trackCodAmountRow" style="margin-top: 6px; display: none; font-size: 13px; color: #1e293b;">貨到付款金額：<b style="font-family:'Outfit',sans-serif; color:var(--accent); font-weight:800; font-size:15px;" id="trackCodAmountText">NT$ 0</b></div>
           <div style="font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.5;">包裹已寄出，依選擇之物流項目約 1~3 天送達指定超商/地址，請留意取件通知簡訊或配送員通知！</div>
@@ -1015,6 +1016,31 @@
       const now = new Date();
       const pad = n => String(n).padStart(2, '0');
       return `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
+    function parseDeliveryInfo(raw) {
+      const formatted = formatDeliveryInfo(raw || '');
+      let method = '';
+      let address = formatted;
+      const match = formatted.match(/^\[(.*?)\]\s*(.*)$/);
+      if (match) {
+        method = match[1].trim();
+        address = match[2].trim() || '-';
+      } else {
+        address = formatted.replace(/^\[.*?\]\s*/, '').trim() || '-';
+      }
+      if (!method || method === '已選配送') {
+        const rawStr = String(raw || '');
+        if (rawStr.includes('711_COD') || (rawStr.includes('7-11') && rawStr.includes('取貨付款'))) method = '7-11 超商取貨付款';
+        else if (rawStr.includes('FAMI_COD') || (rawStr.includes('全家') && rawStr.includes('取貨付款'))) method = '全家 超商取貨付款';
+        else if (rawStr.includes('POST_COD') || rawStr.includes('郵局貨到付款')) method = '郵局貨到付款';
+        else if (rawStr.includes('711_PREPAID') || rawStr.includes('7-11 超商純取貨')) method = '7-11 超商純取貨';
+        else if (rawStr.includes('FAMI_PREPAID') || rawStr.includes('全家 超商純取貨')) method = '全家 超商純取貨';
+        else if (rawStr.includes('POST_PREPAID') || rawStr.includes('郵局純寄件')) method = '郵局純寄件';
+        else if (rawStr.includes('BLACKCAT') || rawStr.includes('黑貓宅配')) method = '黑貓宅配到府';
+        else method = '已選配送';
+      }
+      return { method, address };
     }
 
     function formatDeliveryInfo(raw) {
@@ -1565,7 +1591,11 @@
         if (auditingBox) auditingBox.style.display = 'none';
         const code = shippedItemData.trackingNumber || '86312345678';
         document.getElementById('trackCodeDisplay').textContent = code;
-        document.getElementById('trackShipMethodName').textContent = formatDeliveryInfo(shippedItemData.deliveryAddress || currentCheckoutMethodName);
+        const parsedTrack = parseDeliveryInfo(shippedItemData.deliveryAddress || currentCheckoutMethodName);
+        const trackMethodElem = document.getElementById('trackShipMethodName');
+        if (trackMethodElem) trackMethodElem.textContent = parsedTrack.method;
+        const trackAddrElem = document.getElementById('trackDeliveryAddressText');
+        if (trackAddrElem) trackAddrElem.textContent = parsedTrack.address;
         const trackBtn = document.getElementById('btnOnlineTrack');
         if (trackBtn) trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
 
@@ -2012,7 +2042,8 @@
           </div>
 
           <div style="font-size:12px; color:#475569; background:#f8fafc; padding:10px 12px; border-radius:8px; line-height:1.7; border:1px solid #e2e8f0; margin-bottom:12px;">
-            <div>🚚 配送門市/地址：<b>${formatDeliveryInfo(grp.deliveryAddress || '超商取貨')}</b></div>
+            <div>🚚 配送方式：<b>${parseDeliveryInfo(grp.deliveryAddress).method}</b></div>
+            <div style="margin-top:2px;">📍 門市/地址：<b>${parseDeliveryInfo(grp.deliveryAddress).address}</b></div>
             ${grp.trackingNumber ? `
               <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #e2e8f0;">
                 <div>包裹查詢編號：<b style="font-family:'Outfit',sans-serif; color:#2563eb;">${grp.trackingNumber}</b></div>
