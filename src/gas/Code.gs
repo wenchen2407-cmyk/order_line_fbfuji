@@ -246,6 +246,8 @@ function doGet(e) {
       result = checkCustomerExists(uid);
     } else if (action === 'getSettings') {
       result = getSystemSettings();
+    } else if (action === 'clearTestData') {
+      result = clearTestOrdersData();
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -284,6 +286,8 @@ function doPost(e) {
       result = handleAddProduct(postData.data);
     } else if (action === 'uploadImages') {
       result = handleUploadImages(postData.data);
+    } else if (action === 'clearTestData') {
+      result = clearTestOrdersData();
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -550,6 +554,10 @@ function handleCheckoutOrders(checkoutData) {
     // 嚴格排除已經完成取貨結案的歷史訂單
     const isAlreadyFinished = shipStatus.includes('完成取貨') || shipStatus.includes('結案');
     if (isAlreadyFinished) continue;
+
+    // 嚴格排除已經結過帳的訂單 (已有結帳編號或狀態為已完成結帳待出貨)
+    const hasAlreadyCheckout = Boolean(row[21]) || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨');
+    if (hasAlreadyCheckout) continue;
 
     // 若前端有指定訂單清單，比對 orderId；若無指定，則納入所有尚未結案的當期商品
     if (targetIds) {
@@ -1373,3 +1381,43 @@ function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * 🛠️ 清除測試資料管理函式
+ * 說明：清空「訂單明細」與「顧客歸戶」的所有測試資料，保留第一列表頭標題與欄位格式設定
+ * 可在 Google Apps Script 編輯器中直接選取此函式點擊「執行」，亦可透過 API 觸發
+ */
+function clearTestOrdersData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let deletedOrdersCount = 0;
+  let deletedCustCount = 0;
+
+  // 1. 清除「訂單明細」測試訂單 (保留第 1 列表頭)
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  if (orderSheet) {
+    const lastRow = orderSheet.getLastRow();
+    if (lastRow > 1) {
+      deletedOrdersCount = lastRow - 1;
+      orderSheet.getRange(2, 1, lastRow - 1, orderSheet.getLastColumn()).clearContent();
+    }
+  }
+
+  // 2. 清除「顧客歸戶」測試資料 (保留第 1 列表頭)
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (custSheet) {
+    const lastRow = custSheet.getLastRow();
+    if (lastRow > 1) {
+      deletedCustCount = lastRow - 1;
+      custSheet.getRange(2, 1, lastRow - 1, custSheet.getLastColumn()).clearContent();
+    }
+  }
+
+  Logger.log(`✅ 清除完成！共清除 ${deletedOrdersCount} 筆訂單明細與 ${deletedCustCount} 筆顧客資料。已保留表頭與格式設定。`);
+  return {
+    success: true,
+    message: `✅ 測試資料已成功清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
+    deletedOrders: deletedOrdersCount,
+    deletedCustomers: deletedCustCount
+  };
+}
+
