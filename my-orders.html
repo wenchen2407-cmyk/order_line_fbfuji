@@ -1285,25 +1285,16 @@
         const json = await res.json();
 
         if (json.success && json.data) {
-          if (isDemoMode) {
-            if (json.data.pendingCheckoutOrders && json.data.pendingCheckoutOrders.length > 0) {
-              pendingOrders = json.data.pendingCheckoutOrders;
-            }
-            if (json.data.completedOrders && json.data.completedOrders.length > 0) {
-              completedOrders = json.data.completedOrders;
-            }
+          // 真實環境：若本地剛剛已完成結帳（有 checkoutId），而雲端取回的資料尚未包含 checkoutId 時，優先保留本地結帳狀態以防非同步延遲覆蓋
+          const onlineOrders = json.data.pendingCheckoutOrders || [];
+          const hasLocalChecked = pendingOrders.some(it => Boolean(it.checkoutId));
+          const hasOnlineChecked = onlineOrders.some(it => Boolean(it.checkoutId));
+          if (hasLocalChecked && !hasOnlineChecked && onlineOrders.length > 0) {
+            console.log('雲端正在寫入結帳資訊中，優先維持本地已結帳狀態');
           } else {
-            // 真實環境：若本地剛剛已完成結帳（有 checkoutId），而雲端取回的資料尚未包含 checkoutId 時，優先保留本地結帳狀態以防非同步延遲覆蓋
-            const onlineOrders = json.data.pendingCheckoutOrders || [];
-            const hasLocalChecked = pendingOrders.some(it => Boolean(it.checkoutId));
-            const hasOnlineChecked = onlineOrders.some(it => Boolean(it.checkoutId));
-            if (hasLocalChecked && !hasOnlineChecked && onlineOrders.length > 0) {
-              console.log('雲端正在寫入結帳資訊中，優先維持本地已結帳狀態');
-            } else {
-              pendingOrders = onlineOrders;
-            }
-            completedOrders = json.data.completedOrders || [];
+            pendingOrders = onlineOrders;
           }
+          completedOrders = json.data.completedOrders || [];
 
           customerProfile = json.data.customerProfile || customerProfile;
           if (json.data.settings) {
@@ -1555,8 +1546,18 @@
       }
 
       const subElem = document.getElementById('displayUserSub');
-      const rName = customerProfile.realName || '';
-      const rPhone = customerProfile.phone || '';
+      let rName = customerProfile.realName || '';
+      let rPhone = customerProfile.phone || '';
+
+      // 🌟 雙重備援：若顧客歸戶尚未帶入，直接從訂單明細的第一筆取出真實姓名與電話
+      if (!rName || !rPhone) {
+        const anyOrder = (pendingOrders && pendingOrders[0]) || (completedOrders && completedOrders[0]);
+        if (anyOrder) {
+          if (!rName && anyOrder.recipientName) rName = anyOrder.recipientName;
+          if (!rPhone && anyOrder.phone) rPhone = anyOrder.phone;
+        }
+      }
+
       if (rName || rPhone) {
         subElem.textContent = `${rName} ｜ ${rPhone}`;
       } else {
