@@ -894,7 +894,12 @@ function handleConfirmReceived(data) {
                      (orderId && rOrderId === orderId) || 
                      (!checkoutId && !orderId && (shipStatus.includes('已完成出貨') || shipStatus.includes('出貨') || shipStatus.includes('配送')));
     if (isTarget) {
-      orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
+      const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消') || String(rows[i][16] || '').includes('免付款');
+      if (isOut) {
+        orderSheet.getRange(i + 1, 19).setValue('已完成取貨(缺貨免付)');
+      } else {
+        orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
+      }
       updatedCount++;
     }
   }
@@ -934,6 +939,18 @@ function getOrdersForUser(userId) {
     return text;
   }
 
+  // 預先找出所有「已完成取貨」或「已結案」的結帳單號 (checkoutId)，確保該包裹之缺貨與成功品項整批同進歷史
+  const closedCheckoutIds = new Set();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][2] === userId) {
+      const sStatus = String(rows[i][18] || '').trim();
+      const cid = String(rows[i][21] || '').trim();
+      if (cid && (sStatus.includes('已完成取貨') || sStatus.includes('結案') || sStatus.includes('已取消'))) {
+        closedCheckoutIds.add(cid);
+      }
+    }
+  }
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row[2] === userId) {
@@ -961,9 +978,11 @@ function getOrdersForUser(userId) {
       };
 
       const shipStatus = String(row[18] || '').trim();
-      // 只有「已完成取貨」、「結案」或「已取消」才進入歷史訂單！
-      // 「已完成出貨」依然保留在 pendingCheckoutOrders，以便買家前台能看見物流追蹤卡與一鍵查詢按鈕！
-      const isClosed = shipStatus.includes('已完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已取消');
+      // 只有「已完成取貨」、「結案」或「已取消」或同結帳單號已結案之項目，才進入歷史訂單！
+      const isClosed = shipStatus.includes('已完成取貨') || 
+                       shipStatus.includes('結案') || 
+                       shipStatus.includes('已取消') ||
+                       (Boolean(item.checkoutId) && closedCheckoutIds.has(item.checkoutId));
 
       if (!isClosed) {
         pendingCheckoutOrders.push(item);

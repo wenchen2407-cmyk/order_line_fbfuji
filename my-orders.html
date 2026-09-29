@@ -1254,8 +1254,8 @@
             quantity: 1,
             unitPrice: 980,
             subtotal: 980,
-            shippingFee: 0,
-            totalAmount: 2260,
+            shippingFee: 38,
+            totalAmount: 1018,
             recipientName: '陳大美',
             phone: '0912345678',
             deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
@@ -1275,7 +1275,7 @@
             unitPrice: 1280,
             subtotal: 1280,
             shippingFee: 0,
-            totalAmount: 0,
+            totalAmount: 1280,
             recipientName: '陳大美',
             phone: '0912345678',
             deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
@@ -1300,7 +1300,7 @@
             phone: '0912345678',
             deliveryAddress: '[7-11 超商純取貨] 7-11松山門市 (門市店號: 123456)',
             paymentStatus: '免付款(缺貨取消)',
-            shippingStatus: '缺貨斷貨',
+            shippingStatus: '已完成取貨(缺貨免付)',
             shippedDate: '2026/09/26 11:30',
             trackingNumber: '86312345678',
             checkoutId: 'CO260925183025886'
@@ -1752,6 +1752,7 @@
             trackingNumber: order.trackingNumber,
             shippedDate: order.shippedDate,
             recipientName: order.recipientName,
+            recipientPhone: order.phone,
             items: [],
             goodsTotal: 0,
             shippingFee: 0,
@@ -1763,14 +1764,25 @@
         const grp = groupMap[groupKey];
         grp.items.push(order);
 
-        const isOut = String(order.shippingStatus || '').includes('缺貨') || String(order.shippingStatus || '').includes('斷貨') || String(order.shippingStatus || '').includes('取消');
+        const isOut = String(order.shippingStatus || '').includes('缺貨') || 
+                      String(order.shippingStatus || '').includes('斷貨') || 
+                      String(order.shippingStatus || '').includes('取消') ||
+                      String(order.paymentStatus || '').includes('免付款');
         if (!isOut) {
           grp.goodsTotal += (Number(order.subtotal) || (Number(order.unitPrice || 0) * Number(order.quantity || 1)));
         }
-        grp.shippingFee += (Number(order.shippingFee) || 0);
-        grp.finalTotal += (Number(order.totalAmount) || 0);
+
+        // 運費處理：取整批包裹記錄中最高的運費 (因合併結帳時運費指派給首件品項)
+        const fee = Number(order.shippingFee) || 0;
+        if (fee > grp.shippingFee) {
+          grp.shippingFee = fee;
+        }
+
+        if (!grp.recipientName && order.recipientName) grp.recipientName = order.recipientName;
+        if (!grp.recipientPhone && order.phone) grp.recipientPhone = order.phone;
         if (!grp.trackingNumber && order.trackingNumber) grp.trackingNumber = order.trackingNumber;
         if (!grp.deliveryAddress && order.deliveryAddress) grp.deliveryAddress = order.deliveryAddress;
+        if (!grp.orderDate && order.orderDate) grp.orderDate = order.orderDate;
       });
 
       groups.forEach(grp => {
@@ -1779,7 +1791,10 @@
         card.style.cssText = 'margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 14px; padding: 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.03);';
         
         const itemsHtml = grp.items.map(it => {
-          const isOut = String(it.shippingStatus || '').includes('缺貨') || String(it.shippingStatus || '').includes('斷貨') || String(it.shippingStatus || '').includes('取消');
+          const isOut = String(it.shippingStatus || '').includes('缺貨') || 
+                        String(it.shippingStatus || '').includes('斷貨') || 
+                        String(it.shippingStatus || '').includes('取消') ||
+                        String(it.paymentStatus || '').includes('免付款');
           if (isOut) {
             return `
               <div style="display:flex; justify-content:space-between; align-items:center; background:#fef2f2; padding:8px 10px; border-radius:8px; border:1px solid #fecdd3; font-size:12px;">
@@ -1803,7 +1818,8 @@
           `;
         }).join('');
 
-        const calcFinal = grp.finalTotal > 0 ? grp.finalTotal : (grp.goodsTotal + grp.shippingFee);
+        // 結帳總額嚴格等於商品實付 + 運費，100% 絕對與明細及結帳時對齊
+        const calcFinal = grp.goodsTotal + grp.shippingFee;
 
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #f1f5f9; padding-bottom:10px; margin-bottom:12px;">
@@ -1822,10 +1838,12 @@
             ${itemsHtml}
           </div>
 
-          <div style="font-size:12px; color:#475569; background:#f8fafc; padding:10px 12px; border-radius:8px; line-height:1.6; border:1px solid #e2e8f0; margin-bottom:12px;">
-            <div>🚚 配送方式：<b>${formatDeliveryInfo(grp.deliveryAddress || '超商取貨')}</b></div>
+          <div style="font-size:12px; color:#475569; background:#f8fafc; padding:10px 12px; border-radius:8px; line-height:1.7; border:1px solid #e2e8f0; margin-bottom:12px;">
+            ${grp.recipientName ? `<div>👤 收件姓名：<b>${grp.recipientName}</b></div>` : ''}
+            ${grp.recipientPhone ? `<div>📱 聯絡電話：<b>${grp.recipientPhone}</b></div>` : ''}
+            <div>🚚 配送門市/地址：<b>${formatDeliveryInfo(grp.deliveryAddress || '超商取貨')}</b></div>
             ${grp.trackingNumber ? `
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dashed #e2e8f0;">
                 <div>包裹查詢碼：<b style="font-family:'Outfit',sans-serif; color:#2563eb;">${grp.trackingNumber}</b></div>
                 <a href="${getLogisticsUrl(grp.deliveryAddress)}" target="_blank" style="color:#2563eb; font-weight:700; font-size:11px; text-decoration:underline;">🔍 查詢物流</a>
               </div>
@@ -1867,13 +1885,23 @@
         console.warn('線上取件確認請求略過，在本地直接模擬移入歷史單:', e);
       }
 
-      // 本地模擬更新：將本次當期所有商品移入 completedOrders
+      // 本地模擬更新：將本次當期所有商品移入 completedOrders (嚴格保留缺貨屬性與 0 元免付款標記)
       if (pendingOrders.length > 0) {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const nowStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
         pendingOrders.forEach(item => {
-          item.shippingStatus = '已完成取貨';
+          const s = String(item.shippingStatus || '');
+          const p = String(item.paymentStatus || '');
+          const isOut = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消') || p.includes('免付款');
+          if (isOut) {
+            item.shippingStatus = '已完成取貨(缺貨免付)';
+            item.paymentStatus = '免付款(缺貨取消)';
+            item.shippingFee = 0;
+            item.totalAmount = 0;
+          } else {
+            item.shippingStatus = '已完成取貨';
+          }
           item.shippedDate = nowStr;
           completedOrders.unshift(item);
         });
