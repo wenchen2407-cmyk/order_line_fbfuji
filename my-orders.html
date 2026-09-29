@@ -516,7 +516,7 @@
         </div>
         <div style="margin-top: 6px; font-size: 13px; color: #14532d; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
           <div>物流方式：<b id="codPendingShipMethodText">-</b></div>
-          <div>取貨付款總額：<b style="font-family:'Outfit',sans-serif; font-size: 15.5px; color: #15803d;" id="codPendingAmountText">NT$ 0</b></div>
+          <div>取貨付款金額：<b style="font-family:'Outfit',sans-serif; font-size: 15.5px; color: #15803d;" id="codPendingAmountText">NT$ 0</b></div>
         </div>
         <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
           已收到結帳完成通知！小幫手將盡快為您安排出貨，寄出後將在此顯示包裹查詢編號，屆時請留意取件通知簡訊至指定門市取貨付款！
@@ -2242,9 +2242,9 @@
       btn.textContent = '✓ 確認並送出';
       closeCheckoutModal();
 
-      const payMsg = selectedIsPrepay ? '【待付款】' : '【貨到付款待出貨】';
+      const payMsg = selectedIsPrepay ? '【待付款】' : '【待出貨】';
       const calcTotal = successfulGoodsTotal + selectedShipFee;
-      alert(`🎉 結帳送出成功！\n\n結帳單號：${resultCheckoutId}\n訂單狀態：${payMsg}\n結帳金額：NT$ ${calcTotal.toLocaleString()}\n\n已為您將當期所有登記商品整批結算！${selectedIsPrepay ? '\n請點擊【💰 匯款/付款回報】提供付款資訊，小幫手將盡快核對安排出貨！' : '\n出貨後請留意取件通知簡訊至指定門市取貨付款！'}`);
+      alert(`🎉 結帳送出成功！\n\n結帳單號：${resultCheckoutId}\n訂單狀態：${payMsg}\n結帳金額：NT$ ${calcTotal.toLocaleString()}\n\n${selectedIsPrepay ? '請點擊【💰 匯款/付款回報】提供付款資訊，小幫手將盡快核對安排出貨！' : '出貨後請留意取件通知簡訊至指定門市取貨付款！'}`);
 
       // 立即重繪介面呈現結帳後明細與本次結帳包裹資訊卡
       updateUserProfileUI();
