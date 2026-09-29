@@ -526,7 +526,7 @@
       <a href="catalog.html" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         🛍️ 更多商品
       </a>
-      <a href="my-orders.html" id="linkToMyOrders" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <a href="my-orders.html" id="linkToMyOrders" onclick="handleGoToOrders(event)" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         📦 訂購清單
       </a>
     </div>
@@ -675,8 +675,61 @@
 
     // 初始化頁面 (秒開並行架構)
     window.onload = () => {
-      // 0. 恢復買家快取 (0 毫秒展示)
-      const cachedProfile = sessionStorage.getItem('liff_user_profile');
+      // 0. 若網址帶有 action=orders 直接導向個人訂單清單 (例如從專屬通知卡進入)
+      if (urlParams.get('action') === 'orders') {
+        const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
+        if (cached) {
+          try {
+            const p = JSON.parse(cached);
+            if (p.userId) currentUser.userId = p.userId;
+            if (p.displayName) currentUser.displayName = p.displayName;
+            if (p.pictureUrl) currentUser.pictureUrl = p.pictureUrl;
+          } catch (e) {}
+        }
+
+        if (currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
+          goToMyOrders();
+          return;
+        }
+
+        // 若無快取，呈現優雅載入中並執行 LIFF 初始化取得真實身分再跳轉
+        document.body.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,BlinkMacSystemFont,sans-serif; color:#475569; text-align:center; padding:20px; background:#f8fafc;">
+            <div style="font-size:36px; margin-bottom:12px;">📦</div>
+            <div style="font-weight:700; font-size:16px; margin-bottom:6px; color:#0f172a;">正在載入您的專屬訂購清單...</div>
+            <div style="font-size:13px; color:#94a3b8;">LINE 連線身分同步中，請稍候</div>
+          </div>
+        `;
+        (async () => {
+          try {
+            if (CONFIG.LIFF_ID && !CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
+              await liff.init({ liffId: CONFIG.LIFF_ID });
+              if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                currentUser.userId = profile.userId;
+                currentUser.displayName = profile.displayName;
+                currentUser.pictureUrl = profile.pictureUrl;
+                const profStr = JSON.stringify({
+                  userId: profile.userId,
+                  displayName: profile.displayName,
+                  pictureUrl: profile.pictureUrl
+                });
+                try {
+                  sessionStorage.setItem('liff_user_profile', profStr);
+                  localStorage.setItem('liff_user_profile', profStr);
+                } catch (e) {}
+              }
+            }
+          } catch (e) {
+            console.warn('LIFF 授權取得失敗:', e);
+          }
+          goToMyOrders();
+        })();
+        return;
+      }
+
+      // 0. 恢復買家快取 (localStorage 優先，0 毫秒展示)
+      const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
       if (cachedProfile) {
         try {
           const p = JSON.parse(cachedProfile);
@@ -747,13 +800,15 @@
           document.getElementById('userAvatar').src = currentUser.pictureUrl;
           document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
 
-          // 寫入快取
+          // 寫入快取 (localStorage 與 sessionStorage 雙寫入，確保跨頁不丟失)
           try {
-            sessionStorage.setItem('liff_user_profile', JSON.stringify({
+            const profStr = JSON.stringify({
               userId: profile.userId,
               displayName: profile.displayName,
               pictureUrl: profile.pictureUrl
-            }));
+            });
+            sessionStorage.setItem('liff_user_profile', profStr);
+            localStorage.setItem('liff_user_profile', profStr);
           } catch (e) {}
         } else {
           // 一般外部瀏覽器 (如 Chrome / Safari / 本地 localhost 測試)
@@ -761,12 +816,8 @@
           document.getElementById('userName').textContent = `${currentUser.displayName} (訪客預覽)`;
         }
 
-        // 同步導航按鈕帶入 uid
-        const uidParam = `?uid=${encodeURIComponent(currentUser.userId)}`;
-        const catBtn = document.getElementById('linkBackToCatalog');
-        if (catBtn) catBtn.href = `catalog.html${uidParam}`;
-        const ordBtn = document.getElementById('linkToMyOrders');
-        if (ordBtn) ordBtn.href = `my-orders.html${uidParam}`;
+        // 同步導航按鈕帶入 uid, name, avatar
+        updateNavigationLinks();
       } catch (err) {
         console.warn('LIFF Init 略過或非 LINE 內部環境:', err);
         document.getElementById('userName').textContent = `${currentUser.displayName} (本機模式)`;
@@ -1288,14 +1339,63 @@
       document.getElementById('successModal').classList.add('active');
     }
 
+    function updateNavigationLinks() {
+      const params = new URLSearchParams();
+      if (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
+        params.set('uid', currentUser.userId);
+      }
+      if (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') {
+        params.set('name', currentUser.displayName);
+      }
+      if (currentUser && currentUser.pictureUrl && !currentUser.pictureUrl.includes('placeholder')) {
+        params.set('avatar', currentUser.pictureUrl);
+      }
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+
+      const catBtn = document.getElementById('linkBackToCatalog');
+      if (catBtn) catBtn.href = `catalog.html${queryStr}`;
+      const ordBtn = document.getElementById('linkToMyOrders');
+      if (ordBtn) ordBtn.href = `my-orders.html${queryStr}`;
+    }
+
+    function handleGoToOrders(e) {
+      if (e) e.preventDefault();
+      goToMyOrders();
+    }
+
     function continueShopping() {
-      const uidParam = currentUser && currentUser.userId ? `?uid=${encodeURIComponent(currentUser.userId)}` : '';
-      window.location.href = `catalog.html${uidParam}`;
+      const params = new URLSearchParams();
+      if (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
+        params.set('uid', currentUser.userId);
+      }
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      window.location.href = `catalog.html${queryStr}`;
     }
 
     function goToMyOrders() {
-      const uidParam = currentUser && currentUser.userId ? `?uid=${encodeURIComponent(currentUser.userId)}` : '';
-      window.location.href = `my-orders.html${uidParam}`;
+      const params = new URLSearchParams();
+      let uid = (currentUser && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
+      let name = (currentUser && currentUser.displayName !== '訪客預覽') ? currentUser.displayName : (urlParams.get('name') || '');
+      let avatar = (currentUser && !currentUser.pictureUrl.includes('placeholder')) ? currentUser.pictureUrl : (urlParams.get('avatar') || '');
+
+      if (!uid || !name) {
+        try {
+          const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
+          if (cached) {
+            const p = JSON.parse(cached);
+            if (!uid && p.userId) uid = p.userId;
+            if (!name && p.displayName) name = p.displayName;
+            if (!avatar && p.pictureUrl) avatar = p.pictureUrl;
+          }
+        } catch (err) {}
+      }
+
+      if (uid) params.set('uid', uid);
+      if (name) params.set('name', name);
+      if (avatar) params.set('avatar', avatar);
+
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      window.location.href = `my-orders.html${queryStr}`;
     }
   </script>
 </body>

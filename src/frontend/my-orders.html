@@ -965,7 +965,9 @@
     };
 
     const urlParams = new URLSearchParams(window.location.search);
-    let currentUserId = urlParams.get('uid') || 'TEST_USER_999';
+    let currentUserId = urlParams.get('uid') || '';
+    let currentUserName = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : '';
+    let currentUserAvatar = urlParams.get('avatar') ? decodeURIComponent(urlParams.get('avatar')) : '';
     let pendingOrders = [];
     let completedOrders = [];
     let customerProfile = {};
@@ -1105,6 +1107,16 @@
       if (urlParams.get('uid')) {
         currentUserId = urlParams.get('uid');
       }
+      if (urlParams.get('name')) {
+        currentUserName = decodeURIComponent(urlParams.get('name'));
+        const nameElem = document.getElementById('displayUserName');
+        if (nameElem && currentUserName) nameElem.textContent = currentUserName;
+      }
+      if (urlParams.get('avatar')) {
+        currentUserAvatar = decodeURIComponent(urlParams.get('avatar'));
+        const avatarElem = document.getElementById('userAvatar');
+        if (avatarElem && currentUserAvatar) avatarElem.src = currentUserAvatar;
+      }
 
       // 0. 瞬間快取還原 (非清除模式下，0 毫秒極速呈現上次訂單與身分)
       if (urlParams.get('clear') !== '1') {
@@ -1119,26 +1131,36 @@
     // 0 毫秒訂單快取還原
     function restoreInstantOrdersCache() {
       try {
-        const cachedProfile = sessionStorage.getItem('liff_user_profile');
+        const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
         if (cachedProfile) {
           const p = JSON.parse(cachedProfile);
           if (p.userId && !currentUserId) currentUserId = p.userId;
-          if (p.displayName) document.getElementById('displayUserName').textContent = p.displayName;
-          if (p.pictureUrl) document.getElementById('userAvatar').src = p.pictureUrl;
+          if (p.displayName && !currentUserName) {
+            currentUserName = p.displayName;
+            const nameElem = document.getElementById('displayUserName');
+            if (nameElem) nameElem.textContent = p.displayName;
+          }
+          if (p.pictureUrl && !currentUserAvatar) {
+            currentUserAvatar = p.pictureUrl;
+            const avatarElem = document.getElementById('userAvatar');
+            if (avatarElem) avatarElem.src = p.pictureUrl;
+          }
         }
 
-        const cachedOrders = sessionStorage.getItem(`cached_orders_${currentUserId}`);
-        if (cachedOrders) {
-          const data = JSON.parse(cachedOrders);
-          if (data) {
-            pendingOrders = data.pendingOrders || [];
-            completedOrders = data.completedOrders || [];
-            customerProfile = data.customerProfile || {};
-            if (data.systemSettings) {
-              systemSettings = Object.assign(systemSettings, data.systemSettings);
+        if (currentUserId) {
+          const cachedOrders = sessionStorage.getItem(`cached_orders_${currentUserId}`) || localStorage.getItem(`cached_orders_${currentUserId}`);
+          if (cachedOrders) {
+            const data = JSON.parse(cachedOrders);
+            if (data) {
+              pendingOrders = data.pendingOrders || [];
+              completedOrders = data.completedOrders || [];
+              customerProfile = data.customerProfile || {};
+              if (data.systemSettings) {
+                systemSettings = Object.assign(systemSettings, data.systemSettings);
+              }
+              updateUserProfileUI();
+              renderOrdersView();
             }
-            updateUserProfileUI();
-            renderOrdersView();
           }
         }
       } catch (e) {
@@ -1154,15 +1176,24 @@
           const profile = await liff.getProfile();
           const prevId = currentUserId;
           currentUserId = profile.userId;
-          document.getElementById('userAvatar').src = profile.pictureUrl || 'https://via.placeholder.com/44';
-          document.getElementById('displayUserName').textContent = profile.displayName;
+          currentUserName = profile.displayName || currentUserName;
+          currentUserAvatar = profile.pictureUrl || currentUserAvatar;
 
-          // 存入快取
-          sessionStorage.setItem('liff_user_profile', JSON.stringify({
-            userId: profile.userId,
-            displayName: profile.displayName,
-            pictureUrl: profile.pictureUrl
-          }));
+          const avatarElem = document.getElementById('userAvatar');
+          if (avatarElem && currentUserAvatar) avatarElem.src = currentUserAvatar;
+          const nameElem = document.getElementById('displayUserName');
+          if (nameElem && currentUserName) nameElem.textContent = currentUserName;
+
+          // 同步存入 sessionStorage 與 localStorage 雙快取
+          try {
+            const profStr = JSON.stringify({
+              userId: profile.userId,
+              displayName: profile.displayName,
+              pictureUrl: profile.pictureUrl
+            });
+            sessionStorage.setItem('liff_user_profile', profStr);
+            localStorage.setItem('liff_user_profile', profStr);
+          } catch (e) {}
 
           // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
           if (prevId !== currentUserId) {
@@ -1170,7 +1201,12 @@
           }
         }
       } catch (e) {
-        console.error('LIFF Error:', e);
+        console.warn('LIFF 初始化略過或子頁面非 Endpoint:', e);
+        // 🌟 核心自癒防護：若在線上環境打開且完全無法取得 UID (非 Endpoint 導致失敗)，自動透過官方 LIFF 中繼取回身分
+        if (!currentUserId && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && urlParams.get('demo') !== '1') {
+          window.location.replace(`https://liff.line.me/${CONFIG.LIFF_ID}?action=orders`);
+          return;
+        }
       }
     }
 
@@ -1205,6 +1241,25 @@
         completedOrders = [];
         updateUserProfileUI();
         renderOrdersView();
+        return;
+      }
+
+      // 搶救 currentUserId：從 localStorage 或 sessionStorage 快取中讀取
+      if (!currentUserId) {
+        try {
+          const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
+          if (cached) {
+            const p = JSON.parse(cached);
+            if (p.userId) currentUserId = p.userId;
+            if (p.displayName && !currentUserName) currentUserName = p.displayName;
+            if (p.pictureUrl && !currentUserAvatar) currentUserAvatar = p.pictureUrl;
+          }
+        } catch (e) {}
+      }
+
+      // 若線上環境依然尚未獲得 UID，且非本機/demo，先暫緩發送無效請求
+      if (!currentUserId && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        console.log('尚未取得 LINE User ID，等待身分驗證完成...');
         return;
       }
 
@@ -1506,6 +1561,33 @@
         subElem.textContent = `${rName} ｜ ${rPhone}`;
       } else {
         subElem.textContent = 'LINE 連線已就緒';
+      }
+
+      // 🌟 核心修復：動態更新買家暱稱 displayUserName 與頭像 userAvatar
+      const nameElem = document.getElementById('displayUserName');
+      if (nameElem) {
+        let bestName = currentUserName;
+        if (!bestName && customerProfile && customerProfile.userName) {
+          bestName = customerProfile.userName;
+        }
+        if (!bestName) {
+          const sampleOrder = (pendingOrders && pendingOrders[0]) || (completedOrders && completedOrders[0]);
+          if (sampleOrder && sampleOrder.userName) {
+            bestName = sampleOrder.userName;
+          }
+        }
+        if (bestName) {
+          nameElem.textContent = bestName;
+        } else if (nameElem.textContent === 'LINE 買家') {
+          nameElem.textContent = '連線貴賓';
+        }
+      }
+
+      if (currentUserAvatar) {
+        const avatarElem = document.getElementById('userAvatar');
+        if (avatarElem && !avatarElem.src.includes('http') || avatarElem.src.includes('placeholder')) {
+          avatarElem.src = currentUserAvatar;
+        }
       }
 
       const uidParam = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';

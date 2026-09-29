@@ -449,8 +449,8 @@
     // 0 毫秒快取恢復機制 (SWR 模式)
     function restoreInstantCache() {
       try {
-        // A. 恢復買家資訊
-        const cachedProfile = sessionStorage.getItem('liff_user_profile');
+        // A. 恢復買家資訊 (localStorage 優先)
+        const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
         if (cachedProfile) {
           const p = JSON.parse(cachedProfile);
           if (p.userId) currentUserId = p.userId;
@@ -482,11 +482,22 @@
     }
 
     function updateOrderLinks() {
-      const uidQuery = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';
+      const params = new URLSearchParams();
+      if (currentUserId && currentUserId !== 'TEST_USER_999') params.set('uid', currentUserId);
+      const nameElem = document.getElementById('userNameText');
+      if (nameElem && nameElem.textContent && nameElem.textContent !== '連線貴賓') {
+        params.set('name', nameElem.textContent);
+      }
+      const avatarElem = document.getElementById('userAvatar');
+      if (avatarElem && avatarElem.src && !avatarElem.src.includes('placeholder')) {
+        params.set('avatar', avatarElem.src);
+      }
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+
       const topBtn = document.getElementById('topOrderBtn');
       const bottomBtn = document.getElementById('bottomOrderBtn');
-      if (topBtn) topBtn.href = `my-orders.html${uidQuery}`;
-      if (bottomBtn) bottomBtn.href = `my-orders.html${uidQuery}`;
+      if (topBtn) topBtn.href = `my-orders.html${queryStr}`;
+      if (bottomBtn) bottomBtn.href = `my-orders.html${queryStr}`;
     }
 
     // 初始化 LINE LIFF (背景非同步執行，不阻礙商品載入)
@@ -507,12 +518,16 @@
             if (profile.pictureUrl) {
               document.getElementById('userAvatar').src = profile.pictureUrl;
             }
-            // 存入快取供下次瞬間使用
-            sessionStorage.setItem('liff_user_profile', JSON.stringify({
-              userId: profile.userId,
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl
-            }));
+            // 存入雙快取供下次瞬間使用
+            try {
+              const profStr = JSON.stringify({
+                userId: profile.userId,
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl
+              });
+              sessionStorage.setItem('liff_user_profile', profStr);
+              localStorage.setItem('liff_user_profile', profStr);
+            } catch (e) {}
             updateOrderLinks();
           }
         } catch (err) {
