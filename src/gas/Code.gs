@@ -21,12 +21,12 @@ const DRIVE_FOLDER_ID = '1dqoqS4VJK7Fn56-L-mM5Afwyb6dvTQMB';
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. 商品清單工作表
+  // 1. 商品清單工作表 (升級支援各商品「指定截單時間」欄位)
   let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
-    '成本價(NT$)', '採購原幣與重量備註', '所有圖片清單(JSON)'
+    '成本價(NT$)', '採購原幣與重量備註', '所有圖片清單(JSON)', '指定截單時間'
   ];
 
   if (!prodSheet) {
@@ -40,13 +40,16 @@ function setupSpreadsheet() {
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
-      850, 'JPY 3500 (含稅), 380g', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80'])
+      850, 'JPY 3500 (含稅), 380g', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
+      '2026/10/10 23:59'
     ]);
   } else {
-    // 既有表格：升級表頭為最新規格
+    // 既有表格：升級表頭為最新 15 欄規格
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
   }
+  // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
+  prodSheet.getRange("O:O").setNumberFormat('@');
 
   // 2. 訂單明細工作表 (升級採購狀態表頭與專屬下拉選單、包裹追蹤碼欄位)
   let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
@@ -344,13 +347,27 @@ function getProductsList() {
         description: row[8],
         status: status,
         costPrice: Number(row[11]) || 0,
-        costNote: row[12] || ''
+        costNote: row[12] || '',
+        deadline: row[14] ? formatDeadlineStr(row[14]) : '' // 欄位 15: 各商品指定截單時間 (選填)
       });
     }
   }
 
   const settings = getSystemSettings().data || {};
   return { success: true, data: products, settings: settings };
+}
+
+/**
+ * 格式化截單時間字串 (相容 Date 物件與字串)
+ */
+function formatDeadlineStr(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${val.getFullYear()}/${pad(val.getMonth()+1)}/${pad(val.getDate())} ${pad(val.getHours())}:${pad(val.getMinutes())}`;
+  }
+  return String(val).trim();
 }
 
 /**
@@ -411,19 +428,7 @@ function handleCreateOrder(orderData) {
     const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
     const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
 
-    // 0. 檢查收單截止時間防呆
-    const settings = getSystemSettings().data || {};
-    if (settings.ORDER_DEADLINE) {
-      const deadline = new Date(settings.ORDER_DEADLINE);
-      if (!isNaN(deadline.getTime()) && new Date() > deadline) {
-        return { 
-          success: false, 
-          message: `⚠️ 很抱歉，本次連線已於 ${settings.ORDER_DEADLINE} 截止收單囉！` 
-        };
-      }
-    }
-
-    // 1. 檢查商品庫存
+    // 1. 檢查商品是否存在與取得資料
     const prodData = prodSheet.getDataRange().getValues();
     let productRowIndex = -1;
     let currentStock = 0;
@@ -440,6 +445,23 @@ function handleCreateOrder(orderData) {
 
     if (productRowIndex === -1) {
       return { success: false, message: '找不到此商品！' };
+    }
+
+    // 2. 檢查收單截止時間防呆 (優先以各商品指定截單時間為準，未填則採用系統設定 ORDER_DEADLINE)
+    const settings = getSystemSettings().data || {};
+    let prodDeadlineStr = '';
+    if (targetProduct && targetProduct.length > 14 && targetProduct[14]) {
+      prodDeadlineStr = formatDeadlineStr(targetProduct[14]);
+    }
+    const effectiveDeadlineStr = prodDeadlineStr || settings.ORDER_DEADLINE;
+    if (effectiveDeadlineStr) {
+      const deadline = new Date(effectiveDeadlineStr.replace(/-/g, '/'));
+      if (!isNaN(deadline.getTime()) && new Date() > deadline) {
+        return { 
+          success: false, 
+          message: `⚠️ 很抱歉，此商品已於 ${effectiveDeadlineStr} 截止收單囉！` 
+        };
+      }
     }
 
     const buyQty = Number(orderData.quantity) || 1;
@@ -1324,7 +1346,8 @@ function handleAddProduct(data) {
     now,
     Number(data.costPrice) || 0, // 欄位 12: 成本價 (NT$)
     data.costNote || '',         // 欄位 13: 採購原幣與重量備註
-    JSON.stringify(imagesArray)  // 欄位 14: 所有圖片清單
+    JSON.stringify(imagesArray), // 欄位 14: 所有圖片清單
+    data.deadline ? String(data.deadline).trim() : '' // 欄位 15: 指定截單時間
   ]);
 
   return { 

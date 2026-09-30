@@ -738,10 +738,21 @@
           ? `<span class="card-original-price">NT$ ${origPriceNum.toLocaleString()}</span>` 
           : '';
 
+        const prodDeadline = prod.deadline ? parseDeadline(prod.deadline) : null;
+        const isThisProdExpired = prodDeadline ? (new Date() >= prodDeadline) : isCatalogExpired;
+
+        let deadlineBadgeHtml = '';
+        if (prod.deadline) {
+          const dlParts = prod.deadline.split(' ')[0].split('/');
+          const mmdd = (dlParts.length >= 3) ? `${dlParts[1]}/${dlParts[2]}` : prod.deadline;
+          deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${mmdd} 截止</span>`;
+        }
+
         card.innerHTML = `
           <div class="prod-img-box">
             <img src="${imgUrl}" alt="${prod.name || ''}" loading="lazy" onerror="this.src='https://via.placeholder.com/300'">
             <span class="card-badge">${prod.category || '2026.10月連線'}</span>
+            ${deadlineBadgeHtml}
           </div>
           <div class="card-body">
             <div class="card-title">${prod.name || '未命名商品'}</div>
@@ -749,7 +760,7 @@
               <span class="card-current-price">NT$ ${priceNum.toLocaleString()}</span>
               ${origPriceHtml}
             </div>
-            <div class="${isCatalogExpired ? 'btn-buy-now disabled' : 'btn-buy-now'}">${isCatalogExpired ? '🚫 已截止' : '🛒 立即下單'}</div>
+            <div class="${isThisProdExpired ? 'btn-buy-now disabled' : 'btn-buy-now'}">${isThisProdExpired ? '🚫 已截止' : '🛒 立即下單'}</div>
           </div>
         `;
         grid.appendChild(card);

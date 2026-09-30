@@ -178,6 +178,28 @@
       padding-right: 4px;
     }
 
+    .btn-time-preset {
+      background: #ffffff;
+      color: #78350f;
+      border: 1px solid #fcd34d;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-time-preset:hover {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+    .btn-time-preset:active {
+      transform: scale(0.96);
+    }
+
     .product-check-item {
       display: flex;
       align-items: center;
@@ -512,6 +534,26 @@
             <label class="form-label">規格款式 (用逗號隔開)</label>
             <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色">
           </div>
+        </div>
+
+        <!-- ⏰ 本次連線三大時段快捷指定截單時間 -->
+        <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+              <span>⏰ 指定收單截止時間 (選填)</span>
+            </label>
+            <span style="font-size: 11.5px; color: #b45309;">留空則自動採用全站統一收單時間</span>
+          </div>
+          
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島 (23:59止)</button>
+            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾 (23:59止)</button>
+            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本 (23:59止)</button>
+            <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 清空 (依全站)</button>
+          </div>
+
+          <input type="text" id="newProdDeadline" class="input-text" placeholder="格式範例：2026/10/02 23:59 或點擊上方快捷鍵帶入" style="background: #fff;">
+          <div id="deadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
         </div>
 
         <!-- 📷 商品圖片上傳區塊 (支援附件上傳 + 網址輸入，皆可多張) -->
@@ -947,12 +989,17 @@
         const stockDisplay = (stockNum >= 9999) ? '' : ` ｜ 剩餘: ${stockNum}`;
         const priceNum = Number(prod.price) || 0;
 
+        let deadlineBadge = '';
+        if (prod.deadline) {
+          deadlineBadge = `<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; margin-left: 4px;">⏰ ${prod.deadline} 截單</span>`;
+        }
+
         item.innerHTML = `
           <input type="checkbox" style="transform: scale(1.2); pointer-events: none;" ${isChecked ? 'checked' : ''}>
           <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
           <div class="prod-info">
             <div class="prod-name">${prod.name || '未命名商品'}</div>
-            <div class="prod-sub">${prod.id}${stockDisplay} ｜ 規格: ${specsDisplay}</div>
+            <div class="prod-sub">${prod.id}${stockDisplay} ｜ 規格: ${specsDisplay}${deadlineBadge}</div>
           </div>
           <div class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</div>
         `;
@@ -1470,7 +1517,8 @@
             imageUrls: finalImageUrls,
             costPrice: costPrice,
             costNote: costNote,
-            description: desc
+            description: desc,
+            deadline: document.getElementById('newProdDeadline') ? document.getElementById('newProdDeadline').value.trim() : ''
           }
         };
 
@@ -1491,6 +1539,8 @@
           document.getElementById('newProdSpecs').value = '';
           document.getElementById('newProdDesc').value = '';
           document.getElementById('newProdCategory').value = '2026.10月連線';
+          if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
+          if (document.getElementById('deadlineHintText')) document.getElementById('deadlineHintText').textContent = '';
           localSelectedFiles = [];
           renderAllImageThumbs();
           resetCostCalculator();
@@ -1516,6 +1566,16 @@
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
+      }
+    }
+
+    // 快捷設定連線各時段截單時間
+    function setPresetDeadline(val, label) {
+      const input = document.getElementById('newProdDeadline');
+      const hint = document.getElementById('deadlineHintText');
+      if (input) input.value = val;
+      if (hint) {
+        hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已清空（將自動依照全站系統統一收單時間）';
       }
     }
   </script>

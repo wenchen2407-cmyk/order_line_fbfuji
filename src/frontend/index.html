@@ -804,8 +804,9 @@
             const found = parsed.products.find(p => p.id === targetProductId);
             if (found) {
               currentProduct = found;
-              if (parsed.settings && parsed.settings.ORDER_DEADLINE) {
-                initDeadlineCountdown(parsed.settings.ORDER_DEADLINE);
+              const effDeadline = found.deadline || (parsed.settings && parsed.settings.ORDER_DEADLINE);
+              if (effDeadline) {
+                initDeadlineCountdown(effDeadline);
               }
               renderProductUI();
             }
@@ -911,10 +912,12 @@
       banner.style.display = 'flex';
       const now = new Date();
 
+      const isSpecificDeadline = Boolean(currentProduct && currentProduct.deadline);
+
       if (now >= orderDeadlineDate) {
         isDeadlineExpired = true;
         banner.classList.add('expired');
-        textElem.textContent = '⛔ 本次連線已收單';
+        textElem.textContent = isSpecificDeadline ? '⛔ 此商品已截止收單' : '⛔ 本次連線已收單';
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.textContent = '🚫 已截止登記';
@@ -933,7 +936,7 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = `⏳ 本次連線收單倒數：${timeStr}`;
+        textElem.textContent = isSpecificDeadline ? `⏳ 本品項收單倒數：${timeStr}` : `⏳ 本次連線收單倒數：${timeStr}`;
 
         if (submitBtn && submitBtn.textContent.includes('截止')) {
           submitBtn.disabled = false;
@@ -964,23 +967,23 @@
           };
           initDeadlineCountdown(null);
         } else {
-          // 同步嘗試取得設定 (包含收單截止日)
+          // 同步嘗試取得全站設定 (備援收單截止日)
+          let globalDeadline = null;
           try {
             const settRes = await fetch(`${CONFIG.GAS_API_URL}?action=getSettings`);
             const settJson = await settRes.json();
             if (settJson.success && settJson.data) {
-              initDeadlineCountdown(settJson.data.ORDER_DEADLINE);
-            } else {
-              initDeadlineCountdown(null);
+              globalDeadline = settJson.data.ORDER_DEADLINE;
             }
-          } catch (e) {
-            initDeadlineCountdown(null);
-          }
+          } catch (e) {}
 
           const res = await fetch(apiUrl);
           const json = await res.json();
           if (json.success) {
             currentProduct = json.data;
+            // 🌟 核心規範：優先以商品指定之截單時間為準！
+            const targetDeadline = currentProduct.deadline || globalDeadline;
+            initDeadlineCountdown(targetDeadline);
           } else {
             alert(json.message || '商品不存在');
             return;
@@ -1228,6 +1231,10 @@
 
     // 點擊「火速登記」：老客直接秒單，新客（或剛才取消者）跳彈窗登記
     function handleClickSubmit() {
+      if (isDeadlineExpired) {
+        alert('⚠️ 很抱歉，此商品已截止收單囉！');
+        return;
+      }
       const profile = getSavedCustomerProfile();
       if (profile && profile.realName && profile.phone) {
         // 已有完整資料之老客人：直接秒單！
