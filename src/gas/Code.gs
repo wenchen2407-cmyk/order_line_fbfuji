@@ -73,19 +73,33 @@ function setupSpreadsheet() {
   orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
   orderSheet.getRange("V:V").setNumberFormat('@'); // 結帳編號 (Checkout_ID) 純文字格式
 
-  // 為 S 欄建立「採購狀態快速下拉選單」
+  // 為 S 欄 (第19欄) 建立「採購/出貨狀態」快速下拉選單 (與系統全流程 100% 精準對齊)
   try {
+    const validStatuses = [
+      '連線登記', 
+      '採購成功', 
+      '缺貨斷貨', 
+      '通知結帳', 
+      '已完成結帳', 
+      '已完成出貨', 
+      '已完成取貨'
+    ];
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['連線登記', '採購成功', '缺貨斷貨', '通知結帳', '已完成出貨', '已完成取貨'], true)
+      .requireValueInList(validStatuses, true)
       .setAllowInvalid(true)
       .build();
-    orderSheet.getRange("S2:S1000").setDataValidation(statusRule);
+    orderSheet.getRange("S2:S2000").setDataValidation(statusRule);
 
-    // 既有訂單中，若有舊的「連線中待出貨」或「連線登記中」，自動替換為「連線登記」
+    // 既有訂單中，若有舊版不一致的名稱，自動批次替換對齊
     const orderData = orderSheet.getDataRange().getValues();
     for (let r = 1; r < orderData.length; r++) {
-      if (orderData[r][18] === '連線中待出貨' || orderData[r][18] === '連線登記中') {
+      const cur = String(orderData[r][18] || '').trim();
+      if (cur === '連線中待出貨' || cur === '連線登記中') {
         orderSheet.getRange(r + 1, 19).setValue('連線登記');
+      } else if (cur === '已完成結帳待出貨' || cur === '對帳中，待出貨' || cur === '已結帳') {
+        orderSheet.getRange(r + 1, 19).setValue('已完成結帳');
+      } else if (cur.startsWith('已完成取貨')) {
+        orderSheet.getRange(r + 1, 19).setValue('已完成取貨');
       }
     }
   } catch (e) {
@@ -675,7 +689,7 @@ function handleCheckoutOrders(checkoutData) {
 
   const finalTotalAmount = goodsTotal + shippingFee;
   const payStatus = isPrepay ? '待付款' : '貨到付款待出貨';
-  const orderStatus = '已完成結帳待出貨';
+  const orderStatus = '已完成結帳';
   const deliveryInfo = `[${methodName}] ${checkoutData.recipientAddress || ''}`;
 
   // 1. 更新所有採購成功列：第一筆記單筆運費，其餘記 0，寫入同一結帳編號 (第22欄)
@@ -867,7 +881,7 @@ function handleReportPayment(data) {
       if (lastFive) {
         orderSheet.getRange(rowIndex, 18).setValue(lastFive);       // 匯款後五碼
       }
-      orderSheet.getRange(rowIndex, 19).setValue('對帳中，待出貨'); // 出貨狀態同步標記
+      orderSheet.getRange(rowIndex, 19).setValue('已完成結帳');     // 採購/出貨狀態維持已完成結帳 (對齊下拉選單)
 
       // 處理備註記錄：匯款方式、轉帳時間與備註
       const noteText = `[付款回報: ${payMethod}] 時間: ${transferTime}` + (data.note ? ` 備註: ${data.note}` : '');
@@ -916,12 +930,7 @@ function handleConfirmReceived(data) {
                      (orderId && rOrderId === orderId) || 
                      (!checkoutId && !orderId && (shipStatus.includes('已完成出貨') || shipStatus.includes('出貨') || shipStatus.includes('配送')));
     if (isTarget) {
-      const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消') || String(rows[i][16] || '').includes('免付款');
-      if (isOut) {
-        orderSheet.getRange(i + 1, 19).setValue('已完成取貨(缺貨免付)');
-      } else {
-        orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
-      }
+      orderSheet.getRange(i + 1, 19).setValue('已完成取貨');
       updatedCount++;
     }
   }
