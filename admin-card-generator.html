@@ -1028,8 +1028,16 @@
         elem.querySelector('input[type="checkbox"]').checked = isChecked;
       }
 
-      document.getElementById('shareBtnText').textContent = `🚀 一鍵打包推播至 LINE 群組 (已選 ${selectedProductIds.size} 件)`;
+      updateSelectedCount();
       updateCarouselPreview();
+    }
+
+    // 4.1 更新按鈕上的已選數量
+    function updateSelectedCount() {
+      const shareBtn = document.getElementById('shareBtnText');
+      if (shareBtn) {
+        shareBtn.textContent = `🚀 一鍵打包推播至 LINE 群組 (已選 ${selectedProductIds.size} 件)`;
+      }
     }
 
     // 安全取得圖片網址 (自動解析 Google Drive 連結與備用圖)
@@ -1544,21 +1552,34 @@
           renderAllImageThumbs();
           resetCostCalculator();
           
-          // ⚡ 樂觀秒加（Optimistic UI）：立即推入本地商品庫並自動勾選，免等 5 秒網路往返！
-          if (result.product) {
-            allProducts = allProducts.filter(p => p.id !== result.product.id);
-            allProducts.unshift(result.product);
-            selectedProductIds.add(result.product.id);
-          } else if (result.productId) {
-            selectedProductIds.add(result.productId);
-          }
+          // ⚡ 樂觀秒加（Optimistic UI）：結合前端完整欄位與後端回傳的 ID，確保即便 GAS 部署舊版也能完美呈現！
+          const newProdId = (result.product && result.product.id) || result.productId || customId;
+          const newProdItem = {
+            id: newProdId,
+            name: name,
+            category: category || '2026.10月連線',
+            price: Number(price),
+            originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
+            stock: stock,
+            isUnlimitedStock: isUnlimited,
+            specs: specs,
+            imageUrl: finalImageUrls[0] || '',
+            imageUrls: finalImageUrls,
+            costPrice: costPrice,
+            costNote: costNote,
+            description: desc,
+            deadline: document.getElementById('newProdDeadline') ? document.getElementById('newProdDeadline').value.trim() : '',
+            status: '上架中'
+          };
+          allProducts = allProducts.filter(p => p.id !== newProdItem.id);
+          allProducts.unshift(newProdItem);
+          selectedProductIds.add(newProdItem.id);
+
           renderProductCheckboxes();
           updateSelectedCount();
 
           // 切換回推播頁面並提示
           switchTab('tabPublish');
-          document.querySelectorAll('.tab-btn')[0].classList.add('active');
-          document.querySelectorAll('.tab-btn')[1].classList.remove('active');
           alert('🎉 商品建檔成功！已即時同步寫入 Google 試算表！');
 
           // 背景非同步默默同步試算表最新清單（不卡住操作）
@@ -1569,9 +1590,11 @@
       } catch (err) {
         console.error('建檔或上傳失敗詳細錯誤:', err);
         let msg = '連線處理發生錯誤：' + (err.message || '網路異常或連線逾時');
-        msg += '\n\n💡 常見排查原因：';
-        msg += '\n1. Google Apps Script 尚未授權 Google Drive 存取：請至 GAS 編輯器執行一次 testDrivePermission 並點擊「審查權限」。';
-        msg += '\n2. GAS 部署未更新：修改 Code.gs 後，請記得至「管理部署作業 > 編輯 > 選擇『新版本』 > 部署」！';
+        if (err.message && (err.message.includes('fetch') || err.message.includes('Network') || err.message.includes('Google Drive'))) {
+          msg += '\n\n💡 常見排查原因：';
+          msg += '\n1. Google Apps Script 尚未授權 Google Drive 存取：請至 GAS 編輯器執行一次 testDrivePermission 並點擊「審查權限」。';
+          msg += '\n2. GAS 部署未更新：修改 Code.gs 後，請記得至「管理部署作業 > 編輯 > 選擇『新版本』 > 部署」！';
+        }
         alert(msg);
       } finally {
         saveBtn.disabled = false;
