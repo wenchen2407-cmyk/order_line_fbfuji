@@ -10,6 +10,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
+  <script>
+    // 舊版單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
+      if (pid) {
+        window.location.replace('product.html' + window.location.search);
+      }
+    })();
+  </script>
+
   <style>
     :root {
       --primary: #06c755;
@@ -21,6 +32,148 @@
       --text-muted: #64748b;
       --border: #e2e8f0;
       --radius: 14px;
+    }
+
+    /* 👑 VIP 會員全螢幕毛玻璃守門牆 */
+    .vip-gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 1;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    .vip-gate-overlay.unlocking {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .vip-gate-card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: vipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes vipPop {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .vip-badge-crown {
+      font-size: 38px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 2px 8px rgba(234, 179, 8, 0.3));
+    }
+    .vip-tag {
+      display: inline-block;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #854d0e;
+      border: 1px solid #facc15;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .vip-title {
+      font-size: 19px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .vip-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      text-align: left;
+      background: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .vip-form {
+      text-align: left;
+    }
+    .vip-form-group {
+      margin-bottom: 14px;
+    }
+    .vip-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+    .vip-input-wrap {
+      position: relative;
+    }
+    .vip-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 14.5px;
+      color: #0f172a;
+      outline: none;
+      background: #ffffff;
+      transition: all 0.2s;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .vip-input:focus {
+      border-color: #06c755;
+      box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.15);
+    }
+    .vip-verified-badge {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: #059b43;
+      font-weight: 700;
+      background: #eefbf3;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .btn-vip-unlock {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #06c755 0%, #059b43 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
+      transition: all 0.2s;
+      margin-top: 6px;
+    }
+    .btn-vip-unlock:active {
+      transform: scale(0.98);
+    }
+    .btn-vip-unlock:disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .vip-notice {
+      font-size: 11.5px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 12px;
     }
 
     * {
@@ -359,6 +512,42 @@
 </head>
 <body>
 
+  <!-- 👑 VIP 會員全螢幕毛玻璃守門牆 (未歸戶時強制鎖定全頁，老客 0 毫秒無感隱藏) -->
+  <div id="vipGateOverlay" class="vip-gate-overlay" style="display: none;">
+    <div class="vip-gate-card">
+      <div class="vip-badge-crown">👑</div>
+      <div class="vip-tag">LINE 好友會員限定</div>
+      <h2 class="vip-title">歡迎來到 VIP 連線特賣會</h2>
+      <p class="vip-subtitle">
+        為維護連線代購品質與專屬優惠價，本賣場僅開放給已建檔之 LINE 會員瀏覽與下單。<br>
+        <b>首次造訪僅需 5 秒填寫基本聯絡資料，即可立即解鎖全館！</b>
+      </p>
+
+      <div class="vip-form">
+        <div class="vip-form-group">
+          <label class="vip-label">LINE 顯示暱稱</label>
+          <div class="vip-input-wrap">
+            <input type="text" id="vipLineName" class="vip-input" readonly placeholder="連線驗證中..." style="background: #f8fafc;">
+            <span class="vip-verified-badge" id="vipVerifiedBadge">🟢 已連線</span>
+          </div>
+        </div>
+        <div class="vip-form-group">
+          <label class="vip-label">真實姓名 <span style="color: #ef4444;">*</span></label>
+          <input type="text" id="vipRealName" class="vip-input" placeholder="請填寫證件相符真實姓名 (取貨核對)">
+        </div>
+        <div class="vip-form-group">
+          <label class="vip-label">手機號碼 <span style="color: #ef4444;">*</span></label>
+          <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (出貨重要通知)">
+        </div>
+
+        <button type="button" class="btn-vip-unlock" id="btnVipUnlock" onclick="handleVipRegisterAndUnlock()">
+          ✨ 加入會員並立即解鎖全館
+        </button>
+        <div class="vip-notice">🔒 您的資料僅用於本次出貨聯絡與歸戶核對，絕不外流。</div>
+      </div>
+    </div>
+  </div>
+
   <!-- 頂部 Header -->
   <header class="catalog-header">
     <div class="header-top">
@@ -437,7 +626,109 @@
     let searchKeyword = '';
     let currentUserId = '';
 
+    // ⚡ 0 毫秒會員身分檢查：老客秒通，新客即刻防護
+    function isLocallyVerifiedMember() {
+      try {
+        const raw = localStorage.getItem('line_order_customer_profile');
+        if (!raw) return false;
+        const p = JSON.parse(raw);
+        return Boolean(p && p.realName && p.phone);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function checkVipGateOnLoad() {
+      const overlay = document.getElementById('vipGateOverlay');
+      if (isLocallyVerifiedMember()) {
+        if (overlay) overlay.style.display = 'none';
+      } else {
+        if (overlay) overlay.style.display = 'flex';
+      }
+    }
+
+    function unlockVipGate() {
+      const overlay = document.getElementById('vipGateOverlay');
+      if (overlay) {
+        overlay.classList.add('unlocking');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          overlay.classList.remove('unlocking');
+        }, 350);
+      }
+    }
+
+    // 新客在 VIP 守門牆點擊「加入會員並立即解鎖全館」
+    async function handleVipRegisterAndUnlock() {
+      const lineName = (document.getElementById('userNameText') && document.getElementById('userNameText').textContent !== '連線貴賓')
+        ? document.getElementById('userNameText').textContent
+        : 'LINE 會員';
+      const realName = (document.getElementById('vipRealName').value || '').trim();
+      const phone = (document.getElementById('vipPhone').value || '').trim();
+
+      if (!realName) {
+        alert('請填寫「真實姓名」，以利出國採購核對身分與回國寄件！');
+        document.getElementById('vipRealName').focus();
+        return;
+      }
+
+      if (!phone || !/^09\d{8}$/.test(phone.replace(/[-\s]/g, ''))) {
+        alert('請填寫正確的手機號碼 (例如：0912345678)！');
+        document.getElementById('vipPhone').focus();
+        return;
+      }
+
+      const cleanPhone = phone.replace(/[-\s]/g, '');
+      const profile = {
+        userId: currentUserId || 'GUEST_' + Date.now(),
+        userName: lineName,
+        realName: realName,
+        phone: cleanPhone
+      };
+
+      const btnUnlock = document.getElementById('btnVipUnlock');
+      if (btnUnlock) {
+        btnUnlock.disabled = true;
+        btnUnlock.textContent = '⚡ 正在為您開通 VIP 權限...';
+      }
+
+      // 1. 寫入本地快取
+      localStorage.setItem('line_order_customer_profile', JSON.stringify(profile));
+
+      // 2. 寫入 Google 試算表【顧客歸戶】
+      if (CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
+        try {
+          await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'registerCustomer',
+              data: {
+                userId: profile.userId,
+                userName: lineName,
+                realName: realName,
+                phone: cleanPhone
+              }
+            })
+          });
+        } catch (e) {
+          console.warn('線上歸戶同步警告:', e);
+        }
+      }
+
+      // 3. 原地解鎖全館大廳
+      unlockVipGate();
+      alert('🎉 恭喜您！已成功加入 VIP 連線會員，已為您解鎖全館商品與專屬連線價！');
+
+      if (btnUnlock) {
+        btnUnlock.disabled = false;
+        btnUnlock.textContent = '✨ 加入會員並立即解鎖全館';
+      }
+    }
+
     window.onload = function() {
+      // 0. 瞬間檢查 VIP 資格 (老客 0 毫秒無感秒開)
+      checkVipGateOnLoad();
+
       // 0. 瞬間快取還原 (0 毫秒極速呈現上次畫面，消除等待白屏/骨架屏)
       restoreInstantCache();
 
@@ -454,7 +745,11 @@
         if (cachedProfile) {
           const p = JSON.parse(cachedProfile);
           if (p.userId) currentUserId = p.userId;
-          if (p.displayName) document.getElementById('userNameText').textContent = p.displayName;
+          if (p.displayName) {
+            document.getElementById('userNameText').textContent = p.displayName;
+            const vipLine = document.getElementById('vipLineName');
+            if (vipLine) vipLine.value = p.displayName;
+          }
           if (p.pictureUrl) document.getElementById('userAvatar').src = p.pictureUrl;
           updateOrderLinks();
         }
@@ -500,7 +795,7 @@
       if (bottomBtn) bottomBtn.href = `my-orders.html${queryStr}`;
     }
 
-    // 初始化 LINE LIFF (背景非同步執行，不阻礙商品載入)
+    // 初始化 LINE LIFF (身分驗證與後端歸戶自動對齊)
     async function initLiff() {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('uid')) {
@@ -515,6 +810,8 @@
             const profile = await liff.getProfile();
             currentUserId = profile.userId;
             document.getElementById('userNameText').textContent = profile.displayName || '連線貴賓';
+            const vipLine = document.getElementById('vipLineName');
+            if (vipLine) vipLine.value = profile.displayName || 'LINE 會員';
             if (profile.pictureUrl) {
               document.getElementById('userAvatar').src = profile.pictureUrl;
             }
@@ -529,6 +826,18 @@
               localStorage.setItem('liff_user_profile', profStr);
             } catch (e) {}
             updateOrderLinks();
+
+            // 若尚未取得本地會員，自動向後端試算表查詢（老客人換機自動解鎖！）
+            if (!isLocallyVerifiedMember() && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
+              try {
+                const res = await fetch(`${CONFIG.GAS_API_URL}?action=checkCustomer&userId=${encodeURIComponent(currentUserId)}`);
+                const json = await res.json();
+                if (json.success && json.exists && json.profile && json.profile.realName && json.profile.phone) {
+                  localStorage.setItem('line_order_customer_profile', JSON.stringify(json.profile));
+                  unlockVipGate();
+                }
+              } catch (e) {}
+            }
           }
         } catch (err) {
           console.warn('LIFF 初始化略過或非 LINE 瀏覽器環境:', err);
@@ -729,7 +1038,7 @@
         card.className = 'prod-card';
         // 點擊卡片跳轉至下單頁，帶入 p 與 uid
         const uidParam = currentUserId ? `&uid=${encodeURIComponent(currentUserId)}` : '';
-        card.href = `index.html?p=${encodeURIComponent(prod.id)}${uidParam}`;
+        card.href = `product.html?p=${encodeURIComponent(prod.id)}${uidParam}`;
 
         const imgUrl = getSafeImageUrl(prod.imageUrl);
         const priceNum = Number(prod.price) || 0;

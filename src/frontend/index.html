@@ -3,26 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>連線代購即時訂購單</title>
+  <title>連線商品清單 - W.W.連線代購</title>
   <!-- Google Fonts & LINE LIFF SDK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <script>
+    // 舊版單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
+      if (pid) {
+        window.location.replace('product.html' + window.location.search);
+      }
+    })();
+  </script>
 
   <style>
     :root {
-      --primary: #06c755; /* LINE Green */
+      --primary: #06c755;
       --primary-dark: #059b43;
       --accent: #ff4757;
-      --bg-color: #f8fafc;
+      --bg: #f8fafc;
       --card-bg: #ffffff;
-      --text-main: #1e293b;
+      --text-main: #0f172a;
       --text-muted: #64748b;
-      --border-color: #e2e8f0;
-      --radius: 16px;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --border: #e2e8f0;
+      --radius: 14px;
+    }
+
+    /* 👑 VIP 會員全螢幕毛玻璃守門牆 */
+    .vip-gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 1;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    .vip-gate-overlay.unlocking {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .vip-gate-card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: vipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes vipPop {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .vip-badge-crown {
+      font-size: 38px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 2px 8px rgba(234, 179, 8, 0.3));
+    }
+    .vip-tag {
+      display: inline-block;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #854d0e;
+      border: 1px solid #facc15;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .vip-title {
+      font-size: 19px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .vip-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      text-align: left;
+      background: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .vip-form {
+      text-align: left;
+    }
+    .vip-form-group {
+      margin-bottom: 14px;
+    }
+    .vip-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+    .vip-input-wrap {
+      position: relative;
+    }
+    .vip-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 14.5px;
+      color: #0f172a;
+      outline: none;
+      background: #ffffff;
+      transition: all 0.2s;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .vip-input:focus {
+      border-color: #06c755;
+      box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.15);
+    }
+    .vip-verified-badge {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: #059b43;
+      font-weight: 700;
+      background: #eefbf3;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .btn-vip-unlock {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #06c755 0%, #059b43 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
+      transition: all 0.2s;
+      margin-top: 6px;
+    }
+    .btn-vip-unlock:active {
+      transform: scale(0.98);
+    }
+    .btn-vip-unlock:disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .vip-notice {
+      font-size: 11.5px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 12px;
     }
 
     * {
@@ -33,847 +184,678 @@
     }
 
     body {
-      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-color);
+      font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+      background-color: var(--bg);
       color: var(--text-main);
-      line-height: 1.5;
       padding-bottom: 90px;
     }
 
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
-      padding: 16px;
+    /* 頂部 Header */
+    .catalog-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
     }
 
-    /* 頂部買家資訊列 (LIFF 自動帶入) */
-    .user-badge {
+    .header-top {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 10px;
-      background: rgba(6, 199, 85, 0.08);
-      border: 1px solid rgba(6, 199, 85, 0.2);
-      padding: 8px 14px;
-      border-radius: 999px;
-      margin-bottom: 16px;
-      font-size: 13px;
-      font-weight: 500;
+      margin-bottom: 10px;
     }
 
-    .user-avatar {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1.5px solid var(--primary);
-    }
-
-    /* 商品主圖與卡片 */
-    .card {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-md);
-      overflow: hidden;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-color);
-    }
-
-    .product-img-wrap {
-      position: relative;
-      width: 100%;
-      height: 320px;
-      background: #f8fafc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .product-img {
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
-      object-fit: contain;
-      transition: opacity 0.2s ease;
-    }
-
-    /* 多圖縮圖切換列 */
-    .image-thumbs-strip {
-      display: flex;
-      gap: 8px;
-      padding: 10px 14px;
-      overflow-x: auto;
-      background: #ffffff;
-      border-top: 1px solid var(--border-color);
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .image-thumbs-strip::-webkit-scrollbar {
-      display: none;
-    }
-
-    .image-thumb-btn {
-      flex: 0 0 56px;
-      height: 56px;
-      border-radius: 8px;
-      border: 2px solid transparent;
-      overflow: hidden;
-      cursor: pointer;
-      background: #f1f5f9;
-      padding: 0;
-      transition: all 0.2s;
-    }
-
-    .image-thumb-btn.active {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(6, 199, 85, 0.25);
-    }
-
-    .image-thumb-btn img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .image-counter-badge {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 12px;
-      backdrop-filter: blur(4px);
-      letter-spacing: 0.5px;
-    }
-
-    .badge-stock {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .product-details {
-      padding: 18px;
-    }
-
-    .product-tag {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--primary-dark);
-      background: #eefbf3;
-      padding: 3px 8px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-    }
-
-    .product-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 8px;
+    .brand-title {
+      font-size: 17px;
+      font-weight: 900;
       color: var(--text-main);
-    }
-
-    .price-box {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .current-price {
-      font-family: 'Outfit', sans-serif;
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    .original-price {
-      font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      color: var(--text-muted);
-      text-decoration: line-through;
-    }
-
-    .product-desc {
-      font-size: 14px;
-      color: #475569;
-      line-height: 1.6;
-      border-top: 1px dashed var(--border-color);
-      padding-top: 12px;
-    }
-
-    /* 表單區塊 */
-    .form-section {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 18px;
-      border: 1px solid var(--border-color);
-    }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 14px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .section-title::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 16px;
-      background: var(--primary);
-      border-radius: 2px;
+    .brand-badge {
+      font-size: 11px;
+      background: #eefbf3;
+      color: var(--primary-dark);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
     }
 
-    .form-group {
-      margin-bottom: 14px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #334155;
-    }
-
-    .spec-pills {
+    .btn-my-orders {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .spec-btn {
+      align-items: center;
+      gap: 4px;
       background: #f1f5f9;
-      border: 1.5px solid transparent;
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 500;
+      color: #334155;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
+      text-decoration: none;
       transition: all 0.2s;
     }
 
-    .spec-btn.active {
-      background: #eefbf3;
-      border-color: var(--primary);
-      color: var(--primary-dark);
-      font-weight: 700;
+    .btn-my-orders:active {
+      transform: scale(0.96);
+      background: #e2e8f0;
     }
 
-    .qty-control {
-      display: inline-flex;
-      align-items: center;
-      background: #f1f5f9;
-      border-radius: 10px;
-      overflow: hidden;
+    /* 搜尋框 */
+    .search-bar {
+      position: relative;
+      margin-bottom: 8px;
     }
 
-    .qty-btn {
-      width: 38px;
-      height: 38px;
-      border: none;
-      background: transparent;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .qty-input {
-      width: 45px;
-      text-align: center;
-      border: none;
-      background: transparent;
-      font-size: 15px;
-      font-weight: 700;
-    }
-
-    .form-input, .form-textarea {
+    .search-input {
       width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--border-color);
+      padding: 9px 36px 9px 36px;
       border-radius: 10px;
-      font-size: 14px;
-      font-family: inherit;
+      border: 1px solid var(--border);
       background: #f8fafc;
-      transition: border-color 0.2s, background 0.2s;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-main);
     }
 
-    .form-input:focus, .form-textarea:focus {
+    .search-input:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
     }
 
-    /* 物流選項卡片樣式 */
-    .shipping-options {
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      display: none;
+      padding: 4px;
+    }
+
+    /* 商品網格容器 */
+    .catalog-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    @media (min-width: 640px) {
+      .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+    }
+
+    /* 單一商品卡片 */
+    .prod-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-    }
-
-    .shipping-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 14px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 12px;
-      background: #f8fafc;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s ease;
       cursor: pointer;
-      transition: all 0.2s;
     }
 
-    .shipping-card.active {
-      border-color: var(--primary);
-      background: #eefbf3;
+    .prod-card:active {
+      transform: scale(0.98);
     }
 
-    .shipping-card input[type="radio"] {
-      display: none;
+    .prod-img-box {
+      position: relative;
+      width: 100%;
+      padding-top: 100%; /* 1:1 正方形 */
+      background: #f8fafc;
+      overflow: hidden;
     }
 
-    .shipping-info {
+    .prod-img-box img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #ffffff;
+      transition: transform 0.3s;
+    }
+
+    .prod-card:hover .prod-img-box img {
+      transform: scale(1.03);
+    }
+
+    .card-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .card-body {
+      padding: 10px 12px 12px;
+      display: flex;
+      flex-direction: column;
       flex: 1;
     }
 
-    .shipping-name {
-      font-size: 14px;
+    .card-title {
+      font-size: 13px;
       font-weight: 700;
-      color: #1e293b;
+      line-height: 1.4;
+      height: 36px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 6px;
+      color: var(--text-main);
     }
 
-    .shipping-desc {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
+    .card-prices {
+      margin-top: auto;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    .shipping-price {
+    .card-current-price {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent);
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--primary-dark);
     }
 
-    /* 底部固定結帳 Bar */
-    .bottom-bar {
+    .card-original-price {
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+
+    .btn-buy-now {
+      margin-top: 8px;
+      width: 100%;
+      padding: 7px;
+      border-radius: 8px;
+      background: #eefbf3;
+      color: var(--primary-dark);
+      border: 1px solid #86efac;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      transition: background 0.1s;
+    }
+
+    .prod-card:hover .btn-buy-now {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* 骨架屏載入動效 */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .skeleton-card {
+      background: #fff;
+      border-radius: var(--radius);
+      height: 240px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* 底部固定 Bar */
+    .catalog-bottom-bar {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border-color);
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       z-index: 100;
-      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
     }
 
-    .bottom-bar-inner {
-      max-width: 500px;
-      width: 100%;
-      margin: 0 auto;
+    .bottom-user-info {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 8px;
     }
 
-    .total-summary {
-      display: flex;
-      flex-direction: column;
+    .bottom-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      object-fit: cover;
     }
 
-    .total-label {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .total-price {
-      font-family: 'Outfit', sans-serif;
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--accent);
-    }
-
-    .btn-submit {
+    .bottom-btn-orders {
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 12px 28px;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
-      transition: transform 0.1s, background 0.2s;
-    }
-
-    .btn-submit:active {
-      transform: scale(0.97);
-    }
-
-    .btn-submit:disabled {
-      background: #cbd5e1;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    /* 彈跳成功遮罩 */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: #fff;
-      width: 100%;
-      max-width: 420px;
-      border-radius: 20px;
-      padding: 24px;
-      text-align: center;
-      box-shadow: 0 20px 30px rgba(0,0,0,0.15);
-      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes popIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    .success-icon {
-      width: 64px;
-      height: 64px;
-      background: #eefbf3;
-      color: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      margin: 0 auto 16px;
-    }
-
-    .bank-card {
-      background: #f8fafc;
-      border: 1px dashed var(--border-color);
-      border-radius: 12px;
-      padding: 14px;
-      margin: 16px 0;
-      text-align: left;
-      font-size: 13px;
-    }
-    /* 收單截止動態倒數晶片 */
-    .deadline-banner {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
-      border: 1px solid #fecdd3;
-      color: #e11d48;
-      padding: 7px 12px;
+      padding: 10px 18px;
       border-radius: 10px;
       font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-    .deadline-banner.expired {
-      background: #f1f5f9;
-      border-color: #cbd5e1;
-      color: #64748b;
-    }
-    /* 彈跳成功按鈕組 (左右高度、字體、圓角完美對齊) */
-    .modal-btn-action {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 13px 14px;
-      border-radius: 12px;
-      font-size: 14.5px;
-      font-weight: 700;
-      font-family: inherit;
+      font-weight: 800;
       cursor: pointer;
       text-decoration: none;
-      box-sizing: border-box;
-      transition: all 0.15s ease;
-      line-height: 1.3;
-      white-space: nowrap;
-    }
-    .modal-btn-secondary {
-      background: #f1f5f9;
-      color: #334155;
-      border: 1.5px solid #cbd5e1;
-    }
-    .modal-btn-secondary:active {
-      background: #e2e8f0;
-      transform: scale(0.97);
-    }
-    .modal-btn-primary {
-      background: var(--primary);
-      color: #ffffff;
-      border: 1.5px solid var(--primary);
       box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
     }
-    .modal-btn-primary:active {
-      background: var(--primary-dark);
-      border-color: var(--primary-dark);
-      transform: scale(0.97);
+    .btn-buy-now.disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <!-- 頂部快速導航 Bar (返回更多商品 / 訂購清單) -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
-      <a href="catalog.html" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        🛍️ 更多商品
+  <!-- 👑 VIP 會員全螢幕毛玻璃守門牆 (未歸戶時強制鎖定全頁，老客 0 毫秒無感隱藏) -->
+  <div id="vipGateOverlay" class="vip-gate-overlay" style="display: none;">
+    <div class="vip-gate-card">
+      <div class="vip-badge-crown">👑</div>
+      <div class="vip-tag">LINE 好友會員限定</div>
+      <h2 class="vip-title">歡迎來到 VIP 連線特賣會</h2>
+      <p class="vip-subtitle">
+        為維護連線代購品質與專屬優惠價，本賣場僅開放給已建檔之 LINE 會員瀏覽與下單。<br>
+        <b>首次造訪僅需 5 秒填寫基本聯絡資料，即可立即解鎖全館！</b>
+      </p>
+
+      <div class="vip-form">
+        <div class="vip-form-group">
+          <label class="vip-label">LINE 顯示暱稱</label>
+          <div class="vip-input-wrap">
+            <input type="text" id="vipLineName" class="vip-input" readonly placeholder="連線驗證中..." style="background: #f8fafc;">
+            <span class="vip-verified-badge" id="vipVerifiedBadge">🟢 已連線</span>
+          </div>
+        </div>
+        <div class="vip-form-group">
+          <label class="vip-label">真實姓名 <span style="color: #ef4444;">*</span></label>
+          <input type="text" id="vipRealName" class="vip-input" placeholder="請填寫證件相符真實姓名 (取貨核對)">
+        </div>
+        <div class="vip-form-group">
+          <label class="vip-label">手機號碼 <span style="color: #ef4444;">*</span></label>
+          <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (出貨重要通知)">
+        </div>
+
+        <button type="button" class="btn-vip-unlock" id="btnVipUnlock" onclick="handleVipRegisterAndUnlock()">
+          ✨ 加入會員並立即解鎖全館
+        </button>
+        <div class="vip-notice">🔒 您的資料僅用於本次出貨聯絡與歸戶核對，絕不外流。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 頂部 Header -->
+  <header class="catalog-header">
+    <div class="header-top">
+      <div class="brand-title">
+        <span>🇯🇵🇰🇷 W.W.連線代購</span>
+        <span class="brand-badge">2026.10月連線</span>
+      </div>
+      <a href="my-orders.html" class="btn-my-orders" id="topOrderBtn">
+        <span>📦 訂購清單</span>
       </a>
-      <a href="my-orders.html" id="linkToMyOrders" onclick="handleGoToOrders(event)" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        📦 訂購清單
-      </a>
     </div>
 
-    <!-- LINE 使用者資訊 (LIFF 自動帶入) -->
-    <div class="user-badge" id="userBadge" style="display: flex; align-items: center; gap: 8px;">
-      <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
-      <span id="userName">正在驗證 LINE 帳號...</span>
+    <!-- 搜尋框 -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱、編號 (如 J2609270001)..." oninput="handleSearch()">
+      <button type="button" id="btnClearSearch" class="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="catalog-container">
+    <!-- 收單截止動態倒數晶片 -->
+    <div id="catalogDeadlineBanner" style="display:none; align-items:center; justify-content:center; background:linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border:1px solid #fecdd3; color:#e11d48; padding:8px 12px; border-radius:10px; font-size:12.5px; font-weight:700; margin-bottom:12px;">
+      <span id="catalogDeadlineText"></span>
     </div>
 
-    <!-- 商品主卡片 -->
-    <div class="card">
-      <div class="product-img-wrap">
-        <img id="productImage" class="product-img" src="" alt="商品圖片">
-        <div id="productStock" class="badge-stock" style="display: none;"></div>
-        <div id="imageCounter" class="image-counter-badge" style="display: none;">1 / 1</div>
-      </div>
-      <!-- 多圖縮圖切換列 -->
-      <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
-
-      <div class="product-details">
-        <!-- 倒數收單晶片 -->
-        <div id="deadlineBanner" class="deadline-banner" style="display: none;">
-          <span id="deadlineText"></span>
-        </div>
-
-        <span id="productCategory" class="product-tag">2026.10月連線</span>
-        <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
-        <div class="price-box">
-          <span class="current-price" id="productPrice">NT$ ---</span>
-          <span class="original-price" id="originalPrice" style="display: none;">NT$ ---</span>
-        </div>
-        <p id="productDesc" class="product-desc">商品描述準備中...</p>
-      </div>
+    <div class="stats-bar">
+      <span id="productCountText">正在載入商品清單...</span>
+      <span style="font-size: 11px; color: #10b981;">● 即時連線ing</span>
     </div>
 
-    <!-- 選購選項 -->
-    <div class="form-section">
-      <div class="section-title">選擇款式與數量</div>
-      <div class="form-group">
-        <label class="form-label">規格款式</label>
-        <div class="spec-pills" id="specList">
-          <!-- 動態生成規格 -->
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">購買數量</label>
-        <div class="qty-control">
-          <button type="button" class="qty-btn" id="btnMinus">-</button>
-          <input type="number" id="inputQty" class="qty-input" value="1" min="1" readonly>
-          <button type="button" class="qty-btn" id="btnPlus">+</button>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top: 14px;">
-        <label class="form-label">訂單備註 (選填)</label>
-        <textarea id="custNote" class="form-textarea" rows="2" placeholder="如有尺寸、顏色替補順位等特殊需求可備註"></textarea>
-      </div>
+    <!-- 載入中骨架屏 -->
+    <div id="skeletonLoader" class="skeleton-grid">
+      <div class="skeleton-card" style="background:#e2e8f0;"></div>
+      <div class="skeleton-card" style="background:#e2e8f0;"></div>
+      <div class="skeleton-card" style="background:#e2e8f0;"></div>
+      <div class="skeleton-card" style="background:#e2e8f0;"></div>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12.5px; color: #475569; line-height: 1.75;">
-      <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13.5px;">✈️ 連線代購必讀</div>
-      <div style="margin-bottom: 6px;">• 🚫 <b>下單即確定購買，不可取消或刪改</b>，下單前請確認規格、數量。</div>
-      <div style="margin-bottom: 6px;">• ⚡ <b>依下單順序配貨</b>，若遇缺貨將主動變更狀態。</div>
-      <div style="margin-bottom: 6px;">• ⏰ <b>收單截止時間</b>以群組最後公告之截單時間為主。確認結單時間也會同步於商品清單頁上。</div>
-      <div style="margin-bottom: 6px;">• 📦 <b>待清查完畢後</b>，將於群組或私訊確認訂單資料並發送專屬賣場連結供下單出貨。</div>
-      <div>• 🚚 <b>出貨運費</b>：超商純取 0 元免運；賣貨便/好賣+ 滿 3,000 元免運；亦支援郵寄與宅配（依選擇之寄送方式計費）。</div>
+    <!-- 商品網格 -->
+    <div class="product-grid" id="productGrid" style="display: none;"></div>
+
+    <!-- 查無商品提示 -->
+    <div id="noResultBox" style="display: none; text-align: center; padding: 50px 16px; color: var(--text-muted);">
+      <div style="font-size: 36px; margin-bottom: 8px;">🔍</div>
+      <div style="font-weight: 700; font-size: 15px; color: var(--text-main);">查無符合的連線商品</div>
+      <p style="font-size: 12px; margin-top: 4px;">請嘗試更換搜尋關鍵字（可搜尋商品名稱或編號）！</p>
+      <button type="button" onclick="clearSearch()" style="margin-top: 14px; padding: 6px 16px; border-radius: 8px; border: none; background: #e2e8f0; color: #334155; font-weight: 700; font-size: 12px; cursor: pointer;">清空搜尋條件</button>
     </div>
-  </div>
+  </main>
 
-  <!-- 底部固定搶購 Bar -->
-  <div class="bottom-bar">
-    <div class="bottom-bar-inner">
-      <div class="total-summary">
-        <span class="total-label">商品金額小計</span>
-        <span class="total-price" id="totalDisplay">NT$ 0</span>
-      </div>
-      <button type="button" class="btn-submit" id="btnSubmitOrder" disabled>🚀 火速登記</button>
-    </div>
-  </div>
-
-  <!-- 首次登記基本資料彈跳視窗 (新客只需填寫一次) -->
-  <div class="modal-overlay" id="firstTimeProfileModal">
-    <div class="modal-content" style="text-align: left;">
-      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">首次使用，請建立聯絡資料</h2>
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 16px; text-align: center;">僅需填寫一次</p>
-
-      <div class="form-group">
-        <label class="form-label">LINE 顯示暱稱</label>
-        <input type="text" id="regLineName" class="form-input" placeholder="自動帶入中..." style="background: #f8fafc;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">真實姓名 *</label>
-        <input type="text" id="regRealName" class="form-input" placeholder="請填寫證件相符真實姓名">
-      </div>
-      <div class="form-group">
-        <label class="form-label">手機號碼 *</label>
-        <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
-      </div>
-
-      <button type="button" class="btn-submit" id="btnConfirmProfile" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
-      <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
-    </div>
-  </div>
-
-  <!-- 搶購登記成功彈跳視窗 -->
-  <div class="modal-overlay" id="successModal">
-    <div class="modal-content">
-      <div class="success-icon">🎉</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">登記成功！</h2>
-
-      <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
-        <div>商品品名：<b id="modalProdName">-</b></div>
-        <div>預約規格：<span id="modalSpec">-</span></div>
-        <div>預約數量：<span id="modalQty">-</span> 件</div>
-        <div style="margin-top: 4px; color: var(--accent); font-weight: 700;">小計金額：<span id="modalSubtotal">NT$ 0</span></div>
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button type="button" class="modal-btn-action modal-btn-secondary" onclick="continueShopping()">🛍️ 繼續挑選</button>
-        <button type="button" class="modal-btn-action modal-btn-primary" onclick="goToMyOrders()">📦 查看訂購清單</button>
+  <!-- 底部固定 Bar -->
+  <div class="catalog-bottom-bar">
+    <div class="bottom-user-info">
+      <img id="userAvatar" class="bottom-avatar" src="https://via.placeholder.com/32" alt="">
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-main);" id="userNameText">連線貴賓</div>
+        <div style="font-size: 10px; color: var(--text-muted);">點擊商品即可火速登記</div>
       </div>
     </div>
+    <a href="my-orders.html" class="bottom-btn-orders" id="bottomOrderBtn">
+      📦 查看我的訂購清單
+    </a>
   </div>
 
   <script>
-    // ======= 核心環境設定 (請替換為賣家的 GAS 部署網址與 LIFF ID) =======
+    // ======= 核心設定 (請替換為賣家的 GAS 部署網址與 LIFF ID) =======
     const CONFIG = {
-      LIFF_ID: '2011732923-rcjz7Igd', // 全新連線代購 LIFF ID
+      LIFF_ID: '2011732923-rcjz7Igd',
       GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec'
     };
 
-    // 狀態變數
-    let currentProduct = null;
-    let selectedSpec = '';
-    let currentQty = 1;
-    let currentShippingFee = 60;
-    let currentUser = {
-      userId: 'TEST_USER_999',
-      displayName: '訪客預覽',
-      pictureUrl: 'https://via.placeholder.com/40'
-    };
+    let allProducts = [];
+    let currentCategory = 'ALL';
+    let searchKeyword = '';
+    let currentUserId = '';
 
-    // 網址參數取得指定商品 ID (相容 ?p=, ?pid=, ?productId=, ?id=)
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetProductId = urlParams.get('p') || urlParams.get('pid') || urlParams.get('productId') || urlParams.get('id') || 'P001';
+    // ⚡ 0 毫秒會員身分檢查：老客秒通，新客即刻防護
+    function isLocallyVerifiedMember() {
+      try {
+        const raw = localStorage.getItem('line_order_customer_profile');
+        if (!raw) return false;
+        const p = JSON.parse(raw);
+        return Boolean(p && p.realName && p.phone);
+      } catch (e) {
+        return false;
+      }
+    }
 
-    // 初始化頁面 (秒開並行架構)
-    window.onload = () => {
-      // 0. 若網址帶有 action=orders 直接導向個人訂單清單 (例如從專屬通知卡進入)
-      if (urlParams.get('action') === 'orders') {
-        const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
-        if (cached) {
-          try {
-            const p = JSON.parse(cached);
-            if (p.userId) currentUser.userId = p.userId;
-            if (p.displayName) currentUser.displayName = p.displayName;
-            if (p.pictureUrl) currentUser.pictureUrl = p.pictureUrl;
-          } catch (e) {}
-        }
+    function checkVipGateOnLoad() {
+      const overlay = document.getElementById('vipGateOverlay');
+      if (isLocallyVerifiedMember()) {
+        if (overlay) overlay.style.display = 'none';
+      } else {
+        if (overlay) overlay.style.display = 'flex';
+      }
+    }
 
-        if (currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
-          goToMyOrders();
-          return;
-        }
+    function unlockVipGate() {
+      const overlay = document.getElementById('vipGateOverlay');
+      if (overlay) {
+        overlay.classList.add('unlocking');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          overlay.classList.remove('unlocking');
+        }, 350);
+      }
+    }
 
-        // 若無快取，呈現優雅載入中並執行 LIFF 初始化取得真實身分再跳轉
-        document.body.innerHTML = `
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,BlinkMacSystemFont,sans-serif; color:#475569; text-align:center; padding:20px; background:#f8fafc;">
-            <div style="font-size:36px; margin-bottom:12px;">📦</div>
-            <div style="font-weight:700; font-size:16px; margin-bottom:6px; color:#0f172a;">正在載入您的專屬訂購清單...</div>
-            <div style="font-size:13px; color:#94a3b8;">LINE 連線身分同步中，請稍候</div>
-          </div>
-        `;
-        (async () => {
-          try {
-            if (CONFIG.LIFF_ID && !CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
-              await liff.init({ liffId: CONFIG.LIFF_ID });
-              if (liff.isLoggedIn()) {
-                const profile = await liff.getProfile();
-                currentUser.userId = profile.userId;
-                currentUser.displayName = profile.displayName;
-                currentUser.pictureUrl = profile.pictureUrl;
-                const profStr = JSON.stringify({
-                  userId: profile.userId,
-                  displayName: profile.displayName,
-                  pictureUrl: profile.pictureUrl
-                });
-                try {
-                  sessionStorage.setItem('liff_user_profile', profStr);
-                  localStorage.setItem('liff_user_profile', profStr);
-                } catch (e) {}
-              }
-            }
-          } catch (e) {
-            console.warn('LIFF 授權取得失敗:', e);
-          }
-          goToMyOrders();
-        })();
+    // 新客在 VIP 守門牆點擊「加入會員並立即解鎖全館」
+    async function handleVipRegisterAndUnlock() {
+      const lineName = (document.getElementById('userNameText') && document.getElementById('userNameText').textContent !== '連線貴賓')
+        ? document.getElementById('userNameText').textContent
+        : 'LINE 會員';
+      const realName = (document.getElementById('vipRealName').value || '').trim();
+      const phone = (document.getElementById('vipPhone').value || '').trim();
+
+      if (!realName) {
+        alert('請填寫「真實姓名」，以利出國採購核對身分與回國寄件！');
+        document.getElementById('vipRealName').focus();
         return;
       }
 
-      // 0. 恢復買家快取 (localStorage 優先，0 毫秒展示)
-      const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
-      if (cachedProfile) {
+      if (!phone || !/^09\d{8}$/.test(phone.replace(/[-\s]/g, ''))) {
+        alert('請填寫正確的手機號碼 (例如：0912345678)！');
+        document.getElementById('vipPhone').focus();
+        return;
+      }
+
+      const cleanPhone = phone.replace(/[-\s]/g, '');
+      const profile = {
+        userId: currentUserId || 'GUEST_' + Date.now(),
+        userName: lineName,
+        realName: realName,
+        phone: cleanPhone
+      };
+
+      const btnUnlock = document.getElementById('btnVipUnlock');
+      if (btnUnlock) {
+        btnUnlock.disabled = true;
+        btnUnlock.textContent = '⚡ 正在為您開通 VIP 權限...';
+      }
+
+      // 1. 寫入本地快取
+      localStorage.setItem('line_order_customer_profile', JSON.stringify(profile));
+
+      // 2. 寫入 Google 試算表【顧客歸戶】
+      if (CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
         try {
-          const p = JSON.parse(cachedProfile);
-          if (p.userId && !urlParams.get('uid')) currentUser.userId = p.userId;
-          if (p.displayName) {
-            currentUser.displayName = p.displayName;
-            document.getElementById('userName').textContent = `${p.displayName} (已連線)`;
-          }
-          if (p.pictureUrl) {
-            currentUser.pictureUrl = p.pictureUrl;
-            document.getElementById('userAvatar').src = p.pictureUrl;
-          }
-        } catch (e) {}
+          await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'registerCustomer',
+              data: {
+                userId: profile.userId,
+                userName: lineName,
+                realName: realName,
+                phone: cleanPhone
+              }
+            })
+          });
+        } catch (e) {
+          console.warn('線上歸戶同步警告:', e);
+        }
       }
 
-      // 0. 嘗試從大廳快取中瞬間預先呈現商品詳情 (0 毫秒秒開商品)
-      restoreInstantProductCache();
+      // 3. 原地解鎖全館大廳
+      unlockVipGate();
+      alert('🎉 恭喜您！已成功加入 VIP 連線會員，已為您解鎖全館商品與專屬連線價！');
 
-      loadSavedCustomerInfo();
-      setupEventListeners();
+      if (btnUnlock) {
+        btnUnlock.disabled = false;
+        btnUnlock.textContent = '✨ 加入會員並立即解鎖全館';
+      }
+    }
 
-      // 1. 並行執行 LIFF、商品資料與新客檢查 (互不卡塞)
+    window.onload = function() {
+      // 0. 瞬間檢查 VIP 資格 (老客 0 毫秒無感秒開)
+      checkVipGateOnLoad();
+
+      // 0. 瞬間快取還原 (0 毫秒極速呈現上次畫面，消除等待白屏/骨架屏)
+      restoreInstantCache();
+
+      // 1. 雙軌並行發動 (LIFF 身分驗證 與 商品清單下載 同時出發，互不卡住)
       initLiff();
-      fetchProductData();
-      checkFirstTimeCustomerOnLoad();
+      fetchProducts();
     };
 
-    function restoreInstantProductCache() {
+    // 0 毫秒快取恢復機制 (SWR 模式)
+    function restoreInstantCache() {
       try {
-        const cached = sessionStorage.getItem('cached_catalog_data');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed && Array.isArray(parsed.products)) {
-            const found = parsed.products.find(p => p.id === targetProductId);
-            if (found) {
-              currentProduct = found;
-              const effDeadline = found.deadline || (parsed.settings && parsed.settings.ORDER_DEADLINE);
-              if (effDeadline) {
-                initDeadlineCountdown(effDeadline);
+        // A. 恢復買家資訊 (localStorage 優先)
+        const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
+        if (cachedProfile) {
+          const p = JSON.parse(cachedProfile);
+          if (p.userId) currentUserId = p.userId;
+          if (p.displayName) {
+            document.getElementById('userNameText').textContent = p.displayName;
+            const vipLine = document.getElementById('vipLineName');
+            if (vipLine) vipLine.value = p.displayName;
+          }
+          if (p.pictureUrl) document.getElementById('userAvatar').src = p.pictureUrl;
+          updateOrderLinks();
+        }
+
+        // B. 恢復商品列表與收單狀態
+        const cachedData = sessionStorage.getItem('cached_catalog_data');
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          if (parsed && Array.isArray(parsed.products) && parsed.products.length > 0) {
+            allProducts = parsed.products;
+            document.getElementById('skeletonLoader').style.display = 'none';
+            if (parsed.settings) {
+              initCatalogDeadline(parsed.settings.ORDER_DEADLINE);
+              if (parsed.settings.STORE_NAME) {
+                const brandElem = document.querySelector('.brand-title span:first-child');
+                if (brandElem) brandElem.textContent = parsed.settings.STORE_NAME;
               }
-              renderProductUI();
             }
+            renderProductList();
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('快取還原略過:', e);
+      }
     }
 
-    // 1. 初始化 LINE LIFF
+    function updateOrderLinks() {
+      const params = new URLSearchParams();
+      if (currentUserId && currentUserId !== 'TEST_USER_999') params.set('uid', currentUserId);
+      const nameElem = document.getElementById('userNameText');
+      if (nameElem && nameElem.textContent && nameElem.textContent !== '連線貴賓') {
+        params.set('name', nameElem.textContent);
+      }
+      const avatarElem = document.getElementById('userAvatar');
+      if (avatarElem && avatarElem.src && !avatarElem.src.includes('placeholder')) {
+        params.set('avatar', avatarElem.src);
+      }
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+
+      const topBtn = document.getElementById('topOrderBtn');
+      const bottomBtn = document.getElementById('bottomOrderBtn');
+      if (topBtn) topBtn.href = `my-orders.html${queryStr}`;
+      if (bottomBtn) bottomBtn.href = `my-orders.html${queryStr}`;
+    }
+
+    // 初始化 LINE LIFF (身分驗證與後端歸戶自動對齊)
     async function initLiff() {
-      // 優先讀取網址列的 uid (方便本地測試或網頁間傳遞)
-      const urlUid = urlParams.get('uid');
-      if (urlUid) {
-        currentUser.userId = urlUid;
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('uid')) {
+        currentUserId = urlParams.get('uid');
+        updateOrderLinks();
       }
 
-      if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
-        document.getElementById('userName').textContent = '未啟用 LIFF (本機測試模式)';
-        return;
-      }
+      if (CONFIG.LIFF_ID && !CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
+        try {
+          await liff.init({ liffId: CONFIG.LIFF_ID });
+          if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            currentUserId = profile.userId;
+            document.getElementById('userNameText').textContent = profile.displayName || '連線貴賓';
+            const vipLine = document.getElementById('vipLineName');
+            if (vipLine) vipLine.value = profile.displayName || 'LINE 會員';
+            if (profile.pictureUrl) {
+              document.getElementById('userAvatar').src = profile.pictureUrl;
+            }
+            // 存入雙快取供下次瞬間使用
+            try {
+              const profStr = JSON.stringify({
+                userId: profile.userId,
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl
+              });
+              sessionStorage.setItem('liff_user_profile', profStr);
+              localStorage.setItem('liff_user_profile', profStr);
+            } catch (e) {}
+            updateOrderLinks();
 
-      try {
-        await liff.init({ liffId: CONFIG.LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          currentUser.userId = profile.userId;
-          currentUser.displayName = profile.displayName;
-          currentUser.pictureUrl = profile.pictureUrl || 'https://via.placeholder.com/40';
-
-          document.getElementById('userAvatar').src = currentUser.pictureUrl;
-          document.getElementById('userName').textContent = `${currentUser.displayName} (已連線)`;
-
-          // 寫入快取 (localStorage 與 sessionStorage 雙寫入，確保跨頁不丟失)
-          try {
-            const profStr = JSON.stringify({
-              userId: profile.userId,
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl
-            });
-            sessionStorage.setItem('liff_user_profile', profStr);
-            localStorage.setItem('liff_user_profile', profStr);
-          } catch (e) {}
-        } else {
-          // 一般外部瀏覽器 (如 Chrome / Safari / 本地 localhost 測試)
-          // 絕不自動觸發 liff.login()，避免網址跳轉到 LINE 登入授權並重導向至正式線上網址
-          document.getElementById('userName').textContent = `${currentUser.displayName} (訪客預覽)`;
+            // 若尚未取得本地會員，自動向後端試算表查詢（老客人換機自動解鎖！）
+            if (!isLocallyVerifiedMember() && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
+              try {
+                const res = await fetch(`${CONFIG.GAS_API_URL}?action=checkCustomer&userId=${encodeURIComponent(currentUserId)}`);
+                const json = await res.json();
+                if (json.success && json.exists && json.profile && json.profile.realName && json.profile.phone) {
+                  localStorage.setItem('line_order_customer_profile', JSON.stringify(json.profile));
+                  unlockVipGate();
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (err) {
+          console.warn('LIFF 初始化略過或非 LINE 瀏覽器環境:', err);
         }
-
-        // 同步導航按鈕帶入 uid, name, avatar
-        updateNavigationLinks();
-      } catch (err) {
-        console.warn('LIFF Init 略過或非 LINE 內部環境:', err);
-        document.getElementById('userName').textContent = `${currentUser.displayName} (本機模式)`;
       }
     }
 
-    let orderDeadlineDate = null;
-    let countdownTimer = null;
-    let isDeadlineExpired = false;
+    let catalogDeadlineDate = null;
+    let catalogTimer = null;
+    let isCatalogExpired = false;
 
-    function initDeadlineCountdown(deadlineStr) {
-      if (countdownTimer) clearInterval(countdownTimer);
-      orderDeadlineDate = parseDeadline(deadlineStr);
+    function initCatalogDeadline(deadlineStr) {
+      if (catalogTimer) clearInterval(catalogTimer);
+      catalogDeadlineDate = parseDeadline(deadlineStr);
 
-      updateDeadlineUI();
-      if (orderDeadlineDate) {
-        countdownTimer = setInterval(updateDeadlineUI, 1000);
+      updateCatalogDeadlineUI();
+      if (catalogDeadlineDate) {
+        catalogTimer = setInterval(updateCatalogDeadlineUI, 1000);
       }
     }
 
@@ -889,22 +871,17 @@
       return null;
     }
 
-    function updateDeadlineUI() {
-      const banner = document.getElementById('deadlineBanner');
-      const textElem = document.getElementById('deadlineText');
-      const submitBtn = document.getElementById('btnSubmitOrder');
+    function updateCatalogDeadlineUI() {
+      const banner = document.getElementById('catalogDeadlineBanner');
+      const textElem = document.getElementById('catalogDeadlineText');
       if (!banner || !textElem) return;
 
-      // 若未指定截止時間，視為目前無時間限制，自動隱藏倒數條，維持常態下單狀態
-      if (!orderDeadlineDate) {
+      // 若未指定截止時間，視為目前無時間限制，自動隱藏倒數條，維持常態開放下單
+      if (!catalogDeadlineDate) {
         banner.style.display = 'none';
-        isDeadlineExpired = false;
-        banner.classList.remove('expired');
-        if (submitBtn && submitBtn.textContent.includes('截止')) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
-          submitBtn.style.cursor = 'pointer';
+        if (isCatalogExpired) {
+          isCatalogExpired = false;
+          renderProductList();
         }
         return;
       }
@@ -912,22 +889,18 @@
       banner.style.display = 'flex';
       const now = new Date();
 
-      const isSpecificDeadline = Boolean(currentProduct && currentProduct.deadline);
-
-      if (now >= orderDeadlineDate) {
-        isDeadlineExpired = true;
-        banner.classList.add('expired');
-        textElem.textContent = isSpecificDeadline ? '⛔ 此商品已截止收單' : '⛔ 本次連線已收單';
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = '🚫 已截止登記';
-          submitBtn.style.background = '#94a3b8';
-          submitBtn.style.cursor = 'not-allowed';
+      if (now >= catalogDeadlineDate) {
+        if (!isCatalogExpired) {
+          isCatalogExpired = true;
+          renderProductList();
         }
+        textElem.textContent = '⛔ 本次連線已收單';
       } else {
-        isDeadlineExpired = false;
-        banner.classList.remove('expired');
-        const diffMs = Math.max(0, orderDeadlineDate - now);
+        if (isCatalogExpired) {
+          isCatalogExpired = false;
+          renderProductList();
+        }
+        const diffMs = Math.max(0, catalogDeadlineDate - now);
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -936,513 +909,179 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = isSpecificDeadline ? `⏳ 本品項收單倒數：${timeStr}` : `⏳ 本次連線收單倒數：${timeStr}`;
-
-        if (submitBtn && submitBtn.textContent.includes('截止')) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
-          submitBtn.style.cursor = 'pointer';
-        }
+        textElem.textContent = `⏳ 本次連線收單倒數：${timeStr}`;
       }
     }
 
-    // 2. 取得商品資訊與系統設定
-    async function fetchProductData() {
+    // 載入商品資料 (雙軌並行請求極速完成，100% 確保拿到 settings)
+    async function fetchProducts() {
       try {
-        let apiUrl = `${CONFIG.GAS_API_URL}?action=getProductById&productId=${targetProductId}`;
-        
-        // 若尚未設定 GAS URL 則使用展示用假資料
-        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
-          currentProduct = {
-            id: 'P001',
-            name: '日本代購限定 輕量防潑水後背包',
-            category: '包包配件',
-            originalPrice: 1880,
-            price: 1450,
-            stock: 15,
-            specs: ['經典黑', '燕麥米白', '海軍深藍'],
-            imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
-            description: '日本專櫃限量代購！輕盈防潑水尼龍材質，多隔層設計，大容量通勤與出遊都超百搭。'
-          };
-          initDeadlineCountdown(null);
+        const [prodRes, settRes] = await Promise.allSettled([
+          fetch(`${CONFIG.GAS_API_URL}?action=getProducts`).then(r => r.json()),
+          fetch(`${CONFIG.GAS_API_URL}?action=getSettings`).then(r => r.json())
+        ]);
+
+        document.getElementById('skeletonLoader').style.display = 'none';
+
+        // 1. 處理設定 (收單截止日與商店名稱)
+        let sett = {};
+        if (settRes.status === 'fulfilled' && settRes.value && settRes.value.success && settRes.value.data) {
+          sett = settRes.value.data;
+        } else if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.settings) {
+          sett = prodRes.value.settings;
+        }
+
+        if (sett.ORDER_DEADLINE !== undefined) {
+          initCatalogDeadline(sett.ORDER_DEADLINE);
         } else {
-          // 同步嘗試取得全站設定 (備援收單截止日)
-          let globalDeadline = null;
+          initCatalogDeadline(null);
+        }
+
+        if (sett.STORE_NAME) {
+          const brandElem = document.querySelector('.brand-title span:first-child');
+          if (brandElem) brandElem.textContent = sett.STORE_NAME;
+        }
+
+        // 2. 處理商品
+        if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
+          allProducts = prodRes.value.data;
+
+          // 寫入快取，供下次秒開
           try {
-            const settRes = await fetch(`${CONFIG.GAS_API_URL}?action=getSettings`);
-            const settJson = await settRes.json();
-            if (settJson.success && settJson.data) {
-              globalDeadline = settJson.data.ORDER_DEADLINE;
-            }
+            sessionStorage.setItem('cached_catalog_data', JSON.stringify({
+              products: allProducts,
+              settings: sett
+            }));
           } catch (e) {}
 
-          const res = await fetch(apiUrl);
-          const json = await res.json();
-          if (json.success) {
-            currentProduct = json.data;
-            // 🌟 核心規範：優先以商品指定之截單時間為準！
-            const targetDeadline = currentProduct.deadline || globalDeadline;
-            initDeadlineCountdown(targetDeadline);
-          } else {
-            alert(json.message || '商品不存在');
-            return;
-          }
-        }
-
-        renderProductUI();
-      } catch (e) {
-        console.error('載入商品錯誤:', e);
-      }
-    }
-
-    // 3. 渲染商品 UI (含多圖相簿、無損全圖顯示、原價隱藏邏輯)
-    function renderProductUI() {
-      // 處理多張圖片
-      let allImgs = [];
-      if (Array.isArray(currentProduct.imageUrls) && currentProduct.imageUrls.length > 0) {
-        allImgs = currentProduct.imageUrls;
-      } else if (currentProduct.imageUrl) {
-        allImgs = String(currentProduct.imageUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
-      }
-      if (allImgs.length === 0) {
-        allImgs = ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80'];
-      }
-
-      // 自動將 Google Drive 圖片連結轉為直連網址
-      allImgs = allImgs.map(u => {
-        const driveMatch = u.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || u.match(/id=([a-zA-Z0-9_-]+)/) || u.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (driveMatch && driveMatch[1]) {
-          return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
-        }
-        return u;
-      });
-
-      // 設定主圖片
-      const mainImgElem = document.getElementById('productImage');
-      mainImgElem.src = allImgs[0];
-
-      // 渲染多圖縮圖列
-      const thumbsContainer = document.getElementById('imageThumbsStrip');
-      const counterBadge = document.getElementById('imageCounter');
-
-      if (allImgs.length > 1) {
-        thumbsContainer.innerHTML = '';
-        thumbsContainer.style.display = 'flex';
-        counterBadge.style.display = 'block';
-        counterBadge.textContent = `1 / ${allImgs.length}`;
-
-        allImgs.forEach((imgUrl, idx) => {
-          const thumbBtn = document.createElement('button');
-          thumbBtn.type = 'button';
-          thumbBtn.className = `image-thumb-btn ${idx === 0 ? 'active' : ''}`;
-          thumbBtn.innerHTML = `<img src="${imgUrl}" alt="圖片 ${idx + 1}" onerror="this.src='https://via.placeholder.com/56'">`;
-          thumbBtn.onclick = () => {
-            mainImgElem.style.opacity = '0.4';
-            setTimeout(() => {
-              mainImgElem.src = imgUrl;
-              mainImgElem.style.opacity = '1';
-            }, 120);
-            document.querySelectorAll('.image-thumb-btn').forEach(b => b.classList.remove('active'));
-            thumbBtn.classList.add('active');
-            counterBadge.textContent = `${idx + 1} / ${allImgs.length}`;
-          };
-          thumbsContainer.appendChild(thumbBtn);
-        });
-      } else {
-        thumbsContainer.style.display = 'none';
-        counterBadge.style.display = 'none';
-      }
-
-      document.getElementById('productTitle').textContent = currentProduct.name;
-      document.getElementById('productCategory').textContent = currentProduct.category || '2026.10月連線';
-      
-      const priceNum = Number(currentProduct.price) || 0;
-      const origPriceNum = Number(currentProduct.originalPrice) || 0;
-      document.getElementById('productPrice').textContent = `NT$ ${priceNum.toLocaleString()}`;
-
-      // 專櫃原價：若沒填原價、或原價<=連線價，則隱藏不顯示
-      const origPriceElem = document.getElementById('originalPrice');
-      if (origPriceNum > 0 && origPriceNum > priceNum) {
-        origPriceElem.textContent = `NT$ ${origPriceNum.toLocaleString()}`;
-        origPriceElem.style.display = 'inline';
-      } else {
-        origPriceElem.style.display = 'none';
-      }
-
-      document.getElementById('productDesc').textContent = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
-      
-      const stockNum = Number(currentProduct.stock) || 0;
-      const stockElem = document.getElementById('productStock');
-      if (stockNum >= 9999 || stockNum <= 0) {
-        // 不限名額或無特別限制時：無需顯示標籤
-        stockElem.style.display = 'none';
-      } else {
-        // 有限量名額時才提示買家
-        stockElem.textContent = `剩餘現貨：${stockNum}`;
-        stockElem.style.display = 'block';
-      }
-
-      // 渲染規格按鈕
-      const specContainer = document.getElementById('specList');
-      specContainer.innerHTML = '';
-      if (currentProduct.specs && currentProduct.specs.length > 0) {
-        currentProduct.specs.forEach((spec, idx) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = `spec-btn ${idx === 0 ? 'active' : ''}`;
-          btn.textContent = spec;
-          btn.onclick = () => selectSpec(spec, btn);
-          specContainer.appendChild(btn);
-        });
-        selectedSpec = currentProduct.specs[0];
-      } else {
-        selectedSpec = '單一規格';
-        specContainer.innerHTML = '<span style="font-size: 13px; color: #64748b;">單一規格</span>';
-      }
-
-      updateTotal();
-      document.getElementById('btnSubmitOrder').disabled = false;
-    }
-
-    function selectSpec(spec, btnElement) {
-      selectedSpec = spec;
-      document.querySelectorAll('.spec-btn').forEach(b => b.classList.remove('active'));
-      btnElement.classList.add('active');
-    }
-
-    // 4. 數量增減與金額計算 (純商品小計，運費留待回國出貨結帳)
-    function setupEventListeners() {
-      document.getElementById('btnMinus').onclick = () => {
-        if (currentQty > 1) {
-          currentQty--;
-          document.getElementById('inputQty').value = currentQty;
-          updateTotal();
-        }
-      };
-
-      document.getElementById('btnPlus').onclick = () => {
-        if (currentProduct && currentQty < currentProduct.stock) {
-          currentQty++;
-          document.getElementById('inputQty').value = currentQty;
-          updateTotal();
+          renderProductList();
         } else {
-          alert('已達到目前現貨/連線登記上限！');
-        }
-      };
-
-      document.getElementById('btnSubmitOrder').onclick = handleClickSubmit;
-    }
-
-    function updateTotal() {
-      if (!currentProduct) return;
-      const subtotal = currentProduct.price * currentQty;
-      document.getElementById('totalDisplay').textContent = `NT$ ${subtotal.toLocaleString()}`;
-    }
-
-    // 5. 顧客身分快取管理 (支援老客秒單)
-    function getSavedCustomerProfile() {
-      try {
-        const raw = localStorage.getItem('line_order_customer_profile');
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    function saveCustomerProfile(profile) {
-      localStorage.setItem('line_order_customer_profile', JSON.stringify(profile));
-    }
-
-    function loadSavedCustomerInfo() {
-      const profile = getSavedCustomerProfile();
-      if (profile) {
-        if (profile.realName) document.getElementById('regRealName').value = profile.realName;
-        if (profile.phone) document.getElementById('regPhone').value = profile.phone;
-      }
-    }
-
-    let isSubmittingFromButton = false;
-
-    // 手動重設本地快取並重新跳出建立視窗 (方便賣家測試)
-    function manualResetProfile() {
-      localStorage.removeItem('line_order_customer_profile');
-      const rName = document.getElementById('regRealName');
-      const rPhone = document.getElementById('regPhone');
-      if (rName) rName.value = '';
-      if (rPhone) rPhone.value = '';
-      document.getElementById('regLineName').value = currentUser.displayName || '';
-      isSubmittingFromButton = false;
-      document.getElementById('firstTimeProfileModal').classList.add('active');
-    }
-
-    // 6. 第一次點開商品卡時，檢查是否為新客並自動跳出彈窗建立
-    async function checkFirstTimeCustomerOnLoad() {
-      // (1) 支援網址參數強制重設 (?reset=1 或 ?new=1 或 ?clear=1)
-      const urlParams = new URLSearchParams(window.location.search);
-      const isForceReset = urlParams.get('reset') === '1' || urlParams.get('new') === '1' || urlParams.get('clear') === '1';
-      if (isForceReset) {
-        localStorage.removeItem('line_order_customer_profile');
-        const rName = document.getElementById('regRealName');
-        const rPhone = document.getElementById('regPhone');
-        if (rName) rName.value = '';
-        if (rPhone) rPhone.value = '';
-      }
-
-      let profile = isForceReset ? null : getSavedCustomerProfile();
-
-      // (2) 以 Google 試算表【顧客歸戶】真實資料為準 (避免試算表已清空但手機仍殘留舊快取)
-      if (currentUser.userId && currentUser.userId !== 'TEST_USER_999' && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
-        try {
-          const res = await fetch(`${CONFIG.GAS_API_URL}?action=checkCustomer&userId=${encodeURIComponent(currentUser.userId)}`);
-          const json = await res.json();
-          if (json.success) {
-            if (json.exists && json.profile && json.profile.realName && json.profile.phone) {
-              // 試算表確實有此顧客：同步更新本地快取，視為老客不彈窗
-              saveCustomerProfile(json.profile);
-              loadSavedCustomerInfo();
-              return;
-            } else {
-              // 試算表中查無此顧客（例如管理員剛清空了顧客表）：清除本地殘留快取！
-              localStorage.removeItem('line_order_customer_profile');
-              const rName = document.getElementById('regRealName');
-              const rPhone = document.getElementById('regPhone');
-              if (rName) rName.value = '';
-              if (rPhone) rPhone.value = '';
-              profile = null;
-            }
-          }
-        } catch (e) {
-          console.warn('線上顧客檢查異常:', e);
-        }
-      }
-
-      // (3) 檢查本地資料完整性
-      if (profile && profile.realName && profile.phone) {
-        return; // 已有完整真實姓名與電話，不跳出
-      }
-
-      // (4) 若為新客人：在背景預先將 LINE 暱稱填妥，絕不主動彈窗打擾客人看商品！
-      // 堅持「點擊火速登記時才跳出填寫基本資料」
-      isSubmittingFromButton = true;
-      const regLine = document.getElementById('regLineName');
-      if (regLine) regLine.value = currentUser.displayName || '';
-    }
-
-    // 點擊「火速登記」：老客直接秒單，新客（或剛才取消者）跳彈窗登記
-    function handleClickSubmit() {
-      if (isDeadlineExpired) {
-        alert('⚠️ 很抱歉，此商品已截止收單囉！');
-        return;
-      }
-      const profile = getSavedCustomerProfile();
-      if (profile && profile.realName && profile.phone) {
-        // 已有完整資料之老客人：直接秒單！
-        executeCreateOrder(profile);
-      } else {
-        // 尚未建立聯絡資料：跳出視窗並標記為送單觸發
-        isSubmittingFromButton = true;
-        document.getElementById('regLineName').value = currentUser.displayName || '';
-        document.getElementById('firstTimeProfileModal').classList.add('active');
-      }
-    }
-
-    function closeProfileModal() {
-      isSubmittingFromButton = false;
-      document.getElementById('firstTimeProfileModal').classList.remove('active');
-    }
-
-    // 確認送出聯絡資料 (立即正式寫入試算表【顧客歸戶】)
-    async function confirmProfileAndSubmit() {
-      const lineName = document.getElementById('regLineName').value.trim() || currentUser.displayName || '訪客';
-      const realName = document.getElementById('regRealName').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
-
-      if (!realName) {
-        alert('請填寫「真實姓名」，以利回國後核對訂單與寄件！');
-        document.getElementById('regRealName').focus();
-        return;
-      }
-
-      if (!phone || !/^09\d{8}$/.test(phone.replace(/[-\s]/g, ''))) {
-        alert('請填寫正確的手機號碼 (例如：0912345678)！');
-        document.getElementById('regPhone').focus();
-        return;
-      }
-
-      const cleanPhone = phone.replace(/[-\s]/g, '');
-      const profile = {
-        userId: currentUser.userId,
-        userName: lineName,
-        realName: realName,
-        phone: cleanPhone
-      };
-
-      const btnConfirm = document.getElementById('btnConfirmProfile');
-      if (btnConfirm) {
-        btnConfirm.disabled = true;
-        btnConfirm.textContent = '建立歸戶中...';
-      }
-
-      // 1. 同步快取至本地瀏覽器
-      saveCustomerProfile(profile);
-
-      // 2. 立即正式寫入 Google 試算表【顧客歸戶】工作表
-      if (CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
-        try {
-          await fetch(CONFIG.GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'registerCustomer',
-              data: {
-                userId: currentUser.userId,
-                userName: lineName,
-                realName: realName,
-                phone: cleanPhone
-              }
-            })
-          });
-        } catch (e) {
-          console.warn('線上建立顧客歸戶略過 (已暫存本地):', e);
-        }
-      }
-
-      if (btnConfirm) {
-        btnConfirm.disabled = false;
-        btnConfirm.textContent = '確認送出';
-      }
-
-      closeProfileModal();
-
-      if (isSubmittingFromButton) {
-        // 若是由點擊火速登記觸發的，儲存後直接執行下單
-        isSubmittingFromButton = false;
-        executeCreateOrder(profile);
-      } else {
-        // 首次點開商品卡時填寫完成：提示已建立，可繼續挑選規格登記
-        alert('✅ 聯絡資料已成功建立並歸戶！現在您可以挑選喜愛的商品規格並進行登記囉！');
-      }
-    }
-
-    // 7. 真正執行送單至 Google 試算表 (狀態: 連線中待出貨)
-    async function executeCreateOrder(profile) {
-      const submitBtn = document.getElementById('btnSubmitOrder');
-      submitBtn.disabled = true;
-      submitBtn.textContent = '登記中....';
-
-      const note = document.getElementById('custNote').value.trim();
-      const orderPayload = {
-        action: 'createOrder',
-        data: {
-          productId: currentProduct.id,
-          spec: selectedSpec,
-          quantity: currentQty,
-          userId: currentUser.userId,
-          userName: profile.userName || currentUser.displayName,
-          realName: profile.realName,
-          phone: profile.phone,
-          note: note
-        }
-      };
-
-      try {
-        if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
-          setTimeout(() => {
-            showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
-            submitBtn.disabled = false;
-            submitBtn.textContent = '🚀 火速登記';
-          }, 600);
-          return;
-        }
-
-        const res = await fetch(CONFIG.GAS_API_URL, {
-          method: 'POST',
-          body: JSON.stringify(orderPayload)
-        });
-        const result = await res.json();
-
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 火速登記';
-
-        if (result.success) {
-          showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
-        } else {
-          alert('登記失敗：' + (result.message || result.error || '系統處理異常'));
+          showNoProducts('目前連線商品整理中，敬請期待！');
         }
       } catch (err) {
-        console.error('送單錯誤:', err);
-        alert('網路連線逾時，請檢查網路或稍候再試！');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 火速登記';
+        console.error('載入商品清單失敗:', err);
+        document.getElementById('skeletonLoader').style.display = 'none';
+        if (!allProducts || allProducts.length === 0) {
+          showNoProducts('網路連線逾時，請重新整理頁面！');
+        }
       }
     }
 
-    function showSuccessModal(prodName, spec, qty, subtotal) {
-      document.getElementById('modalProdName').textContent = prodName;
-      document.getElementById('modalSpec').textContent = spec;
-      document.getElementById('modalQty').textContent = qty;
-      document.getElementById('modalSubtotal').textContent = `NT$ ${subtotal.toLocaleString()}`;
-      document.getElementById('successModal').classList.add('active');
+    // 取得可靠的主圖片網址
+    function getSafeImageUrl(rawUrl) {
+      const fallback = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
+      if (!rawUrl) return fallback;
+      const parts = String(rawUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
+      let url = parts[0] || fallback;
+      if (!url.startsWith('http')) return fallback;
+
+      // Google Drive 轉直連
+      const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+      }
+      return url;
     }
 
-    function updateNavigationLinks() {
-      const params = new URLSearchParams();
-      if (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
-        params.set('uid', currentUser.userId);
-      }
-      if (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') {
-        params.set('name', currentUser.displayName);
-      }
-      if (currentUser && currentUser.pictureUrl && !currentUser.pictureUrl.includes('placeholder')) {
-        params.set('avatar', currentUser.pictureUrl);
-      }
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
-
-      const catBtn = document.getElementById('linkBackToCatalog');
-      if (catBtn) catBtn.href = `catalog.html${queryStr}`;
-      const ordBtn = document.getElementById('linkToMyOrders');
-      if (ordBtn) ordBtn.href = `my-orders.html${queryStr}`;
+    // 搜尋處理
+    function handleSearch() {
+      const input = document.getElementById('searchInput');
+      searchKeyword = input ? input.value.trim().toLowerCase() : '';
+      const clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) clearBtn.style.display = searchKeyword ? 'block' : 'none';
+      renderProductList();
     }
 
-    function handleGoToOrders(e) {
-      if (e) e.preventDefault();
-      goToMyOrders();
+    // 清空搜尋
+    function clearSearch() {
+      const input = document.getElementById('searchInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      searchKeyword = '';
+      const clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) clearBtn.style.display = 'none';
+      renderProductList();
     }
 
-    function continueShopping() {
-      const params = new URLSearchParams();
-      if (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
-        params.set('uid', currentUser.userId);
+    // 渲染商品網格
+    function renderProductList() {
+      const grid = document.getElementById('productGrid');
+      const noResult = document.getElementById('noResultBox');
+      const countText = document.getElementById('productCountText');
+
+      grid.innerHTML = '';
+
+      // 依關鍵字篩選 (名稱、編號、分類備註)
+      const filtered = allProducts.filter(p => {
+        if (!searchKeyword) return true;
+        const nameMatch = (p.name || '').toLowerCase().includes(searchKeyword);
+        const idMatch = (p.id || '').toLowerCase().includes(searchKeyword);
+        const catMatch = (p.category || '').toLowerCase().includes(searchKeyword);
+        return nameMatch || idMatch || catMatch;
+      });
+
+      countText.textContent = `共 ${filtered.length} 件連線中的商品`;
+
+      if (filtered.length === 0) {
+        grid.style.display = 'none';
+        noResult.style.display = 'block';
+        return;
       }
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
-      window.location.href = `catalog.html${queryStr}`;
+
+      noResult.style.display = 'none';
+      grid.style.display = 'grid';
+
+      filtered.forEach(prod => {
+        const card = document.createElement('a');
+        card.className = 'prod-card';
+        // 點擊卡片跳轉至下單頁，帶入 p 與 uid
+        const uidParam = currentUserId ? `&uid=${encodeURIComponent(currentUserId)}` : '';
+        card.href = `product.html?p=${encodeURIComponent(prod.id)}${uidParam}`;
+
+        const imgUrl = getSafeImageUrl(prod.imageUrl);
+        const priceNum = Number(prod.price) || 0;
+        const origPriceNum = Number(prod.originalPrice) || 0;
+        const origPriceHtml = (origPriceNum > 0 && origPriceNum > priceNum) 
+          ? `<span class="card-original-price">NT$ ${origPriceNum.toLocaleString()}</span>` 
+          : '';
+
+        const prodDeadline = prod.deadline ? parseDeadline(prod.deadline) : null;
+        const isThisProdExpired = prodDeadline ? (new Date() >= prodDeadline) : isCatalogExpired;
+
+        let deadlineBadgeHtml = '';
+        if (prod.deadline) {
+          const dlParts = prod.deadline.split(' ')[0].split('/');
+          const mmdd = (dlParts.length >= 3) ? `${dlParts[1]}/${dlParts[2]}` : prod.deadline;
+          deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${mmdd} 截止</span>`;
+        }
+
+        card.innerHTML = `
+          <div class="prod-img-box">
+            <img src="${imgUrl}" alt="${prod.name || ''}" loading="lazy" onerror="this.src='https://via.placeholder.com/300'">
+            <span class="card-badge">${prod.category || '2026.10月連線'}</span>
+            ${deadlineBadgeHtml}
+          </div>
+          <div class="card-body">
+            <div class="card-title">${prod.name || '未命名商品'}</div>
+            <div class="card-prices">
+              <span class="card-current-price">NT$ ${priceNum.toLocaleString()}</span>
+              ${origPriceHtml}
+            </div>
+            <div class="${isThisProdExpired ? 'btn-buy-now disabled' : 'btn-buy-now'}">${isThisProdExpired ? '🚫 已截止' : '🛒 立即下單'}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
     }
 
-    function goToMyOrders() {
-      const params = new URLSearchParams();
-      let uid = (currentUser && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
-      let name = (currentUser && currentUser.displayName !== '訪客預覽') ? currentUser.displayName : (urlParams.get('name') || '');
-      let avatar = (currentUser && !currentUser.pictureUrl.includes('placeholder')) ? currentUser.pictureUrl : (urlParams.get('avatar') || '');
-
-      if (!uid || !name) {
-        try {
-          const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
-          if (cached) {
-            const p = JSON.parse(cached);
-            if (!uid && p.userId) uid = p.userId;
-            if (!name && p.displayName) name = p.displayName;
-            if (!avatar && p.pictureUrl) avatar = p.pictureUrl;
-          }
-        } catch (err) {}
-      }
-
-      if (uid) params.set('uid', uid);
-      if (name) params.set('name', name);
-      if (avatar) params.set('avatar', avatar);
-      params.set('t', Date.now());
-
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
-      window.location.href = `my-orders.html${queryStr}`;
+    function showNoProducts(msg) {
+      const grid = document.getElementById('productGrid');
+      const noResult = document.getElementById('noResultBox');
+      grid.style.display = 'none';
+      noResult.style.display = 'block';
+      noResult.querySelector('p').textContent = msg;
     }
   </script>
 </body>
