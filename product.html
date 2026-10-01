@@ -705,10 +705,10 @@
     <div class="vip-gate-card">
       <div class="vip-badge-crown">👑</div>
       <div class="vip-tag">LINE 好友會員限定</div>
-      <h2 class="vip-title">歡迎來到 VIP 連線特賣會</h2>
+      <h2 class="vip-title">歡迎來到 VIP 連線</h2>
       <p class="vip-subtitle">
-        為維護連線代購品質與專屬優惠價，本賣場僅開放給已建檔之 LINE 會員瀏覽與下單。<br>
-        <b>首次造訪僅需 5 秒填寫基本聯絡資料，即可立即解鎖！</b>
+        為維護連線代購品質與專屬優惠，本賣場僅開放給已建檔之 LINE 會員瀏覽與下單。<br>
+        <b>首次進入僅需 5 秒填寫基本聯絡資料，即可立即解鎖</b>
       </p>
 
       <div class="vip-form">
@@ -721,17 +721,17 @@
         </div>
         <div class="vip-form-group">
           <label class="vip-label">真實姓名 <span style="color: #ef4444;">*</span></label>
-          <input type="text" id="vipRealName" class="vip-input" placeholder="請填寫證件相符真實姓名 (取貨核對)">
+          <input type="text" id="vipRealName" class="vip-input" placeholder="請填寫證件相符真實姓名">
         </div>
         <div class="vip-form-group">
           <label class="vip-label">手機號碼 <span style="color: #ef4444;">*</span></label>
-          <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (出貨重要通知)">
+          <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (聯絡用)">
         </div>
 
         <button type="button" class="btn-vip-unlock" id="btnVipUnlock" onclick="handleVipRegisterAndUnlock()">
-          ✨ 加入會員並立即解鎖
+          ✨ 確認送出立即解鎖
         </button>
-        <div class="vip-notice">🔒 您的資料僅用於本次出貨聯絡與歸戶核對，絕不外流。</div>
+        <div class="vip-notice">🔒 您的資料僅用於聯絡及會員核對，絕不外流。</div>
       </div>
     </div>
   </div>
@@ -1488,11 +1488,11 @@
 
       // 3. 原地瞬間解鎖
       unlockVipGate();
-      alert('🎉 恭喜您！已成功加入 VIP 連線會員，已為您解鎖本商品搶購權限！');
+      alert('🎉 恭喜您！已成功加入 VIP 連線！');
 
       if (btnUnlock) {
         btnUnlock.disabled = false;
-        btnUnlock.textContent = '✨ 加入會員並立即解鎖';
+        btnUnlock.textContent = '✨ 確認送出立即解鎖';
       }
     }
 
