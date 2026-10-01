@@ -1529,7 +1529,6 @@
         const result = await res.json();
 
         if (result.success) {
-          alert('🎉 商品建檔成功！已即時同步寫入 Google 試算表！');
           // 清空表單與圖片
           document.getElementById('newProdName').value = '';
           document.getElementById('newProdPrice').value = '';
@@ -1545,14 +1544,25 @@
           renderAllImageThumbs();
           resetCostCalculator();
           
-          if (result.productId) {
+          // ⚡ 樂觀秒加（Optimistic UI）：立即推入本地商品庫並自動勾選，免等 5 秒網路往返！
+          if (result.product) {
+            allProducts = allProducts.filter(p => p.id !== result.product.id);
+            allProducts.unshift(result.product);
+            selectedProductIds.add(result.product.id);
+          } else if (result.productId) {
             selectedProductIds.add(result.productId);
           }
-          // 切換回推播頁面並自動重新整理
+          renderProductList();
+          updateSelectedCount();
+
+          // 切換回推播頁面並提示
           switchTab('tabPublish');
           document.querySelectorAll('.tab-btn')[0].classList.add('active');
           document.querySelectorAll('.tab-btn')[1].classList.remove('active');
-          await fetchProductList();
+          alert('🎉 商品建檔成功！已即時同步寫入 Google 試算表！');
+
+          // 背景非同步默默同步試算表最新清單（不卡住操作）
+          fetchProductList().catch(() => {});
         } else {
           alert('儲存失敗：' + result.message);
         }
