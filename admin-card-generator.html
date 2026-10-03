@@ -622,13 +622,8 @@
     };
 
     let allProducts = [];
+    let storeSettings = {};
     let selectedProductIds = new Set();
-
-    window.onload = async () => {
-      await initLiff();
-      await fetchProductList();
-    };
-
     let liffReady = false;
     let liffInClient = false;
     let liffCanShare = false;
@@ -855,6 +850,39 @@
       }
     }
 
+    // 截單時間字串解析工具
+    function parseDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      const s = String(str).trim().replace(/-/g, '/');
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+      const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      }
+      return null;
+    }
+
+    // 判斷商品是否已收單 / 截止 / 下架無法下訂
+    function isProductExpired(prod) {
+      if (!prod) return false;
+      // 1. 若商品狀態不是上架中，或標註了結單/截止/已下架
+      if (prod.status && (prod.status.includes('結單') || prod.status.includes('截止') || prod.status.includes('已下架'))) {
+        return true;
+      }
+      // 2. 若個別商品有指定截單時間且已超過
+      if (prod.deadline) {
+        const dl = parseDeadline(prod.deadline);
+        if (dl && new Date() >= dl) return true;
+      }
+      // 3. 若全店系統設定有統一截單時間且已超過
+      if (storeSettings && storeSettings.ORDER_DEADLINE) {
+        const storeDl = parseDeadline(storeSettings.ORDER_DEADLINE);
+        if (storeDl && new Date() >= storeDl) return true;
+      }
+      return false;
+    }
+
     // 2. 從 GAS 載入商品清單
     async function fetchProductList() {
       const container = document.getElementById('productListContainer');
@@ -867,12 +895,20 @@
         const json = await res.json();
         loading.style.display = 'none';
 
+        if (json.settings) {
+          storeSettings = json.settings;
+        }
+
         if (json.success && json.data.length > 0) {
           allProducts = json.data;
+          allProducts.forEach((p, idx) => { p._orderIndex = idx; });
+
+          // 🎯 需求 1：不要預設選取任何商品
+          selectedProductIds.clear();
+
           renderProductCheckboxes();
-          // 預設選取前 1~2 個商品
-          if (allProducts.length > 0) toggleSelectProduct(allProducts[0].id);
-          if (allProducts.length > 1) toggleSelectProduct(allProducts[1].id);
+          updateSelectedCount();
+          updateCarouselPreview();
         } else {
           container.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;">目前沒有上架中的商品，請切換至「電腦快速建檔」新增！</div>';
         }
@@ -914,13 +950,16 @@
       renderProductCheckboxes();
     }
 
-    // 3. 渲染勾選清單 (支援即時關鍵字搜尋與防呆)
+    // 3. 渲染勾選清單 (支援新到舊排序、自動排除已收單商品與即時搜尋)
     function renderProductCheckboxes() {
       const container = document.getElementById('productListContainer');
       container.innerHTML = '';
 
-      // 依關鍵字篩選商品 (品名、編號、規格、分類)
-      const filteredProducts = allProducts.filter(prod => {
+      // 依關鍵字篩選商品，並過濾掉「已收單無法下訂」的商品
+      const activeProducts = allProducts.filter(prod => {
+        // 🎯 需求 3：已收單無法下訂的商品不要在此顯示
+        if (isProductExpired(prod)) return false;
+
         if (!currentSearchKeyword) return true;
         const nameStr = (prod.name || '').toLowerCase();
         const idStr = (prod.id || '').toLowerCase();
@@ -939,31 +978,55 @@
                specsStr.includes(currentSearchKeyword);
       });
 
+      // 🎯 需求 2：由新到舊排序（最新商品排在最前面）
+      activeProducts.sort((a, b) => {
+        const matchA = String(a.id || '').match(/\d+/);
+        const matchB = String(b.id || '').match(/\d+/);
+        const numA = matchA ? parseInt(matchA[0], 10) : 0;
+        const numB = matchB ? parseInt(matchB[0], 10) : 0;
+        if (numB !== numA) {
+          return numB - numA;
+        }
+        const idxA = a._orderIndex !== undefined ? a._orderIndex : 0;
+        const idxB = b._orderIndex !== undefined ? b._orderIndex : 0;
+        return idxB - idxA;
+      });
+
       // 更新搜尋結果統計標籤
       const statsElem = document.getElementById('searchStatsText');
       if (statsElem) {
         if (currentSearchKeyword) {
-          statsElem.textContent = `找到 ${filteredProducts.length} 件 (共 ${allProducts.length} 件)`;
-        } else if (allProducts.length > 0) {
-          statsElem.textContent = `共 ${allProducts.length} 件`;
+          statsElem.textContent = `找到 ${activeProducts.length} 件 (依最新排序)`;
+        } else if (activeProducts.length > 0) {
+          statsElem.textContent = `可推播共 ${activeProducts.length} 件 (依最新排序)`;
         } else {
-          statsElem.textContent = '';
+          statsElem.textContent = '無可推播之在架商品';
         }
       }
 
-      if (filteredProducts.length === 0) {
-        const safeWord = currentSearchKeyword.replace(/[<>&"]/g, '');
-        container.innerHTML = `
-          <div style="text-align: center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
-            <div style="font-size: 26px; margin-bottom: 6px;">🔍</div>
-            查無符合「<b style="color: var(--text-main);">${safeWord}</b>」的商品<br>
-            <button type="button" onclick="clearProductSearch()" style="margin-top: 10px; background: #e2e8f0; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #334155; font-weight: 700;">清除條件</button>
-          </div>
-        `;
+      if (activeProducts.length === 0) {
+        if (currentSearchKeyword) {
+          const safeWord = currentSearchKeyword.replace(/[<>&"]/g, '');
+          container.innerHTML = `
+            <div style="text-align: center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
+              <div style="font-size: 26px; margin-bottom: 6px;">🔍</div>
+              查無符合「<b style="color: var(--text-main);">${safeWord}</b>」的商品<br>
+              <button type="button" onclick="clearProductSearch()" style="margin-top: 10px; background: #e2e8f0; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #334155; font-weight: 700;">清除條件</button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
+              <div style="font-size: 26px; margin-bottom: 6px;">📦</div>
+              目前無可推播的在架商品（已收單商品已自動隱藏）<br>
+              請至「💻 電腦快速建檔」新增商品！
+            </div>
+          `;
+        }
         return;
       }
 
-      filteredProducts.forEach(prod => {
+      activeProducts.forEach(prod => {
         const isChecked = selectedProductIds.has(prod.id);
         const item = document.createElement('div');
         item.className = `product-check-item ${isChecked ? 'selected' : ''}`;
@@ -1575,8 +1638,8 @@
             status: '上架中'
           };
           allProducts = allProducts.filter(p => p.id !== newProdItem.id);
+          newProdItem._orderIndex = 9999999;
           allProducts.unshift(newProdItem);
-          selectedProductIds.add(newProdItem.id);
 
           renderProductCheckboxes();
           updateSelectedCount();
