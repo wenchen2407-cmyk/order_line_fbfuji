@@ -2,6 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>連線商品清單 - W.W.連線代購</title>
   <!-- Google Fonts & LINE LIFF SDK -->
@@ -508,6 +511,70 @@
       box-shadow: none;
       cursor: not-allowed;
     }
+
+    /* 分頁導航列樣式 */
+    .pagination-nav {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin: 32px 0 20px;
+    }
+    .pagination-pages {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .page-btn {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      color: var(--text-main);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      user-select: none;
+    }
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary-dark);
+      background: #f0fdf4;
+    }
+    .page-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.35);
+    }
+    .page-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+      box-shadow: none;
+    }
+    .page-ellipsis {
+      font-size: 14px;
+      color: var(--text-muted);
+      padding: 0 6px;
+      font-weight: 700;
+    }
+    .pagination-info {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -591,6 +658,9 @@
     <!-- 商品網格 -->
     <div class="product-grid" id="productGrid" style="display: none;"></div>
 
+    <!-- 分頁導航列 -->
+    <div id="paginationNav" class="pagination-nav" style="display: none;"></div>
+
     <!-- 查無商品提示 -->
     <div id="noResultBox" style="display: none; text-align: center; padding: 50px 16px; color: var(--text-muted);">
       <div style="font-size: 36px; margin-bottom: 8px;">🔍</div>
@@ -625,6 +695,8 @@
     let currentCategory = 'ALL';
     let searchKeyword = '';
     let currentUserId = '';
+    const PAGE_SIZE = 25;
+    let currentPage = 1;
 
     // ⚡ 0 毫秒會員身分檢查：老客秒通，新客即刻防護
     function isLocallyVerifiedMember() {
@@ -983,12 +1055,29 @@
       return url;
     }
 
+    // 判斷商品是否已結單 / 截止 / 下架
+    function isProductExpired(prod) {
+      if (!prod) return false;
+      if (prod.status && (prod.status.includes('結單') || prod.status.includes('截止') || prod.status.includes('已下架'))) {
+        return true;
+      }
+      if (prod.deadline) {
+        const prodDl = parseDeadline(prod.deadline);
+        if (prodDl && new Date() >= prodDl) return true;
+      }
+      if (isCatalogExpired) {
+        return true;
+      }
+      return false;
+    }
+
     // 搜尋處理
     function handleSearch() {
       const input = document.getElementById('searchInput');
       searchKeyword = input ? input.value.trim().toLowerCase() : '';
       const clearBtn = document.getElementById('btnClearSearch');
       if (clearBtn) clearBtn.style.display = searchKeyword ? 'block' : 'none';
+      currentPage = 1;
       renderProductList();
     }
 
@@ -1002,14 +1091,16 @@
       searchKeyword = '';
       const clearBtn = document.getElementById('btnClearSearch');
       if (clearBtn) clearBtn.style.display = 'none';
+      currentPage = 1;
       renderProductList();
     }
 
-    // 渲染商品網格
+    // 渲染商品網格 (含結單沉底排序與分頁切片)
     function renderProductList() {
       const grid = document.getElementById('productGrid');
       const noResult = document.getElementById('noResultBox');
       const countText = document.getElementById('productCountText');
+      const paginationNav = document.getElementById('paginationNav');
 
       grid.innerHTML = '';
 
@@ -1022,10 +1113,24 @@
         return nameMatch || idMatch || catMatch;
       });
 
-      countText.textContent = `共 ${filtered.length} 件連線中的商品`;
+      // 🎯 需求 1：將已結單的商品排序到最後面（未結單在上，已結單在後）
+      filtered.sort((a, b) => {
+        const aExpired = isProductExpired(a) ? 1 : 0;
+        const bExpired = isProductExpired(b) ? 1 : 0;
+        return aExpired - bExpired;
+      });
 
-      if (filtered.length === 0) {
+      const totalItems = filtered.length;
+      const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+      // 確保目前頁數在合理區間
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      if (totalItems === 0) {
+        countText.textContent = `共 0 件連線中的商品`;
         grid.style.display = 'none';
+        if (paginationNav) paginationNav.style.display = 'none';
         noResult.style.display = 'block';
         return;
       }
@@ -1033,7 +1138,18 @@
       noResult.style.display = 'none';
       grid.style.display = 'grid';
 
-      filtered.forEach(prod => {
+      // 🎯 需求 2：增加分頁功能，每頁顯示 25 個商品
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+      const paginatedProducts = filtered.slice(startIndex, endIndex);
+
+      if (totalPages > 1) {
+        countText.textContent = `顯示第 ${startIndex + 1} - ${endIndex} 件，共 ${totalItems} 件商品 (第 ${currentPage} / ${totalPages} 頁)`;
+      } else {
+        countText.textContent = `共 ${totalItems} 件連線中的商品`;
+      }
+
+      paginatedProducts.forEach(prod => {
         const card = document.createElement('a');
         card.className = 'prod-card';
         // 點擊卡片跳轉至下單頁，帶入 p 與 uid
@@ -1047,8 +1163,7 @@
           ? `<span class="card-original-price">NT$ ${origPriceNum.toLocaleString()}</span>` 
           : '';
 
-        const prodDeadline = prod.deadline ? parseDeadline(prod.deadline) : null;
-        const isThisProdExpired = prodDeadline ? (new Date() >= prodDeadline) : isCatalogExpired;
+        const isThisProdExpired = isProductExpired(prod);
 
         let deadlineBadgeHtml = '';
         if (prod.deadline) {
@@ -1057,10 +1172,14 @@
           deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${mmdd} 截止</span>`;
         }
 
+        if (isThisProdExpired) {
+          card.style.opacity = '0.75';
+        }
+
         card.innerHTML = `
           <div class="prod-img-box">
             <img src="${imgUrl}" alt="${prod.name || ''}" loading="lazy" onerror="this.src='https://via.placeholder.com/300'">
-            <span class="card-badge">${prod.category || '2026.10月連線'}</span>
+            <span class="card-badge">${isThisProdExpired ? '🚫 已結單' : (prod.category || '2026.10月連線')}</span>
             ${deadlineBadgeHtml}
           </div>
           <div class="card-body">
@@ -1074,12 +1193,86 @@
         `;
         grid.appendChild(card);
       });
+
+      // 渲染分頁控制器
+      renderPagination(totalItems, totalPages);
+    }
+
+    // 渲染分頁按鈕導航列
+    function renderPagination(totalItems, totalPages) {
+      const nav = document.getElementById('paginationNav');
+      if (!nav) return;
+
+      if (totalPages <= 1) {
+        nav.style.display = 'none';
+        nav.innerHTML = '';
+        return;
+      }
+
+      nav.style.display = 'flex';
+
+      let html = `
+        <div class="pagination-pages">
+          <button type="button" class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">
+            ◀ 上一頁
+          </button>
+      `;
+
+      const pageNumbers = getPageNumbers(currentPage, totalPages);
+      pageNumbers.forEach(p => {
+        if (p === '...') {
+          html += `<span class="page-ellipsis">...</span>`;
+        } else {
+          html += `
+            <button type="button" class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">
+              ${p}
+            </button>
+          `;
+        }
+      });
+
+      html += `
+          <button type="button" class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">
+            下一頁 ▶
+          </button>
+        </div>
+        <div class="pagination-info">每頁 25 件 ｜ 第 ${currentPage} / ${totalPages} 頁 (共 ${totalItems} 件)</div>
+      `;
+
+      nav.innerHTML = html;
+    }
+
+    // 智能頁碼產生器 (支援第 1 頁、最後 1 頁與前後關聯省略號)
+    function getPageNumbers(current, total) {
+      if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+      }
+      if (current <= 4) {
+        return [1, 2, 3, 4, 5, '...', total];
+      }
+      if (current >= total - 3) {
+        return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+      }
+      return [1, '...', current - 1, current, current + 1, '...', total];
+    }
+
+    // 分頁切換並平滑滾動至商品頂部
+    function goToPage(page) {
+      currentPage = page;
+      renderProductList();
+      const grid = document.getElementById('productGrid');
+      if (grid) {
+        const top = grid.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
     }
 
     function showNoProducts(msg) {
       const grid = document.getElementById('productGrid');
       const noResult = document.getElementById('noResultBox');
+      const paginationNav = document.getElementById('paginationNav');
       grid.style.display = 'none';
+      if (paginationNav) paginationNav.style.display = 'none';
       noResult.style.display = 'block';
       noResult.querySelector('p').textContent = msg;
     }
