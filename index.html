@@ -807,7 +807,45 @@
       // 1. 雙軌並行發動 (LIFF 身分驗證 與 商品清單下載 同時出發，互不卡住)
       initLiff();
       fetchProducts();
+
+      // 2. 靜默記錄大廳瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
+      recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁');
     };
+
+    // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
+    function recordPageView(pageKey, pageTitle, productId) {
+      try {
+        const storageKey = 'pv_' + (pageKey || 'catalog.html');
+        const lastVisit = sessionStorage.getItem(storageKey);
+        const now = Date.now();
+        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        sessionStorage.setItem(storageKey, String(now));
+
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
+        if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const payload = {
+          action: 'recordPageView',
+          data: {
+            page: pageKey || 'catalog.html',
+            title: pageTitle || '🇯🇵🇰🇷 連線商品大廳首頁',
+            productId: productId || '-'
+          }
+        };
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(gasUrl, new Blob([JSON.stringify(payload)], { type: 'text/plain' }));
+        } else {
+          fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (e) {}
+    }
 
     // 0 毫秒快取恢復機制 (SWR 模式)
     function restoreInstantCache() {

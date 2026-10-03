@@ -1169,9 +1169,49 @@
         }
 
         renderProductUI();
+
+        // 靜默記錄商品頁面瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
+        if (currentProduct && currentProduct.id) {
+          recordPageView(`product.html?p=${currentProduct.id}`, `【商品】${currentProduct.name}`, currentProduct.id);
+        }
       } catch (e) {
         console.error('載入商品錯誤:', e);
       }
+    }
+
+    // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
+    function recordPageView(pageKey, pageTitle, productId) {
+      try {
+        const storageKey = 'pv_' + (pageKey || ('product.html?p=' + productId));
+        const lastVisit = sessionStorage.getItem(storageKey);
+        const now = Date.now();
+        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        sessionStorage.setItem(storageKey, String(now));
+
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
+        if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const payload = {
+          action: 'recordPageView',
+          data: {
+            page: pageKey || ('product.html?p=' + productId),
+            title: pageTitle || (document.title || '商品內頁'),
+            productId: productId || '-'
+          }
+        };
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(gasUrl, new Blob([JSON.stringify(payload)], { type: 'text/plain' }));
+        } else {
+          fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (e) {}
     }
 
     // 3. 渲染商品 UI (含多圖相簿、無損全圖顯示、原價隱藏邏輯)

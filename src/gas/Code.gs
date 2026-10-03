@@ -8,7 +8,8 @@ const SHEET_NAMES = {
   PRODUCTS: '商品清單',
   ORDERS: '訂單明細',
   CUSTOMERS: '顧客歸戶',
-  SETTINGS: '系統設定'
+  SETTINGS: '系統設定',
+  VIEWS: '瀏覽統計'
 };
 
 // 指定的商品圖片 Google Drive 資料夾 ID
@@ -200,6 +201,19 @@ function setupSpreadsheet() {
   // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
   settSheet.getRange("B:B").setNumberFormat('@');
 
+  // 5. 瀏覽統計工作表 (自動建立各頁面與商品人次統計)
+  let viewSheet = ss.getSheetByName(SHEET_NAMES.VIEWS);
+  const viewHeaders = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
+  if (!viewSheet) {
+    viewSheet = ss.insertSheet(SHEET_NAMES.VIEWS);
+    viewSheet.appendRow(viewHeaders);
+  } else {
+    viewSheet.getRange(1, 1, 1, viewHeaders.length).setValues([viewHeaders]);
+  }
+  viewSheet.getRange(1, 1, 1, viewHeaders.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
+  viewSheet.getRange("D:D").setNumberFormat('#,##0');
+  viewSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+
   // 3. 確保 Google Drive 商品圖片庫資料夾權限為「知道連結者皆可檢視」，子檔案自動繼承免逐檔授權
   try {
     const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
@@ -271,6 +285,14 @@ function doGet(e) {
       result = checkCustomerExists(uid);
     } else if (action === 'getSettings') {
       result = getSystemSettings();
+    } else if (action === 'getViewStats') {
+      result = getViewStats();
+    } else if (action === 'recordPageView') {
+      result = handleRecordPageView({
+        page: e.parameter.page,
+        title: e.parameter.title,
+        productId: e.parameter.productId
+      });
     } else if (action === 'clearTestData') {
       result = clearTestOrdersData();
     } else {
@@ -311,6 +333,10 @@ function doPost(e) {
       result = handleAddProduct(postData.data);
     } else if (action === 'uploadImages') {
       result = handleUploadImages(postData.data);
+    } else if (action === 'recordPageView') {
+      result = handleRecordPageView(postData.data);
+    } else if (action === 'getViewStats') {
+      result = getViewStats();
     } else if (action === 'clearTestData') {
       result = clearTestOrdersData();
     } else {
@@ -1486,6 +1512,164 @@ function clearTestOrdersData() {
     message: `✅ 測試資料已成功清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
     deletedOrders: deletedOrdersCount,
     deletedCustomers: deletedCustCount
+  };
+}
+
+/**
+ * 處理頁面與商品瀏覽人次累計 (使用 LockService 避免併發衝突)
+ */
+function handleRecordPageView(data) {
+  if (!data || !data.page) {
+    return { success: false, message: '無效的頁面資料' };
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { success: false, message: '伺服器繁忙，略過本次統計' };
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
+    const headers = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
+
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAMES.VIEWS || '瀏覽統計');
+      sheet.appendRow(headers);
+      sheet.getRange(1, 1, 1, headers.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
+      sheet.getRange("D:D").setNumberFormat('#,##0');
+      sheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+    }
+
+    const pagePath = String(data.page || '').trim();
+    const pageTitle = String(data.title || pagePath).trim();
+    const productId = String(data.productId || '-').trim();
+    const now = new Date();
+
+    const range = sheet.getDataRange();
+    const values = range.getValues();
+    let targetRow = -1;
+    let currentViews = 0;
+
+    for (let r = 1; r < values.length; r++) {
+      const existingPath = String(values[r][1] || '').trim();
+      const existingPid = String(values[r][2] || '').trim();
+      
+      if (productId !== '-' && productId !== '') {
+        if (existingPid === productId || existingPath === pagePath) {
+          targetRow = r + 1;
+          currentViews = Number(values[r][3]) || 0;
+          break;
+        }
+      } else {
+        if (existingPath === pagePath) {
+          targetRow = r + 1;
+          currentViews = Number(values[r][3]) || 0;
+          break;
+        }
+      }
+    }
+
+    const newViews = currentViews + 1;
+
+    if (targetRow > 0) {
+      if (pageTitle) sheet.getRange(targetRow, 1).setValue(pageTitle);
+      if (productId && productId !== '-') sheet.getRange(targetRow, 3).setValue(productId);
+      sheet.getRange(targetRow, 4).setValue(newViews);
+      sheet.getRange(targetRow, 5).setValue(now);
+    } else {
+      sheet.appendRow([pageTitle, pagePath, productId, 1, now]);
+    }
+
+    return { success: true, page: pagePath, views: newViews };
+  } catch (err) {
+    return { success: false, message: err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 取得全站各頁面與商品瀏覽統計數據
+ */
+function getViewStats() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
+  if (!sheet) {
+    return { success: true, totalViews: 0, pages: [], topProducts: [] };
+  }
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) {
+    return { success: true, totalViews: 0, pages: [], topProducts: [] };
+  }
+
+  let totalViews = 0;
+  const pages = [];
+  const productViewsMap = {};
+
+  for (let r = 1; r < values.length; r++) {
+    const title = String(values[r][0] || '').trim();
+    const path = String(values[r][1] || '').trim();
+    const pid = String(values[r][2] || '').trim();
+    const views = Number(values[r][3]) || 0;
+    const lastTime = values[r][4] ? Utilities.formatDate(new Date(values[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
+
+    totalViews += views;
+
+    const item = {
+      title: title,
+      path: path,
+      productId: pid,
+      views: views,
+      lastVisited: lastTime
+    };
+
+    pages.push(item);
+
+    if (pid && pid !== '-') {
+      productViewsMap[pid] = (productViewsMap[pid] || 0) + views;
+    }
+  }
+
+  pages.sort((a, b) => b.views - a.views);
+
+  // 取得商品清單進行資訊豐富化 (圖片、價格)
+  const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  const productsMeta = {};
+  if (prodSheet) {
+    const prodData = prodSheet.getDataRange().getValues();
+    for (let r = 1; r < prodData.length; r++) {
+      const pid = String(prodData[r][0] || '').trim();
+      const pName = String(prodData[r][1] || '').trim();
+      const pImg = String(prodData[r][7] || '').trim();
+      const pPrice = Number(prodData[r][4]) || 0;
+      if (pid) {
+        productsMeta[pid] = { name: pName, imageUrl: pImg, price: pPrice };
+      }
+    }
+  }
+
+  const topProducts = [];
+  for (const pid in productViewsMap) {
+    const meta = productsMeta[pid] || {};
+    topProducts.push({
+      productId: pid,
+      name: meta.name || pid,
+      imageUrl: meta.imageUrl || '',
+      price: meta.price || 0,
+      views: productViewsMap[pid]
+    });
+  }
+  topProducts.sort((a, b) => b.views - a.views);
+
+  return {
+    success: true,
+    totalViews: totalViews,
+    pages: pages,
+    topProducts: topProducts
   };
 }
 

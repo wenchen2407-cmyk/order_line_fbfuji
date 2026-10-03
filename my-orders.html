@@ -1132,7 +1132,45 @@
       // 1. 並行發動 (LIFF 身分驗證 與 訂單資料獲取 同時執行)
       initLiff();
       fetchUserData();
+
+      // 2. 靜默記錄訂單頁面瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
+      recordPageView('my-orders.html', '📦 買家訂購清單與合併結帳');
     };
+
+    // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
+    function recordPageView(pageKey, pageTitle, productId) {
+      try {
+        const storageKey = 'pv_' + (pageKey || 'my-orders.html');
+        const lastVisit = sessionStorage.getItem(storageKey);
+        const now = Date.now();
+        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        sessionStorage.setItem(storageKey, String(now));
+
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
+        if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const payload = {
+          action: 'recordPageView',
+          data: {
+            page: pageKey || 'my-orders.html',
+            title: pageTitle || '📦 買家訂購清單與合併結帳',
+            productId: productId || '-'
+          }
+        };
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(gasUrl, new Blob([JSON.stringify(payload)], { type: 'text/plain' }));
+        } else {
+          fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (e) {}
+    }
 
     // 0 毫秒訂單快取還原
     function restoreInstantOrdersCache() {

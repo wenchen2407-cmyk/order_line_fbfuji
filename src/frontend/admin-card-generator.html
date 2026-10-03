@@ -387,6 +387,7 @@
       <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 勾選商品發群組 (多選輪播)</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 電腦快速建檔</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabNotifyCustomer', this)">📢 顧客結帳通知 (1對1免額度)</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 瀏覽統計與熱門排行</button>
     </div>
 
     <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
@@ -613,6 +614,75 @@
       </div>
     </div>
 
+    <!-- ================= 分頁 4：全站與商品瀏覽人次統計 (僅賣家可見) ================= -->
+    <div id="tabAnalytics" class="tab-content">
+      <div style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- 頂部總覽標題與功能列 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div class="panel-title" style="margin-bottom: 4px; font-size: 16px;">📊 全站各頁面與商品瀏覽人次統計</div>
+            <div style="font-size: 12px; color: var(--text-muted);">自動記錄買家進入的大廳首頁、單品介紹與訂單頁面，數據即時記錄至 Google 試算表「瀏覽統計」工作表。</div>
+          </div>
+          <button type="button" class="btn" style="width: auto; padding: 7px 14px; font-size: 12px; background: #4f46e5; color: #fff;" onclick="loadViewStats(true)">
+            🔄 重新整理統計
+          </button>
+        </div>
+
+        <!-- 數據指標概覽 Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #4f46e5;">
+            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📈 全站累計總瀏覽量</div>
+            <div id="statTotalViews" style="font-size: 26px; font-weight: 900; color: #4f46e5; margin-top: 4px;">--</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">包含大廳、商品單品頁、訂購單等</div>
+          </div>
+          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #06c755;">
+            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🔥 人氣第一名商品</div>
+            <div id="statTopProduct" style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div>
+            <div id="statTopProductViews" style="font-size: 12px; color: #06c755; font-weight: 700; margin-top: 2px;">-- 次瀏覽</div>
+          </div>
+          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #f59e0b;">
+            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📑 已追蹤頁面與商品數</div>
+            <div id="statTrackedPages" style="font-size: 26px; font-weight: 900; color: #f59e0b; margin-top: 4px;">--</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">不重複路徑/商品記錄</div>
+          </div>
+        </div>
+
+        <!-- 🏆 TOP 熱門人氣商品排行 (圖文卡片) -->
+        <div class="panel" style="margin-bottom: 0;">
+          <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span>🔥 商品關注度排行榜 (Top 10)</span>
+            <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">依買家瀏覽單品頁次數排序</span>
+          </div>
+          <div id="topProductsList" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;">點擊上方 Tab 或重新整理按鈕以讀取排行</div>
+          </div>
+        </div>
+
+        <!-- 📋 所有頁面瀏覽細項表格 -->
+        <div class="panel" style="margin-bottom: 0;">
+          <div class="panel-title" style="margin-bottom: 12px;">📑 各頁面與商品瀏覽人次明細表</div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+              <thead>
+                <tr style="background: #f1f5f9; color: #475569; border-bottom: 1px solid var(--border);">
+                  <th style="padding: 10px 12px; font-weight: 700;">頁面名稱 / 商品</th>
+                  <th style="padding: 10px 12px; font-weight: 700;">路徑 / 參數</th>
+                  <th style="padding: 10px 12px; font-weight: 700; text-align: center;">商品編號</th>
+                  <th style="padding: 10px 12px; font-weight: 700; text-align: right;">累計瀏覽</th>
+                  <th style="padding: 10px 12px; font-weight: 700; text-align: right;">最後瀏覽時間</th>
+                </tr>
+              </thead>
+              <tbody id="pageViewsTableBody">
+                <tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">點擊上方 Tab 或重新整理按鈕以讀取明細</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -631,6 +701,7 @@
     window.onload = async () => {
       await initLiff();
       await fetchProductList();
+      recordPageView('admin-card-generator.html', '💻 賣家管理與發卡推播中心');
     };
 
     async function initLiff() {
@@ -666,8 +737,8 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
-      const tabMap = { 'tabPublish': 0, 'tabCreate': 1, 'tabNotifyCustomer': 2 };
-      const tabIdx = tabMap[tabId] || 0;
+      const tabMap = { 'tabPublish': 0, 'tabCreate': 1, 'tabNotifyCustomer': 2, 'tabAnalytics': 3 };
+      const tabIdx = tabMap[tabId] !== undefined ? tabMap[tabId] : 0;
       const allBtns = document.querySelectorAll('.tab-btn');
 
       if (btnElement) {
@@ -683,7 +754,167 @@
 
       if (tabId === 'tabNotifyCustomer') {
         loadCustomerNotifyList();
+      } else if (tabId === 'tabAnalytics') {
+        loadViewStats();
       }
+    }
+
+    // 4. 統計分析數據載入與展示
+    let viewStatsCache = null;
+
+    async function loadViewStats(forceRefresh = false) {
+      if (viewStatsCache && !forceRefresh) {
+        renderViewStats(viewStatsCache);
+        return;
+      }
+
+      const topList = document.getElementById('topProductsList');
+      const tableBody = document.getElementById('pageViewsTableBody');
+
+      if (topList) topList.innerHTML = '<div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;">⏳ 正在連線 Google 試算表統計...</div>';
+      if (tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">⏳ 正在讀取「瀏覽統計」工作表...</td></tr>';
+
+      try {
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getViewStats`);
+        const data = await res.json();
+        if (data.success) {
+          viewStatsCache = data;
+          renderViewStats(data);
+        } else {
+          if (topList) topList.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">讀取失敗：${data.message || '未知錯誤'}</div>`;
+        }
+      } catch (err) {
+        if (topList) topList.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">連線失敗：${err.message || '請確認 GAS 部署'}</div>`;
+      }
+    }
+
+    function renderViewStats(data) {
+      const totalViews = data.totalViews || 0;
+      const pages = data.pages || [];
+      const topProducts = data.topProducts || [];
+
+      const statTotal = document.getElementById('statTotalViews');
+      const topProdName = document.getElementById('statTopProduct');
+      const topProdViews = document.getElementById('statTopProductViews');
+      const statPages = document.getElementById('statTrackedPages');
+      const topList = document.getElementById('topProductsList');
+      const tableBody = document.getElementById('pageViewsTableBody');
+
+      if (statTotal) statTotal.textContent = totalViews.toLocaleString() + ' 次';
+      if (statPages) statPages.textContent = pages.length.toLocaleString() + ' 個';
+
+      if (topProducts.length > 0) {
+        if (topProdName) topProdName.textContent = topProducts[0].name;
+        if (topProdViews) topProdViews.textContent = `🔥 ${topProducts[0].views.toLocaleString()} 次瀏覽`;
+      } else {
+        if (topProdName) topProdName.textContent = '尚無商品瀏覽資料';
+        if (topProdViews) topProdViews.textContent = '-';
+      }
+
+      // 渲染 Top 10 商品
+      if (topList) {
+        if (topProducts.length === 0) {
+          topList.innerHTML = '<div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;">目前尚無商品單品頁瀏覽記錄</div>';
+        } else {
+          const top10 = topProducts.slice(0, 10);
+          topList.innerHTML = top10.map((p, idx) => {
+            const medalColors = ['#f59e0b', '#94a3b8', '#b45309'];
+            const badgeColor = idx < 3 ? medalColors[idx] : '#e2e8f0';
+            const badgeTextColor = idx < 3 ? '#ffffff' : '#64748b';
+            const imgHtml = p.imageUrl
+              ? `<img src="${p.imageUrl}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);" onerror="this.style.display='none'">`
+              : `<div style="width: 44px; height: 44px; background: #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">📦</div>`;
+
+            return `
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: ${badgeColor}; color: ${badgeTextColor}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">
+                  ${idx + 1}
+                </div>
+                ${imgHtml}
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${p.name}
+                  </div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+                    <span style="font-family: monospace; background: #e2e8f0; padding: 1px 5px; border-radius: 4px;">${p.productId}</span>
+                    ${p.price ? `<span style="color: #ef4444; font-weight: 600;">NT$ ${Number(p.price).toLocaleString()}</span>` : ''}
+                  </div>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                  <div style="font-size: 16px; font-weight: 800; color: #4f46e5;">
+                    ${p.views.toLocaleString()} <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">次</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 渲染頁面明細 Table
+      if (tableBody) {
+        if (pages.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">目前尚無任何瀏覽資料</td></tr>';
+        } else {
+          tableBody.innerHTML = pages.map(pg => {
+            const isProduct = pg.productId && pg.productId !== '-';
+            return `
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 12px; font-weight: 600; color: var(--text-main);">
+                  ${isProduct ? '🛍️ ' : '📄 '} ${pg.title}
+                </td>
+                <td style="padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #64748b;">
+                  ${pg.path}
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                  ${isProduct ? `<span style="font-family: monospace; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px;">${pg.productId}</span>` : '<span style="color:#cbd5e1;">-</span>'}
+                </td>
+                <td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #4f46e5;">
+                  ${pg.views.toLocaleString()}
+                </td>
+                <td style="padding: 10px 12px; text-align: right; font-size: 11.5px; color: #94a3b8;">
+                  ${pg.lastVisited || '-'}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
+    function recordPageView(pageKey, pageTitle, productId) {
+      try {
+        const storageKey = 'pv_' + (pageKey || 'admin-card-generator.html');
+        const lastVisit = sessionStorage.getItem(storageKey);
+        const now = Date.now();
+        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        sessionStorage.setItem(storageKey, String(now));
+
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
+        if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const payload = {
+          action: 'recordPageView',
+          data: {
+            page: pageKey || 'admin-card-generator.html',
+            title: pageTitle || '💻 賣家管理與發卡推播中心',
+            productId: productId || '-'
+          }
+        };
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(gasUrl, new Blob([JSON.stringify(payload)], { type: 'text/plain' }));
+        } else {
+          fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (e) {}
     }
 
     let notifyCustomers = [];
