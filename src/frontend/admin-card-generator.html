@@ -2,6 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>賣家商品建檔 & 多商品輪播推播中心</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1578,7 +1581,8 @@
           renderProductCheckboxes();
           updateSelectedCount();
 
-          // 保持停留在快速建檔頁面，滾動回頂部並提示可繼續新增下一件商品
+          // 明確確保停留在「電腦快速建檔」分頁，滾動回頂部並提示可繼續新增下一件商品
+          switchTab('tabCreate');
           window.scrollTo({ top: 0, behavior: 'smooth' });
           alert(`🎉 商品【${name}】建檔成功！已同步寫入 Google 試算表，您可繼續在此頁面新增下一件商品！`);
           setTimeout(() => {
