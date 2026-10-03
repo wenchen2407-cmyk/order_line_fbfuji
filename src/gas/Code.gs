@@ -524,47 +524,121 @@ function handleCreateOrder(orderData) {
       prodSheet.getRange(productRowIndex, 10).setValue('已售完');
     }
 
-    // 3. 產生訂單編號
-    const now = new Date();
-    const timeStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyMMddHHmmss');
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const orderId = 'OD' + timeStr + randomSuffix;
+    // 3. 檢查同買家是否已登記同商品之同規格（尚未結帳），若有則自動累加數量（合單）
+    const targetUserId = String(orderData.userId || 'LINE_GUEST').trim();
+    const targetSpec = String(orderData.spec || '單一規格').trim();
+    const orderDataRange = orderSheet.getDataRange();
+    const orderValues = orderDataRange.getValues();
+    
+    let existingOrderRow = -1;
+    let existingOrderId = '';
+    let existingQty = 0;
+    let existingNote = '';
+    let existingProcessNote = '';
+
+    // 從最新（最後一列）往回查找，確保匹配當期最近未結帳項目
+    if (targetUserId && targetUserId !== 'LINE_GUEST' && targetUserId !== 'TEST_USER_999') {
+      for (let r = orderValues.length - 1; r >= 1; r--) {
+        const row = orderValues[r];
+        const rowUserId = String(row[2] || '').trim();
+        const rowPid = String(row[4] || '').trim();
+        const rowSpec = String(row[6] || '').trim();
+        const payStatus = String(row[16] || '').trim();
+        const shipStatus = String(row[18] || '').trim();
+        const checkoutId = String(row[21] || '').trim();
+
+        // 排除已結案、已取消、已出貨或已生成結帳單的歷史單
+        const isClosed = Boolean(checkoutId) ||
+                         payStatus.includes('已結帳') ||
+                         shipStatus.includes('完成') ||
+                         shipStatus.includes('出貨') ||
+                         shipStatus.includes('結案') ||
+                         shipStatus.includes('取消');
+
+        if (!isClosed && rowUserId === targetUserId && rowPid === orderData.productId && rowSpec === targetSpec) {
+          existingOrderRow = r + 1; // 1-indexed row in sheet
+          existingOrderId = String(row[0] || '').trim();
+          existingQty = Number(row[7]) || 1;
+          existingNote = String(row[15] || '').trim();
+          existingProcessNote = String(row[19] || '').trim();
+          break;
+        }
+      }
+    }
 
     const unitPrice = Number(targetProduct[4]); // 連線代購價
-    const subtotal = unitPrice * buyQty;
-    const shippingFee = 0; // 連線期間運費先設為 0，出貨結帳時統一合併計算
-    const totalAmount = subtotal;
+    const now = new Date();
+    const timeFormatted = Utilities.formatDate(now, 'Asia/Taipei', 'MM/dd HH:mm');
 
-    // 4. 寫入訂單明細（狀態為「連線中待出貨」，地址為待出貨填寫）
-    orderSheet.appendRow([
-      orderId,
-      now,
-      orderData.userId || 'LINE_GUEST',
-      orderData.userName || '訪客',
-      orderData.productId,
-      targetProduct[1], // 品名
-      orderData.spec || '單一規格',
-      buyQty,
-      unitPrice,
-      subtotal,
-      shippingFee,
-      totalAmount,
-      orderData.realName || orderData.recipientName || '',
-      formatPhoneAsText(orderData.phone),
-      '[待出貨結帳填寫]',
-      orderData.note || '',
-      '未結帳',
-      '',
-      '連線登記', // 訂單採購/出貨處理狀態
-      '',         // 處理備註
-      '',         // 包裹追蹤編號
-      ''          // 結帳編號 (待回國合併結帳時產生)
-    ]);
+    let finalOrderId = '';
+    let finalQty = buyQty;
+    let finalSubtotal = unitPrice * buyQty;
+    let isMerged = false;
 
-    // 5. 更新或建立顧客檔案歸戶
+    if (existingOrderRow > 0) {
+      // 🌟 自動合單：累加數量與金額，不重複佔用試算表列數
+      isMerged = true;
+      finalOrderId = existingOrderId;
+      finalQty = existingQty + buyQty;
+      finalSubtotal = unitPrice * finalQty;
+      const finalTotalAmount = finalSubtotal;
+
+      // 更新第 8 欄(H:數量)、第 10 欄(J:小計)、第 12 欄(L:總金額)
+      orderSheet.getRange(existingOrderRow, 8).setValue(finalQty);
+      orderSheet.getRange(existingOrderRow, 10).setValue(finalSubtotal);
+      orderSheet.getRange(existingOrderRow, 12).setValue(finalTotalAmount);
+
+      // 若有新備註則追加
+      if (orderData.note && orderData.note.trim()) {
+        const mergedNote = existingNote ? `${existingNote}；${orderData.note.trim()}` : orderData.note.trim();
+        orderSheet.getRange(existingOrderRow, 16).setValue(mergedNote);
+      }
+
+      // 在處理備註(T欄第20欄)自動標記加單紀錄，方便賣家清楚追蹤
+      const mergeLog = `[加單+${buyQty} (${timeFormatted})]`;
+      const newProcessNote = existingProcessNote ? `${existingProcessNote} ${mergeLog}` : mergeLog;
+      orderSheet.getRange(existingOrderRow, 20).setValue(newProcessNote);
+
+    } else {
+      // 🌟 新成立訂單
+      const timeStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyMMddHHmmss');
+      const randomSuffix = Math.floor(100 + Math.random() * 900);
+      finalOrderId = 'OD' + timeStr + randomSuffix;
+      finalQty = buyQty;
+      finalSubtotal = unitPrice * buyQty;
+      const shippingFee = 0; // 連線期間運費先設為 0，出貨結帳時統一合併計算
+      const totalAmount = finalSubtotal;
+
+      orderSheet.appendRow([
+        finalOrderId,
+        now,
+        orderData.userId || 'LINE_GUEST',
+        orderData.userName || '訪客',
+        orderData.productId,
+        targetProduct[1], // 品名
+        orderData.spec || '單一規格',
+        finalQty,
+        unitPrice,
+        finalSubtotal,
+        shippingFee,
+        totalAmount,
+        orderData.realName || orderData.recipientName || '',
+        formatPhoneAsText(orderData.phone),
+        '[待出貨結帳填寫]',
+        orderData.note || '',
+        '未結帳',
+        '',
+        '連線登記', // 訂單採購/出貨處理狀態
+        '',         // 處理備註
+        '',         // 包裹追蹤編號
+        ''          // 結帳編號 (待回國合併結帳時產生)
+      ]);
+    }
+
+    // 4. 更新或建立顧客檔案歸戶
     try {
       if (orderData.realName || orderData.phone) {
-        updateCustomerProfile(custSheet, orderData, totalAmount, now);
+        updateCustomerProfile(custSheet, orderData, unitPrice * buyQty, now);
       }
     } catch (custErr) {
       console.error('更新顧客歸戶失敗 (不影響訂單建立):', custErr);
@@ -572,9 +646,14 @@ function handleCreateOrder(orderData) {
 
     return {
       success: true,
-      message: '🎉 登記成功！已為您保留商品名額！',
-      orderId: orderId,
-      subtotal: subtotal,
+      message: isMerged 
+        ? `🎉 加單成功！已自動為您合併累加數量（目前共 ${finalQty} 件）！` 
+        : '🎉 登記成功！已為您保留商品名額！',
+      orderId: finalOrderId,
+      subtotal: finalSubtotal,
+      quantity: finalQty,
+      addedQuantity: buyQty,
+      isMerged: isMerged,
       productName: targetProduct[1],
       remainingStock: newStock
     };

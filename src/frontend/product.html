@@ -851,13 +851,19 @@
   <div class="modal-overlay" id="successModal">
     <div class="modal-content">
       <div class="success-icon">🎉</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">登記成功！</h2>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;" id="modalSuccessTitle">登記成功！</h2>
 
       <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
-        <div>商品品名：<b id="modalProdName">-</b></div>
-        <div>預約規格：<span id="modalSpec">-</span></div>
-        <div>預約數量：<span id="modalQty">-</span> 件</div>
-        <div style="margin-top: 4px; color: var(--accent); font-weight: 700;">小計金額：<span id="modalSubtotal">NT$ 0</span></div>
+        <div style="margin-bottom: 4px;">商品品名：<b id="modalProdName">-</b></div>
+        <div style="margin-bottom: 4px;">預約規格：<span id="modalSpec">-</span></div>
+        <div style="margin-bottom: 4px; display: flex; justify-content: space-between; align-items: flex-start;">
+          <span>預約數量：</span>
+          <span id="modalQty" style="font-weight: 700; text-align: right;">-</span>
+        </div>
+        <div style="margin-top: 6px; color: var(--accent); font-weight: 700; display: flex; justify-content: space-between;">
+          <span>小計金額：</span>
+          <span id="modalSubtotal">NT$ 0</span>
+        </div>
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 16px;">
@@ -1672,7 +1678,14 @@
         submitBtn.textContent = '🚀 火速登記';
 
         if (result.success) {
-          showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
+          showSuccessModal(
+            currentProduct.name,
+            selectedSpec,
+            currentQty,
+            result.subtotal || (currentProduct.price * currentQty),
+            Boolean(result.isMerged),
+            result.quantity
+          );
         } else {
           alert('登記失敗：' + (result.message || result.error || '系統處理異常'));
         }
@@ -1684,10 +1697,21 @@
       }
     }
 
-    function showSuccessModal(prodName, spec, qty, subtotal) {
+    function showSuccessModal(prodName, spec, qty, subtotal, isMerged, totalQty) {
       document.getElementById('modalProdName').textContent = prodName;
       document.getElementById('modalSpec').textContent = spec;
-      document.getElementById('modalQty').textContent = qty;
+      
+      const titleElem = document.getElementById('modalSuccessTitle');
+      const qtyElem = document.getElementById('modalQty');
+
+      if (isMerged && totalQty) {
+        if (titleElem) titleElem.textContent = '🎉 加單成功！已自動合單！';
+        qtyElem.innerHTML = `本次加單 <b>+${qty}</b> 件<br><span style="font-size:12px; color:#059669; font-weight:700;">(已自動合併！累計共 ${totalQty} 件)</span>`;
+      } else {
+        if (titleElem) titleElem.textContent = '登記成功！';
+        qtyElem.textContent = `${qty} 件`;
+      }
+
       document.getElementById('modalSubtotal').textContent = `NT$ ${subtotal.toLocaleString()}`;
       document.getElementById('successModal').classList.add('active');
     }
