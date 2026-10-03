@@ -417,7 +417,7 @@
               <span>📢 LINE 群組推播標題 (通知外層文字)</span>
               <span style="font-size: 11px; color: #64748b; font-weight: normal;">可依連線情境自訂</span>
             </label>
-            <input type="text" id="customPushTitle" class="input-text" style="padding: 9px 12px; font-size: 13px;" value="【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥" placeholder="例：【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥">
+            <input type="text" id="customPushTitle" class="input-text" style="padding: 9px 12px; font-size: 13px;" value="【W.W.親飛連線中～10/11】商品上架囉～～🔥" placeholder="例：【W.W.親飛連線中～10/11】商品上架囉～～🔥">
           </div>
 
           <button type="button" class="btn-action" id="btnShareBatch" onclick="shareBatchCarousel()">
@@ -1283,7 +1283,7 @@
       // 構建 Flex Message (單品用 bubble，多品用 carousel)
       const titleInput = document.getElementById('customPushTitle');
       const customTitle = titleInput ? titleInput.value.trim() : '';
-      const fallbackTitle = '【W.W.連線中】挖寶直擊！精選連線好物熱騰騰上架🔥';
+      const fallbackTitle = '【W.W.親飛連線中～10/11】商品上架囉～～🔥';
 
       const flexPayload = {
         type: 'flex',
