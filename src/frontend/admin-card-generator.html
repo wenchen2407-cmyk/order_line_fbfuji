@@ -1578,9 +1578,13 @@
           renderProductCheckboxes();
           updateSelectedCount();
 
-          // 切換回推播頁面並提示
-          switchTab('tabPublish');
-          alert('🎉 商品建檔成功！已即時同步寫入 Google 試算表！');
+          // 保持停留在快速建檔頁面，滾動回頂部並提示可繼續新增下一件商品
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          alert(`🎉 商品【${name}】建檔成功！已同步寫入 Google 試算表，您可繼續在此頁面新增下一件商品！`);
+          setTimeout(() => {
+            const nameInput = document.getElementById('newProdName');
+            if (nameInput) nameInput.focus();
+          }, 100);
 
           // 背景非同步默默同步試算表最新清單（不卡住操作）
           fetchProductList().catch(() => {});
