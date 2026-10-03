@@ -832,6 +832,7 @@
           const parsed = JSON.parse(cachedData);
           if (parsed && Array.isArray(parsed.products) && parsed.products.length > 0) {
             allProducts = parsed.products;
+            allProducts.forEach((p, idx) => { if (p._orderIndex === undefined) p._orderIndex = idx; });
             document.getElementById('skeletonLoader').style.display = 'none';
             if (parsed.settings) {
               initCatalogDeadline(parsed.settings.ORDER_DEADLINE);
@@ -1017,6 +1018,7 @@
         // 2. 處理商品
         if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
           allProducts = prodRes.value.data;
+          allProducts.forEach((p, idx) => { p._orderIndex = idx; });
 
           // 寫入快取，供下次秒開
           try {
@@ -1113,11 +1115,29 @@
         return nameMatch || idMatch || catMatch;
       });
 
-      // 🎯 需求 1：將已結單的商品排序到最後面（未結單在上，已結單在後）
+      // 🎯 需求 1 & 2：未結單在先、已結單沉底，且依照「新到舊」排序（最新商品排在最前面）
       filtered.sort((a, b) => {
+        // 1. 已結單商品排序到最後面
         const aExpired = isProductExpired(a) ? 1 : 0;
         const bExpired = isProductExpired(b) ? 1 : 0;
-        return aExpired - bExpired;
+        if (aExpired !== bExpired) {
+          return aExpired - bExpired;
+        }
+
+        // 2. 顯示順序新到舊 (Newest to Oldest)
+        // 優先從編號提取序號 (如 K2610030002 -> 2610030002，較大者代表較新)
+        const matchA = String(a.id || '').match(/\d+/);
+        const matchB = String(b.id || '').match(/\d+/);
+        const numA = matchA ? parseInt(matchA[0], 10) : 0;
+        const numB = matchB ? parseInt(matchB[0], 10) : 0;
+        if (numB !== numA) {
+          return numB - numA;
+        }
+
+        // 備用排序：若編號無數字，依試算表原始順序（後加入的排在前面）
+        const idxA = a._orderIndex !== undefined ? a._orderIndex : 0;
+        const idxB = b._orderIndex !== undefined ? b._orderIndex : 0;
+        return idxB - idxA;
       });
 
       const totalItems = filtered.length;
@@ -1144,9 +1164,9 @@
       const paginatedProducts = filtered.slice(startIndex, endIndex);
 
       if (totalPages > 1) {
-        countText.textContent = `顯示第 ${startIndex + 1} - ${endIndex} 件，共 ${totalItems} 件商品 (第 ${currentPage} / ${totalPages} 頁)`;
+        countText.textContent = `顯示第 ${startIndex + 1} - ${endIndex} 件，共 ${totalItems} 件 (依最新上架排序，第 ${currentPage} / ${totalPages} 頁)`;
       } else {
-        countText.textContent = `共 ${totalItems} 件連線中的商品`;
+        countText.textContent = `共 ${totalItems} 件商品 (依最新上架排序)`;
       }
 
       paginatedProducts.forEach(prod => {
