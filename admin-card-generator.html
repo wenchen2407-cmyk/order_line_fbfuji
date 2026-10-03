@@ -546,17 +546,17 @@
             <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
               <span>⏰ 指定收單截止時間 (選填)</span>
             </label>
-            <span style="font-size: 11.5px; color: #b45309;">留空則自動採用全站統一收單時間</span>
+            <span style="font-size: 11.5px; color: #b45309;">預設空白（未指定則自動採用全站統一收單時間）</span>
           </div>
           
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
             <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島 (23:59止)</button>
             <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾 (23:59止)</button>
             <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026/10/10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本 (23:59止)</button>
-            <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 清空 (依全站)</button>
+            <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 預設空白 (依全站)</button>
           </div>
 
-          <input type="text" id="newProdDeadline" class="input-text" placeholder="格式範例：2026/10/02 23:59 或點擊上方快捷鍵帶入" style="background: #fff;">
+          <input type="text" id="newProdDeadline" class="input-text" value="" placeholder="預設空白（可留空，或點擊上方快捷鍵帶入）" style="background: #fff;">
           <div id="deadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
         </div>
 
@@ -1910,7 +1910,7 @@
       const hint = document.getElementById('deadlineHintText');
       if (input) input.value = val;
       if (hint) {
-        hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已清空（將自動依照全站系統統一收單時間）';
+        hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已設為預設空白（自動依照全站系統統一收單時間）';
       }
     }
   </script>
