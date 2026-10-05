@@ -766,15 +766,15 @@
       <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
 
       <div class="product-details">
-        <!-- 倒數收單晶片 (顯示完整年月日時間與動態倒數) -->
+        <!-- 倒數收單晶片 (顯示年月日時間與倒數，完全置左對齊) -->
         <div id="deadlineBanner" class="deadline-banner" style="display: none;">
-          <div style="display: flex; flex-direction: column; width: 100%; gap: 3px;">
-            <div style="display: flex; align-items: baseline; gap: 5px; font-size: 13px; font-weight: 800; line-height: 1.4;">
+          <div style="display: flex; flex-direction: column; width: 100%; gap: 4px; align-items: flex-start; text-align: left;">
+            <div id="deadlineTopRow" style="display: flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 800; line-height: 1.4; text-align: left;">
               <span id="deadlineIcon">⏰</span>
-              <span id="deadlineLabel">截止時間：</span>
+              <span id="deadlineLabel">收單截止時間：</span>
               <span id="deadlineExactTime" style="color: #be123c;"></span>
             </div>
-            <div id="deadlineText" style="font-size: 12px; font-weight: 600; opacity: 0.95; padding-left: 21px; line-height: 1.3;"></div>
+            <div id="deadlineText" style="font-size: 12.5px; font-weight: 600; opacity: 0.95; line-height: 1.4; text-align: left;"></div>
           </div>
         </div>
 
@@ -1078,25 +1078,25 @@
       const day = pad(d.getDate());
       const h = pad(d.getHours());
       const min = pad(d.getMinutes());
-      return `${y}年${m}月${day}日 ${h}:${min}`;
+      return `${y}-${m}-${day} ${h}:${min}`;
     }
 
     function parseDeadline(str) {
       if (!str || !String(str).trim()) return null;
       let s = String(str).trim();
-      s = s.replace(/年|月/g, '/').replace(/日/g, ' ').replace(/-/g, '/').replace(/\s+/g, ' ').trim();
+      s = s.replace(/年|月/g, '-').replace(/日/g, ' ').replace(/\//g, '-').replace(/\s+/g, ' ').trim();
       
-      const shortMatch = s.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      const shortMatch = s.match(/^(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (shortMatch) {
         const currentYear = new Date().getFullYear();
-        s = `${currentYear}/${s}`;
+        s = `${currentYear}-${s}`;
       }
 
-      const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (m) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
       }
-      const d = new Date(s);
+      const d = new Date(s.replace(/-/g, '/'));
       if (!isNaN(d.getTime())) return d;
       return null;
     }
@@ -1135,10 +1135,11 @@
         if (iconElem) iconElem.textContent = '⛔';
         if (labelElem) labelElem.textContent = isSpecificDeadline ? '本商品已截止收單' : '本次連線已截止收單';
         if (exactElem) {
-          exactElem.textContent = `（截止時間：${fullDateStr}）`;
-          exactElem.style.color = '#64748b';
+          exactElem.textContent = '';
+          exactElem.style.display = 'none';
         }
-        textElem.textContent = '🚫 系統已停止登記，感謝您的支持！';
+        textElem.textContent = '';
+        textElem.style.display = 'none';
 
         if (submitBtn) {
           submitBtn.disabled = true;
@@ -1150,11 +1151,13 @@
         isDeadlineExpired = false;
         banner.classList.remove('expired');
         if (iconElem) iconElem.textContent = '⏰';
-        if (labelElem) labelElem.textContent = isSpecificDeadline ? '收單截止時間：' : '本次連線收單截止：';
+        if (labelElem) labelElem.textContent = '收單截止時間：';
         if (exactElem) {
           exactElem.textContent = fullDateStr;
           exactElem.style.color = '#be123c';
+          exactElem.style.display = 'inline';
         }
+        textElem.style.display = 'block';
 
         const diffMs = Math.max(0, orderDeadlineDate - now);
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));

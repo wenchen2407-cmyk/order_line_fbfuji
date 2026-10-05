@@ -415,9 +415,9 @@ function formatDeadlineStr(val) {
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return '';
     const pad = n => String(n).padStart(2, '0');
-    return `${val.getFullYear()}/${pad(val.getMonth()+1)}/${pad(val.getDate())} ${pad(val.getHours())}:${pad(val.getMinutes())}`;
+    return `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())} ${pad(val.getHours())}:${pad(val.getMinutes())}`;
   }
-  return String(val).trim();
+  return String(val).trim().replace(/\//g, '-');
 }
 
 /**
