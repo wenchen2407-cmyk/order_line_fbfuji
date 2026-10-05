@@ -339,6 +339,8 @@ function doPost(e) {
       result = getViewStats();
     } else if (action === 'clearTestData') {
       result = clearTestOrdersData();
+    } else if (action === 'clearTestProducts') {
+      result = clearTestProducts();
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -1407,92 +1409,107 @@ function generateProductId(sheet, currency, now) {
 }
 
 /**
- * 賣家快速新增商品 (可由賣家後台網頁調用)
+ * 賣家快速新增商品 (可由賣家後台網頁調用，使用 LockService 避免連續建立併發衝突)
  */
 function handleAddProduct(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-  if (!sheet) return { success: false, message: '商品表不存在' };
-
-  if (!data.name || !data.price) {
-    return { success: false, message: '商品名稱與價格為必填欄位！' };
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
   }
 
-  const now = new Date();
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (!sheet) return { success: false, message: '商品表不存在' };
 
-  // 判斷幣別 (優先取 data.currency，或從 costNote / name / category 判斷)
-  let cur = (data.currency || '').toUpperCase();
-  if (!cur) {
-    const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
-    if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
-      cur = 'KRW';
-    } else {
-      cur = 'JPY';
+    if (!data.name || !data.price) {
+      return { success: false, message: '商品名稱與價格為必填欄位！' };
     }
-  }
 
-  // 商品編號：若賣家有自訂則使用自訂，否則依「J/K + 西元年後2碼 + 日期 + 0001」自動跳號
-  const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
+    const now = new Date();
 
-  // 規格處理 (支援陣列或逗號字串)
-  let specsArray = [];
-  if (Array.isArray(data.specs)) {
-    specsArray = data.specs;
-  } else if (typeof data.specs === 'string' && data.specs.trim()) {
-    specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
-  }
-
-  // 圖片處理：支援多張圖片（第一張為主圖）
-  let imagesArray = [];
-  if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-    imagesArray = data.imageUrls;
-  } else if (data.imageUrl) {
-    imagesArray = data.imageUrl.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
-  }
-  const mainImage = imagesArray[0] || data.imageUrl || '';
-
-  // 庫存名額：若勾選「不限庫存」則設定為 999999
-  const stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
-
-  sheet.appendRow([
-    pid,
-    data.name.trim(),
-    data.category || '連線好物',
-    (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
-    Number(data.price),
-    stockQty,
-    JSON.stringify(specsArray),
-    mainImage,
-    data.description || '',
-    '上架中',
-    now,
-    Number(data.costPrice) || 0, // 欄位 12: 成本價 (NT$)
-    data.costNote || '',         // 欄位 13: 採購原幣與重量備註
-    JSON.stringify(imagesArray), // 欄位 14: 所有圖片清單
-    data.deadline ? String(data.deadline).trim() : '' // 欄位 15: 指定截單時間
-  ]);
-
-  return { 
-    success: true, 
-    message: '商品建檔成功！', 
-    productId: pid,
-    product: {
-      id: pid,
-      name: data.name.trim(),
-      category: data.category || '連線好物',
-      originalPrice: (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : 0,
-      price: Number(data.price),
-      stock: stockQty,
-      specs: specsArray,
-      imageUrl: mainImage,
-      imageUrls: imagesArray,
-      description: data.description || '',
-      status: '上架中',
-      costPrice: Number(data.costPrice) || 0,
-      costNote: data.costNote || '',
-      deadline: data.deadline ? String(data.deadline).trim() : ''
+    // 判斷幣別 (優先取 data.currency，或從 costNote / name / category 判斷)
+    let cur = (data.currency || '').toUpperCase();
+    if (!cur) {
+      const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
+      if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
+        cur = 'KRW';
+      } else {
+        cur = 'JPY';
+      }
     }
-  };
+
+    // 商品編號：若賣家有自訂則使用自訂，否則依「J/K + 西元年後2碼 + 日期 + 0001」自動跳號
+    const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
+
+    // 規格處理 (支援陣列或逗號字串)
+    let specsArray = [];
+    if (Array.isArray(data.specs)) {
+      specsArray = data.specs;
+    } else if (typeof data.specs === 'string' && data.specs.trim()) {
+      specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+    }
+
+    // 圖片處理：支援多張圖片（第一張為主圖）
+    let imagesArray = [];
+    if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+      imagesArray = data.imageUrls;
+    } else if (data.imageUrl) {
+      imagesArray = data.imageUrl.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+    }
+    const mainImage = imagesArray[0] || data.imageUrl || '';
+
+    // 庫存名額：若勾選「不限庫存」則設定為 999999
+    const stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
+
+    sheet.appendRow([
+      pid,
+      data.name.trim(),
+      data.category || '連線好物',
+      (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
+      Number(data.price),
+      stockQty,
+      JSON.stringify(specsArray),
+      mainImage,
+      data.description || '',
+      '上架中',
+      now,
+      Number(data.costPrice) || 0, // 欄位 12: 成本價 (NT$)
+      data.costNote || '',         // 欄位 13: 採購原幣與重量備註
+      JSON.stringify(imagesArray), // 欄位 14: 所有圖片清單
+      data.deadline ? String(data.deadline).trim() : '' // 欄位 15: 指定截單時間
+    ]);
+
+    SpreadsheetApp.flush();
+
+    return { 
+      success: true, 
+      message: '商品建檔成功！', 
+      productId: pid,
+      product: {
+        id: pid,
+        name: data.name.trim(),
+        category: data.category || '連線好物',
+        originalPrice: (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : 0,
+        price: Number(data.price),
+        stock: stockQty,
+        specs: specsArray,
+        imageUrl: mainImage,
+        imageUrls: imagesArray,
+        description: data.description || '',
+        status: '上架中',
+        costPrice: Number(data.costPrice) || 0,
+        costNote: data.costNote || '',
+        deadline: data.deadline ? String(data.deadline).trim() : ''
+      }
+    };
+  } catch (err) {
+    return { success: false, message: '商品建檔失敗：' + err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**
@@ -1521,7 +1538,7 @@ function handleUploadImages(data) {
       }
       const decoded = Utilities.base64Decode(base64String);
       const contentType = f.type || 'image/jpeg';
-      const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + (i + 1) + '.jpg';
+      const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + Math.floor(Math.random() * 10000) + '_' + (i + 1) + '.jpg';
       
       const blob = Utilities.newBlob(decoded, contentType, fileName);
       const file = folder.createFile(blob);
@@ -1591,6 +1608,33 @@ function clearTestOrdersData() {
     message: `✅ 測試資料已成功清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
     deletedOrders: deletedOrdersCount,
     deletedCustomers: deletedCustCount
+  };
+}
+
+/**
+ * 🛠️ 清除自動化測試商品 (不影響任何正式商品)
+ * 清除名稱包含「測試連續新增商品」或「自動連續測試商品」或「即時測試商品」的商品資料
+ */
+function clearTestProducts() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  if (!sheet) return { success: false, message: '商品表不存在' };
+
+  const data = sheet.getDataRange().getValues();
+  let deletedCount = 0;
+  for (let i = data.length - 1; i >= 1; i--) {
+    const pName = String(data[i][1] || '');
+    const pCat = String(data[i][2] || '');
+    if (pName.includes('測試') || pCat === '測試' || pName.startsWith('自動連續測試') || pName.startsWith('即時測試') || pName.startsWith('商品1') || pName.startsWith('商品2') || pName.startsWith('商品3') || pName.startsWith('商品4') || pName.startsWith('商品5')) {
+      sheet.deleteRow(i + 1);
+      deletedCount++;
+    }
+  }
+
+  return {
+    success: true,
+    message: `✅ 已清除 ${deletedCount} 筆測試商品！`,
+    deletedCount: deletedCount
   };
 }
 

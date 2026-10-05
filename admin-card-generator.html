@@ -1638,12 +1638,16 @@
       localSelectedFiles = localSelectedFiles.concat(files);
       renderAllImageThumbs();
       document.getElementById('uploadStatusText').textContent = `已選取 ${localSelectedFiles.length} 張本機照片`;
+      // 重設 input.value，確保連續選取相同檔案或同檔名照片時均能正常觸發 onchange
+      input.value = '';
     }
 
     function removeLocalFile(idx) {
       localSelectedFiles.splice(idx, 1);
       renderAllImageThumbs();
       document.getElementById('uploadStatusText').textContent = localSelectedFiles.length ? `已選取 ${localSelectedFiles.length} 張本機照片` : '';
+      const input = document.getElementById('fileUploadInput');
+      if (input) input.value = '';
     }
 
     function renderUrlThumbs() {
@@ -1786,14 +1790,26 @@
           }
 
           saveBtn.textContent = `☁️ 正在上傳至 Google Drive...`;
-          const uploadRes = await fetch(CONFIG.GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'uploadImages',
-              data: { files: base64Files }
-            })
-          });
-          const uploadResult = await uploadRes.json();
+          let uploadRes;
+          try {
+            uploadRes = await fetch(CONFIG.GAS_API_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: 'uploadImages',
+                data: { files: base64Files }
+              })
+            });
+          } catch (netErr) {
+            throw new Error('圖片上傳時網路連線中斷或逾時，請檢查網路連線後重試。');
+          }
+
+          let uploadResult;
+          try {
+            uploadResult = await uploadRes.json();
+          } catch (jsonErr) {
+            throw new Error('圖片上傳回應解析異常 (GAS 伺服器可能繁忙或逾時)，請稍候重試。');
+          }
+
           if (uploadResult.success && uploadResult.urls && uploadResult.urls.length > 0) {
             finalImageUrls = uploadResult.urls.concat(finalImageUrls);
           } else {
@@ -1827,14 +1843,25 @@
           }
         };
 
-        const res = await fetch(CONFIG.GAS_API_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        const result = await res.json();
+        let res;
+        try {
+          res = await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        } catch (netErr) {
+          throw new Error('商品寫入資料庫時網路連線中斷，請稍候重試。');
+        }
+
+        let result;
+        try {
+          result = await res.json();
+        } catch (jsonErr) {
+          throw new Error('商品寫入回應解析異常 (GAS 伺服器可能繁忙或逾時)，請稍候重試。');
+        }
 
         if (result.success) {
-          // 清空表單與圖片
+          // 清空表單與圖片欄位
           document.getElementById('newProdName').value = '';
           document.getElementById('newProdPrice').value = '';
           document.getElementById('newProdOriginalPrice').value = '';
@@ -1845,7 +1872,13 @@
           document.getElementById('newProdCategory').value = '2026.10月連線';
           if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
           if (document.getElementById('deadlineHintText')) document.getElementById('deadlineHintText').textContent = '';
+          
+          // 徹底重設本地照片佇列、上傳 input 檔案與狀態文字
           localSelectedFiles = [];
+          const fileInput = document.getElementById('fileUploadInput');
+          if (fileInput) fileInput.value = '';
+          const statusText = document.getElementById('uploadStatusText');
+          if (statusText) statusText.textContent = '';
           renderAllImageThumbs();
           resetCostCalculator();
           
@@ -1883,9 +1916,6 @@
             const nameInput = document.getElementById('newProdName');
             if (nameInput) nameInput.focus();
           }, 100);
-
-          // 背景非同步默默同步試算表最新清單（不卡住操作）
-          fetchProductList().catch(() => {});
         } else {
           alert('儲存失敗：' + result.message);
         }
