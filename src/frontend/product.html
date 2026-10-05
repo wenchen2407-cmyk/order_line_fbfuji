@@ -497,24 +497,26 @@
       text-align: left;
       font-size: 13px;
     }
-    /* 收單截止動態倒數晶片 */
+    /* 收單截止動態倒數晶片 (完整年月日時間 + 倒數) */
     .deadline-banner {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
       border: 1px solid #fecdd3;
       color: #e11d48;
-      padding: 7px 12px;
+      padding: 9px 12px;
       border-radius: 10px;
       font-size: 13px;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(225, 29, 72, 0.06);
     }
     .deadline-banner.expired {
       background: #f1f5f9;
       border-color: #cbd5e1;
       color: #64748b;
+      box-shadow: none;
     }
     /* 彈跳成功按鈕組 (左右高度、字體、圓角完美對齊) */
     .modal-btn-action {
@@ -764,9 +766,16 @@
       <div id="imageThumbsStrip" class="image-thumbs-strip" style="display: none;"></div>
 
       <div class="product-details">
-        <!-- 倒數收單晶片 -->
+        <!-- 倒數收單晶片 (顯示完整年月日時間與動態倒數) -->
         <div id="deadlineBanner" class="deadline-banner" style="display: none;">
-          <span id="deadlineText"></span>
+          <div style="display: flex; flex-direction: column; width: 100%; gap: 3px;">
+            <div style="display: flex; align-items: baseline; gap: 5px; font-size: 13px; font-weight: 800; line-height: 1.4;">
+              <span id="deadlineIcon">⏰</span>
+              <span id="deadlineLabel">截止時間：</span>
+              <span id="deadlineExactTime" style="color: #be123c;"></span>
+            </div>
+            <div id="deadlineText" style="font-size: 12px; font-weight: 600; opacity: 0.95; padding-left: 21px; line-height: 1.3;"></div>
+          </div>
         </div>
 
         <span id="productCategory" class="product-tag">2026.10月連線</span>
@@ -1061,21 +1070,43 @@
       }
     }
 
+    function formatDeadlineFull(d) {
+      if (!d || isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      const y = d.getFullYear();
+      const m = pad(d.getMonth() + 1);
+      const day = pad(d.getDate());
+      const h = pad(d.getHours());
+      const min = pad(d.getMinutes());
+      return `${y}年${m}月${day}日 ${h}:${min}`;
+    }
+
     function parseDeadline(str) {
       if (!str || !String(str).trim()) return null;
-      const s = String(str).trim().replace(/-/g, '/');
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) return d;
+      let s = String(str).trim();
+      s = s.replace(/年|月/g, '/').replace(/日/g, ' ').replace(/-/g, '/').replace(/\s+/g, ' ').trim();
+      
+      const shortMatch = s.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (shortMatch) {
+        const currentYear = new Date().getFullYear();
+        s = `${currentYear}/${s}`;
+      }
+
       const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (m) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
       }
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
       return null;
     }
 
     function updateDeadlineUI() {
       const banner = document.getElementById('deadlineBanner');
       const textElem = document.getElementById('deadlineText');
+      const exactElem = document.getElementById('deadlineExactTime');
+      const labelElem = document.getElementById('deadlineLabel');
+      const iconElem = document.getElementById('deadlineIcon');
       const submitBtn = document.getElementById('btnSubmitOrder');
       if (!banner || !textElem) return;
 
@@ -1095,13 +1126,20 @@
 
       banner.style.display = 'flex';
       const now = new Date();
-
       const isSpecificDeadline = Boolean(currentProduct && currentProduct.deadline);
+      const fullDateStr = formatDeadlineFull(orderDeadlineDate);
 
       if (now >= orderDeadlineDate) {
         isDeadlineExpired = true;
         banner.classList.add('expired');
-        textElem.textContent = isSpecificDeadline ? '⛔ 此商品已截止收單' : '⛔ 本次連線已收單';
+        if (iconElem) iconElem.textContent = '⛔';
+        if (labelElem) labelElem.textContent = isSpecificDeadline ? '本商品已截止收單' : '本次連線已截止收單';
+        if (exactElem) {
+          exactElem.textContent = `（截止時間：${fullDateStr}）`;
+          exactElem.style.color = '#64748b';
+        }
+        textElem.textContent = '🚫 系統已停止登記，感謝您的支持！';
+
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.textContent = '🚫 已截止登記';
@@ -1111,6 +1149,13 @@
       } else {
         isDeadlineExpired = false;
         banner.classList.remove('expired');
+        if (iconElem) iconElem.textContent = '⏰';
+        if (labelElem) labelElem.textContent = isSpecificDeadline ? '收單截止時間：' : '本次連線收單截止：';
+        if (exactElem) {
+          exactElem.textContent = fullDateStr;
+          exactElem.style.color = '#be123c';
+        }
+
         const diffMs = Math.max(0, orderDeadlineDate - now);
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -1120,7 +1165,7 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = isSpecificDeadline ? `⏳ 本品項收單倒數：${timeStr}` : `⏳ 本次連線收單倒數：${timeStr}`;
+        textElem.textContent = `⏳ 距離截止剩餘：${timeStr}`;
 
         if (submitBtn && submitBtn.textContent.includes('截止')) {
           submitBtn.disabled = false;

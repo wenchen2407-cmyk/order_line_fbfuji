@@ -1251,7 +1251,13 @@ function getSystemSettings() {
   for (let i = 1; i < rows.length; i++) {
     const key = rows[i][0];
     const val = rows[i][1];
-    if (key) settings[key] = val;
+    if (key) {
+      if (key === 'ORDER_DEADLINE' && val) {
+        settings[key] = formatDeadlineStr(val);
+      } else {
+        settings[key] = val;
+      }
+    }
   }
 
   // 向下相容相容性處理：若舊試算表只有單一 BANK_INFO，自動拆解為銀行名、帳號與戶名

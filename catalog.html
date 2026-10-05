@@ -970,15 +970,34 @@
       }
     }
 
+    function formatDeadlineFull(d) {
+      if (!d || isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      const y = d.getFullYear();
+      const m = pad(d.getMonth() + 1);
+      const day = pad(d.getDate());
+      const h = pad(d.getHours());
+      const min = pad(d.getMinutes());
+      return `${y}年${m}月${day}日 ${h}:${min}`;
+    }
+
     function parseDeadline(str) {
       if (!str || !String(str).trim()) return null;
-      const s = String(str).trim().replace(/-/g, '/');
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) return d;
+      let s = String(str).trim();
+      s = s.replace(/年|月/g, '/').replace(/日/g, ' ').replace(/-/g, '/').replace(/\s+/g, ' ').trim();
+      
+      const shortMatch = s.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (shortMatch) {
+        const currentYear = new Date().getFullYear();
+        s = `${currentYear}/${s}`;
+      }
+
       const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (m) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
       }
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
       return null;
     }
 
@@ -999,13 +1018,14 @@
 
       banner.style.display = 'flex';
       const now = new Date();
+      const fullDateStr = formatDeadlineFull(catalogDeadlineDate);
 
       if (now >= catalogDeadlineDate) {
         if (!isCatalogExpired) {
           isCatalogExpired = true;
           renderProductList();
         }
-        textElem.textContent = '⛔ 本次連線已收單';
+        textElem.textContent = `⛔ 本次連線已截止收單（截止時間：${fullDateStr}）`;
       } else {
         if (isCatalogExpired) {
           isCatalogExpired = false;
@@ -1020,7 +1040,7 @@
         let timeStr = '';
         if (days > 0) timeStr += `${days}天 `;
         timeStr += `${String(hours).padStart(2, '0')}小時 ${String(mins).padStart(2, '0')}分 ${String(secs).padStart(2, '0')}秒`;
-        textElem.textContent = `⏳ 本次連線收單倒數：${timeStr}`;
+        textElem.textContent = `⏰ 截止時間：${fullDateStr} ｜ ⏳ 倒數：${timeStr}`;
       }
     }
 
@@ -1225,9 +1245,12 @@
 
         let deadlineBadgeHtml = '';
         if (prod.deadline) {
-          const dlParts = prod.deadline.split(' ')[0].split('/');
-          const mmdd = (dlParts.length >= 3) ? `${dlParts[1]}/${dlParts[2]}` : prod.deadline;
-          deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${mmdd} 截止</span>`;
+          const parts = String(prod.deadline).trim().split(/\s+/);
+          const dateParts = parts[0].replace(/-/g, '/').split('/');
+          const mmdd = (dateParts.length >= 3) ? `${dateParts[1]}/${dateParts[2]}` : parts[0];
+          const timePart = parts[1] || '';
+          const displayLabel = timePart ? `${mmdd} ${timePart}` : mmdd;
+          deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${displayLabel} 截止</span>`;
         }
 
         if (isThisProdExpired) {
