@@ -701,7 +701,6 @@
     window.onload = async () => {
       await initLiff();
       await fetchProductList();
-      recordPageView('admin-card-generator.html', '💻 賣家管理與發卡推播中心');
     };
 
     async function initLiff() {
@@ -789,8 +788,20 @@
     }
 
     function renderViewStats(data) {
-      const totalViews = data.totalViews || 0;
-      const pages = data.pages || [];
+      // 嚴格過濾排除「賣家管理與發卡推播中心」與「買家訂購清單與合併結帳」
+      const rawPages = data.pages || [];
+      const pages = rawPages.filter(pg => {
+        const p = String(pg.path || '').toLowerCase();
+        const t = String(pg.title || '');
+        return p !== 'admin-card-generator.html' && 
+               p !== 'my-orders.html' && 
+               !t.includes('賣家管理') && 
+               !t.includes('買家訂購清單') && 
+               !t.includes('合併結帳');
+      });
+
+      // 重新計算實際顧客公開總瀏覽人次
+      const totalViews = pages.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
       const topProducts = data.topProducts || [];
 
       const statTotal = document.getElementById('statTotalViews');
@@ -884,6 +895,7 @@
 
     // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
     function recordPageView(pageKey, pageTitle, productId) {
+      if (!pageKey || pageKey === 'admin-card-generator.html' || pageKey === 'my-orders.html') return;
       try {
         const storageKey = 'pv_' + (pageKey || 'admin-card-generator.html');
         const lastVisit = sessionStorage.getItem(storageKey);

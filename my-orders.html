@@ -1132,13 +1132,11 @@
       // 1. 並行發動 (LIFF 身分驗證 與 訂單資料獲取 同時執行)
       initLiff();
       fetchUserData();
-
-      // 2. 靜默記錄訂單頁面瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
-      recordPageView('my-orders.html', '📦 買家訂購清單與合併結帳');
     };
 
-    // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
+    // 靜默記錄瀏覽人次 (管理中心與訂單結帳頁不計入公開瀏覽量)
     function recordPageView(pageKey, pageTitle, productId) {
+      if (!pageKey || pageKey === 'my-orders.html' || pageKey === 'admin-card-generator.html') return;
       try {
         const storageKey = 'pv_' + (pageKey || 'my-orders.html');
         const lastVisit = sessionStorage.getItem(storageKey);

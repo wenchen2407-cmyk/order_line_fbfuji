@@ -1675,6 +1675,17 @@ function handleRecordPageView(data) {
     const pagePath = String(data.page || '').trim();
     const pageTitle = String(data.title || pagePath).trim();
     const productId = String(data.productId || '-').trim();
+
+    // 嚴格排除「賣家管理與發卡推播中心」與「買家訂購清單與合併結帳」，不計入公開瀏覽量
+    const pLower = pagePath.toLowerCase();
+    if (pLower === 'admin-card-generator.html' || 
+        pLower === 'my-orders.html' || 
+        pageTitle.includes('賣家管理') || 
+        pageTitle.includes('買家訂購清單') || 
+        pageTitle.includes('合併結帳')) {
+      return { success: true, ignored: true, message: '管理中心與訂單頁不計入公開瀏覽人次' };
+    }
+
     const now = new Date();
 
     const range = sheet.getDataRange();
@@ -1721,7 +1732,7 @@ function handleRecordPageView(data) {
 }
 
 /**
- * 取得全站各頁面與商品瀏覽統計數據
+ * 取得全站各頁面與商品瀏覽統計數據 (嚴格排除管理中心與訂單頁)
  */
 function getViewStats() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1735,16 +1746,44 @@ function getViewStats() {
     return { success: true, totalViews: 0, pages: [], topProducts: [] };
   }
 
+  // 判斷是否為應排除的內部/個人頁面
+  function isExcludedPageView(path, title) {
+    const p = String(path || '').toLowerCase();
+    const t = String(title || '');
+    return p === 'admin-card-generator.html' || 
+           p === 'my-orders.html' || 
+           t.includes('賣家管理') || 
+           t.includes('買家訂購清單') || 
+           t.includes('合併結帳');
+  }
+
+  // 自動清理試算表中既有的管理中心與訂單頁面列 (從最後一列往上刪除避免行號偏移)
+  try {
+    for (let r = values.length - 1; r >= 1; r--) {
+      const title = String(values[r][0] || '').trim();
+      const path = String(values[r][1] || '').trim();
+      if (isExcludedPageView(path, title)) {
+        sheet.deleteRow(r + 1);
+      }
+    }
+  } catch (cleanErr) {
+    console.warn('清理排除頁面列失敗:', cleanErr);
+  }
+
+  const currentValues = sheet.getDataRange().getValues();
+
   let totalViews = 0;
   const pages = [];
   const productViewsMap = {};
 
-  for (let r = 1; r < values.length; r++) {
-    const title = String(values[r][0] || '').trim();
-    const path = String(values[r][1] || '').trim();
-    const pid = String(values[r][2] || '').trim();
-    const views = Number(values[r][3]) || 0;
-    const lastTime = values[r][4] ? Utilities.formatDate(new Date(values[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
+  for (let r = 1; r < currentValues.length; r++) {
+    const title = String(currentValues[r][0] || '').trim();
+    const path = String(currentValues[r][1] || '').trim();
+    const pid = String(currentValues[r][2] || '').trim();
+    const views = Number(currentValues[r][3]) || 0;
+    const lastTime = currentValues[r][4] ? Utilities.formatDate(new Date(currentValues[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
+
+    if (isExcludedPageView(path, title)) continue;
 
     totalViews += views;
 
