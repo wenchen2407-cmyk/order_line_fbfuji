@@ -750,9 +750,19 @@
         return;
       }
 
+      // 徹底消滅 GUEST：若無真實 LINE userId，強制觸發 LINE 登入
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!currentUserId || currentUserId.startsWith('GUEST_') || currentUserId === 'TEST_USER_999') {
+        if (!isLocal && typeof liff !== 'undefined' && !liff.isLoggedIn()) {
+          alert('請先授權連線您的 LINE 帳號，以利享有專屬會員權益與訂購保障！');
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+      }
+
       const cleanPhone = phone.replace(/[-\s]/g, '');
       const profile = {
-        userId: currentUserId || 'GUEST_' + Date.now(),
+        userId: currentUserId || (isLocal ? 'LOCAL_DEV_USER' : ''),
         userName: lineName,
         realName: realName,
         phone: cleanPhone
@@ -917,7 +927,14 @@
       if (CONFIG.LIFF_ID && !CONFIG.LIFF_ID.includes('YOUR_LIFF')) {
         try {
           await liff.init({ liffId: CONFIG.LIFF_ID });
-          if (liff.isLoggedIn()) {
+          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          if (!liff.isLoggedIn()) {
+            if (!isLocal) {
+              // 徹底消滅 GUEST：線上環境未登入直接自動導向 LINE 登入授權
+              liff.login({ redirectUri: window.location.href });
+              return;
+            }
+          } else {
             const profile = await liff.getProfile();
             currentUserId = profile.userId;
             document.getElementById('userNameText').textContent = profile.displayName || '連線貴賓';

@@ -1023,7 +1023,15 @@
 
       try {
         await liff.init({ liffId: CONFIG.LIFF_ID });
-        if (liff.isLoggedIn()) {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!liff.isLoggedIn()) {
+          if (!isLocal) {
+            // 徹底消滅 GUEST / TEST_USER：線上環境未登入自動導向 LINE 快速登入授權
+            liff.login({ redirectUri: window.location.href });
+            return;
+          }
+          document.getElementById('userName').textContent = `${currentUser.displayName} (本機訪客預覽)`;
+        } else {
           const profile = await liff.getProfile();
           currentUser.userId = profile.userId;
           currentUser.displayName = profile.displayName;
@@ -1042,10 +1050,6 @@
             sessionStorage.setItem('liff_user_profile', profStr);
             localStorage.setItem('liff_user_profile', profStr);
           } catch (e) {}
-        } else {
-          // 一般外部瀏覽器 (如 Chrome / Safari / 本地 localhost 測試)
-          // 絕不自動觸發 liff.login()，避免網址跳轉到 LINE 登入授權並重導向至正式線上網址
-          document.getElementById('userName').textContent = `${currentUser.displayName} (訪客預覽)`;
         }
 
         // 同步導航按鈕帶入 uid, name, avatar
@@ -1542,6 +1546,16 @@
         return;
       }
 
+      // 徹底消滅 GUEST / TEST_USER：嚴格檢驗是否具備真實 LINE 身分
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!currentUser.userId || currentUser.userId === 'TEST_USER_999' || currentUser.userId.startsWith('GUEST_')) {
+        if (!isLocal && typeof liff !== 'undefined' && !liff.isLoggedIn()) {
+          alert('請先授權連線您的 LINE 帳號，以利享有專屬會員權益與訂購保障！');
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+      }
+
       const cleanPhone = phone.replace(/[-\s]/g, '');
       const profile = {
         userId: currentUser.userId,
@@ -1688,6 +1702,17 @@
     // 7. 真正執行送單至 Google 試算表 (狀態: 連線中待出貨)
     async function executeCreateOrder(profile) {
       const submitBtn = document.getElementById('btnSubmitOrder');
+
+      // 徹底消滅 GUEST / TEST_USER：下單前強制檢驗真實 LINE 身分
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!currentUser.userId || currentUser.userId === 'TEST_USER_999' || currentUser.userId.startsWith('GUEST_')) {
+        if (!isLocal) {
+          alert('請先授權登入 LINE 帳號，以利為您保留連線商品名額與訂單追蹤！');
+          if (typeof liff !== 'undefined') liff.login({ redirectUri: window.location.href });
+          return;
+        }
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = '登記中....';
 

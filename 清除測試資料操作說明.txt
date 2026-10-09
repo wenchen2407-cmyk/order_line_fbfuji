@@ -7,16 +7,11 @@
 在後端 Google Apps Script（src/gas/Code.gs）中，已準備好「安全清除函式」：
 只會清空第 2 列以後的所有測試資料，【完整保留第 1 列表頭結構、欄位背景色與格式設定】，絕不會誤刪工作表或系統設定。
 
-【執行方式（最直覺推薦）：】
-1. 開啟您的 Google 試算表。
-2. 點選上方選單的 「擴充功能」 ➔ 「Apps Script」。
-3. 在編輯器頂部的函式下拉選單中，選擇「clearTestOrdersData」（或 clearOrdersAndCustomers）。
-4. 點擊「執行 ▶️」。
-5. 執行完成後，「訂單明細」與「顧客歸戶」的測試資料即全數清空。
-
-【網址 API 一鍵執行（需部署新版 GAS Web 應用程式）：】
-若您後續重新部署了 GAS Web 應用程式，也可以直接在瀏覽器開啟以下 API 網址一鍵清理：
-https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec?action=clearTestData
+【防誤觸安全保護通知】：
+為防止正式上線後真實顧客資料與訂單遭誤刪，清除功能已全面啟用雙重安全鎖：
+1. Apps Script 編輯器執行防護：直接點擊「執行」會被強制攔截，絕不會清空任何資料。
+2. 公開 API 網址防護：已永久停用透過 GET/POST 網址觸發清除，防止誤點連結導致資料清空。
+若確實有測試需要清理，建議直接在試算表中手動選取測試列按右鍵刪除。
 
 
 二、前端本地快取清除與空狀態驗證

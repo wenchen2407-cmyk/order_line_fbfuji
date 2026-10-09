@@ -1214,7 +1214,14 @@
       if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID.includes('YOUR_LIFF')) return;
       try {
         await liff.init({ liffId: CONFIG.LIFF_ID });
-        if (liff.isLoggedIn()) {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!liff.isLoggedIn()) {
+          if (!isLocal && urlParams.get('demo') !== '1') {
+            // 徹底消滅 GUEST：查看訂單清單時強制導向 LINE 登入授權
+            liff.login({ redirectUri: window.location.href });
+            return;
+          }
+        } else {
           const profile = await liff.getProfile();
           const prevId = currentUserId;
           currentUserId = profile.userId;

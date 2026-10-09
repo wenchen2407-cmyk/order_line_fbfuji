@@ -293,8 +293,10 @@ function doGet(e) {
         title: e.parameter.title,
         productId: e.parameter.productId
       });
-    } else if (action === 'clearTestData') {
-      result = clearTestOrdersData();
+    } else if (action === 'recalculateCustomerStats') {
+      result = recalculateCustomerStats();
+    } else if (action === 'clearTestData' || action === 'clearTestProducts') {
+      result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -337,10 +339,8 @@ function doPost(e) {
       result = handleRecordPageView(postData.data);
     } else if (action === 'getViewStats') {
       result = getViewStats();
-    } else if (action === 'clearTestData') {
-      result = clearTestOrdersData();
-    } else if (action === 'clearTestProducts') {
-      result = clearTestProducts();
+    } else if (action === 'clearTestData' || action === 'clearTestProducts') {
+      result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
     } else {
       result = { success: false, message: '未知的 action' };
     }
@@ -527,7 +527,25 @@ function handleCreateOrder(orderData) {
     }
 
     // 3. 檢查同買家是否已登記同商品之同規格（尚未結帳），若有則自動累加數量（合單）
-    const targetUserId = String(orderData.userId || 'LINE_GUEST').trim();
+    let targetUserId = String(orderData.userId || '').trim();
+    const cleanPhone = String(orderData.phone || '').replace(/[-\s]/g, '').trim();
+
+    // 🛡️ 徹底消滅 GUEST：若傳入 GUEST 或空值，自動依手機號碼查詢是否已有真實 LINE ID
+    if (!targetUserId || targetUserId.startsWith('GUEST_') || targetUserId === 'TEST_USER_999' || targetUserId === 'LINE_GUEST') {
+      if (cleanPhone && custSheet) {
+        const custRows = custSheet.getDataRange().getValues();
+        for (let c = 1; c < custRows.length; c++) {
+          const rowPhone = String(custRows[c][3] || '').replace(/[-\s]/g, '').trim();
+          const rowUid = String(custRows[c][0] || '').trim();
+          if (rowPhone === cleanPhone && rowUid && !rowUid.startsWith('GUEST_') && rowUid !== 'TEST_USER_999') {
+            targetUserId = rowUid;
+            orderData.userId = rowUid;
+            break;
+          }
+        }
+      }
+    }
+
     const targetSpec = String(orderData.spec || '單一規格').trim();
     const orderDataRange = orderSheet.getDataRange();
     const orderValues = orderDataRange.getValues();
@@ -539,7 +557,7 @@ function handleCreateOrder(orderData) {
     let existingProcessNote = '';
 
     // 從最新（最後一列）往回查找，確保匹配當期最近未結帳項目
-    if (targetUserId && targetUserId !== 'LINE_GUEST' && targetUserId !== 'TEST_USER_999') {
+    if (targetUserId && !targetUserId.startsWith('GUEST_') && targetUserId !== 'LINE_GUEST' && targetUserId !== 'TEST_USER_999') {
       for (let r = orderValues.length - 1; r >= 1; r--) {
         const row = orderValues[r];
         const rowUserId = String(row[2] || '').trim();
@@ -957,6 +975,100 @@ function updateCustomerAddress(custSheet, userId, name, phone) {
 }
 
 /**
+ * 🔄 一鍵重新計算並同步【顧客歸戶】的所有統計數據
+ * 根據【訂單明細】最新資料，自動為每位顧客精準重算：
+ * - 歷史訂單數 (第 6 欄)
+ * - 總消費金額 (第 7 欄)
+ * - 首購日期 (第 8 欄)
+ * - 最後下單日期 (第 9 欄)
+ * 支援「LINE_User_ID」與「手機號碼」雙重智慧歸戶比對！
+ */
+function recalculateCustomerStats() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  
+  if (!orderSheet || !custSheet) {
+    return { success: false, message: '找不到訂單或顧客工作表' };
+  }
+
+  const orderData = orderSheet.getDataRange().getValues();
+  const custData = custSheet.getDataRange().getValues();
+  if (custData.length <= 1) {
+    return { success: true, message: '顧客表無資料' };
+  }
+
+  // 1. 建立顧客映射表 (以 userId 為主 key，同時支援手機號碼比對)
+  const statsMap = {};
+  const phoneToUidMap = {};
+
+  for (let c = 1; c < custData.length; c++) {
+    const uid = String(custData[c][0] || '').trim();
+    const phone = String(custData[c][3] || '').replace(/[-\s]/g, '').trim();
+    if (uid) {
+      statsMap[uid] = {
+        orderCount: 0,
+        totalSpend: 0,
+        firstDate: null,
+        lastDate: null
+      };
+      if (phone) phoneToUidMap[phone] = uid;
+    }
+  }
+
+  // 2. 遍歷所有訂單進行統計累加
+  for (let o = 1; o < orderData.length; o++) {
+    const row = orderData[o];
+    let uid = String(row[2] || '').trim(); // 第 3 欄 LINE_User_ID
+    const phone = String(row[13] || '').replace(/[-\s]/g, '').trim(); // 第 14 欄 電話
+    const rawDate = row[1]; // 第 2 欄 下單時間
+    const orderTime = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
+    const amount = Number(row[11]) || Number(row[9]) || 0; // 第 12 欄總金額或第 10 欄商品小計
+
+    // 若 uid 未在顧客表直接對應，但手機號碼能對應，則智慧歸戶
+    if (!statsMap[uid] && phone && phoneToUidMap[phone]) {
+      uid = phoneToUidMap[phone];
+    }
+
+    if (statsMap[uid]) {
+      statsMap[uid].orderCount += 1;
+      statsMap[uid].totalSpend += amount;
+
+      if (orderTime && !isNaN(orderTime.getTime())) {
+        if (!statsMap[uid].firstDate || orderTime < statsMap[uid].firstDate) {
+          statsMap[uid].firstDate = orderTime;
+        }
+        if (!statsMap[uid].lastDate || orderTime > statsMap[uid].lastDate) {
+          statsMap[uid].lastDate = orderTime;
+        }
+      }
+    }
+  }
+
+  // 3. 寫回【顧客歸戶】工作表
+  let updatedCount = 0;
+  for (let c = 1; c < custData.length; c++) {
+    const uid = String(custData[c][0] || '').trim();
+    const stat = statsMap[uid];
+    if (stat) {
+      const row = c + 1;
+      custSheet.getRange(row, 6).setValue(stat.orderCount);
+      custSheet.getRange(row, 7).setValue(stat.totalSpend);
+      if (stat.firstDate) custSheet.getRange(row, 8).setValue(stat.firstDate);
+      if (stat.lastDate) custSheet.getRange(row, 9).setValue(stat.lastDate);
+      updatedCount++;
+    }
+  }
+
+  Logger.log(`✅ 已完成 ${updatedCount} 位顧客之歷史訂單數據重新整理！`);
+  return {
+    success: true,
+    message: `✅ 已重新統計並同步 ${updatedCount} 位顧客的歷史訂單與消費金額！`,
+    updatedCount: updatedCount
+  };
+}
+
+/**
  * 格式化電話號碼為 Google 試算表純文字 (防止開頭 0 被自動轉為數字截斷)
  */
 function formatPhoneAsText(phone) {
@@ -1172,10 +1284,11 @@ function getOrdersForUser(userId) {
  */
 function handleRegisterCustomer(data) {
   if (!data) return { success: false, message: '缺少資料' };
-  const userId = data.userId || 'LINE_GUEST';
-  const userName = data.userName || '訪客';
+  let userId = String(data.userId || '').trim();
+  const userName = data.userName || 'LINE 會員';
   const realName = (data.realName || '').trim();
   const rawPhone = data.phone ? String(data.phone).trim() : '';
+  const cleanPhone = rawPhone.replace(/[-\s]/g, '');
   const phone = formatPhoneAsText(rawPhone);
 
   if (!realName || !rawPhone) {
@@ -1198,15 +1311,45 @@ function handleRegisterCustomer(data) {
   const values = custSheet.getDataRange().getValues();
   let found = false;
 
+  // 🛡️ 徹底消滅 GUEST：若當前是真實 LINE ID (U...)，而歷史記錄中相同電話曾是 GUEST，自動將該歷史列轉正！
+  const isRealLineId = userId && !userId.startsWith('GUEST_') && userId !== 'TEST_USER_999' && userId !== 'LINE_GUEST';
+
   for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === userId) {
+    const rowUid = String(values[i][0] || '').trim();
+    const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
+
+    // 條件 1: UID 完全匹配
+    // 條件 2: 傳入真實 LINE ID，且表中該電話為 GUEST (自動升級為真實 LINE ID)
+    const isMatched = (rowUid === userId) || (isRealLineId && rowPhone === cleanPhone && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999'));
+
+    if (isMatched) {
       found = true;
       const row = i + 1;
+      if (isRealLineId && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999')) {
+        custSheet.getRange(row, 1).setValue(userId); // 🌟 將舊 GUEST 自動升級為真實 LINE ID！
+      }
       if (userName) custSheet.getRange(row, 2).setValue(userName);
       custSheet.getRange(row, 3).setValue(realName);
       custSheet.getRange(row, 4).setValue(phone);
       custSheet.getRange(row, 9).setValue(now);
       break;
+    }
+  }
+
+  // 若仍未找到，且當前傳入是 GUEST 但表中該電話已有真實 LINE ID，自動繼承
+  if (!found && (!isRealLineId) && cleanPhone) {
+    for (let i = 1; i < values.length; i++) {
+      const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
+      const rowUid = String(values[i][0] || '').trim();
+      if (rowPhone === cleanPhone && rowUid && !rowUid.startsWith('GUEST_') && rowUid !== 'TEST_USER_999') {
+        userId = rowUid; // 繼承真實 LINE ID
+        found = true;
+        const row = i + 1;
+        if (userName) custSheet.getRange(row, 2).setValue(userName);
+        custSheet.getRange(row, 3).setValue(realName);
+        custSheet.getRange(row, 9).setValue(now);
+        break;
+      }
     }
   }
 
@@ -1522,6 +1665,8 @@ function handleAddProduct(data) {
  * 處理附件圖片上傳至 Google Drive (極速優化版：利用資料夾繼承權限，省去逐檔遠端授權延遲)
  */
 function handleUploadImages(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
   try {
     let folder;
     try {
@@ -1545,12 +1690,9 @@ function handleUploadImages(data) {
       const decoded = Utilities.base64Decode(base64String);
       const contentType = f.type || 'image/jpeg';
       const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + Math.floor(Math.random() * 10000) + '_' + (i + 1) + '.jpg';
-      
+
       const blob = Utilities.newBlob(decoded, contentType, fileName);
       const file = folder.createFile(blob);
-      // 💡 資料夾已設為公開檢視，檔案建立時自動繼承公開權限，無需逐檔 setSharing，每張照片節省 1~1.5 秒！
-
-      // 直接輸出 Google Drive 穩定可直連的圖片網址
       const directUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
       uploadedUrls.push(directUrl);
     }
@@ -1558,6 +1700,8 @@ function handleUploadImages(data) {
     return { success: true, urls: uploadedUrls };
   } catch (err) {
     return { success: false, message: '圖片上傳至 Google Drive 失敗：' + err.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -1579,11 +1723,20 @@ function jsonResponse(obj) {
 }
 
 /**
- * 🛠️ 清除測試資料管理函式
- * 說明：清空「訂單明細」與「顧客歸戶」的所有測試資料，保留第一列表頭標題與欄位格式設定
- * 可在 Google Apps Script 編輯器中直接選取此函式點擊「執行」，亦可透過 API 觸發
+ * 🛠️ 清除測試資料管理函式（已啟用防誤觸保護）
+ * 說明：為避免在 Apps Script 編輯器誤按「執行」造成正式顧客與訂單被清空，
+ * 此函式強制要求輸入安全密鑰 safetyKey。未帶密鑰執行時會被直接攔截，絕不會動到試算表！
  */
-function clearTestOrdersData() {
+function clearTestOrdersData(safetyKey) {
+  // 🛡️ 強制防誤觸檢查：直接點選執行時 safetyKey 為 undefined，會被立即攔截
+  if (safetyKey !== 'CONFIRM_DELETE_ORDERS_2026') {
+    Logger.log('🚫【安全防護已啟動】拒絕執行！為防止正式顧客與訂單資料遭誤刪，此功能已永久上鎖。若在 Apps Script 編輯器誤按「執行」，資料絕不會被清空。');
+    return {
+      success: false,
+      message: '🚫【安全防護已啟動】拒絕執行！為保護真實顧客與訂單資料，已阻止清除動作。'
+    };
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let deletedOrdersCount = 0;
   let deletedCustCount = 0;
@@ -1611,17 +1764,25 @@ function clearTestOrdersData() {
   Logger.log(`✅ 清除完成！共清除 ${deletedOrdersCount} 筆訂單明細與 ${deletedCustCount} 筆顧客資料。已保留表頭與格式設定。`);
   return {
     success: true,
-    message: `✅ 測試資料已成功清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
+    message: `✅ 測試資料已清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
     deletedOrders: deletedOrdersCount,
     deletedCustomers: deletedCustCount
   };
 }
 
 /**
- * 🛠️ 清除自動化測試商品 (不影響任何正式商品)
- * 清除名稱包含「測試連續新增商品」或「自動連續測試商品」或「即時測試商品」的商品資料
+ * 🛠️ 清除自動化測試商品（已啟用防誤觸保護）
  */
-function clearTestProducts() {
+function clearTestProducts(safetyKey) {
+  // 🛡️ 強制防誤觸檢查
+  if (safetyKey !== 'CONFIRM_DELETE_PRODUCTS_2026') {
+    Logger.log('🚫【安全防護已啟動】拒絕執行！為防止商品資料遭誤刪，已阻止清除動作。');
+    return {
+      success: false,
+      message: '🚫【安全防護已啟動】拒絕執行！為保護商品庫，已阻止清除動作。'
+    };
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   if (!sheet) return { success: false, message: '商品表不存在' };

@@ -365,6 +365,138 @@
       background: #334155;
       box-shadow: 0 4px 12px rgba(51, 65, 85, 0.2);
     }
+
+    /* 📱 手機螢幕比例專屬優化 (RWD Mobile Adaption) */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px 8px;
+      }
+      .container {
+        width: 100%;
+        max-width: 100%;
+      }
+      .header {
+        margin-bottom: 14px;
+      }
+      .header h1 {
+        font-size: 19px !important;
+      }
+      .header p {
+        font-size: 12px !important;
+      }
+      #liffStatusBadge {
+        font-size: 11px !important;
+        padding: 4px 10px !important;
+      }
+
+      /* Tab 列支援平滑橫向滑動，不被壓縮變形 */
+      .tabs-nav {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding: 3px;
+        gap: 4px;
+        border-radius: 12px;
+        margin-bottom: 14px;
+        max-width: 100%;
+      }
+      .tabs-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .tab-btn {
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        font-size: 12.5px;
+        border-radius: 9px;
+      }
+
+      /* 卡片面板縮小內距，最大化商品展示空間 */
+      .panel {
+        padding: 14px 12px;
+        border-radius: 14px;
+      }
+      .panel-title {
+        font-size: 14.5px;
+        margin-bottom: 12px;
+      }
+
+      /* 勾選清單項目尺寸適配手機 */
+      .product-select-list {
+        max-height: 380px;
+        gap: 8px;
+        padding-right: 2px;
+      }
+      .product-check-item {
+        padding: 9px 10px;
+        gap: 10px;
+        border-radius: 10px;
+      }
+      .prod-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+      }
+      .prod-name {
+        font-size: 13.5px;
+      }
+      .prod-sub {
+        font-size: 11.5px;
+      }
+      .prod-price-tag {
+        font-size: 14px;
+      }
+
+      /* 手機端 LINE 輪播卡片預覽等比微縮，不霸佔螢幕高度 */
+      .line-chat-simulator {
+        min-height: 270px;
+        padding: 12px 10px;
+        border-radius: 16px;
+        gap: 10px;
+      }
+      .flex-preview-bubble {
+        width: 190px;
+        border-radius: 13px;
+      }
+      .preview-img {
+        height: 115px;
+      }
+      .preview-body {
+        padding: 9px;
+      }
+      .preview-tag {
+        font-size: 9.5px;
+        padding: 2px 5px;
+      }
+      .preview-title {
+        font-size: 12.5px;
+        height: 32px;
+        margin-bottom: 4px;
+      }
+      .preview-price {
+        font-size: 15px;
+      }
+      .preview-footer {
+        padding: 6px 10px;
+      }
+      .preview-btn {
+        padding: 6px 0;
+        font-size: 11.5px;
+      }
+
+      /* 操作按鈕緊湊適配 */
+      .btn-action {
+        padding: 11px 14px;
+        font-size: 14px;
+        border-radius: 11px;
+        margin-top: 12px;
+      }
+    }
   </style>
 </head>
 <body>
