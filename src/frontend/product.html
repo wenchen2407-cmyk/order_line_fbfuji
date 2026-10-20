@@ -208,10 +208,13 @@
 
     .product-desc {
       font-size: 14px;
-      color: #475569;
-      line-height: 1.6;
+      color: #334155;
+      line-height: 1.75;
       border-top: 1px dashed var(--border-color);
-      padding-top: 12px;
+      padding-top: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      letter-spacing: 0.01em;
     }
 
     /* 表單區塊 */
@@ -1393,7 +1396,11 @@
         origPriceElem.style.display = 'none';
       }
 
-      document.getElementById('productDesc').textContent = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
+      const rawDesc = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
+      const cleanDesc = (typeof rawDesc === 'string') 
+        ? rawDesc.replace(/\\n/g, '\n').replace(/\\r/g, '').trim() 
+        : String(rawDesc);
+      document.getElementById('productDesc').textContent = cleanDesc;
       
       const stockNum = Number(currentProduct.stock) || 0;
       const stockElem = document.getElementById('productStock');
