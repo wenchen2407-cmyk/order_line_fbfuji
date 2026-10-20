@@ -25,13 +25,13 @@ const ADMIN_ALERT_EMAIL = 'wen.chen2407@gmail.com';
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. 商品清單工作表 (升級支援原幣進貨價、匯率、重量與公式連動欄位)
+  // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量與公式連動欄位)
   let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
     '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
-    '採購幣別', '原幣進貨價', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
+    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
   ];
 
   if (!prodSheet) {
@@ -39,22 +39,22 @@ function setupSpreadsheet() {
     prodSheet.appendRow(prodHeaders);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
-    // 加入範例資料 (成本價採用公式連動：=ROUND(Q2*R2 + (S2/1000)*T2))
+    // 加入範例資料 (成本價採用公式連動：=ROUND((Q2+R2)*S2 + (T2/1000)*U2))
     prodSheet.appendRow([
       'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
-      '=ROUND(Q2*R2 + (S2/1000)*T2)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
+      '=ROUND((Q2+R2)*S2 + (T2/1000)*U2)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
       '2026/10/10 23:59',
-      'JPY', 3500, 0.22, 380, 240
+      'JPY', 3182, 318, 0.22, 380, 240
     ]);
   } else {
-    // 既有表格：升級表頭為最新 20 欄規格
+    // 既有表格：升級表頭為最新 21 欄規格
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
-    // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/重量欄位，並將成本價全面升級為連動公式
+    // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/稅金/重量欄位，並將成本價全面升級為連動公式
     upgradeExistingProductsToFormula(prodSheet);
   }
   // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
@@ -245,14 +245,14 @@ function upgradeExistingProductsToFormula(targetSheet) {
   const lastRow = prodSheet.getLastRow();
   if (lastRow <= 1) return '目前尚無商品資料';
 
-  // 確保表格寬度至少有 20 欄
+  // 確保表格寬度至少有 21 欄
   const maxCols = prodSheet.getMaxColumns();
-  if (maxCols < 20) {
-    prodSheet.insertColumnsAfter(maxCols, 20 - maxCols);
+  if (maxCols < 21) {
+    prodSheet.insertColumnsAfter(maxCols, 21 - maxCols);
   }
 
-  // 讀取第 2 列到最後一列所有商品資料
-  const range = prodSheet.getRange(2, 1, lastRow - 1, 20);
+  // 讀取第 2 列到最後一列所有商品資料 (21 欄)
+  const range = prodSheet.getRange(2, 1, lastRow - 1, 21);
   const values = range.getValues();
   const formulas = range.getFormulas();
 
@@ -270,13 +270,14 @@ function upgradeExistingProductsToFormula(targetSheet) {
     const prodName = String(row[1] || '');
 
     let cur = String(row[15] || '').trim(); // P 欄 (第16欄): 採購幣別
-    let foreign = Number(row[16]) || 0;     // Q 欄 (第17欄): 原幣進貨價
-    let rate = Number(row[17]) || 0;        // R 欄 (第18欄): 採購匯率
-    let weight = Number(row[18]) || 0;      // S 欄 (第19欄): 商品重量(g)
-    let shipRate = Number(row[19]) || 240;  // T 欄 (第20欄): 運費單價
+    let preTax = Number(row[16]) || 0;      // Q 欄 (第17欄): 原幣稅前金額
+    let tax = Number(row[17]) || 0;         // R 欄 (第18欄): 稅金 (原幣)
+    let rate = Number(row[18]) || 0;        // S 欄 (第19欄): 採購匯率
+    let weight = Number(row[19]) || 0;      // T 欄 (第20欄): 商品重量(g)
+    let shipRate = Number(row[20]) || 240;  // U 欄 (第21欄): 國際運費單價
 
-    // 若尚未填寫 P~T 欄，嘗試從備註文字與品名自動解析還原
-    if (!cur || (foreign === 0 && weight === 0)) {
+    // 若尚未填寫 P~U 欄，嘗試從備註文字與品名自動解析還原
+    if (!cur || (preTax === 0 && weight === 0)) {
       if (!cur) {
         if (note.includes('KRW') || pid.startsWith('K') || prodName.includes('韓')) {
           cur = 'KRW';
@@ -290,11 +291,19 @@ function upgradeExistingProductsToFormula(targetSheet) {
         }
       }
 
-      // 解析原幣金額 (例：JPY 3500, 3500(含稅), 稅前3000)
-      if (foreign === 0) {
-        const foreignMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,)/i) || note.match(/(?:JPY|KRW|TWD)\s*(\d+(?:\.\d+)?)/i);
-        if (foreignMatch) {
-          foreign = Number(foreignMatch[1]) || 0;
+      // 解析稅前金額與稅金 (例：稅前3000+稅300, 或 JPY 3500)
+      if (preTax === 0 && tax === 0) {
+        const splitMatch = note.match(/稅前\s*(\d+(?:\.\d+)?).*?稅(?:金)?\s*(\d+(?:\.\d+)?)/i);
+        if (splitMatch) {
+          preTax = Number(splitMatch[1]) || 0;
+          tax = Number(splitMatch[2]) || 0;
+        } else {
+          // 單一金額
+          const foreignMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,)/i) || note.match(/(?:JPY|KRW|TWD)\s*(\d+(?:\.\d+)?)/i);
+          if (foreignMatch) {
+            preTax = Number(foreignMatch[1]) || 0;
+            tax = 0;
+          }
         }
       }
 
@@ -308,21 +317,21 @@ function upgradeExistingProductsToFormula(targetSheet) {
 
       // 寫回 values
       row[15] = cur;
-      row[16] = foreign;
-      row[17] = rate > 0 ? rate : (cur === 'KRW' ? 0.026 : (cur === 'TWD' ? 1.0 : 0.22));
-      row[18] = weight;
-      row[19] = shipRate;
+      row[16] = preTax;
+      row[17] = tax;
+      row[18] = rate > 0 ? rate : (cur === 'KRW' ? 0.026 : (cur === 'TWD' ? 1.0 : 0.22));
+      row[19] = weight;
+      row[20] = shipRate;
     }
 
-    // 將 L 欄 (成本價) 升級為連動公式
+    // 將 L 欄 (成本價) 升級為連動公式：=ROUND((Q{row}+R{row})*S{row} + (T{row}/1000)*U{row})
     if (!currentFormula || !currentFormula.startsWith('=')) {
-      if (foreign > 0 || weight > 0) {
-        formulas[i][11] = `=ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum})`;
+      if ((preTax + tax) > 0 || weight > 0) {
+        formulas[i][11] = `=ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum})`;
       } else if (typeof currentCost === 'number' && currentCost > 0) {
-        // 原本已有成本數字但未登記原幣：保留原數字，但預備好公式條件
-        formulas[i][11] = `=IF(OR(Q${rowNum}>0, S${rowNum}>0), ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum}), ${currentCost})`;
+        formulas[i][11] = `=IF(OR(Q${rowNum}>0, R${rowNum}>0, T${rowNum}>0), ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum}), ${currentCost})`;
       } else {
-        formulas[i][11] = `=IF(OR(Q${rowNum}>0, S${rowNum}>0), ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum}), 0)`;
+        formulas[i][11] = `=IF(OR(Q${rowNum}>0, R${rowNum}>0, T${rowNum}>0), ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum}), 0)`;
       }
     }
 
@@ -338,8 +347,8 @@ function upgradeExistingProductsToFormula(targetSheet) {
   }
 
   SpreadsheetApp.flush();
-  Logger.log(`[升級完成] 共升級 ${upgradedCount} 筆既有商品為公式連動與獨立欄位！`);
-  return `成功將 ${upgradedCount} 筆既有商品升級為公式連動與獨立欄位！`;
+  Logger.log(`[升級完成] 共升級 ${upgradedCount} 筆既有商品為 21 欄獨立登記與公式連動！`);
+  return `成功將 ${upgradedCount} 筆既有商品升級為 21 欄獨立登記與公式連動！`;
 }
 
 /**
@@ -538,10 +547,11 @@ function getProductsList() {
         costNote: row[12] || '',
         deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定截單時間 (選填)
         currency: row[15] || 'JPY',                          // 欄位 16 (P): 採購幣別
-        costForeign: Number(row[16]) || 0,                   // 欄位 17 (Q): 原幣進貨價 (含稅)
-        exchangeRate: Number(row[17]) || 0,                  // 欄位 18 (R): 採購匯率
-        weightG: Number(row[18]) || 0,                       // 欄位 19 (S): 商品重量 (g)
-        shippingRate: Number(row[19]) || 240                 // 欄位 20 (T): 國際運費單價 (元/kg)
+        costPreTax: Number(row[16]) || 0,                    // 欄位 17 (Q): 原幣稅前金額
+        costTax: Number(row[17]) || 0,                       // 欄位 18 (R): 稅金 (原幣)
+        exchangeRate: Number(row[18]) || 0,                  // 欄位 19 (S): 採購匯率
+        weightG: Number(row[19]) || 0,                       // 欄位 20 (T): 商品重量 (g)
+        shippingRate: Number(row[20]) || 240                 // 欄位 21 (U): 國際運費單價 (元/kg)
       });
     }
   }
@@ -1831,20 +1841,19 @@ function handleAddProduct(data) {
 
     const targetRow = sheet.getLastRow() + 1;
 
-    // 採購原幣、匯率與重量獨立分開登記
+    // 採購原幣、稅金、匯率與重量獨立分開登記
     if (data.currency) cur = String(data.currency).toUpperCase();
-    const foreignPrice = Number(data.costForeign || data.costPricePreTax || 0);
-    const taxAmount = Number(data.taxAmount || data.calcTaxAmount || 0);
-    const totalForeign = foreignPrice + taxAmount;
+    const preTax = Number(data.costPricePreTax || data.costForeign || 0);
+    const tax = Number(data.taxAmount || data.calcTaxAmount || 0);
     const rate = Number(data.exchangeRate || 0);
     const weight = Number(data.weightG || data.weight || 0);
     const shipRate = Number(data.shippingRate || 240);
 
     // 成本價 (NT$)：若有進貨價或重量，使用 Google 試算表公式連動；否則使用靜態成本
     let costCellVal = Number(data.costPrice) || 0;
-    if (totalForeign > 0 || weight > 0) {
-      // 試算表公式：Q 欄(原幣進貨價) * R 欄(採購匯率) + S 欄(重量g)/1000 * T 欄(運費單價/kg)
-      costCellVal = `=ROUND(Q${targetRow} * R${targetRow} + (S${targetRow} / 1000) * T${targetRow})`;
+    if ((preTax + tax) > 0 || weight > 0) {
+      // 試算表公式：(Q 欄(原幣稅前) + R 欄(稅金)) * S 欄(採購匯率) + T 欄(重量g)/1000 * U 欄(運費單價/kg)
+      costCellVal = `=ROUND((Q${targetRow} + R${targetRow}) * S${targetRow} + (T${targetRow} / 1000) * U${targetRow})`;
     }
 
     sheet.appendRow([
@@ -1864,10 +1873,11 @@ function handleAddProduct(data) {
       JSON.stringify(imagesArray), // 欄位 14 (N): 所有圖片清單
       data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定截單時間
       cur,                         // 欄位 16 (P): 採購幣別
-      totalForeign,                // 欄位 17 (Q): 原幣進貨價 (含稅)
-      rate,                        // 欄位 18 (R): 採購匯率
-      weight,                      // 欄位 19 (S): 商品重量 (g)
-      shipRate                     // 欄位 20 (T): 國際運費單價 (元/kg)
+      preTax,                      // 欄位 17 (Q): 原幣稅前金額
+      tax,                         // 欄位 18 (R): 稅金 (原幣)
+      rate,                        // 欄位 19 (S): 採購匯率
+      weight,                      // 欄位 20 (T): 商品重量 (g)
+      shipRate                     // 欄位 21 (U): 國際運費單價 (元/kg)
     ]);
 
     SpreadsheetApp.flush();
