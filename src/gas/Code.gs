@@ -320,11 +320,12 @@ function upgradeExistingProductsToFormula(targetSheet) {
     // 2. 從「採購備註說明」(M 欄) 權威還原真實數據
     if (note) {
       // 解析幣別
-      const curMatch = note.match(/(JPY|KRW|TWD|USD)/i);
+      const curMatch = note.match(/(JPY|USD|KRW|TWD)/i);
       if (curMatch) {
         cur = curMatch[1].toUpperCase();
       } else if (!cur) {
-        if (pid.startsWith('K') || prodName.includes('韓') || note.includes('韓')) cur = 'KRW';
+        if (pid.startsWith('U') || prodName.includes('美') || note.includes('美') || note.includes('USD')) cur = 'USD';
+        else if (pid.startsWith('K') || prodName.includes('韓') || note.includes('韓')) cur = 'KRW';
         else if (pid.startsWith('T') || prodName.includes('台') || note.includes('台')) cur = 'TWD';
         else cur = 'JPY';
       }
@@ -335,8 +336,8 @@ function upgradeExistingProductsToFormula(targetSheet) {
         preTax = Number(splitMatch[1]);
         tax = Number(splitMatch[2]);
       } else {
-        // 單一金額 (例：JPY 2400 或 3500(含稅))
-        const singleMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,|$)/i);
+        // 單一金額 (例：JPY 2400, USD 120, 或 3500(含稅))
+        const singleMatch = note.match(/(?:JPY|USD|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,|$)/i);
         if (singleMatch && (preTax === undefined || preTax === '' || isNaN(Number(preTax)) || Number(preTax) === 0 || isShifted)) {
           preTax = Number(singleMatch[1]);
           if (tax === undefined || tax === '' || isNaN(Number(tax)) || isShifted) {
@@ -364,11 +365,16 @@ function upgradeExistingProductsToFormula(targetSheet) {
     // 3. 確保預設值與格式正確
     if (!cur) cur = 'JPY';
 
-    // 匯率合理性防護：若匯率不存在或大於等於 10 (殘留重量)，強制還原為幣別基準匯率
-    if (typeof rate !== 'number' || isNaN(rate) || rate <= 0 || rate >= 10) {
-      if (cur === 'KRW') rate = 0.026;
-      else if (cur === 'TWD') rate = 1.0;
-      else rate = 0.22;
+    // 匯率合理性防護：若匯率不存在或殘留錯位重量，還原為幣別基準匯率
+    if (cur === 'USD') {
+      if (typeof rate !== 'number' || isNaN(rate) || rate <= 0 || rate < 10 || rate > 60) rate = 32.5;
+    } else if (cur === 'KRW') {
+      if (typeof rate !== 'number' || isNaN(rate) || rate <= 0 || rate >= 1) rate = 0.026;
+    } else if (cur === 'TWD') {
+      rate = 1.0;
+    } else {
+      // JPY
+      if (typeof rate !== 'number' || isNaN(rate) || rate <= 0 || rate >= 1) rate = 0.22;
     }
 
     // 運費單價防護
@@ -1802,14 +1808,25 @@ function updatePaymentSettings() {
 
 /**
  * 自動產生商品編號：
- * 日幣商品: J + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 J2609270001)
- * 韓元商品: K + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 K2609270001)
+ * 日本代購: J + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 J2609270001)
+ * 美國代購: U + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 U2610210001)
+ * 韓國代購: K + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 K2609270001)
+ * 台灣現貨: T + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 T2609270001)
  */
 function generateProductId(sheet, currency, now) {
   const cur = String(currency || 'JPY').toUpperCase();
-  const prefixChar = (cur === 'KRW' || cur.includes('韓') || cur.includes('KOR')) ? 'K' : 'J';
+  let prefixChar = 'J';
+  if (cur === 'USD' || cur.includes('美') || cur.includes('USA')) {
+    prefixChar = 'U';
+  } else if (cur === 'KRW' || cur.includes('韓') || cur.includes('KOR')) {
+    prefixChar = 'K';
+  } else if (cur === 'TWD' || cur.includes('台') || cur.includes('TW')) {
+    prefixChar = 'T';
+  } else {
+    prefixChar = 'J';
+  }
   const datePart = Utilities.formatDate(now || new Date(), 'Asia/Taipei', 'yyMMdd');
-  const basePrefix = prefixChar + datePart; // 例如 J260927 或 K260927
+  const basePrefix = prefixChar + datePart; // 例如 J260927, U261021, K260927, T260927
 
   let maxSeq = 0;
   if (sheet) {
@@ -1860,14 +1877,18 @@ function handleAddProduct(data) {
     let cur = (data.currency || '').toUpperCase();
     if (!cur) {
       const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
-      if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
+      if (hint.includes('USD') || hint.includes('美') || hint.includes('USA')) {
+        cur = 'USD';
+      } else if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
         cur = 'KRW';
+      } else if (hint.includes('TWD') || hint.includes('台') || hint.includes('TW')) {
+        cur = 'TWD';
       } else {
         cur = 'JPY';
       }
     }
 
-    // 商品編號：若賣家有自訂則使用自訂，否則依「J/K + 西元年後2碼 + 日期 + 0001」自動跳號
+    // 商品編號：若賣家有自訂則使用自訂，否則依「J/U/K/T + 西元年後2碼 + 日期 + 0001」自動跳號
     const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
 
     // 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)

@@ -677,6 +677,7 @@
               <label class="form-label" style="font-size: 12px;">採購幣別</label>
               <select id="calcCurrency" class="input-text" style="padding: 8px;" onchange="changeCurrencyPreset()">
                 <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
+                <option value="USD">🇺🇸 美金 (USD)</option>
                 <option value="KRW">🇰🇷 韓元 (KRW)</option>
                 <option value="TWD">🇹🇼 台幣 (TWD)</option>
               </select>
@@ -1828,6 +1829,8 @@
       const rateInput = document.getElementById('calcExchangeRate');
       if (cur === 'JPY') {
         rateInput.value = '0.2200';
+      } else if (cur === 'USD') {
+        rateInput.value = '32.5000';
       } else if (cur === 'KRW') {
         rateInput.value = '0.0240';
       } else if (cur === 'TWD') {
