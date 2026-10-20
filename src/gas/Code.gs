@@ -53,6 +53,9 @@ function setupSpreadsheet() {
     // 既有表格：升級表頭為最新 20 欄規格
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
+    
+    // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/重量欄位，並將成本價全面升級為連動公式
+    upgradeExistingProductsToFormula(prodSheet);
   }
   // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
   prodSheet.getRange("O:O").setNumberFormat('@');
@@ -228,6 +231,115 @@ function setupSpreadsheet() {
   }
 
   return '工作表與系統設定更新升級完成！';
+}
+
+/**
+ * 🌟 自動升級既有商品資料：將舊商品的成本備註拆解為獨立欄位 (P~T欄)，並將 L 欄成本價全面升級為連動公式
+ * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」，或直接執行 setupSpreadsheet()
+ */
+function upgradeExistingProductsToFormula(targetSheet) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const prodSheet = targetSheet || ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  if (!prodSheet) return '找不到商品清單工作表';
+
+  const lastRow = prodSheet.getLastRow();
+  if (lastRow <= 1) return '目前尚無商品資料';
+
+  // 確保表格寬度至少有 20 欄
+  const maxCols = prodSheet.getMaxColumns();
+  if (maxCols < 20) {
+    prodSheet.insertColumnsAfter(maxCols, 20 - maxCols);
+  }
+
+  // 讀取第 2 列到最後一列所有商品資料
+  const range = prodSheet.getRange(2, 1, lastRow - 1, 20);
+  const values = range.getValues();
+  const formulas = range.getFormulas();
+
+  let upgradedCount = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const rowNum = i + 2;
+    const row = values[i];
+    const pid = String(row[0] || '').trim();
+    if (!pid) continue;
+
+    const currentCost = row[11];
+    const currentFormula = formulas[i][11]; // L 欄 (第12欄) 目前公式
+    const note = String(row[12] || '');    // M 欄 (第13欄) 備註文字
+    const prodName = String(row[1] || '');
+
+    let cur = String(row[15] || '').trim(); // P 欄 (第16欄): 採購幣別
+    let foreign = Number(row[16]) || 0;     // Q 欄 (第17欄): 原幣進貨價
+    let rate = Number(row[17]) || 0;        // R 欄 (第18欄): 採購匯率
+    let weight = Number(row[18]) || 0;      // S 欄 (第19欄): 商品重量(g)
+    let shipRate = Number(row[19]) || 240;  // T 欄 (第20欄): 運費單價
+
+    // 若尚未填寫 P~T 欄，嘗試從備註文字與品名自動解析還原
+    if (!cur || (foreign === 0 && weight === 0)) {
+      if (!cur) {
+        if (note.includes('KRW') || pid.startsWith('K') || prodName.includes('韓')) {
+          cur = 'KRW';
+          if (rate === 0) rate = 0.026;
+        } else if (note.includes('TWD') || pid.startsWith('T') || prodName.includes('台')) {
+          cur = 'TWD';
+          if (rate === 0) rate = 1.0;
+        } else {
+          cur = 'JPY';
+          if (rate === 0) rate = 0.22;
+        }
+      }
+
+      // 解析原幣金額 (例：JPY 3500, 3500(含稅), 稅前3000)
+      if (foreign === 0) {
+        const foreignMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,)/i) || note.match(/(?:JPY|KRW|TWD)\s*(\d+(?:\.\d+)?)/i);
+        if (foreignMatch) {
+          foreign = Number(foreignMatch[1]) || 0;
+        }
+      }
+
+      // 解析重量 (例：380g, 重350g)
+      if (weight === 0) {
+        const weightMatch = note.match(/(?:重|重量|重約|weight|\,)\s*(\d+(?:\.\d+)?)\s*g/i) || note.match(/(\d+)\s*g/i);
+        if (weightMatch) {
+          weight = Number(weightMatch[1]) || 0;
+        }
+      }
+
+      // 寫回 values
+      row[15] = cur;
+      row[16] = foreign;
+      row[17] = rate > 0 ? rate : (cur === 'KRW' ? 0.026 : (cur === 'TWD' ? 1.0 : 0.22));
+      row[18] = weight;
+      row[19] = shipRate;
+    }
+
+    // 將 L 欄 (成本價) 升級為連動公式
+    if (!currentFormula || !currentFormula.startsWith('=')) {
+      if (foreign > 0 || weight > 0) {
+        formulas[i][11] = `=ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum})`;
+      } else if (typeof currentCost === 'number' && currentCost > 0) {
+        // 原本已有成本數字但未登記原幣：保留原數字，但預備好公式條件
+        formulas[i][11] = `=IF(OR(Q${rowNum}>0, S${rowNum}>0), ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum}), ${currentCost})`;
+      } else {
+        formulas[i][11] = `=IF(OR(Q${rowNum}>0, S${rowNum}>0), ROUND(Q${rowNum}*R${rowNum} + (S${rowNum}/1000)*T${rowNum}), 0)`;
+      }
+    }
+
+    upgradedCount++;
+  }
+
+  // 批次寫入數值與公式
+  range.setValues(values);
+  for (let i = 0; i < formulas.length; i++) {
+    if (formulas[i][11] && formulas[i][11].startsWith('=')) {
+      prodSheet.getRange(i + 2, 12).setFormula(formulas[i][11]);
+    }
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log(`[升級完成] 共升級 ${upgradedCount} 筆既有商品為公式連動與獨立欄位！`);
+  return `成功將 ${upgradedCount} 筆既有商品升級為公式連動與獨立欄位！`;
 }
 
 /**
