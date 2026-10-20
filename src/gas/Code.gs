@@ -25,12 +25,13 @@ const ADMIN_ALERT_EMAIL = 'wen.chen2407@gmail.com';
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. 商品清單工作表 (升級支援各商品「指定截單時間」欄位)
+  // 1. 商品清單工作表 (升級支援原幣進貨價、匯率、重量與公式連動欄位)
   let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
-    '成本價(NT$)', '採購原幣與重量備註', '所有圖片清單(JSON)', '指定截單時間'
+    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
+    '採購幣別', '原幣進貨價', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
   ];
 
   if (!prodSheet) {
@@ -38,17 +39,18 @@ function setupSpreadsheet() {
     prodSheet.appendRow(prodHeaders);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
-    // 加入範例資料
+    // 加入範例資料 (成本價採用公式連動：=ROUND(Q2*R2 + (S2/1000)*T2))
     prodSheet.appendRow([
       'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
-      850, 'JPY 3500 (含稅), 380g', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
-      '2026/10/10 23:59'
+      '=ROUND(Q2*R2 + (S2/1000)*T2)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
+      '2026/10/10 23:59',
+      'JPY', 3500, 0.22, 380, 240
     ]);
   } else {
-    // 既有表格：升級表頭為最新 15 欄規格
+    // 既有表格：升級表頭為最新 20 欄規格
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
   }
@@ -422,7 +424,12 @@ function getProductsList() {
         status: status,
         costPrice: Number(row[11]) || 0,
         costNote: row[12] || '',
-        deadline: row[14] ? formatDeadlineStr(row[14]) : '' // 欄位 15: 各商品指定截單時間 (選填)
+        deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定截單時間 (選填)
+        currency: row[15] || 'JPY',                          // 欄位 16 (P): 採購幣別
+        costForeign: Number(row[16]) || 0,                   // 欄位 17 (Q): 原幣進貨價 (含稅)
+        exchangeRate: Number(row[17]) || 0,                  // 欄位 18 (R): 採購匯率
+        weightG: Number(row[18]) || 0,                       // 欄位 19 (S): 商品重量 (g)
+        shippingRate: Number(row[19]) || 240                 // 欄位 20 (T): 國際運費單價 (元/kg)
       });
     }
   }
@@ -1710,6 +1717,24 @@ function handleAddProduct(data) {
       stockQty = anyUnlimited ? 999999 : calculatedStock;
     }
 
+    const targetRow = sheet.getLastRow() + 1;
+
+    // 採購原幣、匯率與重量獨立分開登記
+    if (data.currency) cur = String(data.currency).toUpperCase();
+    const foreignPrice = Number(data.costForeign || data.costPricePreTax || 0);
+    const taxAmount = Number(data.taxAmount || data.calcTaxAmount || 0);
+    const totalForeign = foreignPrice + taxAmount;
+    const rate = Number(data.exchangeRate || 0);
+    const weight = Number(data.weightG || data.weight || 0);
+    const shipRate = Number(data.shippingRate || 240);
+
+    // 成本價 (NT$)：若有進貨價或重量，使用 Google 試算表公式連動；否則使用靜態成本
+    let costCellVal = Number(data.costPrice) || 0;
+    if (totalForeign > 0 || weight > 0) {
+      // 試算表公式：Q 欄(原幣進貨價) * R 欄(採購匯率) + S 欄(重量g)/1000 * T 欄(運費單價/kg)
+      costCellVal = `=ROUND(Q${targetRow} * R${targetRow} + (S${targetRow} / 1000) * T${targetRow})`;
+    }
+
     sheet.appendRow([
       pid,
       data.name.trim(),
@@ -1722,10 +1747,15 @@ function handleAddProduct(data) {
       data.description || '',
       '上架中',
       now,
-      Number(data.costPrice) || 0, // 欄位 12: 成本價 (NT$)
-      data.costNote || '',         // 欄位 13: 採購原幣與重量備註
-      JSON.stringify(imagesArray), // 欄位 14: 所有圖片清單
-      data.deadline ? String(data.deadline).trim() : '' // 欄位 15: 指定截單時間
+      costCellVal,                 // 欄位 12 (L): 成本價 (NT$) -> 支援試算表公式連動
+      data.costNote || '',         // 欄位 13 (M): 採購備註說明
+      JSON.stringify(imagesArray), // 欄位 14 (N): 所有圖片清單
+      data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定截單時間
+      cur,                         // 欄位 16 (P): 採購幣別
+      totalForeign,                // 欄位 17 (Q): 原幣進貨價 (含稅)
+      rate,                        // 欄位 18 (R): 採購匯率
+      weight,                      // 欄位 19 (S): 商品重量 (g)
+      shipRate                     // 欄位 20 (T): 國際運費單價 (元/kg)
     ]);
 
     SpreadsheetApp.flush();
