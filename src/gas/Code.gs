@@ -15,6 +15,9 @@ const SHEET_NAMES = {
 // 指定的商品圖片 Google Drive 資料夾 ID
 const DRIVE_FOLDER_ID = '1dqoqS4VJK7Fn56-L-mM5Afwyb6dvTQMB';
 
+// 📧 管理者接收【網址觸擊 / 訪客進站】即時通報的 Email 信箱
+const ADMIN_ALERT_EMAIL = 'wen.chen2407@gmail.com';
+
 /**
  * 試算表初次安裝設定與欄位升級：自動補齊成本價、重量備註與多圖欄位
  * 可在 Apps Script 編輯器中直接執行此函式升級試算表結構
@@ -366,11 +369,32 @@ function getProductsList() {
     const row = data[i];
     const status = row[9];
     if (status === '上架中') {
-      let specs = [];
+      let rawSpecs = [];
       try {
-        specs = JSON.parse(row[6]);
+        rawSpecs = JSON.parse(row[6]);
       } catch (e) {
-        specs = row[6] ? [row[6]] : [];
+        rawSpecs = row[6] ? [row[6]] : [];
+      }
+
+      const basePrice = Number(row[4]) || 0;
+      const baseStock = Number(row[5]) || 0;
+      const isBaseUnlimited = baseStock >= 9999;
+
+      // 正規化規格陣列 (相容舊版純字串陣列 與 新版獨立定價庫存物件陣列)
+      let normalizedSpecs = [];
+      if (Array.isArray(rawSpecs)) {
+        normalizedSpecs = rawSpecs.map(s => {
+          if (s && typeof s === 'object') {
+            const sName = String(s.name || '').trim();
+            const sPrice = (s.price !== undefined && !isNaN(Number(s.price)) && Number(s.price) > 0) ? Number(s.price) : basePrice;
+            const sUnlimited = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
+            const sStock = sUnlimited ? 999999 : (Number(s.stock) || 0);
+            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+          } else if (typeof s === 'string' && s.trim()) {
+            return { name: s.trim(), price: basePrice, stock: baseStock, isUnlimited: isBaseUnlimited };
+          }
+          return null;
+        }).filter(s => s && s.name);
       }
 
       // 解析所有圖片清單
@@ -389,9 +413,9 @@ function getProductsList() {
         name: row[1],
         category: row[2],
         originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
-        price: Number(row[4]),
-        stock: Number(row[5]),
-        specs: specs,
+        price: basePrice,
+        stock: baseStock,
+        specs: normalizedSpecs,
         imageUrl: row[7] || (allImages[0] || ''),
         imageUrls: allImages,
         description: row[8],
@@ -514,13 +538,62 @@ function handleCreateOrder(orderData) {
       }
     }
 
-    const buyQty = Number(orderData.quantity) || 1;
-    if (currentStock < buyQty) {
-      return { success: false, message: '庫存不足！目前剩餘數量：' + currentStock };
+    const targetSpec = String(orderData.spec || '單一規格').trim();
+    let specsList = [];
+    try {
+      specsList = JSON.parse(targetProduct[6]);
+    } catch(e) {
+      specsList = targetProduct[6] ? [targetProduct[6]] : [];
     }
 
-    // 2. 扣減庫存
-    const newStock = currentStock - buyQty;
+    let targetSpecObj = null;
+    let targetSpecIndex = -1;
+    let unitPrice = Number(targetProduct[4]); // 預設為主商品連線代購價
+
+    if (Array.isArray(specsList)) {
+      for (let s = 0; s < specsList.length; s++) {
+        const item = specsList[s];
+        const sName = (item && typeof item === 'object') ? String(item.name || '').trim() : String(item || '').trim();
+        if (sName === targetSpec) {
+          targetSpecObj = item;
+          targetSpecIndex = s;
+          if (item && typeof item === 'object') {
+            if (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) {
+              unitPrice = Number(item.price);
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    const buyQty = Number(orderData.quantity) || 1;
+
+    // 檢查規格庫存與總庫存
+    if (targetSpecObj && typeof targetSpecObj === 'object') {
+      const sStock = Number(targetSpecObj.stock);
+      const isUnlimited = Boolean(targetSpecObj.isUnlimited || sStock >= 9999);
+      if (!isUnlimited && sStock < buyQty) {
+        return { success: false, message: `⚠️ 款式「${targetSpec}」庫存不足！目前剩餘數量：${sStock}` };
+      }
+    } else {
+      if (currentStock < buyQty) {
+        return { success: false, message: '庫存不足！目前剩餘數量：' + currentStock };
+      }
+    }
+
+    // 扣減指定規格庫存與總庫存
+    if (targetSpecObj && typeof targetSpecObj === 'object' && targetSpecIndex >= 0) {
+      const sStock = Number(targetSpecObj.stock);
+      const isUnlimited = Boolean(targetSpecObj.isUnlimited || sStock >= 9999);
+      if (!isUnlimited) {
+        targetSpecObj.stock = Math.max(0, sStock - buyQty);
+        specsList[targetSpecIndex] = targetSpecObj;
+        prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsList));
+      }
+    }
+
+    const newStock = Math.max(0, currentStock - buyQty);
     prodSheet.getRange(productRowIndex, 6).setValue(newStock);
     if (newStock <= 0) {
       prodSheet.getRange(productRowIndex, 10).setValue('已售完');
@@ -546,7 +619,6 @@ function handleCreateOrder(orderData) {
       }
     }
 
-    const targetSpec = String(orderData.spec || '單一規格').trim();
     const orderDataRange = orderSheet.getDataRange();
     const orderValues = orderDataRange.getValues();
     
@@ -586,7 +658,6 @@ function handleCreateOrder(orderData) {
       }
     }
 
-    const unitPrice = Number(targetProduct[4]); // 連線代購價
     const now = new Date();
     const timeFormatted = Utilities.formatDate(now, 'Asia/Taipei', 'MM/dd HH:mm');
 
@@ -1593,12 +1664,34 @@ function handleAddProduct(data) {
     // 商品編號：若賣家有自訂則使用自訂，否則依「J/K + 西元年後2碼 + 日期 + 0001」自動跳號
     const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
 
-    // 規格處理 (支援陣列或逗號字串)
+    // 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
     let specsArray = [];
+    const basePrice = Number(data.price) || 0;
+    let calculatedStock = 0;
+    let hasExplicitSpecs = false;
+
     if (Array.isArray(data.specs)) {
-      specsArray = data.specs;
+      specsArray = data.specs.map(item => {
+        if (item && typeof item === 'object') {
+          hasExplicitSpecs = true;
+          const sName = String(item.name || '').trim();
+          const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
+          const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
+          const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
+          if (!sUnlimited) calculatedStock += sStock;
+          return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+        } else if (typeof item === 'string' && item.trim()) {
+          return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+        }
+        return null;
+      }).filter(s => s && s.name);
     } else if (typeof data.specs === 'string' && data.specs.trim()) {
-      specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
+        name: name,
+        price: basePrice,
+        stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+        isUnlimited: Boolean(data.isUnlimitedStock)
+      }));
     }
 
     // 圖片處理：支援多張圖片（第一張為主圖）
@@ -1610,8 +1703,12 @@ function handleAddProduct(data) {
     }
     const mainImage = imagesArray[0] || data.imageUrl || '';
 
-    // 庫存名額：若勾選「不限庫存」則設定為 999999
-    const stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
+    // 庫存名額：若有獨立規格庫存，且有任一規格為不限庫存則總庫存為 999999；否則為各規格加總
+    let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
+    if (hasExplicitSpecs && specsArray.length > 0) {
+      const anyUnlimited = specsArray.some(s => s.isUnlimited);
+      stockQty = anyUnlimited ? 999999 : calculatedStock;
+    }
 
     sheet.appendRow([
       pid,
@@ -1837,14 +1934,10 @@ function handleRecordPageView(data) {
     const pageTitle = String(data.title || pagePath).trim();
     const productId = String(data.productId || '-').trim();
 
-    // 嚴格排除「賣家管理與發卡推播中心」與「買家訂購清單與合併結帳」，不計入公開瀏覽量
+    // 僅排除「賣家管理中心」，買家查單與商品瀏覽皆正常統計並寄發觸擊通報
     const pLower = pagePath.toLowerCase();
-    if (pLower === 'admin-card-generator.html' || 
-        pLower === 'my-orders.html' || 
-        pageTitle.includes('賣家管理') || 
-        pageTitle.includes('買家訂購清單') || 
-        pageTitle.includes('合併結帳')) {
-      return { success: true, ignored: true, message: '管理中心與訂單頁不計入公開瀏覽人次' };
+    if (pLower === 'admin-card-generator.html' || pageTitle.includes('賣家管理') || pageTitle.includes('發卡推播')) {
+      return { success: true, ignored: true, message: '管理中心不計入訪客觸擊' };
     }
 
     const now = new Date();
@@ -1884,11 +1977,114 @@ function handleRecordPageView(data) {
       sheet.appendRow([pageTitle, pagePath, productId, 1, now]);
     }
 
+    // 📧 即時發送【網址觸擊 / 進站通報】Email 通知給管理者 (wen.chen2407@gmail.com)
+    try {
+      sendPageViewAlertEmail({
+        pagePath: pagePath,
+        pageTitle: pageTitle,
+        productId: productId,
+        newViews: newViews,
+        userName: data.userName || '',
+        userId: data.userId || '',
+        now: now
+      });
+    } catch (mailErr) {
+      console.warn('發送網址觸擊通知信略過:', mailErr);
+    }
+
     return { success: true, page: pagePath, views: newViews };
   } catch (err) {
     return { success: false, message: err.toString() };
   } finally {
     lock.releaseLock();
+  }
+}
+
+/**
+ * 📧 發送【網址觸擊 / 訪客進站】即時 Email 通報至指定管理者信箱
+ * 內建 5 分鐘 Cache 防刷信保護機制，保證即時通知且避免灌信
+ */
+function sendPageViewAlertEmail(info) {
+  if (!ADMIN_ALERT_EMAIL) return;
+
+  try {
+    const pagePath = info.pagePath || '';
+    const pageTitle = info.pageTitle || pagePath;
+    const productId = info.productId || '-';
+    const newViews = info.newViews || 1;
+    const userName = String(info.userName || '').trim();
+    const userId = String(info.userId || '').trim();
+    const now = info.now instanceof Date ? info.now : new Date();
+    const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+
+    // 🛡️ 防短時間灌信保護 (以頁面與訪客身分為 key，5分鐘內不重複寄發相同網址)
+    const visitorKey = userId || userName || 'anon';
+    const cacheKey = 'pv_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(visitorKey);
+    const cache = CacheService.getScriptCache();
+    if (cache.get(cacheKey)) {
+      // 5分鐘內已通知過，略過寄信
+      return;
+    }
+    // 寫入快取，鎖定 300 秒 (5 分鐘)
+    cache.put(cacheKey, '1', 300);
+
+    const isIdentified = Boolean(userName || (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999'));
+    const visitorDisplay = isIdentified 
+      ? (userName ? `<b>${userName}</b> (已連線 LINE 會員)` : `LINE 訪客 (${userId})`)
+      : '<span style="color:#64748b;">匿名 / 外部訪客 (點擊連結進入)</span>';
+
+    const emailSubject = isIdentified
+      ? `👀【訪客進站】LINE 好友「${userName || '會員'}」點開了：${pageTitle}`
+      : `🌐【網址觸擊】有人點開了：${pageTitle} (累計第 ${newViews} 次點擊)`;
+
+    const htmlBody = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+        <div style="background: linear-gradient(135deg, #06c755 0%, #059b43 100%); color: #ffffff; padding: 22px 24px;">
+          <div style="font-size: 13px; font-weight: 700; opacity: 0.9; letter-spacing: 0.5px;">W.W. 連線代購 • 即時網址觸擊通報</div>
+          <div style="font-size: 18px; font-weight: 900; margin-top: 6px; line-height: 1.4;">${emailSubject}</div>
+        </div>
+        <div style="padding: 24px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; width: 110px; font-weight: 600;">📱 觸擊頁面：</td>
+              <td style="padding: 10px 0; color: #0f172a; font-weight: 800; font-size: 15px;">${pageTitle}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">🔗 頁面路徑：</td>
+              <td style="padding: 10px 0; color: #3b82f6; font-family: monospace; font-size: 13px; word-break: break-all;">${pagePath}</td>
+            </tr>
+            ${productId && productId !== '-' ? `
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">📦 商品編號：</td>
+              <td style="padding: 10px 0; color: #0f172a; font-weight: 700;">${productId}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">👤 訪客身分：</td>
+              <td style="padding: 10px 0; color: #0f172a;">${visitorDisplay}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">📈 累計觸擊：</td>
+              <td style="padding: 10px 0; color: #e11d48; font-weight: 900; font-size: 16px;">第 ${newViews} 次點擊</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">⏰ 點擊時間：</td>
+              <td style="padding: 10px 0; color: #334155; font-weight: 600;">${nowStr}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 22px; padding-top: 16px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+            此信件由 Google Apps Script 後端系統於訪客載入網頁時自動發送 • 5分鐘防刷信冷卻保護
+          </div>
+        </div>
+      </div>
+    `;
+
+    MailApp.sendEmail({
+      to: ADMIN_ALERT_EMAIL,
+      subject: emailSubject,
+      htmlBody: htmlBody
+    });
+  } catch (err) {
+    console.warn('MailApp 發送失敗:', err);
   }
 }
 

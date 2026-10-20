@@ -278,6 +278,15 @@
       font-weight: 700;
     }
 
+    .spec-btn.sold-out {
+      background: #f8fafc;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+      text-decoration: line-through;
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
     .qty-control {
       display: inline-flex;
       align-items: center;
@@ -892,6 +901,7 @@
     // 狀態變數
     let currentProduct = null;
     let selectedSpec = '';
+    let selectedSpecObj = null;
     let currentQty = 1;
     let currentShippingFee = 60;
     let currentUser = {
@@ -917,6 +927,9 @@
             if (p.pictureUrl) currentUser.pictureUrl = p.pictureUrl;
           } catch (e) {}
         }
+
+        // 觸擊追蹤：記錄點擊查單連結
+        recordPageView('?action=orders', '📦 買家查單連結入口 (?action=orders)', '-');
 
         if (currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
           goToMyOrders();
@@ -1050,6 +1063,9 @@
             sessionStorage.setItem('liff_user_profile', profStr);
             localStorage.setItem('liff_user_profile', profStr);
           } catch (e) {}
+
+          // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名進站通報
+          triggerProductPageView(true);
         }
 
         // 同步導航按鈕帶入 uid, name, avatar
@@ -1228,33 +1244,64 @@
 
         renderProductUI();
 
-        // 靜默記錄商品頁面瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
-        if (currentProduct && currentProduct.id) {
-          recordPageView(`product.html?p=${currentProduct.id}`, `【商品】${currentProduct.name}`, currentProduct.id);
-        }
+        // 靜默記錄商品頁面瀏覽次數 (若有身分秒發，若無身分等待 600ms 緩衝以利 LIFF 授權)
+        triggerProductPageView();
       } catch (e) {
         console.error('載入商品錯誤:', e);
       }
     }
 
+    let hasSentIdentifiedPv = false;
+    let pvTimer = null;
+
+    function triggerProductPageView(forceIdentified = false) {
+      if (hasSentIdentifiedPv && !forceIdentified) return;
+
+      const uid = (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
+      const uname = (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') ? currentUser.displayName : (urlParams.get('name') || '');
+      const hasIdentity = Boolean(uid || uname);
+
+      const pageKey = `product.html?p=${targetProductId}`;
+      const pageTitle = currentProduct ? `【商品】${currentProduct.name}` : (document.title || '商品內頁');
+
+      if (hasIdentity) {
+        hasSentIdentifiedPv = true;
+        if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
+        recordPageView(pageKey, pageTitle, targetProductId, true);
+      } else if (!forceIdentified) {
+        if (!pvTimer) {
+          pvTimer = setTimeout(() => {
+            if (!hasSentIdentifiedPv) {
+              recordPageView(pageKey, pageTitle, targetProductId, false);
+            }
+          }, 600);
+        }
+      }
+    }
+
     // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
-    function recordPageView(pageKey, pageTitle, productId) {
+    function recordPageView(pageKey, pageTitle, productId, forceSend = false) {
       try {
         const storageKey = 'pv_' + (pageKey || ('product.html?p=' + productId));
         const lastVisit = sessionStorage.getItem(storageKey);
         const now = Date.now();
-        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        if (!forceSend && lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
         sessionStorage.setItem(storageKey, String(now));
 
         const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
         if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const uid = (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
+        const uname = (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') ? currentUser.displayName : (urlParams.get('name') || '');
 
         const payload = {
           action: 'recordPageView',
           data: {
             page: pageKey || ('product.html?p=' + productId),
             title: pageTitle || (document.title || '商品內頁'),
-            productId: productId || '-'
+            productId: productId || '-',
+            userId: uid,
+            userName: uname
           }
         };
 
@@ -1359,32 +1406,138 @@
         stockElem.style.display = 'block';
       }
 
-      // 渲染規格按鈕
+      // 規格資料標準化 Helper
+      function normalizeSpecItem(s, defaultPrice, defaultStock) {
+        if (typeof s === 'object' && s !== null) {
+          const isUnlim = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
+          return {
+            name: s.name || '單一規格',
+            price: Number(s.price) || defaultPrice,
+            stock: isUnlim ? 9999 : (Number(s.stock) || 0),
+            isUnlimited: isUnlim
+          };
+        }
+        const isUnlim = Boolean(Number(defaultStock) >= 9999);
+        return {
+          name: String(s || '單一規格'),
+          price: defaultPrice,
+          stock: isUnlim ? 9999 : (Number(defaultStock) || 0),
+          isUnlimited: isUnlim
+        };
+      }
+
+      // 渲染規格按鈕 (支援個別價格、個別庫存與售罄禁用)
       const specContainer = document.getElementById('specList');
       specContainer.innerHTML = '';
-      if (currentProduct.specs && currentProduct.specs.length > 0) {
-        currentProduct.specs.forEach((spec, idx) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = `spec-btn ${idx === 0 ? 'active' : ''}`;
-          btn.textContent = spec;
-          btn.onclick = () => selectSpec(spec, btn);
-          specContainer.appendChild(btn);
-        });
-        selectedSpec = currentProduct.specs[0];
+      
+      const rawSpecs = (currentProduct.specs && currentProduct.specs.length > 0) ? currentProduct.specs : ['單一規格'];
+      const normalizedSpecs = rawSpecs.map(s => normalizeSpecItem(s, priceNum, stockNum));
+      
+      let initialSpecObj = null;
+      let initialBtn = null;
+
+      normalizedSpecs.forEach((specObj, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'spec-btn';
+        
+        const isSoldOut = (!specObj.isUnlimited && specObj.stock <= 0);
+        let btnText = specObj.name;
+        if (isSoldOut) {
+          btn.classList.add('sold-out');
+          btnText += ' (售完)';
+        }
+
+        btn.textContent = btnText;
+        btn.onclick = () => {
+          if (isSoldOut) {
+            alert(`【${specObj.name}】目前已售完囉！敬請挑選其他款式～`);
+            return;
+          }
+          selectSpec(specObj, btn);
+        };
+        specContainer.appendChild(btn);
+
+        // 預設選中第一個有庫存的規格；若全售完則預設選第 0 個
+        if (!initialSpecObj && !isSoldOut) {
+          initialSpecObj = specObj;
+          initialBtn = btn;
+        }
+      });
+
+      if (!initialSpecObj && normalizedSpecs.length > 0) {
+        initialSpecObj = normalizedSpecs[0];
+        initialBtn = specContainer.children[0];
+      }
+
+      if (initialSpecObj && initialBtn) {
+        selectSpec(initialSpecObj, initialBtn);
+      }
+    }
+
+    function selectSpec(specObj, btnElement) {
+      selectedSpec = specObj.name;
+      selectedSpecObj = specObj;
+
+      document.querySelectorAll('.spec-btn').forEach(b => b.classList.remove('active'));
+      if (btnElement && !btnElement.classList.contains('sold-out')) {
+        btnElement.classList.add('active');
+      }
+
+      // 1. 即時連動更新售價顯示
+      const specPrice = Number(specObj.price) || (Number(currentProduct.price) || 0);
+      document.getElementById('productPrice').textContent = `NT$ ${specPrice.toLocaleString()}`;
+
+      // 專櫃原價比對
+      const origPriceNum = Number(currentProduct.originalPrice) || 0;
+      const origPriceElem = document.getElementById('originalPrice');
+      if (origPriceNum > 0 && origPriceNum > specPrice) {
+        origPriceElem.textContent = `NT$ ${origPriceNum.toLocaleString()}`;
+        origPriceElem.style.display = 'inline';
       } else {
-        selectedSpec = '單一規格';
-        specContainer.innerHTML = '<span style="font-size: 13px; color: #64748b;">單一規格</span>';
+        origPriceElem.style.display = 'none';
+      }
+
+      // 2. 即時連動更新庫存標籤提示
+      const stockElem = document.getElementById('productStock');
+      const submitBtn = document.getElementById('btnSubmitOrder');
+
+      if (!specObj.isUnlimited && specObj.stock <= 0) {
+        stockElem.textContent = `⚠️ 【${specObj.name}】目前已售罄`;
+        stockElem.style.display = 'block';
+        stockElem.style.background = '#fef2f2';
+        stockElem.style.color = '#ef4444';
+        if (submitBtn && !isDeadlineExpired) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = '此規格已售完';
+          submitBtn.style.background = '#94a3b8';
+        }
+      } else if (specObj.isUnlimited || specObj.stock >= 9999) {
+        stockElem.style.display = 'none';
+        if (submitBtn && !isDeadlineExpired) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 火速登記';
+          submitBtn.style.background = 'var(--primary)';
+        }
+      } else {
+        stockElem.textContent = `剩餘現貨：${specObj.stock}`;
+        stockElem.style.display = 'block';
+        stockElem.style.background = '#ecfdf5';
+        stockElem.style.color = '#059669';
+        if (submitBtn && !isDeadlineExpired) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 火速登記';
+          submitBtn.style.background = 'var(--primary)';
+        }
+      }
+
+      // 3. 調整購買數量不超過上限
+      if (!specObj.isUnlimited && specObj.stock > 0 && currentQty > specObj.stock) {
+        currentQty = specObj.stock;
+        document.getElementById('inputQty').value = currentQty;
       }
 
       updateTotal();
-      document.getElementById('btnSubmitOrder').disabled = false;
-    }
-
-    function selectSpec(spec, btnElement) {
-      selectedSpec = spec;
-      document.querySelectorAll('.spec-btn').forEach(b => b.classList.remove('active'));
-      btnElement.classList.add('active');
     }
 
     // 4. 數量增減與金額計算 (純商品小計，運費留待回國出貨結帳)
@@ -1398,12 +1551,16 @@
       };
 
       document.getElementById('btnPlus').onclick = () => {
-        if (currentProduct && currentQty < currentProduct.stock) {
+        const maxStock = (selectedSpecObj && !selectedSpecObj.isUnlimited) 
+          ? selectedSpecObj.stock 
+          : (currentProduct && currentProduct.stock >= 9999 ? 9999 : (currentProduct ? currentProduct.stock : 9999));
+        
+        if (currentQty < maxStock) {
           currentQty++;
           document.getElementById('inputQty').value = currentQty;
           updateTotal();
         } else {
-          alert('已達到目前現貨/連線登記上限！');
+          alert(`已達到目前款式上限（剩餘 ${maxStock} 件）！`);
         }
       };
 
@@ -1412,7 +1569,8 @@
 
     function updateTotal() {
       if (!currentProduct) return;
-      const subtotal = currentProduct.price * currentQty;
+      const unitPrice = selectedSpecObj ? selectedSpecObj.price : (Number(currentProduct.price) || 0);
+      const subtotal = unitPrice * currentQty;
       document.getElementById('totalDisplay').textContent = `NT$ ${subtotal.toLocaleString()}`;
     }
 
@@ -1610,6 +1768,12 @@
         alert('⚠️ 很抱歉，此商品已截止收單囉！');
         return;
       }
+
+      if (selectedSpecObj && !selectedSpecObj.isUnlimited && selectedSpecObj.stock <= 0) {
+        alert(`⚠️ 很抱歉，款式【${selectedSpec}】目前已售罄囉！敬請挑選其他款式～`);
+        return;
+      }
+
       const profile = getSavedCustomerProfile();
       if (profile && profile.realName && profile.phone) {
         // 已有完整資料之老客人：直接秒單！
@@ -1717,11 +1881,13 @@
       submitBtn.textContent = '登記中....';
 
       const note = document.getElementById('custNote').value.trim();
+      const specPrice = selectedSpecObj ? selectedSpecObj.price : (Number(currentProduct.price) || 0);
       const orderPayload = {
         action: 'createOrder',
         data: {
           productId: currentProduct.id,
           spec: selectedSpec,
+          specPrice: specPrice,
           quantity: currentQty,
           userId: currentUser.userId,
           userName: profile.userName || currentUser.displayName,
@@ -1734,7 +1900,7 @@
       try {
         if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
           setTimeout(() => {
-            showSuccessModal(currentProduct.name, selectedSpec, currentQty, currentProduct.price * currentQty);
+            showSuccessModal(currentProduct.name, selectedSpec, currentQty, specPrice * currentQty);
             submitBtn.disabled = false;
             submitBtn.textContent = '🚀 火速登記';
           }, 600);
@@ -1755,7 +1921,7 @@
             currentProduct.name,
             selectedSpec,
             currentQty,
-            result.subtotal || (currentProduct.price * currentQty),
+            result.subtotal || (specPrice * currentQty),
             Boolean(result.isMerged),
             result.quantity
           );

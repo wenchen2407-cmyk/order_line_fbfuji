@@ -206,13 +206,16 @@
     .product-check-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
+      gap: 10px;
+      padding: 10px 12px;
       border: 1.5px solid var(--border);
       border-radius: 12px;
       background: #f8fafc;
       cursor: pointer;
       transition: all 0.2s;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .product-check-item.selected {
@@ -221,8 +224,8 @@
     }
 
     .prod-thumb {
-      width: 54px;
-      height: 54px;
+      width: 50px;
+      height: 50px;
       border-radius: 8px;
       object-fit: cover;
       background: #cbd5e1;
@@ -232,27 +235,63 @@
     .prod-info {
       flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .prod-name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+      width: 100%;
     }
 
     .prod-name {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 700;
+      color: #0f172a;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .prod-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
+      flex: 1;
+      min-width: 0;
     }
 
     .prod-price-tag {
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 800;
       color: var(--accent);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .prod-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.3;
+      word-break: break-all;
+    }
+
+    .deadline-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 10.5px;
+      white-space: nowrap;
     }
 
     /* LINE 預覽視窗 (支援 Carousel 左右橫向捲動) */
@@ -366,35 +405,39 @@
       box-shadow: 0 4px 12px rgba(51, 65, 85, 0.2);
     }
 
-    /* 📱 手機螢幕比例專屬優化 (RWD Mobile Adaption) */
+    /* 📱 手機螢幕比例專屬優化 (100% 符合手機螢幕寬度，徹底消除橫向溢出) */
     html, body {
       overflow-x: hidden;
       max-width: 100vw;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     @media (max-width: 768px) {
       body {
-        padding: 10px 8px;
+        padding: 8px 6px;
       }
       .container {
         width: 100%;
         max-width: 100%;
+        padding: 0;
+        box-sizing: border-box;
       }
       .header {
-        margin-bottom: 14px;
+        margin-bottom: 12px;
       }
       .header h1 {
-        font-size: 19px !important;
+        font-size: 18px !important;
       }
       .header p {
-        font-size: 12px !important;
+        font-size: 11.5px !important;
       }
       #liffStatusBadge {
         font-size: 11px !important;
-        padding: 4px 10px !important;
+        padding: 3px 10px !important;
       }
 
-      /* Tab 列支援平滑橫向滑動，不被壓縮變形 */
+      /* Tab 列支援平滑橫向滑動，不被壓縮撐爆螢幕 */
       .tabs-nav {
         display: flex;
         overflow-x: auto;
@@ -403,8 +446,10 @@
         padding: 3px;
         gap: 4px;
         border-radius: 12px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
         max-width: 100%;
+        box-sizing: border-box;
+        scrollbar-width: none;
       }
       .tabs-nav::-webkit-scrollbar {
         display: none;
@@ -416,85 +461,102 @@
         border-radius: 9px;
       }
 
-      /* 卡片面板縮小內距，最大化商品展示空間 */
+      /* 面板容器完全貼合手機寬度 */
+      .grid-layout {
+        gap: 12px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
       .panel {
-        padding: 14px 12px;
+        padding: 12px 10px;
         border-radius: 14px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
       }
       .panel-title {
-        font-size: 14.5px;
-        margin-bottom: 12px;
+        font-size: 14px;
+        margin-bottom: 10px;
       }
 
-      /* 勾選清單項目尺寸適配手機 */
+      /* 勾選清單項目尺寸適配手機螢幕 */
       .product-select-list {
-        max-height: 380px;
+        max-height: 400px;
         gap: 8px;
-        padding-right: 2px;
+        padding-right: 0;
+        width: 100%;
+        box-sizing: border-box;
       }
       .product-check-item {
-        padding: 9px 10px;
-        gap: 10px;
+        padding: 8px 10px;
+        gap: 8px;
         border-radius: 10px;
+        width: 100%;
+        box-sizing: border-box;
       }
       .prod-thumb {
-        width: 48px;
-        height: 48px;
-        border-radius: 8px;
+        width: 44px;
+        height: 44px;
+        border-radius: 7px;
       }
       .prod-name {
+        font-size: 13px;
+      }
+      .prod-price-tag {
         font-size: 13.5px;
       }
       .prod-sub {
-        font-size: 11.5px;
-      }
-      .prod-price-tag {
-        font-size: 14px;
+        font-size: 11px;
       }
 
-      /* 手機端 LINE 輪播卡片預覽等比微縮，不霸佔螢幕高度 */
+      /* 手機端 LINE 輪播卡片預覽容器：限制寬度與高度，橫向平滑滾動 */
       .line-chat-simulator {
-        min-height: 270px;
-        padding: 12px 10px;
-        border-radius: 16px;
+        min-height: 250px;
+        padding: 10px 8px;
+        border-radius: 14px;
         gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
       }
       .flex-preview-bubble {
-        width: 190px;
-        border-radius: 13px;
+        width: 185px;
+        border-radius: 12px;
       }
       .preview-img {
-        height: 115px;
+        height: 110px;
       }
       .preview-body {
-        padding: 9px;
+        padding: 8px;
       }
       .preview-tag {
         font-size: 9.5px;
         padding: 2px 5px;
       }
       .preview-title {
-        font-size: 12.5px;
-        height: 32px;
+        font-size: 12px;
+        height: 30px;
         margin-bottom: 4px;
       }
       .preview-price {
-        font-size: 15px;
+        font-size: 14px;
       }
       .preview-footer {
-        padding: 6px 10px;
+        padding: 6px 8px;
       }
       .preview-btn {
-        padding: 6px 0;
-        font-size: 11.5px;
+        padding: 5px 0;
+        font-size: 11px;
       }
 
-      /* 操作按鈕緊湊適配 */
+      /* 操作按鈕尺寸貼合手機 */
       .btn-action {
-        padding: 11px 14px;
-        font-size: 14px;
+        padding: 11px 12px;
+        font-size: 13.5px;
         border-radius: 11px;
-        margin-top: 12px;
+        margin-top: 10px;
       }
     }
   </style>
@@ -655,20 +717,76 @@
           </div>
         </div>
 
-        <div class="row-2">
-          <div class="form-group">
-            <label class="form-label">庫存與名額控制</label>
-            <div style="padding: 8px 0;">
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleStockInput()">
-                <span>連線時間不限名額跟庫存（無限接單）</span>
-              </label>
-            </div>
-            <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
+        <!-- 🏷️ 規格款式與庫存數量設定 (支援簡易逗號模式 vs 獨立規格價格與數量模式) -->
+        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+              <span>🏷️ 規格款式、個別售價與庫存數量</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleSpecMode()">
+              <span>啟用各規格「獨立價格」與「個別庫存」</span>
+            </label>
           </div>
-          <div class="form-group">
-            <label class="form-label">規格款式 (用逗號隔開)</label>
-            <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色">
+
+          <!-- 模式 A：簡易規格模式 (共用價格與庫存) -->
+          <div id="simpleSpecBox">
+            <div class="row-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
+                <div style="padding: 6px 0;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleStockInput()">
+                    <span>連線時間不限名額跟庫存（無限接單）</span>
+                  </label>
+                </div>
+                <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
+                <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色">
+              </div>
+            </div>
+          </div>
+
+          <!-- 模式 B：進階規格表格模式 (各規格獨立定價與獨立現貨庫存) -->
+          <div id="advancedSpecBox" style="display: none;">
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
+              💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
+            </div>
+
+            <!-- 快速批次轉換小工具 -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
+              <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
+              <input type="text" id="batchSpecInput" class="input-text" style="font-size: 12px; padding: 6px 10px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
+              <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddSpecs()">批次套用</button>
+            </div>
+
+            <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="specTable">
+                <thead>
+                  <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 8px 12px; font-weight: 700;">規格款式名稱 *</th>
+                    <th style="padding: 8px 12px; font-weight: 700; width: 140px;">規格售價 (NT$)</th>
+                    <th style="padding: 8px 12px; font-weight: 700; width: 140px;">現貨數量</th>
+                    <th style="padding: 8px 12px; font-weight: 700; width: 100px; text-align: center;">不限名額</th>
+                    <th style="padding: 8px 12px; font-weight: 700; width: 60px; text-align: center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="specTableBody">
+                  <!-- 動態列由 JavaScript 渲染 -->
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+              <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="addSpecRow()">
+                <span>➕ 新增規格款式</span>
+              </button>
+              <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
+                📊 規格合計：0 種 ｜ 現貨庫存：0 件
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1432,17 +1550,25 @@
 
         let deadlineBadge = '';
         if (prod.deadline) {
-          deadlineBadge = `<span style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; margin-left: 4px;">⏰ ${prod.deadline} 截單</span>`;
+          deadlineBadge = `<span class="deadline-badge-pill">⏰ ${prod.deadline} 截單</span>`;
         }
 
         item.innerHTML = `
-          <input type="checkbox" style="transform: scale(1.2); pointer-events: none;" ${isChecked ? 'checked' : ''}>
-          <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
-          <div class="prod-info">
-            <div class="prod-name">${prod.name || '未命名商品'}</div>
-            <div class="prod-sub">${prod.id}${stockDisplay} ｜ 規格: ${specsDisplay}${deadlineBadge}</div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <input type="checkbox" style="transform: scale(1.15); pointer-events: none; margin: 0;" ${isChecked ? 'checked' : ''}>
+            <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
           </div>
-          <div class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</div>
+          <div class="prod-info">
+            <div class="prod-name-row">
+              <span class="prod-name">${prod.name || '未命名商品'}</span>
+              <span class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</span>
+            </div>
+            <div class="prod-sub">
+              <span>${prod.id}${stockDisplay}</span>
+              <span>• 規格: ${specsDisplay}</span>
+            </div>
+            ${deadlineBadge ? `<div style="margin-top: 2px;">${deadlineBadge}</div>` : ''}
+          </div>
         `;
         container.appendChild(item);
       });
@@ -1771,6 +1897,121 @@
       }
     }
 
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 規格獨立定價與庫存管理
+    function toggleSpecMode() {
+      const isAdvanced = document.getElementById('advancedSpecModeCheck').checked;
+      document.getElementById('simpleSpecBox').style.display = isAdvanced ? 'none' : 'block';
+      document.getElementById('advancedSpecBox').style.display = isAdvanced ? 'block' : 'none';
+
+      if (isAdvanced) {
+        const tbody = document.getElementById('specTableBody');
+        if (tbody.children.length === 0) {
+          // 若原本簡單模式有文字，自動拆解轉入
+          const simpleSpecs = document.getElementById('newProdSpecs').value.trim();
+          if (simpleSpecs) {
+            document.getElementById('batchSpecInput').value = simpleSpecs;
+            batchAddSpecs();
+          } else {
+            addSpecRow('單一規格');
+          }
+        }
+      }
+      updateSpecSummary();
+    }
+
+    function addSpecRow(name = '', price = '', stock = '', isUnlimited = null) {
+      const tbody = document.getElementById('specTableBody');
+      const defaultPrice = document.getElementById('newProdPrice').value.trim() || 0;
+      const rowPrice = (price !== '' && price !== null && price !== undefined) ? price : defaultPrice;
+
+      // 庫存預設值：若沒指定，依全站是否不限庫存設定
+      const globalUnlimited = document.getElementById('unlimitedStockCheck').checked;
+      const rowUnlimited = (isUnlimited !== null) ? Boolean(isUnlimited) : globalUnlimited;
+      const rowStock = (stock !== '' && stock !== null && stock !== undefined) ? stock : (rowUnlimited ? '' : 10);
+
+      const tr = document.createElement('tr');
+      tr.className = 'spec-table-row';
+      tr.style.borderBottom = '1px solid #f1f5f9';
+      tr.innerHTML = `
+        <td style="padding: 6px 12px;">
+          <input type="text" class="input-text spec-name-input" value="${escapeHtml(name)}" placeholder="例：黑色 M / 100ml" style="font-size: 13px; padding: 6px 8px;" oninput="updateSpecSummary()">
+        </td>
+        <td style="padding: 6px 12px;">
+          <input type="number" class="input-text spec-price-input" value="${rowPrice}" placeholder="售價" style="font-size: 13px; padding: 6px 8px;">
+        </td>
+        <td style="padding: 6px 12px;">
+          <input type="number" class="input-text spec-stock-input" value="${rowUnlimited ? '' : rowStock}" placeholder="件數" style="font-size: 13px; padding: 6px 8px; ${rowUnlimited ? 'display:none;' : ''}" oninput="updateSpecSummary()">
+          <span class="spec-unlimited-label" style="font-size: 12px; color: #64748b; font-weight: 600; ${rowUnlimited ? '' : 'display:none;'}">不限庫存</span>
+        </td>
+        <td style="padding: 6px 12px; text-align: center;">
+          <input type="checkbox" class="spec-unlimited-check" ${rowUnlimited ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleRowUnlimited(this)">
+        </td>
+        <td style="padding: 6px 12px; text-align: center;">
+          <button type="button" style="background: none; border: none; color: #ef4444; font-size: 15px; cursor: pointer; padding: 4px;" onclick="removeSpecRow(this)" title="刪除此規格">🗑️</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      updateSpecSummary();
+    }
+
+    function toggleRowUnlimited(checkElem) {
+      const tr = checkElem.closest('tr');
+      const stockInput = tr.querySelector('.spec-stock-input');
+      const unlimLabel = tr.querySelector('.spec-unlimited-label');
+      if (checkElem.checked) {
+        stockInput.style.display = 'none';
+        unlimLabel.style.display = 'inline';
+      } else {
+        stockInput.style.display = 'block';
+        if (!stockInput.value) stockInput.value = '10';
+        unlimLabel.style.display = 'none';
+      }
+      updateSpecSummary();
+    }
+
+    function removeSpecRow(btn) {
+      const tr = btn.closest('tr');
+      tr.remove();
+      updateSpecSummary();
+    }
+
+    function batchAddSpecs() {
+      const raw = document.getElementById('batchSpecInput').value.trim();
+      if (!raw) return;
+      const list = raw.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      list.forEach(name => addSpecRow(name));
+      document.getElementById('batchSpecInput').value = '';
+    }
+
+    function updateSpecSummary() {
+      const isAdvanced = document.getElementById('advancedSpecModeCheck').checked;
+      if (!isAdvanced) return;
+      const rows = document.querySelectorAll('.spec-table-row');
+      let totalStock = 0;
+      let hasUnlimited = false;
+      let count = 0;
+
+      rows.forEach(r => {
+        const name = r.querySelector('.spec-name-input').value.trim();
+        if (name) count++;
+        const isUnlim = r.querySelector('.spec-unlimited-check').checked;
+        if (isUnlim) {
+          hasUnlimited = true;
+        } else {
+          totalStock += (Number(r.querySelector('.spec-stock-input').value) || 0);
+        }
+      });
+
+      const summaryElem = document.getElementById('specSummaryText');
+      if (summaryElem) {
+        summaryElem.textContent = `📊 規格合計：${count} 種 ｜ 現貨庫存：${hasUnlimited ? (totalStock + ' 件 (部分不限)') : (totalStock + ' 件')}`;
+      }
+    }
+
     // ===== 9. 圖片處理 (本地附件多圖 + 網址多圖) =====
     let localSelectedFiles = []; // 存放本地選取的 File 物件
 
@@ -1966,6 +2207,44 @@
 
         saveBtn.textContent = '正在寫入商品資料庫...';
 
+        const isAdvancedSpec = document.getElementById('advancedSpecModeCheck').checked;
+        let specsPayload = [];
+        let calculatedTotalStock = 0;
+        let hasUnlimitedSpec = false;
+
+        if (isAdvancedSpec) {
+          const specRows = document.querySelectorAll('.spec-table-row');
+          specRows.forEach(row => {
+            const sName = row.querySelector('.spec-name-input').value.trim();
+            if (!sName) return;
+            const sPrice = Number(row.querySelector('.spec-price-input').value) || Number(price);
+            const sUnlimited = row.querySelector('.spec-unlimited-check').checked;
+            const sStock = sUnlimited ? 999999 : (Number(row.querySelector('.spec-stock-input').value) || 0);
+            if (sUnlimited) hasUnlimitedSpec = true;
+            else calculatedTotalStock += sStock;
+
+            specsPayload.push({
+              name: sName,
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUnlimited
+            });
+          });
+          if (specsPayload.length === 0) {
+            alert('啟用各規格「獨立價格」與「個別庫存」時，請至少填寫一個規格名稱！');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
+            return;
+          }
+        } else {
+          specsPayload = specs;
+        }
+
+        const finalStock = isAdvancedSpec 
+          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock) 
+          : stock;
+        const finalIsUnlimited = isAdvancedSpec ? hasUnlimitedSpec : isUnlimited;
+
         const payload = {
           action: 'addProduct',
           data: {
@@ -1975,9 +2254,9 @@
             category: category,
             price: Number(price),
             originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
-            stock: stock,
-            isUnlimitedStock: isUnlimited,
-            specs: specs,
+            stock: finalStock,
+            isUnlimitedStock: finalIsUnlimited,
+            specs: specsPayload,
             imageUrl: finalImageUrls[0] || '',
             imageUrls: finalImageUrls,
             costPrice: costPrice,
@@ -2017,6 +2296,13 @@
           if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
           if (document.getElementById('deadlineHintText')) document.getElementById('deadlineHintText').textContent = '';
           
+          // 重設規格獨立表格
+          document.getElementById('advancedSpecModeCheck').checked = false;
+          toggleSpecMode();
+          const specTableBody = document.getElementById('specTableBody');
+          if (specTableBody) specTableBody.innerHTML = '';
+          updateSpecSummary();
+
           // 徹底重設本地照片佇列、上傳 input 檔案與狀態文字
           localSelectedFiles = [];
           const fileInput = document.getElementById('fileUploadInput');
@@ -2034,9 +2320,9 @@
             category: category || '2026.10月連線',
             price: Number(price),
             originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
-            stock: stock,
-            isUnlimitedStock: isUnlimited,
-            specs: specs,
+            stock: finalStock,
+            isUnlimitedStock: finalIsUnlimited,
+            specs: specsPayload,
             imageUrl: finalImageUrls[0] || '',
             imageUrls: finalImageUrls,
             costPrice: costPrice,

@@ -1132,27 +1132,60 @@
       // 1. 並行發動 (LIFF 身分驗證 與 訂單資料獲取 同時執行)
       initLiff();
       fetchUserData();
+
+      // 2. 靜默記錄買家查單觸擊 (若有身分秒發，若無身分等待 600ms 緩衝以利 LIFF 授權)
+      triggerOrdersPageView();
     };
 
-    // 靜默記錄瀏覽人次 (管理中心與訂單結帳頁不計入公開瀏覽量)
-    function recordPageView(pageKey, pageTitle, productId) {
-      if (!pageKey || pageKey === 'my-orders.html' || pageKey === 'admin-card-generator.html') return;
+    let hasSentOrdersPv = false;
+    let ordersPvTimer = null;
+
+    function triggerOrdersPageView(forceIdentified = false) {
+      if (hasSentOrdersPv && !forceIdentified) return;
+
+      const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
+      const uname = (currentUserName && currentUserName !== '訪客') ? currentUserName : (urlParams.get('name') || '');
+      const hasIdentity = Boolean(uid || uname);
+
+      if (hasIdentity) {
+        hasSentOrdersPv = true;
+        if (ordersPvTimer) { clearTimeout(ordersPvTimer); ordersPvTimer = null; }
+        recordPageView('?action=orders', '📦 買家查單連結入口 (?action=orders)', '-', true);
+      } else if (!forceIdentified) {
+        if (!ordersPvTimer) {
+          ordersPvTimer = setTimeout(() => {
+            if (!hasSentOrdersPv) {
+              recordPageView('?action=orders', '📦 買家查單連結入口 (?action=orders)', '-', false);
+            }
+          }, 600);
+        }
+      }
+    }
+
+    // 靜默記錄瀏覽人次 (管理中心不計入公開瀏覽量)
+    function recordPageView(pageKey, pageTitle, productId, forceSend = false) {
+      if (!pageKey || pageKey === 'admin-card-generator.html') return;
       try {
-        const storageKey = 'pv_' + (pageKey || 'my-orders.html');
+        const storageKey = 'pv_' + (pageKey || '?action=orders');
         const lastVisit = sessionStorage.getItem(storageKey);
         const now = Date.now();
-        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        if (!forceSend && lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
         sessionStorage.setItem(storageKey, String(now));
 
         const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
         if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
 
+        const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
+        const uname = (currentUserName && currentUserName !== '訪客') ? currentUserName : (urlParams.get('name') || '');
+
         const payload = {
           action: 'recordPageView',
           data: {
-            page: pageKey || 'my-orders.html',
-            title: pageTitle || '📦 買家訂購清單與合併結帳',
-            productId: productId || '-'
+            page: pageKey || '?action=orders',
+            title: pageTitle || '📦 買家查單連結入口 (?action=orders)',
+            productId: productId || '-',
+            userId: uid,
+            userName: uname
           }
         };
 
@@ -1243,6 +1276,9 @@
             sessionStorage.setItem('liff_user_profile', profStr);
             localStorage.setItem('liff_user_profile', profStr);
           } catch (e) {}
+
+          // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名查單進站通報
+          triggerOrdersPageView(true);
 
           // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
           if (prevId !== currentUserId) {

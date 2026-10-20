@@ -818,28 +818,58 @@
       initLiff();
       fetchProducts();
 
-      // 2. 靜默記錄大廳瀏覽次數 (背景傳輸不卡頓，買家端零干擾)
-      recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁');
+      // 2. 靜默記錄大廳瀏覽次數 (若有身分秒發，若無身分等待 600ms 緩衝以利 LIFF 授權)
+      triggerCatalogPageView();
     };
 
+    let hasSentCatalogPv = false;
+    let catalogPvTimer = null;
+
+    function triggerCatalogPageView(forceIdentified = false) {
+      if (hasSentCatalogPv && !forceIdentified) return;
+
+      const uname = (document.getElementById('userNameText') ? document.getElementById('userNameText').textContent : '') || (urlParams.get('name') || '');
+      const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
+      const hasIdentity = Boolean(uid && uname && uname !== '訪客' && uname !== '載入中...' && uname !== '連線貴賓');
+
+      if (hasIdentity) {
+        hasSentCatalogPv = true;
+        if (catalogPvTimer) { clearTimeout(catalogPvTimer); catalogPvTimer = null; }
+        recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁', '-', true);
+      } else if (!forceIdentified) {
+        if (!catalogPvTimer) {
+          catalogPvTimer = setTimeout(() => {
+            if (!hasSentCatalogPv) {
+              recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁', '-', false);
+            }
+          }, 600);
+        }
+      }
+    }
+
     // 靜默記錄瀏覽人次 (非同步背景送出，30秒防刷，完全不阻礙使用者操作與畫面)
-    function recordPageView(pageKey, pageTitle, productId) {
+    function recordPageView(pageKey, pageTitle, productId, forceSend = false) {
       try {
         const storageKey = 'pv_' + (pageKey || 'catalog.html');
         const lastVisit = sessionStorage.getItem(storageKey);
         const now = Date.now();
-        if (lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
+        if (!forceSend && lastVisit && now - parseInt(lastVisit, 10) < 30000) return;
         sessionStorage.setItem(storageKey, String(now));
 
         const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_API_URL) ? CONFIG.GAS_API_URL : '';
         if (!gasUrl || gasUrl.includes('YOUR_GAS')) return;
+
+        const uname = (document.getElementById('userNameText') ? document.getElementById('userNameText').textContent : '') || (urlParams.get('name') || '');
+        const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
 
         const payload = {
           action: 'recordPageView',
           data: {
             page: pageKey || 'catalog.html',
             title: pageTitle || '🇯🇵🇰🇷 連線商品大廳首頁',
-            productId: productId || '-'
+            productId: productId || '-',
+            userId: uid,
+            userName: (uname !== '訪客' && uname !== '載入中...') ? uname : ''
           }
         };
 
@@ -954,6 +984,9 @@
               localStorage.setItem('liff_user_profile', profStr);
             } catch (e) {}
             updateOrderLinks();
+
+            // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名大廳進站通報
+            triggerCatalogPageView(true);
 
             // 若尚未取得本地會員，自動向後端試算表查詢（老客人換機自動解鎖！）
             if (!isLocallyVerifiedMember() && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('YOUR_GAS')) {
@@ -1258,7 +1291,35 @@
           ? `<span class="card-original-price">NT$ ${origPriceNum.toLocaleString()}</span>` 
           : '';
 
+        // 多規格獨立價格判定：若各規格價格不同，顯示「NT$ 最低價 起」
+        let displayPriceText = `NT$ ${priceNum.toLocaleString()}`;
+        let isAllSpecsSoldOut = false;
+
+        if (Array.isArray(prod.specs) && prod.specs.length > 0) {
+          const specPrices = prod.specs
+            .map(s => (typeof s === 'object' && s !== null && s.price) ? Number(s.price) : null)
+            .filter(p => p !== null && !isNaN(p) && p > 0);
+          
+          if (specPrices.length > 0) {
+            const minP = Math.min(...specPrices);
+            const maxP = Math.max(...specPrices);
+            displayPriceText = (minP < maxP) ? `NT$ ${minP.toLocaleString()} 起` : `NT$ ${minP.toLocaleString()}`;
+          }
+
+          // 判定是否全規格庫存皆售罄 (且有限量)
+          const hasObjSpecs = prod.specs.some(s => typeof s === 'object' && s !== null);
+          if (hasObjSpecs) {
+            isAllSpecsSoldOut = prod.specs.every(s => {
+              if (typeof s === 'object' && s !== null) {
+                return !s.isUnlimited && Number(s.stock) <= 0;
+              }
+              return false;
+            });
+          }
+        }
+
         const isThisProdExpired = isProductExpired(prod);
+        const isUnavailable = isThisProdExpired || isAllSpecsSoldOut;
 
         let deadlineBadgeHtml = '';
         if (prod.deadline) {
@@ -1270,23 +1331,31 @@
           deadlineBadgeHtml = `<span style="position: absolute; right: 8px; top: 8px; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); color: #fde047; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid rgba(253,224,71,0.3);">⏰ ${displayLabel} 截止</span>`;
         }
 
-        if (isThisProdExpired) {
+        if (isUnavailable) {
           card.style.opacity = '0.75';
         }
+
+        let badgeText = prod.category || '2026.10月連線';
+        if (isThisProdExpired) badgeText = '🚫 已結單';
+        else if (isAllSpecsSoldOut) badgeText = '⚠️ 已售完';
+
+        let btnText = '🛒 立即前往';
+        if (isThisProdExpired) btnText = '🚫 已截止';
+        else if (isAllSpecsSoldOut) btnText = '⚠️ 已售完';
 
         card.innerHTML = `
           <div class="prod-img-box">
             <img src="${imgUrl}" alt="${prod.name || ''}" loading="lazy" onerror="this.src='https://via.placeholder.com/300'">
-            <span class="card-badge">${isThisProdExpired ? '🚫 已結單' : (prod.category || '2026.10月連線')}</span>
+            <span class="card-badge">${badgeText}</span>
             ${deadlineBadgeHtml}
           </div>
           <div class="card-body">
             <div class="card-title">${prod.name || '未命名商品'}</div>
             <div class="card-prices">
-              <span class="card-current-price">NT$ ${priceNum.toLocaleString()}</span>
+              <span class="card-current-price">${displayPriceText}</span>
               ${origPriceHtml}
             </div>
-            <div class="${isThisProdExpired ? 'btn-buy-now disabled' : 'btn-buy-now'}">${isThisProdExpired ? '🚫 已截止' : '🛒 立即前往'}</div>
+            <div class="${isUnavailable ? 'btn-buy-now disabled' : 'btn-buy-now'}">${btnText}</div>
           </div>
         `;
         grid.appendChild(card);
