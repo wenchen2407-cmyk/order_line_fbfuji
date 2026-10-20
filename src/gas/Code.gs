@@ -237,6 +237,21 @@ function setupSpreadsheet() {
  * 🌟 自動升級既有商品資料：將舊商品的成本備註拆解為獨立欄位 (P~T欄)，並將 L 欄成本價全面升級為連動公式
  * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」，或直接執行 setupSpreadsheet()
  */
+/**
+ * 🌟 智慧修復與升級既有商品成本資料：
+ * 1. 徹底解決 20 欄升級為 21 欄（新增稅金欄位）所造成的資料向左錯位問題（原本匯率 0.22 錯移到稅金、重量 200 錯移到匯率、運費 240 錯移到重量、運費單價為空）。
+ * 2. 徹底消除 480102 天價異常錯誤（原公式將原幣 2400 乘上錯位重量 200）。
+ * 3. 依據【採購備註說明】（例如：JPY 2400 (稅前2400+稅0), 重200g, 運費NT$48）權威還原：
+ *    - 採購幣別 P (16): JPY
+ *    - 原幣稅前金額 Q (17): 2400
+ *    - 稅金(原幣) R (18): 0 (純數字 0)
+ *    - 採購匯率 S (19): 0.22
+ *    - 商品重量(g) T (20): 200
+ *    - 國際運費(元/kg) U (21): 240
+ * 4. 成本價 L (12) 全面套用精確分開四捨五入公式：
+ *    =ROUND((Q + R) * S) + ROUND((T / 1000) * U)
+ *    在該商品中計算結果保證精準為 576 元（528 + 48）。
+ */
 function upgradeExistingProductsToFormula(targetSheet) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const prodSheet = targetSheet || ss.getSheetByName(SHEET_NAMES.PRODUCTS);
@@ -251,6 +266,16 @@ function upgradeExistingProductsToFormula(targetSheet) {
     prodSheet.insertColumnsAfter(maxCols, 21 - maxCols);
   }
 
+  // 確保第 1 列表頭為最新 21 欄標準名稱
+  const prodHeaders = [
+    '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
+    '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
+    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
+    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
+  ];
+  prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
+  prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
+
   // 讀取第 2 列到最後一列所有商品資料 (21 欄)
   const range = prodSheet.getRange(2, 1, lastRow - 1, 21);
   const values = range.getValues();
@@ -264,41 +289,125 @@ function upgradeExistingProductsToFormula(targetSheet) {
     const pid = String(row[0] || '').trim();
     if (!pid) continue;
 
-    const currentCost = row[11];
     const prodName = String(row[1] || '');
+    const currentCost = row[11];
+    const note = String(row[12] || '').trim();
 
-    // 取得當前既有欄位數值
-    let cur = String(row[15] || '').trim(); // P 欄 (第16欄): 採購幣別
+    let cur = String(row[15] || '').trim().toUpperCase();
+    let preTax = row[16];
+    let tax = row[17];
+    let rate = row[18];
+    let weight = row[19];
+    let shipRate = row[20];
 
-    // 幣別：依商品編號或品名提供預設標記，避免空白
-    if (!cur) {
-      if (pid.startsWith('K') || prodName.includes('韓')) {
-        cur = 'KRW';
-      } else if (pid.startsWith('T') || prodName.includes('台')) {
-        cur = 'TWD';
-      } else {
-        cur = 'JPY';
-      }
-      row[15] = cur;
+    // 1. 偵測是否遭遇 20 欄擴展 21 欄造成的資料錯位 (Shifted)
+    // 典型特徵：稅金 R 欄是小數匯率 (0.001~1.0)，而匯率 S 欄是大數字 (>=10，例如 200, 380)
+    const isShifted = (typeof tax === 'number' && tax > 0 && tax <= 1.0) && 
+                      (typeof rate === 'number' && rate >= 10);
+    
+    if (isShifted) {
+      // 修正錯位：原 R 欄其實是匯率，原 S 欄其實是重量，原 T 欄其實是運費單價
+      const shiftedRate = tax;
+      const shiftedWeight = rate;
+      const shiftedShip = (typeof weight === 'number' && weight > 0) ? weight : 240;
+
+      rate = shiftedRate;
+      weight = shiftedWeight;
+      shipRate = shiftedShip;
+      tax = 0;
     }
 
-    // 取得原本手動登記之真實成本數字 (防止被錯誤覆蓋)
+    // 2. 從「採購備註說明」(M 欄) 權威還原真實數據
+    if (note) {
+      // 解析幣別
+      const curMatch = note.match(/(JPY|KRW|TWD|USD)/i);
+      if (curMatch) {
+        cur = curMatch[1].toUpperCase();
+      } else if (!cur) {
+        if (pid.startsWith('K') || prodName.includes('韓') || note.includes('韓')) cur = 'KRW';
+        else if (pid.startsWith('T') || prodName.includes('台') || note.includes('台')) cur = 'TWD';
+        else cur = 'JPY';
+      }
+
+      // 解析稅前金額與稅金 (例：稅前2400+稅0 或 稅前3000+稅300)
+      const splitMatch = note.match(/稅前\s*(\d+(?:\.\d+)?)\s*\+\s*稅(?:金)?\s*(\d+(?:\.\d+)?)/i);
+      if (splitMatch) {
+        preTax = Number(splitMatch[1]);
+        tax = Number(splitMatch[2]);
+      } else {
+        // 單一金額 (例：JPY 2400 或 3500(含稅))
+        const singleMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,|$)/i);
+        if (singleMatch && (preTax === undefined || preTax === '' || isNaN(Number(preTax)) || Number(preTax) === 0 || isShifted)) {
+          preTax = Number(singleMatch[1]);
+          if (tax === undefined || tax === '' || isNaN(Number(tax)) || isShifted) {
+            tax = 0;
+          }
+        }
+      }
+
+      // 解析商品重量 (例：重200g, 380g)
+      const weightMatch = note.match(/(?:重|重量|重約|weight|[\,，\s])\s*(\d+(?:\.\d+)?)\s*g/i) || note.match(/(\d+)\s*g/i);
+      if (weightMatch) {
+        weight = Number(weightMatch[1]);
+      }
+
+      // 解析運費單價 (例：運費NT$48 且重量為 200g ➜ 48 / 0.2 = 240)
+      if (note.includes('運費NT$') && weight > 0) {
+        const freightMatch = note.match(/運費NT\$\s*(\d+)/i);
+        if (freightMatch) {
+          const freightVal = Number(freightMatch[1]);
+          shipRate = Math.round(freightVal / (weight / 1000));
+        }
+      }
+    }
+
+    // 3. 確保預設值與格式正確
+    if (!cur) cur = 'JPY';
+
+    // 匯率合理性防護：若匯率不存在或大於等於 10 (殘留重量)，強制還原為幣別基準匯率
+    if (typeof rate !== 'number' || isNaN(rate) || rate <= 0 || rate >= 10) {
+      if (cur === 'KRW') rate = 0.026;
+      else if (cur === 'TWD') rate = 1.0;
+      else rate = 0.22;
+    }
+
+    // 運費單價防護
+    if (typeof shipRate !== 'number' || isNaN(shipRate) || shipRate <= 0) {
+      shipRate = 240;
+    }
+
+    // 數值型別標準化
+    const finalPreTax = (preTax !== undefined && preTax !== '' && !isNaN(Number(preTax))) ? Number(preTax) : '';
+    const finalTax = (tax !== undefined && tax !== '' && !isNaN(Number(tax))) ? Number(tax) : (finalPreTax !== '' ? 0 : '');
+    const finalWeight = (weight !== undefined && weight !== '' && !isNaN(Number(weight))) ? Number(weight) : '';
+
+    // 寫回 values 矩陣
+    row[15] = cur;
+    row[16] = finalPreTax;
+    row[17] = finalTax;
+    row[18] = rate;
+    row[19] = finalWeight;
+    row[20] = shipRate;
+
+    // 取得原本手動登記之真實成本數字 (防止 480102 等天價殘留為 baseCost)
     let baseCost = 0;
-    if (typeof currentCost === 'number' && !isNaN(currentCost) && currentCost > 0) {
+    if (typeof currentCost === 'number' && !isNaN(currentCost) && currentCost > 0 && currentCost < 50000) {
       baseCost = currentCost;
     }
 
-    // 🌟 正確的成本價公式 (嚴格分開計算四捨五入)：
+    // 🌟 嚴格套用正確的成本價公式：
     // 商品折台幣 = ROUND((原幣稅前 Q + 稅金 R) * 匯率 S)
     // 國際運費台幣 = ROUND((重量 T / 1000) * 運費 U)
-    // 若原幣(Q)與重量(T)尚未實際填寫，則維持原本手動登記之成本數字，絕不擅自猜測偽造數據！
+    // 兩者嚴格分開計算四捨五入！
     formulas[i][11] = `=IF(OR(N(Q${rowNum})>0, N(T${rowNum})>0), ROUND((N(Q${rowNum}) + N(R${rowNum})) * N(S${rowNum})) + ROUND((N(T${rowNum}) / 1000) * IF(N(U${rowNum})>0, N(U${rowNum}), 240)), ${baseCost})`;
 
     upgradedCount++;
   }
 
-  // 批次寫入數值與公式
+  // 批次寫入所有數值
   range.setValues(values);
+
+  // 逐列覆寫 L 欄 (成本價) 公式
   for (let i = 0; i < formulas.length; i++) {
     if (formulas[i][11] && formulas[i][11].startsWith('=')) {
       prodSheet.getRange(i + 2, 12).setFormula(formulas[i][11]);
@@ -306,8 +415,15 @@ function upgradeExistingProductsToFormula(targetSheet) {
   }
 
   SpreadsheetApp.flush();
-  Logger.log(`[校正完成] 共更新 ${upgradedCount} 筆商品公式，已移除未經手動輸入之猜測資料，成本價全面改採精確分開四捨五入連動！`);
-  return `成功校正 ${upgradedCount} 筆商品！已套用正確計算公式，未輸入之欄位已還原乾淨狀態。`;
+  Logger.log(`[校正與修復完成] 共更新 ${upgradedCount} 筆商品！已徹底排除錯位，精準校正稅金/匯率/重量/運費並套用正確公式！`);
+  return `成功校正並修復 ${upgradedCount} 筆商品！欄位錯位已排除，稅金與匯率已還原，成本價公式已全面校準。`;
+}
+
+/**
+ * 🌟 一鍵修復商品成本與欄位錯位（供 Apps Script 介面選取執行的別名函式）
+ */
+function repairProductCostData() {
+  return upgradeExistingProductsToFormula();
 }
 
 /**
@@ -380,6 +496,8 @@ function doGet(e) {
       });
     } else if (action === 'recalculateCustomerStats') {
       result = recalculateCustomerStats();
+    } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
+      result = { success: true, message: upgradeExistingProductsToFormula() };
     } else if (action === 'clearTestData' || action === 'clearTestProducts') {
       result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
     } else {
