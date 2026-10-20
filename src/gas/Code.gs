@@ -39,15 +39,15 @@ function setupSpreadsheet() {
     prodSheet.appendRow(prodHeaders);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
-    // 加入範例資料 (成本價採用公式連動：=ROUND((Q2+R2)*S2 + (T2/1000)*U2))
+    // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
     prodSheet.appendRow([
       'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
-      '=ROUND((Q2+R2)*S2 + (T2/1000)*U2)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
+      '=IF(OR(N(Q2)>0, N(T2)>0), ROUND((N(Q2) + N(R2)) * N(S2)) + ROUND((N(T2) / 1000) * IF(N(U2)>0, N(U2), 240)), 850)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
       '2026/10/10 23:59',
-      'JPY', 3182, 318, 0.22, 380, 240
+      'JPY', 3000, 300, 0.22, 380, 240
     ]);
   } else {
     // 既有表格：升級表頭為最新 21 欄規格
@@ -265,75 +265,34 @@ function upgradeExistingProductsToFormula(targetSheet) {
     if (!pid) continue;
 
     const currentCost = row[11];
-    const currentFormula = formulas[i][11]; // L 欄 (第12欄) 目前公式
-    const note = String(row[12] || '');    // M 欄 (第13欄) 備註文字
     const prodName = String(row[1] || '');
 
+    // 取得當前既有欄位數值
     let cur = String(row[15] || '').trim(); // P 欄 (第16欄): 採購幣別
-    let preTax = Number(row[16]) || 0;      // Q 欄 (第17欄): 原幣稅前金額
-    let tax = Number(row[17]) || 0;         // R 欄 (第18欄): 稅金 (原幣)
-    let rate = Number(row[18]) || 0;        // S 欄 (第19欄): 採購匯率
-    let weight = Number(row[19]) || 0;      // T 欄 (第20欄): 商品重量(g)
-    let shipRate = Number(row[20]) || 240;  // U 欄 (第21欄): 國際運費單價
 
-    // 若尚未填寫 P~U 欄，嘗試從備註文字與品名自動解析還原
-    if (!cur || (preTax === 0 && weight === 0)) {
-      if (!cur) {
-        if (note.includes('KRW') || pid.startsWith('K') || prodName.includes('韓')) {
-          cur = 'KRW';
-          if (rate === 0) rate = 0.026;
-        } else if (note.includes('TWD') || pid.startsWith('T') || prodName.includes('台')) {
-          cur = 'TWD';
-          if (rate === 0) rate = 1.0;
-        } else {
-          cur = 'JPY';
-          if (rate === 0) rate = 0.22;
-        }
-      }
-
-      // 解析稅前金額與稅金 (例：稅前3000+稅300, 或 JPY 3500)
-      if (preTax === 0 && tax === 0) {
-        const splitMatch = note.match(/稅前\s*(\d+(?:\.\d+)?).*?稅(?:金)?\s*(\d+(?:\.\d+)?)/i);
-        if (splitMatch) {
-          preTax = Number(splitMatch[1]) || 0;
-          tax = Number(splitMatch[2]) || 0;
-        } else {
-          // 單一金額
-          const foreignMatch = note.match(/(?:JPY|KRW|TWD)?\s*(\d+(?:\.\d+)?)\s*(?:\(|含稅|稅前|\,)/i) || note.match(/(?:JPY|KRW|TWD)\s*(\d+(?:\.\d+)?)/i);
-          if (foreignMatch) {
-            preTax = Number(foreignMatch[1]) || 0;
-            tax = 0;
-          }
-        }
-      }
-
-      // 解析重量 (例：380g, 重350g)
-      if (weight === 0) {
-        const weightMatch = note.match(/(?:重|重量|重約|weight|\,)\s*(\d+(?:\.\d+)?)\s*g/i) || note.match(/(\d+)\s*g/i);
-        if (weightMatch) {
-          weight = Number(weightMatch[1]) || 0;
-        }
-      }
-
-      // 寫回 values
-      row[15] = cur;
-      row[16] = preTax;
-      row[17] = tax;
-      row[18] = rate > 0 ? rate : (cur === 'KRW' ? 0.026 : (cur === 'TWD' ? 1.0 : 0.22));
-      row[19] = weight;
-      row[20] = shipRate;
-    }
-
-    // 將 L 欄 (成本價) 升級為連動公式：=ROUND((Q{row}+R{row})*S{row} + (T{row}/1000)*U{row})
-    if (!currentFormula || !currentFormula.startsWith('=')) {
-      if ((preTax + tax) > 0 || weight > 0) {
-        formulas[i][11] = `=ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum})`;
-      } else if (typeof currentCost === 'number' && currentCost > 0) {
-        formulas[i][11] = `=IF(OR(Q${rowNum}>0, R${rowNum}>0, T${rowNum}>0), ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum}), ${currentCost})`;
+    // 幣別：依商品編號或品名提供預設標記，避免空白
+    if (!cur) {
+      if (pid.startsWith('K') || prodName.includes('韓')) {
+        cur = 'KRW';
+      } else if (pid.startsWith('T') || prodName.includes('台')) {
+        cur = 'TWD';
       } else {
-        formulas[i][11] = `=IF(OR(Q${rowNum}>0, R${rowNum}>0, T${rowNum}>0), ROUND((Q${rowNum}+R${rowNum})*S${rowNum} + (T${rowNum}/1000)*U${rowNum}), 0)`;
+        cur = 'JPY';
       }
+      row[15] = cur;
     }
+
+    // 取得原本手動登記之真實成本數字 (防止被錯誤覆蓋)
+    let baseCost = 0;
+    if (typeof currentCost === 'number' && !isNaN(currentCost) && currentCost > 0) {
+      baseCost = currentCost;
+    }
+
+    // 🌟 正確的成本價公式 (嚴格分開計算四捨五入)：
+    // 商品折台幣 = ROUND((原幣稅前 Q + 稅金 R) * 匯率 S)
+    // 國際運費台幣 = ROUND((重量 T / 1000) * 運費 U)
+    // 若原幣(Q)與重量(T)尚未實際填寫，則維持原本手動登記之成本數字，絕不擅自猜測偽造數據！
+    formulas[i][11] = `=IF(OR(N(Q${rowNum})>0, N(T${rowNum})>0), ROUND((N(Q${rowNum}) + N(R${rowNum})) * N(S${rowNum})) + ROUND((N(T${rowNum}) / 1000) * IF(N(U${rowNum})>0, N(U${rowNum}), 240)), ${baseCost})`;
 
     upgradedCount++;
   }
@@ -347,8 +306,8 @@ function upgradeExistingProductsToFormula(targetSheet) {
   }
 
   SpreadsheetApp.flush();
-  Logger.log(`[升級完成] 共升級 ${upgradedCount} 筆既有商品為 21 欄獨立登記與公式連動！`);
-  return `成功將 ${upgradedCount} 筆既有商品升級為 21 欄獨立登記與公式連動！`;
+  Logger.log(`[校正完成] 共更新 ${upgradedCount} 筆商品公式，已移除未經手動輸入之猜測資料，成本價全面改採精確分開四捨五入連動！`);
+  return `成功校正 ${upgradedCount} 筆商品！已套用正確計算公式，未輸入之欄位已還原乾淨狀態。`;
 }
 
 /**
@@ -1841,19 +1800,23 @@ function handleAddProduct(data) {
 
     const targetRow = sheet.getLastRow() + 1;
 
-    // 採購原幣、稅金、匯率與重量獨立分開登記
+    // 採購原幣、稅金、匯率與重量獨立分開登記 (嚴格以實際輸入資料為準，未輸入則保留空白)
     if (data.currency) cur = String(data.currency).toUpperCase();
-    const preTax = Number(data.costPricePreTax || data.costForeign || 0);
-    const tax = Number(data.taxAmount || data.calcTaxAmount || 0);
-    const rate = Number(data.exchangeRate || 0);
-    const weight = Number(data.weightG || data.weight || 0);
-    const shipRate = Number(data.shippingRate || 240);
+    const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
+    const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
+    const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
+    const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
 
-    // 成本價 (NT$)：若有進貨價或重量，使用 Google 試算表公式連動；否則使用靜態成本
+    const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
+    const tax = hasTax ? Number(data.taxAmount) : '';
+    const rate = hasRate ? Number(data.exchangeRate) : '';
+    const weight = hasWeight ? Number(data.weightG) : '';
+    const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
+
+    // 成本價 (NT$)：精準分開四捨五入公式 ROUND((Q+R)*S) + ROUND((T/1000)*U)
     let costCellVal = Number(data.costPrice) || 0;
-    if ((preTax + tax) > 0 || weight > 0) {
-      // 試算表公式：(Q 欄(原幣稅前) + R 欄(稅金)) * S 欄(採購匯率) + T 欄(重量g)/1000 * U 欄(運費單價/kg)
-      costCellVal = `=ROUND((Q${targetRow} + R${targetRow}) * S${targetRow} + (T${targetRow} / 1000) * U${targetRow})`;
+    if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
+      costCellVal = `=IF(OR(N(Q${targetRow})>0, N(T${targetRow})>0), ROUND((N(Q${targetRow}) + N(R${targetRow})) * N(S${targetRow})) + ROUND((N(T${targetRow}) / 1000) * IF(N(U${targetRow})>0, N(U${targetRow}), 240)), ${costCellVal})`;
     }
 
     sheet.appendRow([
