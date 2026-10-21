@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📢 顧客結帳通知功能完整規劃與 LINE 卡片視覺展示說明 — W.W. 連線代購</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --primary-light: #e8f9ee;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --danger: #e11d48;
+      --danger-light: #ffe4e6;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 32px -4px rgba(15, 23, 42, 0.12);
+      --shadow-xl: 0 20px 48px -8px rgba(15, 23, 42, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
+      color: var(--slate-800);
+      line-height: 1.6;
+      padding: 24px 16px 60px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* 頂部 Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #064e3b 100%);
+      color: #ffffff;
+      padding: 36px 32px;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header-banner::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(6, 199, 85, 0.25) 0%, rgba(6, 199, 85, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(6, 199, 85, 0.18);
+      border: 1px solid rgba(6, 199, 85, 0.4);
+      color: #4ade80;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .header-subtitle {
+      font-size: 14.5px;
+      color: #cbd5e1;
+      max-width: 780px;
+      line-height: 1.6;
+    }
+
+    /* 雙欄主架構 */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 左側規劃卡片群 */
+    .card-panel {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--slate-200);
+      transition: all 0.2s ease;
+    }
+
+    .card-panel:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed var(--slate-200);
+    }
+
+    .panel-title .icon-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* 流程步驟 */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      background: var(--slate-50);
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid #e2e8f0;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      background: var(--slate-900);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-body h4 {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 4px;
+    }
+
+    .step-body p {
+      font-size: 13px;
+      color: var(--slate-600);
+      line-height: 1.5;
+    }
+
+    /* 規則表格 */
+    .rule-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .rule-table th, .rule-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    .rule-table th {
+      background: var(--slate-100);
+      color: var(--slate-700);
+      font-weight: 700;
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .tag-green { background: #dcfce7; color: #15803d; }
+    .tag-blue { background: #dbeafe; color: #1e40af; }
+    .tag-red { background: #fee2e2; color: #b91c1c; }
+    .tag-purple { background: #f3e8ff; color: #7e22ce; }
+
+    /* 右側手機 LINE 模擬器 */
+    .phone-container {
+      position: sticky;
+      top: 24px;
+    }
+
+    .phone-frame {
+      background: #1e293b;
+      border-radius: 44px;
+      padding: 14px;
+      box-shadow: var(--shadow-xl);
+      border: 4px solid #334155;
+      max-width: 410px;
+      margin: 0 auto;
+    }
+
+    .phone-screen {
+      background: #8c9dad;
+      border-radius: 32px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 680px;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* LINE Header */
+    .line-header {
+      background: #202b36;
+      color: #ffffff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .line-header-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .line-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* LINE 聊天內容滾動區 */
+    .line-chat-body {
+      flex: 1;
+      padding: 14px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-time-pill {
+      align-self: center;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-size: 10.5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 4px;
+    }
+
+    /* Flex Message Bubble 模擬 */
+    .flex-bubble {
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.96) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .flex-header {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 16px 18px;
+      position: relative;
+    }
+
+    .flex-header-tag {
+      font-size: 11px;
+      font-weight: 800;
+      color: #4ade80;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .flex-header-title {
+      font-size: 15.5px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .flex-header-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 3px;
+    }
+
+    .flex-body {
+      padding: 16px 18px;
+    }
+
+    /* 戰報雙欄卡片 */
+    .stat-pill-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      border: 1px solid #e2e8f0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stat-pill {
+      text-align: center;
+    }
+
+    .stat-pill-label {
+      font-size: 11px;
+      color: var(--slate-500);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .stat-pill-val-success {
+      font-size: 15px;
+      font-weight: 900;
+      color: #15803d;
+    }
+
+    .stat-pill-val-out {
+      font-size: 15px;
+      font-weight: 900;
+      color: #b91c1c;
+    }
+
+    /* 品項清單條列 */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: var(--slate-700);
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-row-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 220px;
+      font-weight: 500;
+    }
+
+    .item-row-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* 應付總額 */
+    .total-box {
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 8px;
+    }
+
+    .total-label {
+      font-size: 12px;
+      color: var(--slate-500);
+      font-weight: 700;
+    }
+
+    .total-price {
+      font-size: 20px;
+      font-weight: 900;
+      color: #e11d48;
+    }
+
+    .shipping-tip {
+      font-size: 11.5px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .shipping-tip-free {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .shipping-tip-need {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .packing-notice {
+      font-size: 11.5px;
+      color: var(--slate-500);
+      line-height: 1.5;
+    }
+
+    .flex-footer {
+      padding: 0 18px 16px;
+    }
+
+    .btn-checkout-liff {
+      display: block;
+      width: 100%;
+      background: #06c755;
+      color: #ffffff;
+      text-align: center;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 13.5px;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-checkout-liff:hover {
+      background: #05b04c;
+      transform: translateY(-1px);
+    }
+
+    /* 控制面板：切換範例與樣式 */
+    .control-box {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      margin-top: 14px;
+      border: 1px solid var(--slate-200);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .control-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-switch {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--slate-200);
+      background: var(--slate-50);
+      color: var(--slate-700);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-switch.active {
+      background: var(--slate-900);
+      color: #ffffff;
+      border-color: var(--slate-900);
+    }
+
+    /* 純文字展示框 */
+    .raw-text-box {
+      display: none;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-family: monospace;
+      font-size: 12.5px;
+      color: #334155;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: var(--slate-900);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 700;
+      box-shadow: var(--shadow-xl);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 頂部 Header Banner -->
+  <header class="header-banner">
+    <div class="badge-pill">
+      <span>⚡ 0 則數消耗 • 終生免費推播</span>
+      <span>•</span>
+      <span>LINE Front-end Framework (LIFF)</span>
+    </div>
+    <h1 class="header-title">📢 顧客結帳通知功能設計規劃與 LINE 卡片視覺展示說明</h1>
+    <p class="header-subtitle">
+      專為 <strong>W.W. 連線代購</strong> 量身打造的 1 對 1 免額度個人化結帳推播方案。在出國連線檔期結束後，系統自動依試算表訂單掃描出已成功採購之買家，賣家只需一鍵即可在 LINE 中為每位顧客精準發送專屬 Flex 結帳卡片，徹底告別手動對帳與官方帳號超額推播費用！
+    </p>
+  </header>
+
+  <!-- 雙欄主內容架構 -->
+  <div class="main-grid">
+
+    <!-- 左側：完整規劃與架構說明 -->
+    <div class="left-col">
+
+      <!-- 區塊 1：核心特色與效益 -->
+      <section class="card-panel">
+        <h2 class="panel-title">
+          <span class="icon-circle">🎯</span>
+          <span>為什麼需要「1 對 1 免額度結帳通知」？</span>
+        </h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px; border-radius: 12px;">
+            <div style="font-weight: 800; color: #15803d; font-size: 14px; margin-bottom: 4px;">💰 0 推播費用消耗</div>
+            <div style="font-size: 12.5px; color: #166534; line-height: 1.5;">
+              採用 LIFF <code style="background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 4px;">shareTargetPicker</code> 技術，由賣家個人帳號發出，完全不扣官方帳號每月 200 則的額度限制。
+            </div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 14px; border-radius: 12px;">
+            <div style="font-weight: 800; color: #1e40af; font-size: 14px; margin-bottom: 4px;">⚡ 多筆訂單自動歸戶</div>
+            <div style="font-size: 12.5px; color: #1e3a8a; line-height: 1.5;">
+              客人連續多天下單 5 樣商品，系統自動依 UID 彙整為 1 張卡片，清楚標記「成功幾件、缺貨幾件、應付總額」。
+            </div>
+          </div>
+          <div style="background: #fff7ed; border: 1px solid #fed7aa; padding: 14px; border-radius: 12px;">
+            <div style="font-weight: 800; color: #c2410c; font-size: 14px; margin-bottom: 4px;">🛒 直達結帳與選門市</div>
+            <div style="font-size: 12.5px; color: #9a3412; line-height: 1.5;">
+              卡片按鈕內嵌客人專屬 UID 連結，買家點開立即進入 <code style="background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 4px;">my-orders.html</code>，直接選 7-11/全家超商門市。
+            </div>
+          </div>
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; padding: 14px; border-radius: 12px;">
+            <div style="font-weight: 800; color: #7e22ce; font-size: 14px; margin-bottom: 4px;">🛡️ 防重複與缺貨防呆</div>
+            <div style="font-size: 12.5px; color: #6b21a8; line-height: 1.5;">
+              發送過自動記錄時間；若客人「全數缺貨」則自動阻擋發送結帳卡，改為發送溫暖缺貨說明，展現貼心服務。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 2：業務全流程 -->
+      <section class="card-panel">
+        <h2 class="panel-title">
+          <span class="icon-circle">🔄</span>
+          <span>連線採購到結帳推播全流程 (4 步驟)</span>
+        </h2>
+        <div class="step-list">
+          <div class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-body">
+              <h4>賣家在試算表標記採購結果</h4>
+              <p>在【訂單明細】工作表第 19 欄 (S 欄)「採購/出貨狀態」下拉選單中，依現場實際採購狀況標記為「採購成功」或「缺貨斷貨」。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-body">
+              <h4>管理後台自動彙整名單</h4>
+              <p>打開管理後台【📢 顧客結帳通知】分頁，系統調用後端 API 自動歸戶：統計出每位客人的成功件數、缺貨件數與應付總額，並依消費金額大到小排序。</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-body">
+              <h4>一鍵喚起 LINE 好友選擇器發送</h4>
+              <p>點擊客人卡片旁的「🚀 發送 1 對 1 卡片」，系統自動喚起 LINE 好友選單，勾選該好友即可將精美 Flex 卡片直接發送到聊天室！</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">4</div>
+            <div class="step-body">
+              <h4>客人點擊直達結帳與回填</h4>
+              <p>客人收到卡片點擊「💳 點此開啟清單完成結帳」，自動開啟專屬查單頁，選擇配送方式（7-11、全家、宅配）並回傳匯款後五碼！</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 3：待通知名單判定規則 -->
+      <section class="card-panel">
+        <h2 class="panel-title">
+          <span class="icon-circle">📋</span>
+          <span>誰會出現在「待通知名單」中？（資料庫篩選規則）</span>
+        </h2>
+        <p style="font-size: 13px; color: var(--slate-600); margin-bottom: 12px;">
+          後端 Google Apps Script 執行 <code style="background: var(--slate-100); padding: 2px 6px; border-radius: 4px;">action=getCustomerNotifyList</code> 時，必須嚴格符合以下條件才會列入名單：
+        </p>
+        <table class="rule-table">
+          <thead>
+            <tr>
+              <th style="width: 120px;">檢查條件</th>
+              <th>判定邏輯</th>
+              <th style="width: 100px;">狀態標籤</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. 未結帳判定</strong></td>
+              <td>結帳編號 (V 欄) 為空，且付款狀態不為「已完成付款」或「已付款待對帳」。</td>
+              <td><span class="tag-badge tag-green">合格可通知</span></td>
+            </tr>
+            <tr>
+              <td><strong>2. 有採購成功</strong></td>
+              <td>名下至少有 1 筆訂單為「採購成功」、「連線登記」或「通知結帳」。</td>
+              <td><span class="tag-badge tag-blue">計入戰報</span></td>
+            </tr>
+            <tr>
+              <td><strong>3. 全數缺貨處理</strong></td>
+              <td>若該顧客登記的品項「全部都是缺貨斷貨」，標記全數缺貨，<strong>防呆禁止發送催款卡片</strong>。</td>
+              <td><span class="tag-badge tag-red">⚠️ 全數缺貨</span></td>
+            </tr>
+            <tr>
+              <td><strong>4. 重複通知冷卻</strong></td>
+              <td>若 12 小時內已發送過結帳通知，按鈕旁提示「已於 X 小時前發送過」，防止重複騷擾。</td>
+              <td><span class="tag-badge tag-purple">冷卻防呆</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 區塊 4：後端 API 規格與檔案存放位置 -->
+      <section class="card-panel">
+        <h2 class="panel-title">
+          <span class="icon-circle">🛠️</span>
+          <span>專案文檔與後續串接規劃</span>
+        </h2>
+        <div style="font-size: 13px; color: var(--slate-700); line-height: 1.7;">
+          <p>📄 <strong>純文字完整規劃 TXT 已存檔於專案根目錄：</strong></p>
+          <div style="background: var(--slate-100); padding: 8px 12px; border-radius: 6px; font-family: monospace; margin: 6px 0 14px; word-break: break-all;">
+            /Users/wen/projects/Project LINE Order/顧客結帳通知_功能評估與完整規劃文案清單.txt
+          </div>
+          <p>🌐 <strong>本視覺化展示與說明網頁：</strong></p>
+          <div style="background: var(--slate-100); padding: 8px 12px; border-radius: 6px; font-family: monospace; margin: 6px 0 14px; word-break: break-all;">
+            /Users/wen/projects/Project LINE Order/顧客結帳通知_視覺展示與規劃說明.html
+          </div>
+          <p style="color: var(--primary-dark); font-weight: 700;">
+            👉 待您檢視右側的真實 LINE 卡片效果與文案確認無誤後，我們隨時可啟動前後端正式串接！
+          </p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 右側：手機 LINE 模擬器與即時預覽 -->
+    <div class="right-col">
+      <div class="phone-container">
+
+        <!-- 手機外框 -->
+        <div class="phone-frame">
+          <div class="phone-screen">
+
+            <!-- LINE Header -->
+            <div class="line-header">
+              <div class="line-header-user">
+                <span>❮</span>
+                <div class="line-avatar">👤</div>
+                <span id="previewChatUser">王小美 (LINE 好友)</span>
+              </div>
+              <div style="font-size: 18px; letter-spacing: -2px;">•••</div>
+            </div>
+
+            <!-- LINE 聊天室內容 -->
+            <div class="line-chat-body">
+              <div class="chat-time-pill">2026/10/21 下午 18:30</div>
+
+              <!-- 互動 Flex Message Bubble -->
+              <div class="flex-bubble" id="flexCard">
+                
+                <!-- 卡片頂部 Header -->
+                <div class="flex-header">
+                  <div class="flex-header-tag">🌸 W.W. 連線代購 • 採購確認</div>
+                  <div class="flex-header-title" id="cardTitle">王小美 您的專屬清單備妥囉！</div>
+                  <div class="flex-header-sub">本次連線已結案，小幫手正整理打包中</div>
+                </div>
+
+                <!-- 卡片中間 Body -->
+                <div class="flex-body">
+                  
+                  <!-- 戰報概覽 -->
+                  <div class="stat-pill-box">
+                    <div class="stat-pill">
+                      <div class="stat-pill-label">🎉 採購成功</div>
+                      <div class="stat-pill-val-success" id="cardSuccessCount">3 件</div>
+                    </div>
+                    <div class="stat-pill" style="border-left: 1px solid #e2e8f0;">
+                      <div class="stat-pill-label">⚠️ 缺貨斷貨</div>
+                      <div class="stat-pill-val-out" id="cardOutCount">1 件</div>
+                    </div>
+                  </div>
+
+                  <!-- 成功品項摘錄 -->
+                  <div class="items-list" id="cardItemsList">
+                    <div class="item-row">
+                      <span class="item-row-name">• 防潑水輕量後背包 (黑 M)</span>
+                      <span class="item-row-badge tag-green">× 1</span>
+                    </div>
+                    <div class="item-row">
+                      <span class="item-row-name">• 日本專櫃保濕精華液 (50ml)</span>
+                      <span class="item-row-badge tag-green">× 2</span>
+                    </div>
+                    <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
+                      <span class="item-row-name">• 限量櫻花保溫杯 (粉色)</span>
+                      <span class="item-row-badge tag-red">斷貨</span>
+                    </div>
+                  </div>
+
+                  <!-- 應付金額 -->
+                  <div class="total-box">
+                    <div class="total-label">應付商品總額</div>
+                    <div class="total-price" id="cardTotalPrice">NT$ 2,450</div>
+                  </div>
+
+                  <!-- 滿額免運進度提示 -->
+                  <div class="shipping-tip" id="cardShippingTip">
+                    💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 550)
+                  </div>
+
+                  <!-- 溫馨說明 -->
+                  <p class="packing-notice" id="cardNotice">
+                    小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11、全家、宅配）並完成結帳唷～
+                  </p>
+
+                </div>
+
+                <!-- 卡片底部 Footer 按鈕 -->
+                <div class="flex-footer">
+                  <a href="#" class="btn-checkout-liff" id="cardBtn" onclick="alert('👉 在正式環境中，顧客點擊此處將立即開啟個人查單結帳頁面 (my-orders.html)！'); return false;">
+                    💳 點此開啟清單選擇門市與結帳
+                  </a>
+                  <div style="text-align: center; font-size: 10.5px; color: #94a3b8; margin-top: 8px;">
+                    如有任何品項疑問，可直接在此對話視窗留言與小編聯絡 ❤️
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 範例切換與純文字展示控制面板 -->
+        <div class="control-box">
+          <div class="control-title">
+            <span>🎭 切換模擬情境與顧客範例：</span>
+            <span style="font-size: 11px; color: var(--slate-400);">即時連動右側手機</span>
+          </div>
+
+          <div class="btn-group" style="margin-bottom: 12px;">
+            <button type="button" class="btn-switch active" onclick="switchScenario('A', this)">
+              顧客 A：成功 3 件 + 斷貨 1 件 (差額滿運)
+            </button>
+            <button type="button" class="btn-switch" onclick="switchScenario('B', this)">
+              顧客 B：大單 4 件 (已達 $3000 免運)
+            </button>
+            <button type="button" class="btn-switch" onclick="switchScenario('C', this)">
+              顧客 C：不幸全數缺貨 (免結帳安慰卡)
+            </button>
+          </div>
+
+          <div class="control-title" style="margin-top: 14px;">
+            <span>📝 通知形式切換：</span>
+          </div>
+          <div class="btn-group" style="margin-bottom: 10px;">
+            <button type="button" class="btn-switch active" id="btnModeFlex" onclick="toggleViewMode('flex')">
+              📱 LINE Flex 互動卡片
+            </button>
+            <button type="button" class="btn-switch" id="btnModeText" onclick="toggleViewMode('text')">
+              📋 1對1 私訊純文字文案
+            </button>
+          </div>
+
+          <!-- 純文字文案展示框 -->
+          <div class="raw-text-box" id="rawTextBox">
+            <button type="button" class="btn-copy" onclick="copyRawText()">複製文案</button>
+            <div id="rawTextContent"></div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- 複製成功 Toast -->
+<div class="toast" id="toast">📋 純文字通知文案已複製到剪貼簿！</div>
+
+<script>
+  // 模擬情境資料庫
+  const SCENARIOS = {
+    A: {
+      user: '王小美 (LINE 好友)',
+      title: '王小美 您的專屬清單備妥囉！',
+      success: 3,
+      out: 1,
+      total: 2450,
+      tipType: 'need',
+      tipText: '💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 550)',
+      notice: '小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11、全家、宅配）並完成結帳唷～',
+      btnText: '💳 點此開啟清單選擇門市與結帳',
+      btnColor: '#06c755',
+      itemsHtml: `
+        <div class="item-row">
+          <span class="item-row-name">• 防潑水輕量後背包 (黑 M)</span>
+          <span class="item-row-badge tag-green">× 1</span>
+        </div>
+        <div class="item-row">
+          <span class="item-row-name">• 日本專櫃保濕精華液 (50ml)</span>
+          <span class="item-row-badge tag-green">× 2</span>
+        </div>
+        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
+          <span class="item-row-name">• 限量櫻花保溫杯 (粉色)</span>
+          <span class="item-row-badge tag-red">斷貨</span>
+        </div>
+      `,
+      rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
+
+親愛的 王小美 您好：
+本次海外連線採購已圓滿結束，小幫手已為您確認並整理好專屬採購清單囉！
+
+📋 您的採購戰報：
+------------------------------------
+🎉 採購成功：3 件
+⚠️ 缺貨斷貨：1 件
+💰 商品應付總額：NT$ 2,450
+------------------------------------
+💡 滿 NT$ 3,000 即享超商免運 (支援 7-11 取貨付款、全家、郵局、黑貓宅配)
+
+👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
+https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
+
+小幫手已在打包整理包裹囉！收到您的收件資訊後會依序寄出，感謝您的等待與支持！❤️`
+    },
+    B: {
+      user: '陳大明 (LINE 好友)',
+      title: '陳大明 您的專屬清單備妥囉！',
+      success: 4,
+      out: 0,
+      total: 4890,
+      tipType: 'free',
+      tipText: '🎉 恭喜！訂單滿 NT$ 3,000 已享超商取貨免運費！',
+      notice: '商品已全數採購齊全！請點擊下方按鈕填寫 7-11 或全家收件門市，我們將以最快速度為您寄出！',
+      btnText: '💳 點此開啟清單選擇門市與結帳',
+      btnColor: '#06c755',
+      itemsHtml: `
+        <div class="item-row">
+          <span class="item-row-name">• 美國限定連帽外套 (灰 L)</span>
+          <span class="item-row-badge tag-green">× 1</span>
+        </div>
+        <div class="item-row">
+          <span class="item-row-name">• 經典防風立領外套 (黑 XL)</span>
+          <span class="item-row-badge tag-green">× 1</span>
+        </div>
+        <div class="item-row">
+          <span class="item-row-name">• 專櫃純棉短T (白 M)</span>
+          <span class="item-row-badge tag-green">× 2</span>
+        </div>
+      `,
+      rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
+
+親愛的 陳大明 您好：
+本次海外連線採購已圓滿結束，您的登記品項已全數採購成功！🎉
+
+📋 您的採購戰報：
+------------------------------------
+🎉 採購成功：4 件
+⚠️ 缺貨斷貨：0 件
+💰 商品應付總額：NT$ 4,890
+------------------------------------
+🎉 恭喜已達免運門檻，享超商取貨免運費出貨！
+
+👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
+https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
+
+小幫手已在打包整理包裹囉，收到您的收件資訊後會儘速寄出，感謝您的熱情支持！❤️`
+    },
+    C: {
+      user: '李小芬 (LINE 好友)',
+      title: '李小芬 連線採購結果通知',
+      success: 0,
+      out: 2,
+      total: 0,
+      tipType: 'need',
+      tipText: '⚠️ 本訂單已全數斷貨，無須進行任何付款',
+      notice: '非常抱歉！您本次登記的 2 件商品專櫃現場大熱銷已全數斷貨 😭 小幫手跑了多家門市仍未補到現貨，深感抱歉！訂單已自動結案，無須付款。',
+      btnText: '🌸 點此查看斷貨紀錄 (無須付款)',
+      btnColor: '#64748b',
+      itemsHtml: `
+        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
+          <span class="item-row-name">• 限量聯名帆布袋 (藍色)</span>
+          <span class="item-row-badge tag-red">斷貨</span>
+        </div>
+        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
+          <span class="item-row-name">• 日本限定刺繡手帕 (粉色)</span>
+          <span class="item-row-badge tag-red">斷貨</span>
+        </div>
+      `,
+      rawText: `【W.W. 連線代購 • 採購結果通知】🌸
+
+親愛的 李小芬 您好：
+非常抱歉通知您，您本次登記連線的品項現場專櫃因大熱賣已全數缺貨斷貨 😭
+小幫手跑了多家門市皆未能幫您補到現貨，深感抱歉！
+
+此筆訂單【無須進行任何付款或結帳】，您的訂單已自動結案。
+後續連線若有補貨或新款上架，小編會第一時間通知您，非常感謝您的熱情支持與體諒！🙇‍♀️`
+    }
+  };
+
+  let currentKey = 'A';
+
+  function switchScenario(key, btn) {
+    currentKey = key;
+    document.querySelectorAll('.btn-group .btn-switch').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const data = SCENARIOS[key];
+    document.getElementById('previewChatUser').textContent = data.user;
+    document.getElementById('cardTitle').textContent = data.title;
+    document.getElementById('cardSuccessCount').textContent = data.success + ' 件';
+    document.getElementById('cardOutCount').textContent = data.out + ' 件';
+    document.getElementById('cardTotalPrice').textContent = 'NT$ ' + data.total.toLocaleString();
+    document.getElementById('cardItemsList').innerHTML = data.itemsHtml;
+    document.getElementById('cardNotice').textContent = data.notice;
+    
+    const tipEl = document.getElementById('cardShippingTip');
+    tipEl.textContent = data.tipText;
+    tipEl.className = 'shipping-tip ' + (data.tipType === 'free' ? 'shipping-tip-free' : 'shipping-tip-need');
+
+    const btnEl = document.getElementById('cardBtn');
+    btnEl.textContent = data.btnText;
+    btnEl.style.background = data.btnColor;
+
+    document.getElementById('rawTextContent').textContent = data.rawText;
+  }
+
+  function toggleViewMode(mode) {
+    const flexCard = document.getElementById('flexCard');
+    const rawBox = document.getElementById('rawTextBox');
+    const btnFlex = document.getElementById('btnModeFlex');
+    const btnText = document.getElementById('btnModeText');
+
+    if (mode === 'flex') {
+      flexCard.style.display = 'block';
+      rawBox.style.display = 'none';
+      btnFlex.classList.add('active');
+      btnText.classList.remove('active');
+    } else {
+      flexCard.style.display = 'none';
+      rawBox.style.display = 'block';
+      btnText.classList.add('active');
+      btnFlex.classList.remove('active');
+      document.getElementById('rawTextContent').textContent = SCENARIOS[currentKey].rawText;
+    }
+  }
+
+  function copyRawText() {
+    const text = SCENARIOS[currentKey].rawText;
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  // 初始化預設 scenario A
+  switchScenario('A', document.querySelector('.btn-switch.active'));
+</script>
+
+</body>
+</html>
