@@ -116,14 +116,22 @@ function setupSpreadsheet() {
   }
 
   // 3. 顧客歸戶表
+  const custHeaders = [
+    'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
+    '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+  ];
   let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
   if (!custSheet) {
     custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
-    custSheet.appendRow([
-      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記'
-    ]);
-    custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.appendRow(custHeaders);
+    custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+  } else {
+    // 檢查既有表頭是否已有第 11 欄 (顧客來源)
+    const headerVals = custSheet.getRange(1, 1, 1, Math.max(custSheet.getLastColumn(), 10)).getValues()[0];
+    if (headerVals.length < 11 || !headerVals[10]) {
+      custSheet.getRange(1, 11).setValue('顧客來源');
+      custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    }
   }
   // 將電話欄 (第4欄 D) 設為純文字格式，避免開頭 0 被截斷
   custSheet.getRange("D:D").setNumberFormat('@');
@@ -689,7 +697,8 @@ function checkCustomerExists(userId) {
           userName: data[i][1],
           realName: data[i][2],
           phone: data[i][3],
-          defaultAddress: data[i][4]
+          defaultAddress: data[i][4],
+          source: data[i][10] || ''
         }
       };
     }
@@ -1172,7 +1181,7 @@ function handleCheckoutOrders(checkoutData) {
 
 /**
  * 更新或建立顧客檔案歸戶
- * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記']
+ * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源']
  */
 function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
   try {
@@ -1183,9 +1192,9 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
         custSheet.appendRow([
           'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-          '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記'
+          '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
         ]);
-        custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+        custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
       }
     }
 
@@ -1193,6 +1202,7 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
     const userName = orderData.userName || '訪客';
     const realName = orderData.realName || orderData.recipientName || '';
     const phone = formatPhoneAsText(orderData.phone);
+    const source = (orderData.source || '').trim();
     const data = custSheet.getDataRange().getValues();
     let found = false;
 
@@ -1203,6 +1213,9 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         if (userName) custSheet.getRange(row, 2).setValue(userName);
         if (realName) custSheet.getRange(row, 3).setValue(realName);
         if (phone) custSheet.getRange(row, 4).setValue(phone);
+        if (source && (!data[i][10] || data[i][10] === '')) {
+          custSheet.getRange(row, 11).setValue(source);
+        }
         
         const currentOrders = Number(data[i][5]) || 0;
         const currentSpend = Number(data[i][6]) || 0;
@@ -1227,7 +1240,8 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         Number(totalAmount) || 0,
         now,
         now,
-        ''
+        '',
+        source
       ]);
     }
   } catch (err) {
@@ -1573,6 +1587,7 @@ function handleRegisterCustomer(data) {
   const rawPhone = data.phone ? String(data.phone).trim() : '';
   const cleanPhone = rawPhone.replace(/[-\s]/g, '');
   const phone = formatPhoneAsText(rawPhone);
+  const source = (data.source || '').trim();
 
   if (!realName || !rawPhone) {
     return { success: false, message: '真實姓名與電話為必填' };
@@ -1584,9 +1599,9 @@ function handleRegisterCustomer(data) {
     custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
     custSheet.appendRow([
       'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記'
+      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
     ]);
-    custSheet.getRange(1, 1, 1, 10).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
     custSheet.getRange("D:D").setNumberFormat('@');
   }
 
@@ -1615,6 +1630,7 @@ function handleRegisterCustomer(data) {
       custSheet.getRange(row, 3).setValue(realName);
       custSheet.getRange(row, 4).setValue(phone);
       custSheet.getRange(row, 9).setValue(now);
+      if (source) custSheet.getRange(row, 11).setValue(source);
       break;
     }
   }
@@ -1631,6 +1647,7 @@ function handleRegisterCustomer(data) {
         if (userName) custSheet.getRange(row, 2).setValue(userName);
         custSheet.getRange(row, 3).setValue(realName);
         custSheet.getRange(row, 9).setValue(now);
+        if (source) custSheet.getRange(row, 11).setValue(source);
         break;
       }
     }
@@ -1647,7 +1664,8 @@ function handleRegisterCustomer(data) {
       0,
       '',
       now,
-      ''
+      '',
+      source
     ]);
   }
 
@@ -1658,7 +1676,8 @@ function handleRegisterCustomer(data) {
       userId: userId,
       userName: userName,
       realName: realName,
-      phone: rawPhone
+      phone: rawPhone,
+      source: source
     }
   };
 }

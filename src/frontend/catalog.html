@@ -606,6 +606,16 @@
           <label class="vip-label">手機號碼 <span style="color: #ef4444;">*</span></label>
           <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (聯絡用)">
         </div>
+        <div class="vip-form-group">
+          <label class="vip-label">您是從哪裡得知本賣場？ <span style="color: #ef4444;">*</span></label>
+          <select id="vipSource" class="vip-input" style="background: #fff; cursor: pointer;">
+            <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
+            <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
+            <option value="Instagram">📸 Instagram (IG)</option>
+            <option value="親友推薦">🤝 親朋好友介紹推薦</option>
+            <option value="其他">🔍 其他管道 / 網路搜尋</option>
+          </select>
+        </div>
 
         <button type="button" class="btn-vip-unlock" id="btnVipUnlock" onclick="handleVipRegisterAndUnlock()">
           ✨ 確認送出立即解鎖
@@ -698,6 +708,39 @@
     const PAGE_SIZE = 25;
     let currentPage = 1;
 
+    // 智慧來源管道解析與保存 (支援 ?src=fb / line / ig / friend / other 或自動辨識 referrer)
+    function detectAndSaveVisitorSource() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const srcParam = (urlParams.get('src') || urlParams.get('source') || urlParams.get('ref') || '').toLowerCase().trim();
+      let detectedSource = '';
+
+      if (srcParam === 'fb' || srcParam === 'facebook' || srcParam.includes('fb_')) {
+        detectedSource = 'Facebook 社團/粉專';
+      } else if (srcParam === 'line' || srcParam.includes('line_')) {
+        detectedSource = 'LINE 好友/群組';
+      } else if (srcParam === 'ig' || srcParam === 'instagram') {
+        detectedSource = 'Instagram';
+      } else if (srcParam === 'friend' || srcParam === 'recommend') {
+        detectedSource = '親友推薦';
+      } else if (srcParam === 'other') {
+        detectedSource = '其他';
+      } else if (document.referrer) {
+        const ref = document.referrer.toLowerCase();
+        if (ref.includes('facebook.com') || ref.includes('fb.me')) {
+          detectedSource = 'Facebook 社團/粉專';
+        } else if (ref.includes('instagram.com')) {
+          detectedSource = 'Instagram';
+        } else if (ref.includes('line.me')) {
+          detectedSource = 'LINE 好友/群組';
+        }
+      }
+
+      if (detectedSource) {
+        sessionStorage.setItem('store_visitor_source', detectedSource);
+      }
+      return sessionStorage.getItem('store_visitor_source') || 'Facebook 社團/粉專';
+    }
+
     // ⚡ 0 毫秒會員身分檢查：老客秒通，新客即刻防護
     function isLocallyVerifiedMember() {
       try {
@@ -712,6 +755,20 @@
 
     function checkVipGateOnLoad() {
       const overlay = document.getElementById('vipGateOverlay');
+
+      // 初始化來源下拉選單預設值
+      let defaultSrc = detectAndSaveVisitorSource();
+      try {
+        const raw = localStorage.getItem('line_order_customer_profile');
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p && p.source) defaultSrc = p.source;
+        }
+      } catch (e) {}
+
+      const vipSrc = document.getElementById('vipSource');
+      if (vipSrc && defaultSrc) vipSrc.value = defaultSrc;
+
       if (isLocallyVerifiedMember()) {
         if (overlay) overlay.style.display = 'none';
       } else {
@@ -761,11 +818,13 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
+      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim() || 'Facebook 社團/粉專';
       const profile = {
         userId: currentUserId || (isLocal ? 'LOCAL_DEV_USER' : ''),
         userName: lineName,
         realName: realName,
-        phone: cleanPhone
+        phone: cleanPhone,
+        source: source
       };
 
       const btnUnlock = document.getElementById('btnVipUnlock');
@@ -788,7 +847,8 @@
                 userId: profile.userId,
                 userName: lineName,
                 realName: realName,
-                phone: cleanPhone
+                phone: cleanPhone,
+                source: source
               }
             })
           });

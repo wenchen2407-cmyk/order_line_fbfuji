@@ -741,6 +741,16 @@
           <label class="vip-label">手機號碼 <span style="color: #ef4444;">*</span></label>
           <input type="tel" id="vipPhone" class="vip-input" placeholder="09xxxxxxxx (聯絡用)">
         </div>
+        <div class="vip-form-group">
+          <label class="vip-label">您是從哪裡得知本賣場？ <span style="color: #ef4444;">*</span></label>
+          <select id="vipSource" class="vip-input" style="background: #fff; cursor: pointer;">
+            <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
+            <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
+            <option value="Instagram">📸 Instagram (IG)</option>
+            <option value="親友推薦">🤝 親朋好友介紹推薦</option>
+            <option value="其他">🔍 其他管道 / 網路搜尋</option>
+          </select>
+        </div>
 
         <button type="button" class="btn-vip-unlock" id="btnVipUnlock" onclick="handleVipRegisterAndUnlock()">
           ✨ 確認送出立即解鎖
@@ -861,6 +871,16 @@
       <div class="form-group">
         <label class="form-label">手機號碼 *</label>
         <input type="tel" id="regPhone" class="form-input" placeholder="09xxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">您是從哪裡得知本賣場？ *</label>
+        <select id="regSource" class="form-input" style="background: #fff; cursor: pointer;">
+          <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
+          <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
+          <option value="Instagram">📸 Instagram (IG)</option>
+          <option value="親友推薦">🤝 親朋好友介紹推薦</option>
+          <option value="其他">🔍 其他管道 / 網路搜尋</option>
+        </select>
       </div>
 
       <button type="button" class="btn-submit" id="btnConfirmProfile" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
@@ -1598,11 +1618,50 @@
       localStorage.setItem('line_order_customer_profile', JSON.stringify(profile));
     }
 
+    // 智慧來源管道解析與保存 (支援 ?src=fb / line / ig / friend / other 或自動辨識 referrer)
+    function detectAndSaveVisitorSource() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const srcParam = (urlParams.get('src') || urlParams.get('source') || urlParams.get('ref') || '').toLowerCase().trim();
+      let detectedSource = '';
+
+      if (srcParam === 'fb' || srcParam === 'facebook' || srcParam.includes('fb_')) {
+        detectedSource = 'Facebook 社團/粉專';
+      } else if (srcParam === 'line' || srcParam.includes('line_')) {
+        detectedSource = 'LINE 好友/群組';
+      } else if (srcParam === 'ig' || srcParam === 'instagram') {
+        detectedSource = 'Instagram';
+      } else if (srcParam === 'friend' || srcParam === 'recommend') {
+        detectedSource = '親友推薦';
+      } else if (srcParam === 'other') {
+        detectedSource = '其他';
+      } else if (document.referrer) {
+        const ref = document.referrer.toLowerCase();
+        if (ref.includes('facebook.com') || ref.includes('fb.me')) {
+          detectedSource = 'Facebook 社團/粉專';
+        } else if (ref.includes('instagram.com')) {
+          detectedSource = 'Instagram';
+        } else if (ref.includes('line.me')) {
+          detectedSource = 'LINE 好友/群組';
+        }
+      }
+
+      if (detectedSource) {
+        sessionStorage.setItem('store_visitor_source', detectedSource);
+      }
+      return sessionStorage.getItem('store_visitor_source') || 'Facebook 社團/粉專';
+    }
+
     function loadSavedCustomerInfo() {
       const profile = getSavedCustomerProfile();
       if (profile) {
         if (profile.realName) document.getElementById('regRealName').value = profile.realName;
         if (profile.phone) document.getElementById('regPhone').value = profile.phone;
+        if (profile.source) {
+          const regSrc = document.getElementById('regSource');
+          if (regSrc) regSrc.value = profile.source;
+          const vipSrc = document.getElementById('vipSource');
+          if (vipSrc) vipSrc.value = profile.source;
+        }
       }
     }
 
@@ -1616,6 +1675,9 @@
       if (rName) rName.value = '';
       if (rPhone) rPhone.value = '';
       document.getElementById('regLineName').value = currentUser.displayName || '';
+      const defaultSrc = detectAndSaveVisitorSource();
+      const regSrc = document.getElementById('regSource');
+      if (regSrc) regSrc.value = defaultSrc;
       isSubmittingFromButton = false;
       document.getElementById('firstTimeProfileModal').classList.add('active');
     }
@@ -1645,6 +1707,13 @@
         if (rName) rName.value = '';
         if (rPhone) rPhone.value = '';
       }
+
+      // 初始化來源下拉選單預設值
+      const defaultSrc = (getSavedCustomerProfile() && getSavedCustomerProfile().source) || detectAndSaveVisitorSource();
+      const vipSrc = document.getElementById('vipSource');
+      if (vipSrc && defaultSrc) vipSrc.value = defaultSrc;
+      const regSrc = document.getElementById('regSource');
+      if (regSrc && defaultSrc) regSrc.value = defaultSrc;
 
       const isVerified = !isForceReset && isLocallyVerifiedMember();
 
@@ -1725,11 +1794,13 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
+      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim() || 'Facebook 社團/粉專';
       const profile = {
         userId: currentUser.userId,
         userName: lineName,
         realName: realName,
-        phone: cleanPhone
+        phone: cleanPhone,
+        source: source
       };
 
       const btnUnlock = document.getElementById('btnVipUnlock');
@@ -1753,7 +1824,8 @@
                 userId: currentUser.userId,
                 userName: lineName,
                 realName: realName,
-                phone: cleanPhone
+                phone: cleanPhone,
+                source: source
               }
             })
           });
@@ -1820,11 +1892,13 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
+      const source = (document.getElementById('regSource') ? document.getElementById('regSource').value : '').trim() || 'Facebook 社團/粉專';
       const profile = {
         userId: currentUser.userId,
         userName: lineName,
         realName: realName,
-        phone: cleanPhone
+        phone: cleanPhone,
+        source: source
       };
 
       const btnConfirm = document.getElementById('btnConfirmProfile');
@@ -1847,7 +1921,8 @@
                 userId: currentUser.userId,
                 userName: lineName,
                 realName: realName,
-                phone: cleanPhone
+                phone: cleanPhone,
+                source: source
               }
             })
           });
@@ -1903,6 +1978,7 @@
           userName: profile.userName || currentUser.displayName,
           realName: profile.realName,
           phone: profile.phone,
+          source: profile.source || '',
           note: note
         }
       };
