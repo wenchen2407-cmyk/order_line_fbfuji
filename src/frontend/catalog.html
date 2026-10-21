@@ -837,12 +837,15 @@
         if (catalogPvTimer) { clearTimeout(catalogPvTimer); catalogPvTimer = null; }
         recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁', '-', true);
       } else if (!forceIdentified) {
+        // 給予 LIFF 充足時間取得好友身分，避免 600ms 搶跑造成匿名通知
         if (!catalogPvTimer) {
+          const isLineApp = navigator.userAgent && navigator.userAgent.includes('Line');
+          const waitTime = isLineApp ? 3000 : 2500;
           catalogPvTimer = setTimeout(() => {
             if (!hasSentCatalogPv) {
               recordPageView('catalog.html', '🇯🇵🇰🇷 連線商品大廳首頁', '-', false);
             }
-          }, 600);
+          }, waitTime);
         }
       }
     }

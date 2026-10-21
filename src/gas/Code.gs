@@ -2271,8 +2271,37 @@ function sendPageViewAlertEmail(info) {
     const now = info.now instanceof Date ? info.now : new Date();
     const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
 
+    // 🔍 智慧身分反查：若有 userId，自動從【顧客歸戶】工作表反查真實姓名、最新暱稱與電話
+    let customerRealName = '';
+    let customerLineNick = '';
+    let customerPhone = '';
+    if (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999') {
+      try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+        if (custSheet) {
+          const custData = custSheet.getDataRange().getValues();
+          for (let c = 1; c < custData.length; c++) {
+            if (String(custData[c][0]).trim() === userId) {
+              customerLineNick = String(custData[c][1] || '').trim();
+              customerRealName = String(custData[c][2] || '').trim();
+              customerPhone = String(custData[c][3] || '').trim();
+              break;
+            }
+          }
+        }
+      } catch (custErr) {
+        console.warn('反查顧客歸戶失敗:', custErr);
+      }
+    }
+
+    // 彙整最終展示姓名：優先顯示「真實姓名 (LINE暱稱)」，次之為 LINE 暱稱
+    const effectiveName = customerRealName 
+      ? `${customerRealName}${customerLineNick ? ' (' + customerLineNick + ')' : ''}`
+      : (customerLineNick || userName);
+
     // 🛡️ 防短時間灌信保護 (以頁面與訪客身分為 key，5分鐘內不重複寄發相同網址)
-    const visitorKey = userId || userName || 'anon';
+    const visitorKey = userId || effectiveName || 'anon';
     const cacheKey = 'pv_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(visitorKey);
     const cache = CacheService.getScriptCache();
     if (cache.get(cacheKey)) {
@@ -2282,13 +2311,14 @@ function sendPageViewAlertEmail(info) {
     // 寫入快取，鎖定 300 秒 (5 分鐘)
     cache.put(cacheKey, '1', 300);
 
-    const isIdentified = Boolean(userName || (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999'));
+    const isIdentified = Boolean(effectiveName || (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999'));
+    const phoneNotice = customerPhone ? ` <span style="font-size:12px; color:#64748b; font-weight:normal;">(${customerPhone})</span>` : '';
     const visitorDisplay = isIdentified 
-      ? (userName ? `<b>${userName}</b> (已連線 LINE 會員)` : `LINE 訪客 (${userId})`)
+      ? (effectiveName ? `<b>${effectiveName}</b> (已連線 LINE 會員)${phoneNotice}` : `LINE 訪客 (${userId})`)
       : '<span style="color:#64748b;">匿名 / 外部訪客 (點擊連結進入)</span>';
 
     const emailSubject = isIdentified
-      ? `👀【訪客進站】LINE 好友「${userName || '會員'}」點開了：${pageTitle}`
+      ? `👀【訪客進站】LINE 好友「${effectiveName || '會員'}」點開了：${pageTitle}`
       : `🌐【網址觸擊】有人點開了：${pageTitle} (累計第 ${newViews} 次點擊)`;
 
     const htmlBody = `

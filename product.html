@@ -1272,12 +1272,15 @@
         if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
         recordPageView(pageKey, pageTitle, targetProductId, true);
       } else if (!forceIdentified) {
+        // 給予 LIFF 充分時間向 LINE 伺服器取得好友身分憑證 (延長至 2500ms 緩衝，避免搶發匿名信)
         if (!pvTimer) {
+          const isLineApp = navigator.userAgent && navigator.userAgent.includes('Line');
+          const waitTime = isLineApp ? 3000 : 2500;
           pvTimer = setTimeout(() => {
             if (!hasSentIdentifiedPv) {
               recordPageView(pageKey, pageTitle, targetProductId, false);
             }
-          }, 600);
+          }, waitTime);
         }
       }
     }
