@@ -263,7 +263,7 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      height: 680px;
+      height: 700px;
       box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
     }
 
@@ -316,7 +316,7 @@
       margin-bottom: 4px;
     }
 
-    /* Flex Message Bubble 模擬 */
+    /* Flex Message Bubble 模擬 (高質感風格) */
     .flex-bubble {
       background: #ffffff;
       border-radius: 18px;
@@ -396,31 +396,52 @@
       color: #b91c1c;
     }
 
-    /* 品項清單條列 */
+    /* 品項清單條列 (含商品編號與真實規格) */
     .items-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
       margin-bottom: 14px;
-      font-size: 12.5px;
+      font-size: 12px;
       color: var(--slate-700);
       background: #f8fafc;
       padding: 10px 12px;
       border-radius: 10px;
+      border: 1px solid #edf2f7;
     }
 
     .item-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 6px;
+    }
+
+    .item-row-left {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .item-row-id {
+      font-size: 10px;
+      color: #64748b;
+      font-family: monospace;
+      font-weight: 700;
     }
 
     .item-row-name {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 220px;
-      font-weight: 500;
+      max-width: 210px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .item-row-spec {
+      font-size: 10.5px;
+      color: #475569;
     }
 
     .item-row-badge {
@@ -428,6 +449,7 @@
       padding: 1px 6px;
       border-radius: 4px;
       font-weight: 700;
+      flex-shrink: 0;
     }
 
     /* 應付總額 */
@@ -737,7 +759,7 @@
         </table>
       </section>
 
-      <!-- 區塊 4：後端 API 規格與檔案存放位置 -->
+      <!-- 區塊 4：專案文件與後續規劃 -->
       <section class="card-panel">
         <h2 class="panel-title">
           <span class="icon-circle">🛠️</span>
@@ -773,7 +795,7 @@
               <div class="line-header-user">
                 <span>❮</span>
                 <div class="line-avatar">👤</div>
-                <span id="previewChatUser">王小美 (LINE 好友)</span>
+                <span id="previewChatUser">林佩君 (Penny)</span>
               </div>
               <div style="font-size: 18px; letter-spacing: -2px;">•••</div>
             </div>
@@ -788,7 +810,7 @@
                 <!-- 卡片頂部 Header -->
                 <div class="flex-header">
                   <div class="flex-header-tag">🌸 W.W. 連線代購 • 採購確認</div>
-                  <div class="flex-header-title" id="cardTitle">王小美 您的專屬清單備妥囉！</div>
+                  <div class="flex-header-title" id="cardTitle">林佩君 您的專屬清單備妥囉！</div>
                   <div class="flex-header-sub">本次連線已結案，小幫手正整理打包中</div>
                 </div>
 
@@ -807,36 +829,25 @@
                     </div>
                   </div>
 
-                  <!-- 成功品項摘錄 -->
+                  <!-- 成功品項摘錄 (包含商品編號、多規格與數量) -->
                   <div class="items-list" id="cardItemsList">
-                    <div class="item-row">
-                      <span class="item-row-name">• 防潑水輕量後背包 (黑 M)</span>
-                      <span class="item-row-badge tag-green">× 1</span>
-                    </div>
-                    <div class="item-row">
-                      <span class="item-row-name">• 日本專櫃保濕精華液 (50ml)</span>
-                      <span class="item-row-badge tag-green">× 2</span>
-                    </div>
-                    <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
-                      <span class="item-row-name">• 限量櫻花保溫杯 (粉色)</span>
-                      <span class="item-row-badge tag-red">斷貨</span>
-                    </div>
+                    <!-- 動態由 JavaScript 載入 -->
                   </div>
 
                   <!-- 應付金額 -->
                   <div class="total-box">
                     <div class="total-label">應付商品總額</div>
-                    <div class="total-price" id="cardTotalPrice">NT$ 2,450</div>
+                    <div class="total-price" id="cardTotalPrice">NT$ 2,130</div>
                   </div>
 
                   <!-- 滿額免運進度提示 -->
                   <div class="shipping-tip" id="cardShippingTip">
-                    💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 550)
+                    💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 870)
                   </div>
 
                   <!-- 溫馨說明 -->
                   <p class="packing-notice" id="cardNotice">
-                    小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11、全家、宅配）並完成結帳唷～
+                    小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11 賣貨便、全家好賣+、宅配）並完成結帳唷～
                   </p>
 
                 </div>
@@ -862,18 +873,18 @@
         <div class="control-box">
           <div class="control-title">
             <span>🎭 切換模擬情境與顧客範例：</span>
-            <span style="font-size: 11px; color: var(--slate-400);">即時連動右側手機</span>
+            <span style="font-size: 11px; color: var(--slate-400);">依現行系統風格建置</span>
           </div>
 
           <div class="btn-group" style="margin-bottom: 12px;">
             <button type="button" class="btn-switch active" onclick="switchScenario('A', this)">
-              顧客 A：成功 3 件 + 斷貨 1 件 (差額滿運)
+              情境一：一般採購成功買家 (成功 3 件 + 斷貨 1 件)
             </button>
             <button type="button" class="btn-switch" onclick="switchScenario('B', this)">
-              顧客 B：大單 4 件 (已達 $3000 免運)
+              情境二：滿額免運大單買家 (滿 $3,000 免運出貨)
             </button>
             <button type="button" class="btn-switch" onclick="switchScenario('C', this)">
-              顧客 C：不幸全數缺貨 (免結帳安慰卡)
+              情境三：極熱門款全數斷貨買家 (全數斷貨 2 件)
             </button>
           </div>
 
@@ -885,7 +896,7 @@
               📱 LINE Flex 互動卡片
             </button>
             <button type="button" class="btn-switch" id="btnModeText" onclick="toggleViewMode('text')">
-              📋 1對1 私訊純文字文案
+              📋 1對1 私訊純文字文案 (一鍵複製)
             </button>
           </div>
 
@@ -908,45 +919,57 @@
 <div class="toast" id="toast">📋 純文字通知文案已複製到剪貼簿！</div>
 
 <script>
-  // 模擬情境資料庫
+  // 依照目前系統建置風格打造的真實情境資料庫
   const SCENARIOS = {
     A: {
-      user: '王小美 (LINE 好友)',
-      title: '王小美 您的專屬清單備妥囉！',
+      user: '林佩君 (Penny)',
+      title: '林佩君 您的專屬清單備妥囉！',
       success: 3,
       out: 1,
-      total: 2450,
+      total: 2130,
       tipType: 'need',
-      tipText: '💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 550)',
-      notice: '小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11、全家、宅配）並完成結帳唷～',
+      tipText: '💡 滿 NT$ 3,000 即享超商免運 (尚差 NT$ 870)',
+      notice: '小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11 賣貨便、全家好賣+、宅配）並完成結帳唷～',
       btnText: '💳 點此開啟清單選擇門市與結帳',
       btnColor: '#06c755',
       itemsHtml: `
         <div class="item-row">
-          <span class="item-row-name">• 防潑水輕量後背包 (黑 M)</span>
-          <span class="item-row-badge tag-green">× 1</span>
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210001</span>
+            <span class="item-row-name">日本代購限定 輕量防潑水後背包</span>
+            <span class="item-row-spec">規格：經典黑 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-green">採購成功</span>
         </div>
-        <div class="item-row">
-          <span class="item-row-name">• 日本專櫃保濕精華液 (50ml)</span>
-          <span class="item-row-badge tag-green">× 2</span>
+        <div class="item-row" style="margin-top: 4px;">
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210002</span>
+            <span class="item-row-name">專櫃限定 保濕滋潤潤唇膏</span>
+            <span class="item-row-spec">規格：02 蜜桃粉 / 數量：2 件</span>
+          </div>
+          <span class="item-row-badge tag-green">採購成功</span>
         </div>
-        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
-          <span class="item-row-name">• 限量櫻花保溫杯 (粉色)</span>
-          <span class="item-row-badge tag-red">斷貨</span>
+        <div class="item-row" style="margin-top: 4px; opacity: 0.65;">
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210003</span>
+            <span class="item-row-name" style="text-decoration: line-through;">限量櫻花刺繡手帕</span>
+            <span class="item-row-spec">規格：粉色 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-red">專櫃斷貨</span>
         </div>
       `,
       rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
 
-親愛的 王小美 您好：
+親愛的 林佩君 您好：
 本次海外連線採購已圓滿結束，小幫手已為您確認並整理好專屬採購清單囉！
 
 📋 您的採購戰報：
 ------------------------------------
 🎉 採購成功：3 件
-⚠️ 缺貨斷貨：1 件
-💰 商品應付總額：NT$ 2,450
+⚠️ 缺貨斷貨：1 件 (限量櫻花刺繡手帕 現場斷貨)
+💰 商品應付總額：NT$ 2,130
 ------------------------------------
-💡 滿 NT$ 3,000 即享超商免運 (支援 7-11 取貨付款、全家、郵局、黑貓宅配)
+💡 滿 NT$ 3,000 即享超商免運 (支援 7-11 賣貨便、全家好賣+、郵局、黑貓宅配出貨)
 
 👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
 https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
@@ -954,42 +977,54 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
 小幫手已在打包整理包裹囉！收到您的收件資訊後會依序寄出，感謝您的等待與支持！❤️`
     },
     B: {
-      user: '陳大明 (LINE 好友)',
-      title: '陳大明 您的專屬清單備妥囉！',
-      success: 4,
+      user: '張雅婷 (Tina)',
+      title: '張雅婷 您的專屬清單備妥囉！',
+      success: 3,
       out: 0,
-      total: 4890,
+      total: 4820,
       tipType: 'free',
-      tipText: '🎉 恭喜！訂單滿 NT$ 3,000 已享超商取貨免運費！',
-      notice: '商品已全數採購齊全！請點擊下方按鈕填寫 7-11 或全家收件門市，我們將以最快速度為您寄出！',
+      tipText: '🎉 恭喜！訂單滿 NT$ 3,000 已享超商取貨免運費出貨！',
+      notice: '商品已全數採購齊全！請點擊下方按鈕填寫 7-11 賣貨便或全家收件門市，我們將以最快速度為您寄出！',
       btnText: '💳 點此開啟清單選擇門市與結帳',
       btnColor: '#06c755',
       itemsHtml: `
         <div class="item-row">
-          <span class="item-row-name">• 美國限定連帽外套 (灰 L)</span>
-          <span class="item-row-badge tag-green">× 1</span>
+          <div class="item-row-left">
+            <span class="item-row-id">U2610210001</span>
+            <span class="item-row-name">美國限定 防風防潑水連帽外套</span>
+            <span class="item-row-spec">規格：經典灰 L / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-green">採購成功</span>
         </div>
-        <div class="item-row">
-          <span class="item-row-name">• 經典防風立領外套 (黑 XL)</span>
-          <span class="item-row-badge tag-green">× 1</span>
+        <div class="item-row" style="margin-top: 4px;">
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210004</span>
+            <span class="item-row-name">專櫃高保濕精華液 100ml</span>
+            <span class="item-row-spec">規格：限定加大版 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-green">採購成功</span>
         </div>
-        <div class="item-row">
-          <span class="item-row-name">• 專櫃純棉短T (白 M)</span>
-          <span class="item-row-badge tag-green">× 2</span>
+        <div class="item-row" style="margin-top: 4px;">
+          <div class="item-row-left">
+            <span class="item-row-id">K2610210001</span>
+            <span class="item-row-name">韓國東大門 寬版羊毛針織衫</span>
+            <span class="item-row-spec">規格：燕麥奶 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-green">採購成功</span>
         </div>
       `,
       rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
 
-親愛的 陳大明 您好：
+親愛的 張雅婷 您好：
 本次海外連線採購已圓滿結束，您的登記品項已全數採購成功！🎉
 
 📋 您的採購戰報：
 ------------------------------------
-🎉 採購成功：4 件
+🎉 採購成功：3 件
 ⚠️ 缺貨斷貨：0 件
-💰 商品應付總額：NT$ 4,890
+💰 商品應付總額：NT$ 4,820
 ------------------------------------
-🎉 恭喜已達免運門檻，享超商取貨免運費出貨！
+🎉 恭喜已達免運門檻，享 7-11 / 全家 超商取貨免運費出貨！
 
 👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
 https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
@@ -997,8 +1032,8 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
 小幫手已在打包整理包裹囉，收到您的收件資訊後會儘速寄出，感謝您的熱情支持！❤️`
     },
     C: {
-      user: '李小芬 (LINE 好友)',
-      title: '李小芬 連線採購結果通知',
+      user: '黃美玲 (Maggie)',
+      title: '黃美玲 連線採購結果通知',
       success: 0,
       out: 2,
       total: 0,
@@ -1008,18 +1043,26 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
       btnText: '🌸 點此查看斷貨紀錄 (無須付款)',
       btnColor: '#64748b',
       itemsHtml: `
-        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
-          <span class="item-row-name">• 限量聯名帆布袋 (藍色)</span>
-          <span class="item-row-badge tag-red">斷貨</span>
+        <div class="item-row" style="opacity: 0.65;">
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210005</span>
+            <span class="item-row-name" style="text-decoration: line-through;">專櫃限量聯名保溫杯 480ml</span>
+            <span class="item-row-spec">規格：櫻花限定款 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-red">現場完售</span>
         </div>
-        <div class="item-row" style="color: #94a3b8; text-decoration: line-through;">
-          <span class="item-row-name">• 日本限定刺繡手帕 (粉色)</span>
-          <span class="item-row-badge tag-red">斷貨</span>
+        <div class="item-row" style="margin-top: 4px; opacity: 0.65;">
+          <div class="item-row-left">
+            <span class="item-row-id">J2610210006</span>
+            <span class="item-row-name" style="text-decoration: line-through;">限量刺繡帆布提袋</span>
+            <span class="item-row-spec">規格：海軍藍 / 數量：1 件</span>
+          </div>
+          <span class="item-row-badge tag-red">專櫃斷貨</span>
         </div>
       `,
       rawText: `【W.W. 連線代購 • 採購結果通知】🌸
 
-親愛的 李小芬 您好：
+親愛的 黃美玲 您好：
 非常抱歉通知您，您本次登記連線的品項現場專櫃因大熱賣已全數缺貨斷貨 😭
 小幫手跑了多家門市皆未能幫您補到現貨，深感抱歉！
 
@@ -1084,7 +1127,7 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
     });
   }
 
-  // 初始化預設 scenario A
+  // 初始化載入情境 A
   switchScenario('A', document.querySelector('.btn-switch.active'));
 </script>
 
