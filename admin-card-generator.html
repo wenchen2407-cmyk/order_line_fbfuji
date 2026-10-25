@@ -1294,7 +1294,12 @@
           <span>✏️ 編輯商品資料</span>
           <span id="editModalProdIdBadge" style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-family: monospace;"></span>
         </div>
-        <button type="button" onclick="closeEditProductModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-card-action" style="background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 12px; padding: 4px 10px; cursor: pointer;" onclick="copyProductOrderUrl(document.getElementById('editProdId').value)" title="複製 LINE 專屬直達下單連結">
+            <span>🔗 複製 LINE 連結</span>
+          </button>
+          <button type="button" onclick="closeEditProductModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;">✕</button>
+        </div>
       </div>
 
       <div class="edit-modal-body">
@@ -3428,7 +3433,7 @@
                 ${p.status === '上架中'
                   ? `<button type="button" class="btn-card-action" style="color:#dc2626; border-color:#fecaca;" onclick="quickToggleProductStatus('${p.id}', '已下架')">⚪️ 點擊下架</button>`
                   : `<button type="button" class="btn-card-action" style="color:#16a34a; border-color:#bbf7d0;" onclick="quickToggleProductStatus('${p.id}', '上架中')">🟢 點擊上架</button>`}
-                <button type="button" class="btn-card-action" onclick="copyProductOrderUrl('${p.id}')" title="複製前台直達下單連結">
+                <button type="button" class="btn-card-action" onclick="copyProductOrderUrl('${p.id}')" title="複製 LINE 專屬直達下單連結">
                   <span>🔗 複製連結</span>
                 </button>
                 <button type="button" class="btn-card-action" onclick="window.open('product.html?pid=${p.id}', '_blank')" title="前往商品詳情頁">
@@ -3693,17 +3698,22 @@
       }
     }
 
-    // 複製商品前台下單直達連結
+    // 複製商品 LINE 專屬直達下單連結
     function copyProductOrderUrl(productId) {
-      const url = `${window.location.origin}${window.location.pathname.replace('admin-card-generator.html', 'product.html')}?pid=${productId}`;
+      if (!productId) {
+        alert('請先指定商品編號！');
+        return;
+      }
+      const liffId = (typeof CONFIG !== 'undefined' && CONFIG.LIFF_ID) ? CONFIG.LIFF_ID : '2011732923-rcjz7Igd';
+      const url = `https://liff.line.me/${liffId}?p=${encodeURIComponent(productId)}`;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
-          alert(`📋 已複製商品 [${productId}] 專屬直達下單連結：\n${url}`);
+          alert(`📋 已成功複製商品 [${productId}] 的 LINE 專屬直達下單連結！\n\n🔗 連結網址：\n${url}\n\n💡 提示：分享給顧客或貼在 LINE 群組，好友點開即可在 LINE 內快速下單！`);
         }).catch(() => {
-          prompt('請複製以下商品連結：', url);
+          prompt('請複製以下商品 LINE 專屬直達下單連結：', url);
         });
       } else {
-        prompt('請複製以下商品連結：', url);
+        prompt('請複製以下商品 LINE 專屬直達下單連結：', url);
       }
     }
 
