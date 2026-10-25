@@ -203,32 +203,63 @@
       transform: scale(0.96);
     }
 
+    /* 🎨 方案 A：精緻分層卡片型 (徹底解決文字沾黏、手機/電腦極致呼吸感) */
     .product-check-item {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
       border: 1.5px solid var(--border);
-      border-radius: 12px;
-      background: #f8fafc;
+      border-radius: 14px;
+      background: #ffffff;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       width: 100%;
       box-sizing: border-box;
-      overflow: hidden;
+      position: relative;
+    }
+
+    .product-check-item:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
 
     .product-check-item.selected {
       border-color: var(--primary);
-      background: #eefbf3;
+      background: #f0fdf4;
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .prod-card-chk {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 3px;
+      flex-shrink: 0;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      transition: all 0.15s;
+    }
+
+    .product-check-item.selected .prod-card-chk {
+      background: var(--primary);
+      border-color: var(--primary);
     }
 
     .prod-thumb {
-      width: 50px;
-      height: 50px;
-      border-radius: 8px;
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
       object-fit: cover;
-      background: #cbd5e1;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
       flex-shrink: 0;
     }
 
@@ -237,15 +268,14 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      overflow: hidden;
+      gap: 5px;
     }
 
     .prod-name-row {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 6px;
+      align-items: flex-start;
+      gap: 8px;
       width: 100%;
     }
 
@@ -253,31 +283,54 @@
       font-size: 13.5px;
       font-weight: 700;
       color: #0f172a;
-      white-space: nowrap;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
       flex: 1;
       min-width: 0;
     }
 
     .prod-price-tag {
       font-family: 'Outfit', sans-serif;
-      font-size: 14.5px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--accent);
       flex-shrink: 0;
       white-space: nowrap;
+      text-align: right;
     }
 
-    .prod-sub {
-      font-size: 11.5px;
-      color: var(--text-muted);
+    .prod-meta-row {
       display: flex;
       flex-wrap: wrap;
+      gap: 6px;
       align-items: center;
-      gap: 4px;
-      line-height: 1.3;
-      word-break: break-all;
+      font-size: 11.5px;
+    }
+
+    .pill-code {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: 'Outfit', monospace;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .pill-spec {
+      background: #f8fafc;
+      color: #334155;
+      padding: 2px 8px;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 11px;
     }
 
     .deadline-badge-pill {
@@ -287,10 +340,10 @@
       background: #fef3c7;
       color: #92400e;
       border: 1px solid #fde68a;
-      padding: 1px 6px;
-      border-radius: 4px;
+      padding: 2px 7px;
+      border-radius: 5px;
       font-weight: 700;
-      font-size: 10.5px;
+      font-size: 11px;
       white-space: nowrap;
     }
 
@@ -490,25 +543,37 @@
         box-sizing: border-box;
       }
       .product-check-item {
-        padding: 8px 10px;
-        gap: 8px;
-        border-radius: 10px;
+        padding: 10px 12px;
+        gap: 10px;
+        border-radius: 12px;
         width: 100%;
         box-sizing: border-box;
       }
+      .prod-card-chk {
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        font-size: 10px;
+      }
       .prod-thumb {
-        width: 44px;
-        height: 44px;
-        border-radius: 7px;
+        width: 52px;
+        height: 52px;
+        border-radius: 8px;
       }
       .prod-name {
         font-size: 13px;
+        line-height: 1.35;
       }
       .prod-price-tag {
-        font-size: 13.5px;
+        font-size: 14px;
       }
-      .prod-sub {
-        font-size: 11px;
+      .prod-meta-row {
+        gap: 4px;
+        font-size: 10.5px;
+      }
+      .pill-code, .pill-spec, .deadline-badge-pill {
+        font-size: 10px;
+        padding: 1px 6px;
       }
 
       /* 手機端 LINE 輪播卡片預覽容器：限制寬度與高度，橫向平滑滾動 */
@@ -1727,20 +1792,18 @@
         }
 
         item.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-            <input type="checkbox" style="transform: scale(1.15); pointer-events: none; margin: 0;" ${isChecked ? 'checked' : ''}>
-            <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
-          </div>
+          <div class="prod-card-chk">${isChecked ? '✓' : ''}</div>
+          <img class="prod-thumb" src="${displayImg}" alt="" onerror="this.src='https://via.placeholder.com/80'">
           <div class="prod-info">
             <div class="prod-name-row">
               <span class="prod-name">${prod.name || '未命名商品'}</span>
               <span class="prod-price-tag">NT$ ${priceNum.toLocaleString()}</span>
             </div>
-            <div class="prod-sub">
-              <span>${prod.id}${stockDisplay}</span>
-              <span>• 規格: ${specsDisplay}</span>
+            <div class="prod-meta-row">
+              <span class="pill-code">#${prod.id}${stockDisplay}</span>
+              <span class="pill-spec">規格：${specsDisplay}</span>
+              ${deadlineBadge ? deadlineBadge : ''}
             </div>
-            ${deadlineBadge ? `<div style="margin-top: 2px;">${deadlineBadge}</div>` : ''}
           </div>
         `;
         container.appendChild(item);
@@ -1760,12 +1823,13 @@
         selectedProductIds.add(prodId);
       }
 
-      // 更新樣式
+      // 更新樣式 (對齊方案 A 之立體勾選盒)
       const elem = document.getElementById(`item_${prodId}`);
       if (elem) {
         const isChecked = selectedProductIds.has(prodId);
         elem.classList.toggle('selected', isChecked);
-        elem.querySelector('input[type="checkbox"]').checked = isChecked;
+        const chkBox = elem.querySelector('.prod-card-chk');
+        if (chkBox) chkBox.textContent = isChecked ? '✓' : '';
       }
 
       updateSelectedCount();
