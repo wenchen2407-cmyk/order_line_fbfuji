@@ -864,9 +864,29 @@
           <div class="panel-title" style="margin-bottom:0;">📢 顧客專屬採購清單推播 (0 額度消耗)</div>
           <button type="button" style="font-size:12px; color:var(--primary-dark); background:none; border:none; cursor:pointer; font-weight:700;" onclick="loadCustomerNotifyList()">🔄 重新整理名單</button>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
-          系統自動彙整試算表中有成功採購的顧客，點擊「🚀 發送個人結帳卡片」即可在 LINE 中挑選該好友，傳送專屬 Flex 結帳卡片（完全不扣官方帳號額度，終生免費！）。
+        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
+          系統自動彙整試算表中有成功採購的顧客，點擊「🚀 發送 1 對 1 卡片」可挑選好友送出專屬 Flex 結帳卡片（完全不扣官方帳號額度，終生免費！）。
+          <br>
+          <span style="display:inline-block; margin-top:6px; color:#334155; background:#f1f5f9; padding:6px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+            💻 <b>電腦版 Chrome 使用說明</b>：若尚未登入 LINE，點擊發送卡片時會引導登入授權；亦可直接點擊「📋 複製純文字」按鈕，一秒貼到 LINE 電腦版私訊！
+          </span>
         </p>
+
+        <!-- 頂部即時統計指標 (Dashboard) -->
+        <div id="notifyStatsBox" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:14px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:11.5px; color:#64748b; font-weight:600;">👥 待結帳顧客數</div>
+            <div id="statNotifyCustCount" style="font-size:22px; font-weight:900; color:#0f172a; margin-top:3px;">--</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:11.5px; color:#64748b; font-weight:600;">📦 待出貨成功件數</div>
+            <div id="statNotifySuccessItems" style="font-size:22px; font-weight:900; color:#15803d; margin-top:3px;">--</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:11.5px; color:#64748b; font-weight:600;">💰 待收回總款項</div>
+            <div id="statNotifyTotalAmount" style="font-size:22px; font-weight:900; color:#e11d48; margin-top:3px;">--</div>
+          </div>
+        </div>
 
         <div id="customerNotifyList" style="display:flex; flex-direction:column; gap:10px;">
           <div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px;">正在載入顧客結帳名單...</div>
@@ -983,11 +1003,15 @@
       if (errMsg) {
         badge.innerHTML = `<span style="color:#ef4444;">⚠️ LIFF 初始化異常 (${errMsg})</span>`;
       } else if (liffInClient && liffCanShare) {
-        badge.innerHTML = `<span style="color:#10b981;">🟢 LINE 內部環境｜群組推播功能已就緒</span>`;
-      } else if (!liffInClient) {
-        badge.innerHTML = `<span style="color:#f59e0b;">🟡 外部瀏覽器開啟｜請在 LINE 聊天室中打開此頁面以使用群組推播</span>`;
-      } else if (!liffCanShare) {
-        badge.innerHTML = `<span style="color:#ef4444;">🔴 ShareTargetPicker 未啟用（請至 LINE Developers 後台開啟）</span>`;
+        badge.innerHTML = `<span style="color:#10b981;">🟢 LINE 內部環境｜1對1與群組推播已就緒</span>`;
+      } else if (liff.isLoggedIn()) {
+        if (liffCanShare) {
+          badge.innerHTML = `<span style="color:#10b981;">🟢 電腦版已登入 LINE｜1對1與群組推播已就緒</span> <a href="javascript:void(0)" onclick="liff.logout(); window.location.reload();" style="font-size:11px; color:#64748b; margin-left:8px; text-decoration:underline;">登出</a>`;
+        } else {
+          badge.innerHTML = `<span style="color:#ef4444;">🔴 已登入 LINE 但 ShareTargetPicker 未啟用（請至 LINE Developers 後台開啟）</span>`;
+        }
+      } else {
+        badge.innerHTML = `<span style="color:#f59e0b;">🟡 電腦版外部瀏覽器｜未登入 LINE</span> <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="margin-left:8px; padding:2px 8px; font-size:11px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">點此登入 LINE</button>`;
       }
     }
 
@@ -1190,18 +1214,65 @@
     }
 
     let notifyCustomers = [];
+    let notifyStats = { totalCheckoutCustomers: 0, totalSuccessItems: 0, totalPendingAmount: 0 };
 
     async function loadCustomerNotifyList() {
       const container = document.getElementById('customerNotifyList');
       if (!container) return;
-      container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">正在讀取顧客採購資料...</div>';
+      container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:13px;">⏳ 正在即時讀取 Google 試算表訂單與顧客名單...</div>';
 
-      notifyCustomers = [
-        { userId: 'U111222333', name: '王小美', phone: '0912345678', successCount: 2, outOfStockCount: 1, totalAmount: 2450 },
-        { userId: 'U444555666', name: '陳大明', phone: '0987654321', successCount: 1, outOfStockCount: 0, totalAmount: 890 }
-      ];
+      try {
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getCustomerNotifyList`);
+        const json = await res.json();
 
-      renderCustomerNotifyList();
+        if (json && json.success) {
+          notifyCustomers = json.customers || [];
+          notifyStats = json.stats || {
+            totalCheckoutCustomers: notifyCustomers.filter(c => c.type === 'checkout').length,
+            totalSuccessItems: notifyCustomers.filter(c => c.type === 'checkout').reduce((s, c) => s + (c.successCount || 0), 0),
+            totalPendingAmount: notifyCustomers.filter(c => c.type === 'checkout').reduce((s, c) => s + (c.totalAmount || 0), 0)
+          };
+          renderCustomerNotifyStats();
+          renderCustomerNotifyList();
+        } else {
+          const errMsg = (json && json.message) || '無法取得名單';
+          // 若後端顯示未知的 action，代表雲端 Apps Script 尚未重新發布新版本
+          if (errMsg.includes('未知的 action')) {
+            container.innerHTML = `
+              <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:18px; color:#92400e; font-size:13px; line-height:1.6;">
+                <div style="font-weight:800; font-size:14px; margin-bottom:6px; color:#b45309;">⚠️ Google Apps Script 雲端尚未重新部署</div>
+                偵測到 Google 試算表後端尚未發布最新版的 <code>Code.gs</code> 程式碼（API 回傳：「未知的 action」）。<br><br>
+                <b>如何立即啟用真實資料連線：</b><br>
+                1. 開啟您的 Google 試算表 ➜ 點擊上方選單【擴充功能】➜【Apps Script】。<br>
+                2. 將本專案最新版 <code>src/gas/Code.gs</code> 內容複製貼上覆蓋既有程式碼並存檔。<br>
+                3. 點擊右上角【部署】➜【新部署】➜ 類型選【網頁應用程式】➜ 點擊【部署】確認。<br>
+                4. 完成後回到此頁面點擊「🔄 重新整理名單」即可讀取真實試算表名單！
+              </div>
+            `;
+            const cCount = document.getElementById('statNotifyCustCount');
+            const sItems = document.getElementById('statNotifySuccessItems');
+            const tAmount = document.getElementById('statNotifyTotalAmount');
+            if (cCount) cCount.textContent = '待更新';
+            if (sItems) sItems.textContent = '待更新';
+            if (tAmount) tAmount.textContent = '待更新';
+            return;
+          }
+
+          container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444; font-size:13px;">讀取失敗：${errMsg}</div>`;
+        }
+      } catch (e) {
+        console.error('讀取顧客名單失敗:', e);
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444; font-size:13px;">網路連線異常，無法讀取顧客名單 (${e.message})</div>`;
+      }
+    }
+
+    function renderCustomerNotifyStats() {
+      const cCount = document.getElementById('statNotifyCustCount');
+      const sItems = document.getElementById('statNotifySuccessItems');
+      const tAmount = document.getElementById('statNotifyTotalAmount');
+      if (cCount) cCount.textContent = `${(notifyStats.totalCheckoutCustomers || 0).toLocaleString()} 人`;
+      if (sItems) sItems.textContent = `${(notifyStats.totalSuccessItems || 0).toLocaleString()} 件`;
+      if (tAmount) tAmount.textContent = `NT$ ${(notifyStats.totalPendingAmount || 0).toLocaleString()}`;
     }
 
     function renderCustomerNotifyList() {
@@ -1209,41 +1280,144 @@
       container.innerHTML = '';
 
       if (notifyCustomers.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;">目前沒有待通知結帳的顧客名單</div>';
+        container.innerHTML = `
+          <div style="text-align:center; padding:40px 20px; color:#94a3b8; background:#fff; border:1px dashed #cbd5e1; border-radius:12px;">
+            <div style="font-size:28px; margin-bottom:8px;">🎉</div>
+            <div style="font-weight:700; color:#475569; font-size:14px;">目前沒有待通知結帳的顧客名單</div>
+            <div style="font-size:12px; margin-top:4px;">所有訂單均已完成結帳或取貨！</div>
+          </div>
+        `;
         return;
       }
 
       notifyCustomers.forEach(cust => {
         const item = document.createElement('div');
-        item.style.cssText = 'background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.02);';
+        item.style.cssText = 'background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.02); flex-wrap:wrap; gap:10px;';
+        
+        let typeBadge = '';
+        if (cust.type === 'all_out') {
+          typeBadge = '<span style="font-size:11px; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:6px; font-weight:700; margin-left:6px;">⚠️ 全數缺貨斷貨</span>';
+        } else if (cust.isNotified) {
+          typeBadge = `<span style="font-size:11px; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:2px 8px; border-radius:6px; font-weight:700; margin-left:6px;">✅ 已通知 ${cust.lastNotifiedTime || ''}</span>`;
+        }
+
+        const successText = cust.successCount > 0 ? `<span style="color:#15803d; font-weight:700;">✅ 完成 ${cust.successCount} 件</span>` : '';
+        const outText = cust.outOfStockCount > 0 ? `<span style="color:#b91c1c; font-weight:700;">❌ 缺貨 ${cust.outOfStockCount} 件</span>` : '';
+        const pendingText = cust.pendingCount > 0 ? `<span style="color:#d97706; font-weight:700;">⏳ 連線中 ${cust.pendingCount} 件</span>` : '';
+        const countsSummary = [successText, outText, pendingText].filter(Boolean).join(' ｜ ');
+
         item.innerHTML = `
           <div>
-            <div style="font-weight:800; font-size:15px; color:#0f172a;">${cust.name} <span style="font-size:12px; color:#64748b; font-weight:normal;">(${cust.phone || '無電話'})</span></div>
+            <div style="font-weight:800; font-size:15px; color:#0f172a; display:flex; align-items:center; flex-wrap:wrap;">
+              <span>${cust.name}</span>
+              <span style="font-size:12px; color:#64748b; font-weight:normal; margin-left:6px;">(${cust.phone || '無電話'})</span>
+              ${typeBadge}
+            </div>
             <div style="font-size:12.5px; color:#475569; margin-top:4px;">
-              <span style="color:#15803d; font-weight:700;">🎉 成功 ${cust.successCount} 件</span> ｜ 
-              <span style="color:#b91c1c;">⚠️ 缺貨 ${cust.outOfStockCount} 件</span> ｜ 
-              <b>應付：NT$ ${cust.totalAmount.toLocaleString()}</b>
+              ${countsSummary} ｜ 
+              <b style="color:${cust.totalAmount > 0 ? '#e11d48' : '#64748b'};">商品總額：NT$ ${cust.totalAmount.toLocaleString()}</b>
             </div>
           </div>
-          <button type="button" class="btn-action" style="width:auto; padding:8px 14px; font-size:12.5px; margin-top:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
-            🚀 發送 1 對 1 卡片
-          </button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              🚀 發送 1 對 1 卡片
+            </button>
+            <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              📋 複製純文字
+            </button>
+          </div>
         `;
         container.appendChild(item);
       });
     }
 
+    function copyCustomerRawText(userId, name, successCount, outCount, totalAmount) {
+      const targetUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?action=orders&uid=${encodeURIComponent(userId)}`;
+      const outText = outCount > 0 ? `\n      ❌ 缺貨斷貨：${outCount} 件` : '';
+      const freeTip = totalAmount >= 3000 ? ' (已達滿額免運 ✨)' : ' (滿 $3,000 即享超商免運)';
+      const text = `【🌸 W.W. 連線代購 • 採購結果通知】\n\n${name} 您好：\n您登記的連線商品明細已整理好囉！\n\n📦 採購結果：\n      ✅ 採購完成：${successCount} 件${outText}\n💰 商品總額：NT$ ${totalAmount.toLocaleString()}${freeTip}\n\n👉 點此確認明細與完成結帳作業：\n${targetUrl}\n\n小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert(`📋 已成功複製【${name}】的純文字結帳通知文案！`);
+        }).catch(() => {
+          prompt('請複製以下文案：', text);
+        });
+      } else {
+        prompt('請複製以下文案：', text);
+      }
+    }
+
     async function sendSingleCustomerNotify(userId, name, successCount, outCount, totalAmount) {
+      if (!liffReady) {
+        alert('⏳ LINE LIFF 系統正在連線初始化中，請稍候重試！');
+        return;
+      }
+
+      // 檢查是否登入（電腦 Chrome 等外部瀏覽器必須登入 LINE 才能呼叫 shareTargetPicker）
+      if (!liff.isLoggedIn()) {
+        const doLogin = confirm(
+          `💡 電腦版 Chrome 發送 1 對 1 卡片前，需要登入您的 LINE 帳號。\n\n` +
+          `【確定】：前往 LINE 登入授權（登入後即可在電腦 Chrome 直接發送卡片）\n` +
+          `【取消】：改用「📋 複製純文字」按鈕，直接貼到 LINE 電腦版私訊！`
+        );
+        if (doLogin) {
+          liff.login({ redirectUri: window.location.href });
+        }
+        return;
+      }
+
+      // 檢查 Share Target Picker 是否可用
       if (!liff.isApiAvailable('shareTargetPicker')) {
-        alert('⚠️ 您的環境目前無法使用「好友分享」功能！請在手機 LINE 內部開啟。');
+        alert(
+          '⚠️ 目前環境無法使用 LINE 好友分享 (ShareTargetPicker)！\n\n' +
+          '常見原因與解決方式：\n' +
+          '1. 請確認 LINE Developers 後台該 LIFF App 的「Share Target Picker」開關已啟用為 ON。\n' +
+          '2. 電腦版 Chrome 亦可直接點擊「📋 複製純文字」按鈕，一秒貼到 LINE 電腦版私訊給顧客！'
+        );
         return;
       }
 
       const targetUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?action=orders&uid=${encodeURIComponent(userId)}`;
 
+      const statContents = [
+        {
+          type: 'text',
+          text: `✅ 採購完成：${successCount} 件`,
+          size: 'sm',
+          color: '#15803d',
+          weight: 'bold'
+        }
+      ];
+
+      if (outCount > 0) {
+        statContents.push({
+          type: 'text',
+          text: `❌ 缺貨斷貨：${outCount} 件`,
+          size: 'sm',
+          color: '#b91c1c',
+          margin: 'xs'
+        });
+      }
+
+      statContents.push(
+        {
+          type: 'separator',
+          margin: 'sm'
+        },
+        {
+          type: 'text',
+          text: `商品總額：NT$ ${totalAmount.toLocaleString()}`,
+          size: 'md',
+          color: '#e11d48',
+          weight: 'bold',
+          margin: 'sm'
+        }
+      );
+
       const flexPayload = {
         type: 'flex',
-        altText: `【W.W.連線代購】${name} 您好，您的專屬採購清單已出爐！`,
+        altText: `【🌸 W.W. 連線代購 • 採購結果通知】${name} 您好，您的專屬採購清單已出爐！`,
         contents: {
           type: 'bubble',
           size: 'kilo',
@@ -1255,14 +1429,14 @@
             contents: [
               {
                 type: 'text',
-                text: '🌸 W.W. 連線代購 採購確認',
+                text: '🌸 W.W. 連線代購 • 採購結果通知',
                 color: '#4ade80',
                 weight: 'bold',
                 size: 'xs'
               },
               {
                 type: 'text',
-                text: `${name} 您的專屬清單已備妥！`,
+                text: `${name} 您的專屬清單備妥囉！`,
                 color: '#ffffff',
                 weight: 'bold',
                 size: 'md',
@@ -1281,38 +1455,11 @@
                 backgroundColor: '#f8fafc',
                 paddingAll: '12px',
                 cornerRadius: '10px',
-                contents: [
-                  {
-                    type: 'text',
-                    text: `• 🎉 採購成功：${successCount} 件`,
-                    size: 'sm',
-                    color: '#15803d',
-                    weight: 'bold'
-                  },
-                  {
-                    type: 'text',
-                    text: `• ⚠️ 缺貨斷貨：${outCount} 件`,
-                    size: 'sm',
-                    color: '#b91c1c',
-                    margin: 'xs'
-                  },
-                  {
-                    type: 'separator',
-                    margin: 'sm'
-                  },
-                  {
-                    type: 'text',
-                    text: `應付總額：NT$ ${totalAmount.toLocaleString()}`,
-                    size: 'md',
-                    color: '#e11d48',
-                    weight: 'bold',
-                    margin: 'sm'
-                  }
-                ]
+                contents: statContents
               },
               {
                 type: 'text',
-                text: '小幫手已在整理打包包裹囉！請點擊下方按鈕確認配送門市與結帳：',
+                text: '小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️',
                 size: 'xs',
                 color: '#64748b',
                 wrap: true,
@@ -1330,7 +1477,7 @@
                 type: 'button',
                 action: {
                   type: 'uri',
-                  label: '💳 點此開啟清單完成結帳',
+                  label: '💳 點此確認明細與完成結帳作業',
                   uri: targetUrl
                 },
                 style: 'primary',
@@ -1346,6 +1493,22 @@
         const res = await liff.shareTargetPicker([flexPayload]);
         if (res) {
           alert(`🎉 已成功發送 1 對 1 結帳卡片給【${name}】！`);
+          // 背景標記試算表狀態為已通知
+          try {
+            fetch(CONFIG.GAS_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'markCustomerNotified', userId: userId }),
+              keepalive: true
+            }).catch(() => {});
+            // 更新本地顧客狀態
+            const target = notifyCustomers.find(c => c.userId === userId);
+            if (target) {
+              target.isNotified = true;
+              target.lastNotifiedTime = '剛剛';
+              renderCustomerNotifyList();
+            }
+          } catch (e) {}
         }
       } catch (e) {
         console.error('推播失敗:', e);

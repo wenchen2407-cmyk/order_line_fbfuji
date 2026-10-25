@@ -508,6 +508,8 @@ function doGet(e) {
         title: e.parameter.title,
         productId: e.parameter.productId
       });
+    } else if (action === 'getCustomerNotifyList') {
+      result = getCustomerNotifyList();
     } else if (action === 'recalculateCustomerStats') {
       result = recalculateCustomerStats();
     } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
@@ -531,6 +533,7 @@ function doGet(e) {
  * - reportPayment (客人回填匯款後五碼)
  * - addProduct (賣家快速上架商品)
  * - uploadImages (圖片上傳 Google Drive)
+ * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知)
  */
 function doPost(e) {
   try {
@@ -552,6 +555,8 @@ function doPost(e) {
       result = handleAddProduct(postData.data);
     } else if (action === 'uploadImages') {
       result = handleUploadImages(postData.data);
+    } else if (action === 'markCustomerNotified') {
+      result = handleMarkCustomerNotified(postData);
     } else if (action === 'recordPageView') {
       result = handleRecordPageView(postData.data);
     } else if (action === 'getViewStats') {
@@ -2498,6 +2503,205 @@ function getViewStats() {
     totalViews: totalViews,
     pages: pages,
     topProducts: topProducts
+  };
+}
+
+/**
+ * 查詢待發送 1 對 1 結帳通知的顧客清單 (0 額度消耗推播後端)
+ * 自動遍歷【訂單明細】與【顧客歸戶】，過濾出未結帳且採購確認的顧客名單
+ */
+function getCustomerNotifyList() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!orderSheet) {
+    return { success: false, message: '訂單工作表不存在' };
+  }
+
+  const orderRows = orderSheet.getDataRange().getValues();
+  const custRows = custSheet ? custSheet.getDataRange().getValues() : [];
+
+  // 1. 建立顧客歸戶資料映射 (以 LINE_User_ID 為主 key，同時支援手機映射)
+  const customerInfoMap = {};
+  const phoneToCustomerMap = {};
+  for (let c = 1; c < custRows.length; c++) {
+    const uid = String(custRows[c][0] || '').trim();
+    const phone = String(custRows[c][3] || '').replace(/[-\s]/g, '').trim();
+    if (uid) {
+      const info = {
+        lineNick: String(custRows[c][1] || '').trim(),
+        realName: String(custRows[c][2] || '').trim(),
+        phone: String(custRows[c][3] || '').trim()
+      };
+      customerInfoMap[uid] = info;
+      if (phone) phoneToCustomerMap[phone] = info;
+    }
+  }
+
+  // 2. 歸組統計顧客未結帳訂單
+  const customerGroups = {};
+
+  for (let r = 1; r < orderRows.length; r++) {
+    const row = orderRows[r];
+    const userId = String(row[2] || '').trim();
+    if (!userId) continue;
+
+    const shipStatus = String(row[18] || '').trim();
+    const checkoutId = String(row[21] || '').trim();
+    const payStatus = String(row[16] || '').trim();
+    const processNote = String(row[19] || '').trim();
+
+    // 排除已結案、已完成取貨、已結帳或已付款完成者
+    if (checkoutId) continue;
+    if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
+    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+      continue;
+    }
+
+    // 判斷商品狀態
+    const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消');
+    const isSuccess = !isOut && (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('通知'));
+    const isRegistering = !isOut && !isSuccess;
+
+    const qty = Number(row[7]) || 1;
+    const unitPrice = Number(row[8]) || 0;
+    const subtotal = Number(row[9]) || (unitPrice * qty);
+    const phone = String(row[13] || '').replace(/[-\s]/g, '').trim();
+
+    if (!customerGroups[userId]) {
+      const profile = customerInfoMap[userId] || (phone && phoneToCustomerMap[phone]) || {};
+      customerGroups[userId] = {
+        userId: userId,
+        name: profile.realName || String(row[12] || '').trim() || profile.lineNick || String(row[3] || '').trim() || '顧客',
+        phone: profile.phone || String(row[13] || '').trim(),
+        successCount: 0,
+        outOfStockCount: 0,
+        pendingCount: 0,
+        totalAmount: 0,
+        items: [],
+        lastNotifiedTime: null,
+        isNotified: false
+      };
+    }
+
+    const group = customerGroups[userId];
+
+    // 檢查處理備註是否有通知時間標記
+    if (processNote.includes('已發送1對1結帳通知')) {
+      group.isNotified = true;
+      const match = processNote.match(/已發送1對1結帳通知\s*\(([^)]+)\)/);
+      if (match) {
+        group.lastNotifiedTime = match[1];
+      }
+    }
+
+    group.items.push({
+      orderId: String(row[0] || '').trim(),
+      productId: String(row[4] || '').trim(),
+      productName: String(row[5] || '').trim(),
+      spec: String(row[6] || '').trim(),
+      quantity: qty,
+      unitPrice: unitPrice,
+      subtotal: subtotal,
+      status: isSuccess ? 'success' : (isOut ? 'out' : 'pending'),
+      shippingStatus: shipStatus
+    });
+
+    if (isSuccess) {
+      group.successCount += qty;
+      group.totalAmount += subtotal;
+    } else if (isOut) {
+      group.outOfStockCount += qty;
+    } else if (isRegistering) {
+      group.pendingCount += qty;
+    }
+  }
+
+  // 3. 過濾與分類顧客
+  const list = [];
+  Object.values(customerGroups).forEach(group => {
+    if (group.successCount === 0 && group.outOfStockCount > 0 && group.pendingCount === 0) {
+      group.type = 'all_out'; // 全數缺貨斷貨
+      list.push(group);
+    } else if (group.successCount > 0) {
+      group.type = 'checkout'; // 有採購成功品項，可結帳
+      list.push(group);
+    } else if (group.pendingCount > 0) {
+      group.type = 'pending'; // 尚有連線登記未確認商品
+      list.push(group);
+    }
+  });
+
+  // 4. 排序規則：採購成功總金額由大到小排序 (高客單價大單買家優先通知)
+  list.sort((a, b) => {
+    if (a.type === 'checkout' && b.type === 'checkout') {
+      return b.totalAmount - a.totalAmount;
+    }
+    if (a.type === 'checkout') return -1;
+    if (b.type === 'checkout') return 1;
+    return 0;
+  });
+
+  // 5. 彙整統計數據
+  const checkoutList = list.filter(c => c.type === 'checkout');
+  const stats = {
+    totalCheckoutCustomers: checkoutList.length,
+    totalSuccessItems: checkoutList.reduce((sum, c) => sum + c.successCount, 0),
+    totalPendingAmount: checkoutList.reduce((sum, c) => sum + c.totalAmount, 0)
+  };
+
+  return {
+    success: true,
+    stats: stats,
+    customers: list
+  };
+}
+
+/**
+ * 標記顧客名下所有當期未結帳訂單為「通知結帳」，並記錄通知發送時間
+ */
+function handleMarkCustomerNotified(postData) {
+  const data = (postData && postData.data) || postData || {};
+  const userId = data.userId;
+  if (!userId) return { success: false, message: '缺少 userId' };
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
+
+  const rows = orderSheet.getDataRange().getValues();
+  const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm');
+  let updatedCount = 0;
+
+  for (let r = 1; r < rows.length; r++) {
+    if (String(rows[r][2] || '').trim() === userId) {
+      const shipStatus = String(rows[r][18] || '').trim();
+      const checkoutId = String(rows[r][21] || '').trim();
+      if (!checkoutId && !shipStatus.includes('完成取貨') && !shipStatus.includes('結案')) {
+        const rowIndex = r + 1;
+        // 若狀態為採購成功，狀態更新為「通知結帳」
+        if (shipStatus === '採購成功' || shipStatus === '連線登記') {
+          orderSheet.getRange(rowIndex, 19).setValue('通知結帳');
+        }
+        // 追記備註
+        const oldNote = String(rows[r][19] || '').trim();
+        const notifyTag = `已發送1對1結帳通知 (${nowStr})`;
+        let newNote = oldNote;
+        if (oldNote.includes('已發送1對1結帳通知')) {
+          newNote = oldNote.replace(/已發送1對1結帳通知\s*\([^)]*\)/, notifyTag);
+        } else {
+          newNote = oldNote ? `${oldNote} ｜ ${notifyTag}` : notifyTag;
+        }
+        orderSheet.getRange(rowIndex, 20).setValue(newNote);
+        updatedCount++;
+      }
+    }
+  }
+
+  return {
+    success: true,
+    message: `已成功更新 ${updatedCount} 筆訂單備註為已通知`,
+    notifiedTime: nowStr
   };
 }
 

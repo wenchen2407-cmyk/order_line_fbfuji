@@ -809,7 +809,7 @@
                 
                 <!-- 卡片頂部 Header -->
                 <div class="flex-header">
-                  <div class="flex-header-tag">🌸 W.W. 連線代購 • 採購確認</div>
+                  <div class="flex-header-tag">🌸 W.W. 連線代購 • 採購結果通知</div>
                   <div class="flex-header-title" id="cardTitle">林佩君 您的專屬清單備妥囉！</div>
                   <div class="flex-header-sub">本次連線已結案，小幫手正整理打包中</div>
                 </div>
@@ -817,14 +817,14 @@
                 <!-- 卡片中間 Body -->
                 <div class="flex-body">
                   
-                  <!-- 戰報概覽 -->
+                  <!-- 採購概覽 -->
                   <div class="stat-pill-box">
                     <div class="stat-pill">
-                      <div class="stat-pill-label">🎉 採購成功</div>
+                      <div class="stat-pill-label">✅ 採購完成</div>
                       <div class="stat-pill-val-success" id="cardSuccessCount">3 件</div>
                     </div>
                     <div class="stat-pill" style="border-left: 1px solid #e2e8f0;">
-                      <div class="stat-pill-label">⚠️ 缺貨斷貨</div>
+                      <div class="stat-pill-label">❌ 缺貨斷貨</div>
                       <div class="stat-pill-val-out" id="cardOutCount">1 件</div>
                     </div>
                   </div>
@@ -836,18 +836,18 @@
 
                   <!-- 應付金額 -->
                   <div class="total-box">
-                    <div class="total-label">應付商品總額</div>
+                    <div class="total-label">商品總額</div>
                     <div class="total-price" id="cardTotalPrice">NT$ 2,130</div>
                   </div>
 
                   <!-- 滿額免運進度提示 -->
                   <div class="shipping-tip" id="cardShippingTip">
-                    💡 滿 NT$ 3,000 即享免運 (尚差 NT$ 870)
+                    💡 滿 NT$ 3,000 即享超商免運 (尚差 NT$ 870)
                   </div>
 
                   <!-- 溫馨說明 -->
                   <p class="packing-notice" id="cardNotice">
-                    小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11 賣貨便、全家好賣+、宅配）並完成結帳唷～
+                    小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️
                   </p>
 
                 </div>
@@ -855,7 +855,7 @@
                 <!-- 卡片底部 Footer 按鈕 -->
                 <div class="flex-footer">
                   <a href="#" class="btn-checkout-liff" id="cardBtn" onclick="alert('👉 在正式環境中，顧客點擊此處將立即開啟個人查單結帳頁面 (my-orders.html)！'); return false;">
-                    💳 點此開啟清單選擇門市與結帳
+                    💳 點此確認明細與完成結帳作業
                   </a>
                   <div style="text-align: center; font-size: 10.5px; color: #94a3b8; margin-top: 8px;">
                     如有任何品項疑問，可直接在此對話視窗留言與小編聯絡 ❤️
@@ -929,8 +929,8 @@
       total: 2130,
       tipType: 'need',
       tipText: '💡 滿 NT$ 3,000 即享超商免運 (尚差 NT$ 870)',
-      notice: '小幫手正緊鑼密鼓為您打包包裹！請點擊下方按鈕核對品項、填寫收件門市（支援 7-11 賣貨便、全家好賣+、宅配）並完成結帳唷～',
-      btnText: '💳 點此開啟清單選擇門市與結帳',
+      notice: '小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️',
+      btnText: '💳 點此確認明細與完成結帳作業',
       btnColor: '#06c755',
       itemsHtml: `
         <div class="item-row">
@@ -955,26 +955,23 @@
             <span class="item-row-name" style="text-decoration: line-through;">限量櫻花刺繡手帕</span>
             <span class="item-row-spec">規格：粉色 / 數量：1 件</span>
           </div>
-          <span class="item-row-badge tag-red">專櫃斷貨</span>
+          <span class="item-row-badge tag-red">缺貨斷貨</span>
         </div>
       `,
-      rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
+      rawText: `【🌸 W.W. 連線代購 • 採購結果通知】
 
-親愛的 林佩君 您好：
-本次海外連線採購已圓滿結束，小幫手已為您確認並整理好專屬採購清單囉！
+佩君 您好：
+您登記的連線商品明細已整理好囉！
 
-📋 您的採購戰報：
-------------------------------------
-🎉 採購成功：3 件
-⚠️ 缺貨斷貨：1 件 (限量櫻花刺繡手帕 現場斷貨)
-💰 商品應付總額：NT$ 2,130
-------------------------------------
-💡 滿 NT$ 3,000 即享超商免運 (支援 7-11 賣貨便、全家好賣+、郵局、黑貓宅配出貨)
+📦 採購結果：
+      ✅ 採購完成：3 件
+      ❌ 缺貨斷貨：1 件
+💰 商品總額：NT$ 2,130 (滿 $3,000 即享超商免運)
 
-👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
+👉 點此確認明細與完成結帳作業：
 https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
 
-小幫手已在打包整理包裹囉！收到您的收件資訊後會依序寄出，感謝您的等待與支持！❤️`
+小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️`
     },
     B: {
       user: '張雅婷 (Tina)',
@@ -984,8 +981,8 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
       total: 4820,
       tipType: 'free',
       tipText: '🎉 恭喜！訂單滿 NT$ 3,000 已享超商取貨免運費出貨！',
-      notice: '商品已全數採購齊全！請點擊下方按鈕填寫 7-11 賣貨便或全家收件門市，我們將以最快速度為您寄出！',
-      btnText: '💳 點此開啟清單選擇門市與結帳',
+      notice: '小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️',
+      btnText: '💳 點此確認明細與完成結帳作業',
       btnColor: '#06c755',
       itemsHtml: `
         <div class="item-row">
@@ -1013,23 +1010,19 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U111222333
           <span class="item-row-badge tag-green">採購成功</span>
         </div>
       `,
-      rawText: `【W.W. 連線代購 • 採購確認與結帳通知】🌸
+      rawText: `【🌸 W.W. 連線代購 • 採購結果通知】
 
-親愛的 張雅婷 您好：
-本次海外連線採購已圓滿結束，您的登記品項已全數採購成功！🎉
+雅婷 您好：
+好消息！您登記的商品已全數採購成功囉 🎉
 
-📋 您的採購戰報：
-------------------------------------
-🎉 採購成功：3 件
-⚠️ 缺貨斷貨：0 件
-💰 商品應付總額：NT$ 4,820
-------------------------------------
-🎉 恭喜已達免運門檻，享 7-11 / 全家 超商取貨免運費出貨！
+📦 採購結果：
+      ✅ 採購完成：3 件
+💰 商品總額：NT$ 4,820 (已達滿額免運 ✨)
 
-👉 請點擊下方專屬連結確認明細、選擇配送門市並完成結帳：
+👉 點此確認明細與完成結帳作業：
 https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
 
-小幫手已在打包整理包裹囉，收到您的收件資訊後會儘速寄出，感謝您的熱情支持！❤️`
+小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️`
     },
     C: {
       user: '黃美玲 (Maggie)',
@@ -1038,9 +1031,9 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
       out: 2,
       total: 0,
       tipType: 'need',
-      tipText: '⚠️ 本訂單已全數斷貨，無須進行任何付款',
-      notice: '非常抱歉！您本次登記的 2 件商品專櫃現場大熱銷已全數斷貨 😭 小幫手跑了多家門市仍未補到現貨，深感抱歉！訂單已自動結案，無須付款。',
-      btnText: '🌸 點此查看斷貨紀錄 (無須付款)',
+      tipText: '⚠️ 本訂單已全數缺貨斷貨，無須進行任何付款',
+      notice: '非常抱歉！您本次登記的 2 件商品現場已全數缺貨斷貨 😭 小幫手跑了多家門市仍未補到現貨，深感抱歉！訂單已自動結案，無須付款。',
+      btnText: '🌸 查看斷貨紀錄 (無須付款)',
       btnColor: '#64748b',
       itemsHtml: `
         <div class="item-row" style="opacity: 0.65;">
@@ -1049,7 +1042,7 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
             <span class="item-row-name" style="text-decoration: line-through;">專櫃限量聯名保溫杯 480ml</span>
             <span class="item-row-spec">規格：櫻花限定款 / 數量：1 件</span>
           </div>
-          <span class="item-row-badge tag-red">現場完售</span>
+          <span class="item-row-badge tag-red">缺貨斷貨</span>
         </div>
         <div class="item-row" style="margin-top: 4px; opacity: 0.65;">
           <div class="item-row-left">
@@ -1057,17 +1050,17 @@ https://liff.line.me/2011732923-rcjz7Igd?action=orders&uid=U444555666
             <span class="item-row-name" style="text-decoration: line-through;">限量刺繡帆布提袋</span>
             <span class="item-row-spec">規格：海軍藍 / 數量：1 件</span>
           </div>
-          <span class="item-row-badge tag-red">專櫃斷貨</span>
+          <span class="item-row-badge tag-red">缺貨斷貨</span>
         </div>
       `,
-      rawText: `【W.W. 連線代購 • 採購結果通知】🌸
+      rawText: `【🌸 W.W. 連線代購 • 採購結果通知】
 
-親愛的 黃美玲 您好：
-非常抱歉通知您，您本次登記連線的品項現場專櫃因大熱賣已全數缺貨斷貨 😭
-小幫手跑了多家門市皆未能幫您補到現貨，深感抱歉！
+美玲 您好：
+非常抱歉通知您，您登記的品項現場已全數缺貨斷貨 😭
+小幫手跑了多家門市仍未補到現貨，真的非常抱歉！
 
-此筆訂單【無須進行任何付款或結帳】，您的訂單已自動結案。
-後續連線若有補貨或新款上架，小編會第一時間通知您，非常感謝您的熱情支持與體諒！🙇‍♀️`
+此筆訂單【無須進行任何付款】，系統已為您自動結案。
+若後續有補貨會再第一時間通知您，謝謝您的體諒與支持！🙇‍♀️`
     }
   };
 
