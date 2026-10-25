@@ -25,13 +25,14 @@ const ADMIN_ALERT_EMAIL = 'wen.chen2407@gmail.com';
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量與公式連動欄位)
+  // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量、公式連動欄位與最後更新時間)
   let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
     '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
-    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
+    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
+    '最後更新時間'
   ];
 
   if (!prodSheet) {
@@ -40,6 +41,7 @@ function setupSpreadsheet() {
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
     // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
+    const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
     prodSheet.appendRow([
       'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
@@ -47,14 +49,19 @@ function setupSpreadsheet() {
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
       '=IF(OR(N(Q2)>0, N(T2)>0), ROUND((N(Q2) + N(R2)) * N(S2)) + ROUND((N(T2) / 1000) * IF(N(U2)>0, N(U2), 240)), 850)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
       '2026/10/10 23:59',
-      'JPY', 3000, 300, 0.22, 380, 240
+      'JPY', 3000, 300, 0.22, 380, 240,
+      nowStr
     ]);
   } else {
-    // 既有表格：升級表頭為最新 21 欄規格
+    // 既有表格：升級表頭為最新 22 欄規格
+    const curCols = prodSheet.getMaxColumns();
+    if (curCols < prodHeaders.length) {
+      prodSheet.insertColumnsAfter(curCols, prodHeaders.length - curCols);
+    }
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
     prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
     
-    // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/稅金/重量欄位，並將成本價全面升級為連動公式
+    // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/稅金/重量欄位與最後更新時間，並將成本價全面升級為連動公式
     upgradeExistingProductsToFormula(prodSheet);
   }
   // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
@@ -268,24 +275,25 @@ function upgradeExistingProductsToFormula(targetSheet) {
   const lastRow = prodSheet.getLastRow();
   if (lastRow <= 1) return '目前尚無商品資料';
 
-  // 確保表格寬度至少有 21 欄
+  // 確保表格寬度至少有 22 欄
   const maxCols = prodSheet.getMaxColumns();
-  if (maxCols < 21) {
-    prodSheet.insertColumnsAfter(maxCols, 21 - maxCols);
+  if (maxCols < 22) {
+    prodSheet.insertColumnsAfter(maxCols, 22 - maxCols);
   }
 
-  // 確保第 1 列表頭為最新 21 欄標準名稱
+  // 確保第 1 列表頭為最新 22 欄標準名稱
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
     '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
-    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)'
+    '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
+    '最後更新時間'
   ];
   prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
   prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
 
-  // 讀取第 2 列到最後一列所有商品資料 (21 欄)
-  const range = prodSheet.getRange(2, 1, lastRow - 1, 21);
+  // 讀取第 2 列到最後一列所有商品資料 (22 欄)
+  const range = prodSheet.getRange(2, 1, lastRow - 1, 22);
   const values = range.getValues();
   const formulas = range.getFormulas();
 
@@ -403,6 +411,12 @@ function upgradeExistingProductsToFormula(targetSheet) {
     row[19] = finalWeight;
     row[20] = shipRate;
 
+    // 確保第 22 欄 (最後更新時間) 有初始值
+    if (!row[21]) {
+      const createdVal = row[10] || new Date();
+      row[21] = createdVal instanceof Date ? Utilities.formatDate(createdVal, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss') : String(createdVal);
+    }
+
     // 取得原本手動登記之真實成本數字 (防止 480102 等天價殘留為 baseCost)
     let baseCost = 0;
     if (typeof currentCost === 'number' && !isNaN(currentCost) && currentCost > 0 && currentCost < 50000) {
@@ -487,8 +501,9 @@ function doGet(e) {
   
   try {
     let result = {};
-    if (action === 'getProducts') {
-      result = getProductsList();
+    if (action === 'getProducts' || action === 'getAllProducts') {
+      const includeAll = action === 'getAllProducts' || (e && e.parameter && (e.parameter.includeAll === '1' || e.parameter.includeAll === 'true'));
+      result = getProductsList(includeAll);
     } else if (action === 'getProductById') {
       const pid = e.parameter.productId;
       result = getProductDetail(pid);
@@ -532,6 +547,8 @@ function doGet(e) {
  * - checkoutOrders (出貨合併結帳：6大配送方式與收件資料)
  * - reportPayment (客人回填匯款後五碼)
  * - addProduct (賣家快速上架商品)
+ * - updateProduct (賣家線上完整維護商品資料)
+ * - batchUpdateProducts (批次上架/下架/修改分類)
  * - uploadImages (圖片上傳 Google Drive)
  * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知)
  */
@@ -553,6 +570,10 @@ function doPost(e) {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
       result = handleAddProduct(postData.data);
+    } else if (action === 'updateProduct') {
+      result = handleUpdateProduct(postData.data);
+    } else if (action === 'batchUpdateProducts') {
+      result = handleBatchUpdateProducts(postData.data);
     } else if (action === 'uploadImages') {
       result = handleUploadImages(postData.data);
     } else if (action === 'markCustomerNotified') {
@@ -573,9 +594,9 @@ function doPost(e) {
 }
 
 /**
- * 取得上架商品清單
+ * 取得上架商品清單 (支援 includeAll: true 時取得所有商品包含已下架，供管理後台維護)
  */
-function getProductsList() {
+function getProductsList(includeAll = false) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   if (!sheet) return { success: false, message: '尚未初始化商品表' };
@@ -587,7 +608,7 @@ function getProductsList() {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     const status = row[9];
-    if (status === '上架中') {
+    if (includeAll || status === '上架中') {
       let rawSpecs = [];
       try {
         rawSpecs = JSON.parse(row[6]);
@@ -627,6 +648,9 @@ function getProductsList() {
       const origPriceVal = row[3];
       const hasOrigPrice = origPriceVal !== '' && origPriceVal !== null && !isNaN(Number(origPriceVal)) && Number(origPriceVal) > 0;
 
+      const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
+      const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
+
       products.push({
         id: row[0],
         name: row[1],
@@ -638,7 +662,7 @@ function getProductsList() {
         imageUrl: row[7] || (allImages[0] || ''),
         imageUrls: allImages,
         description: row[8],
-        status: status,
+        status: status || '上架中',
         costPrice: Number(row[11]) || 0,
         costNote: row[12] || '',
         deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定截單時間 (選填)
@@ -647,7 +671,9 @@ function getProductsList() {
         costTax: Number(row[17]) || 0,                       // 欄位 18 (R): 稅金 (原幣)
         exchangeRate: Number(row[18]) || 0,                  // 欄位 19 (S): 採購匯率
         weightG: Number(row[19]) || 0,                       // 欄位 20 (T): 商品重量 (g)
-        shippingRate: Number(row[20]) || 240                 // 欄位 21 (U): 國際運費單價 (元/kg)
+        shippingRate: Number(row[20]) || 240,                // 欄位 21 (U): 國際運費單價 (元/kg)
+        createdAt: createdAtStr,                             // 欄位 11 (K): 建立時間
+        updatedAt: updatedAtStr                              // 欄位 22 (V): 最後更新時間
       });
     }
   }
@@ -2003,7 +2029,8 @@ function handleAddProduct(data) {
       tax,                         // 欄位 18 (R): 稅金 (原幣)
       rate,                        // 欄位 19 (S): 採購匯率
       weight,                      // 欄位 20 (T): 商品重量 (g)
-      shipRate                     // 欄位 21 (U): 國際運費單價 (元/kg)
+      shipRate,                    // 欄位 21 (U): 國際運費單價 (元/kg)
+      Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss') // 欄位 22 (V): 最後更新時間
     ]);
 
     SpreadsheetApp.flush();
@@ -2031,6 +2058,234 @@ function handleAddProduct(data) {
     };
   } catch (err) {
     return { success: false, message: '商品建檔失敗：' + err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 賣家線上完整維護商品資料 (100% 全欄位對齊建檔表單，並更新最後更新時間)
+ */
+function handleUpdateProduct(data) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (!sheet) return { success: false, message: '商品表不存在' };
+
+    const pid = String(data.id || '').trim();
+    if (!pid) return { success: false, message: '缺少商品編號 (ID)' };
+
+    if (!data.name || data.price === undefined || data.price === '') {
+      return { success: false, message: '商品名稱與價格為必填欄位！' };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return { success: false, message: '商品清單為空' };
+
+    // 尋找商品所在的列 (row)
+    const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    let rowIndex = -1;
+    for (let i = 0; i < idRange.length; i++) {
+      if (String(idRange[i][0]).trim() === pid) {
+        rowIndex = i + 2; // 試算表從第 2 列開始 (1-based)
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return { success: false, message: `找不到商品編號：${pid}` };
+    }
+
+    const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+
+    // 1. 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
+    let specsArray = [];
+    const basePrice = Number(data.price) || 0;
+    let calculatedStock = 0;
+    let hasExplicitSpecs = false;
+
+    if (Array.isArray(data.specs)) {
+      specsArray = data.specs.map(item => {
+        if (item && typeof item === 'object') {
+          hasExplicitSpecs = true;
+          const sName = String(item.name || '').trim();
+          const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
+          const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
+          const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
+          if (!sUnlimited) calculatedStock += sStock;
+          return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+        } else if (typeof item === 'string' && item.trim()) {
+          return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+        }
+        return null;
+      }).filter(s => s && s.name);
+    } else if (typeof data.specs === 'string' && data.specs.trim()) {
+      specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
+        name: name,
+        price: basePrice,
+        stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+        isUnlimited: Boolean(data.isUnlimitedStock)
+      }));
+    }
+
+    // 2. 圖片處理：支援多張圖片（第一張為主圖）
+    let imagesArray = [];
+    if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+      imagesArray = data.imageUrls.filter(Boolean);
+    } else if (data.imageUrl) {
+      imagesArray = String(data.imageUrl).split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+    }
+    const mainImage = imagesArray[0] || data.imageUrl || '';
+
+    // 3. 庫存名額計算
+    let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 0);
+    if (hasExplicitSpecs && specsArray.length > 0) {
+      const anyUnlimited = specsArray.some(s => s.isUnlimited);
+      stockQty = anyUnlimited ? 999999 : calculatedStock;
+    }
+
+    // 4. 成本與公式處理
+    let cur = (data.currency || 'JPY').toUpperCase();
+    const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
+    const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
+    const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
+    const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
+
+    const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
+    const tax = hasTax ? Number(data.taxAmount) : '';
+    const rate = hasRate ? Number(data.exchangeRate) : '';
+    const weight = hasWeight ? Number(data.weightG) : '';
+    const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
+
+    let costCellVal = Number(data.costPrice) || 0;
+    let costFormula = '';
+    if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
+      costFormula = `=IF(OR(N(Q${rowIndex})>0, N(T${rowIndex})>0), ROUND((N(Q${rowIndex}) + N(R${rowIndex})) * N(S${rowIndex})) + ROUND((N(T${rowIndex}) / 1000) * IF(N(U${rowIndex})>0, N(U${rowIndex}), 240)), ${costCellVal})`;
+    }
+
+    const statusVal = data.status === '已下架' ? '已下架' : '上架中';
+
+    // 確保欄位至少有 22 欄
+    if (sheet.getMaxColumns() < 22) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
+    }
+
+    // 更新各欄位 (嚴格對齊 22 欄規格)
+    sheet.getRange(rowIndex, 2).setValue(String(data.name || '').trim()); // B: 商品名稱
+    sheet.getRange(rowIndex, 3).setValue(String(data.category || '連線好物').trim()); // C: 分類
+    sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
+    sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
+    sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
+    sheet.getRange(rowIndex, 7).setValue(JSON.stringify(specsArray)); // G: 規格清單(JSON)
+    sheet.getRange(rowIndex, 8).setValue(mainImage); // H: 封面主圖網址
+    sheet.getRange(rowIndex, 9).setValue(data.description || ''); // I: 商品描述
+    sheet.getRange(rowIndex, 10).setValue(statusVal); // J: 狀態
+    // K 欄 (建立時間) 保留原值不改動
+    if (costFormula) {
+      sheet.getRange(rowIndex, 12).setFormula(costFormula); // L: 成本價公式
+    } else {
+      sheet.getRange(rowIndex, 12).setValue(costCellVal);
+    }
+    sheet.getRange(rowIndex, 13).setValue(data.costNote || ''); // M: 採購備註說明
+    sheet.getRange(rowIndex, 14).setValue(JSON.stringify(imagesArray)); // N: 所有圖片清單
+    sheet.getRange(rowIndex, 15).setValue(data.deadline ? String(data.deadline).trim() : ''); // O: 指定截單時間
+    sheet.getRange(rowIndex, 16).setValue(cur); // P: 採購幣別
+    sheet.getRange(rowIndex, 17).setValue(preTax); // Q: 原幣稅前金額
+    sheet.getRange(rowIndex, 18).setValue(tax); // R: 稅金(原幣)
+    sheet.getRange(rowIndex, 19).setValue(rate); // S: 採購匯率
+    sheet.getRange(rowIndex, 20).setValue(weight); // T: 商品重量(g)
+    sheet.getRange(rowIndex, 21).setValue(shipRate); // U: 國際運費單價
+    sheet.getRange(rowIndex, 22).setValue(nowStr); // V: 最後更新時間
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      message: `商品 [${pid}] 更新成功！`,
+      productId: pid,
+      updatedAt: nowStr
+    };
+  } catch (err) {
+    return { success: false, message: '更新商品失敗：' + err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 批次更新商品 (批次上架、批次下架、批次修改分類)
+ * data: {
+ *   productIds: ['J2610...', 'J2610...'],
+ *   updateType: 'status' | 'category',
+ *   value: '上架中' | '已下架' | '新分類標籤'
+ * }
+ */
+function handleBatchUpdateProducts(data) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (!sheet) return { success: false, message: '商品表不存在' };
+
+    const pids = Array.isArray(data.productIds) ? data.productIds.map(id => String(id).trim()).filter(Boolean) : [];
+    if (pids.length === 0) return { success: false, message: '請至少選擇一件商品！' };
+
+    const updateType = data.updateType; // 'status' 或 'category'
+    const value = String(data.value || '').trim();
+
+    if (!updateType || !value) {
+      return { success: false, message: '缺少更新類型或更新數值' };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return { success: false, message: '商品清單為空' };
+
+    if (sheet.getMaxColumns() < 22) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
+    }
+
+    const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+    const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+    let updatedCount = 0;
+    const targetCol = updateType === 'status' ? 10 : (updateType === 'category' ? 3 : 0);
+    if (targetCol === 0) return { success: false, message: '不支援的批次更新類型：' + updateType };
+
+    for (let i = 0; i < idRange.length; i++) {
+      const currentPid = String(idRange[i][0]).trim();
+      if (pids.includes(currentPid)) {
+        const row = i + 2;
+        sheet.getRange(row, targetCol).setValue(value);
+        sheet.getRange(row, 22).setValue(nowStr); // V欄: 最後更新時間
+        updatedCount++;
+      }
+    }
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      message: `成功批次更新 ${updatedCount} 件商品！`,
+      updatedCount: updatedCount,
+      updateType: updateType,
+      value: value,
+      updatedAt: nowStr
+    };
+  } catch (err) {
+    return { success: false, message: '批次更新失敗：' + err.toString() };
   } finally {
     lock.releaseLock();
   }

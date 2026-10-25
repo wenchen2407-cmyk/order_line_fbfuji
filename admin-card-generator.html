@@ -69,9 +69,175 @@
       padding: 4px;
       border-radius: 14px;
       margin-bottom: 20px;
-      max-width: 500px;
+      max-width: 920px;
       margin-left: auto;
       margin-right: auto;
+      overflow-x: auto;
+    }
+
+    /* ===== 🛠️ 商品資料維護專用樣式 ===== */
+    .manage-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .manage-stat-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      text-align: center;
+    }
+    .manage-stat-label {
+      font-size: 11.5px;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .manage-stat-num {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-top: 2px;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* 批次浮動工具列 */
+    .batch-toolbar {
+      position: sticky;
+      top: 10px;
+      z-index: 90;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 16px;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      animation: fadeIn 0.2s ease;
+    }
+    .batch-toolbar-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-batch {
+      border: none;
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .btn-batch-green {
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-batch-green:hover { background: #059669; }
+    .btn-batch-gray {
+      background: #475569;
+      color: #fff;
+    }
+    .btn-batch-gray:hover { background: #334155; }
+    .btn-batch-blue {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .btn-batch-blue:hover { background: #2563eb; }
+
+    /* 商品管理卡片 */
+    .manage-card {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      transition: all 0.18s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .manage-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .manage-card.status-off {
+      background: #f8fafc;
+      opacity: 0.78;
+    }
+    .manage-card.selected {
+      border-color: var(--primary);
+      background: #f0fdf4;
+    }
+    .manage-card-thumb {
+      width: 76px;
+      height: 76px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* 編輯視窗 Modal (Drawer) */
+    .edit-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .edit-modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
+    .edit-modal-container {
+      background: #ffffff;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 760px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .edit-modal-header {
+      padding: 14px 20px;
+      background: #0f172a;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .edit-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .edit-modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      background: #f8fafc;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
     .tab-btn {
@@ -645,6 +811,7 @@
     <div class="tabs-nav">
       <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 勾選商品發群組 (多選輪播)</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 電腦快速建檔</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabManageProducts', this)">🛠️ 商品資料維護 (批次管理)</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabNotifyCustomer', this)">📢 顧客結帳通知 (1對1免額度)</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 瀏覽統計與熱門排行</button>
     </div>
@@ -922,7 +1089,96 @@
       </div>
     </div>
 
-    <!-- ================= 分頁 3：顧客結帳通知 (1 對 1 免額度推播) ================= -->
+    <!-- ================= 分頁 3：商品資料維護與批次管理 (線上免開試算表) ================= -->
+    <div id="tabManageProducts" class="tab-content">
+      <div class="panel" style="max-width: 920px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div class="panel-title" style="margin-bottom: 2px;">🛠️ 商品資料線上維護與批次管理</div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;">支援線上修改完整欄位、切換上下架、批次更新分類與最後更新時間，完全不需開啟 Google 試算表！</p>
+          </div>
+          <button type="button" style="font-size: 12.5px; color: var(--primary-dark); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" onclick="loadManageProducts(true)">
+            <span>🔄 重新整理商品清單</span>
+          </button>
+        </div>
+
+        <!-- 頂部即時統計指標 -->
+        <div class="manage-stats-grid">
+          <div class="manage-stat-box">
+            <div class="manage-stat-label">📦 全部品項數</div>
+            <div id="manageStatAll" class="manage-stat-num">--</div>
+          </div>
+          <div class="manage-stat-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+            <div class="manage-stat-label" style="color: #15803d;">🟢 上架中 (前台可買)</div>
+            <div id="manageStatActive" class="manage-stat-num" style="color: #15803d;">--</div>
+          </div>
+          <div class="manage-stat-box" style="background: #f8fafc; border-color: #cbd5e1;">
+            <div class="manage-stat-label" style="color: #64748b;">⚪️ 已下架 (暫停販售)</div>
+            <div id="manageStatInactive" class="manage-stat-num" style="color: #64748b;">--</div>
+          </div>
+        </div>
+
+        <!-- 搜尋與狀態切換篩選列 -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 1; min-width: 220px; position: relative;">
+              <input type="text" id="manageSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
+              <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
+              <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
+            </div>
+            <select id="manageCategoryFilter" class="input-text" style="width: auto; min-width: 150px; font-size: 13px; padding: 9px 12px;" onchange="handleManageSearch()">
+              <option value="">全部活動分類</option>
+            </select>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; gap: 6px;" id="manageFilterBtnGroup">
+              <button type="button" class="btn-time-preset active" data-status="all" onclick="filterManageStatus('all', this)">全部</button>
+              <button type="button" class="btn-time-preset" data-status="active" onclick="filterManageStatus('active', this)">🟢 僅看上架中</button>
+              <button type="button" class="btn-time-preset" data-status="inactive" onclick="filterManageStatus('inactive', this)">⚪️ 僅看已下架</button>
+            </div>
+            <div id="manageResultCountText" style="font-size: 12px; color: var(--text-muted); font-weight: 600;"></div>
+          </div>
+        </div>
+
+        <!-- 🚀 批次管理工具列 (有勾選商品時自動彈出) -->
+        <div id="batchToolbar" class="batch-toolbar" style="display: none;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700;">
+              <input type="checkbox" id="batchSelectAllCheck" style="width: 18px; height: 18px; accent-color: var(--primary);" onchange="toggleSelectAllManage(this.checked)">
+              <span>全選此頁</span>
+            </label>
+            <span style="font-size: 13px; font-weight: 800; background: rgba(255,255,255,0.18); padding: 3px 10px; border-radius: 20px;">
+              已選取 <span id="batchSelectedCount" style="color: #6ee7b7; font-size: 15px;">0</span> 件商品
+            </span>
+          </div>
+
+          <div class="batch-toolbar-actions">
+            <button type="button" class="btn-batch btn-batch-green" onclick="batchUpdateStatus('上架中')">
+              <span>🟢 批次上架</span>
+            </button>
+            <button type="button" class="btn-batch btn-batch-gray" onclick="batchUpdateStatus('已下架')">
+              <span>⚪️ 批次下架</span>
+            </button>
+            <button type="button" class="btn-batch btn-batch-blue" onclick="openBatchCategoryModal()">
+              <span>🏷️ 批次修改分類</span>
+            </button>
+            <button type="button" style="background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="clearManageSelection()">
+              取消選取
+            </button>
+          </div>
+        </div>
+
+        <!-- 商品列表容器 -->
+        <div id="manageLoadingBox" style="text-align: center; padding: 35px 20px; color: var(--text-muted); font-size: 14px;">
+          <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+          正在載入商品清單...
+        </div>
+        <div id="manageProductListContainer"></div>
+      </div>
+    </div>
+
+    <!-- ================= 分頁 4：顧客結帳通知 (1 對 1 免額度推播) ================= -->
     <div id="tabNotifyCustomer" class="tab-content">
       <div class="panel" style="max-width: 720px; margin: 0 auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -1030,6 +1286,288 @@
 
   </div>
 
+  <!-- ================= ✏️ 編輯商品完整資料彈出視窗 (Modal Drawer) ================= -->
+  <div id="editProductModal" class="edit-modal-overlay">
+    <div class="edit-modal-container">
+      <div class="edit-modal-header">
+        <div style="font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+          <span>✏️ 編輯商品資料</span>
+          <span id="editModalProdIdBadge" style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-family: monospace;"></span>
+        </div>
+        <button type="button" onclick="closeEditProductModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;">✕</button>
+      </div>
+
+      <div class="edit-modal-body">
+        <input type="hidden" id="editProdId">
+
+        <div class="row-2">
+          <div class="form-group">
+            <label class="form-label">活動分類標籤 *</label>
+            <input type="text" id="editProdCategory" class="input-text" placeholder="例：2026.10月連線">
+          </div>
+          <div class="form-group">
+            <label class="form-label">商品上下架狀態 *</label>
+            <select id="editProdStatus" class="input-text">
+              <option value="上架中">🟢 上架中 (前台可見且可下單)</option>
+              <option value="已下架">⚪️ 已下架 (前台隱藏不可購買)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">商品名稱 *</label>
+          <input type="text" id="editProdName" class="input-text" placeholder="商品名稱">
+        </div>
+
+        <div class="row-2">
+          <div class="form-group">
+            <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
+            <input type="number" id="editProdPrice" class="input-text" placeholder="例：980" oninput="calculateEditCost()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">專櫃原價/參考市價 (NT$)</label>
+            <input type="number" id="editProdOriginalPrice" class="input-text" placeholder="例：1280">
+          </div>
+        </div>
+
+        <!-- 🧮 連線代購成本計算機 (管理者專用內部紀錄) -->
+        <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px; margin: 14px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+              <span>🧮 連線代購成本計算機</span>
+              <span style="font-size: 11px; font-weight: 500; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
+            </div>
+            <button type="button" style="font-size: 12px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;" onclick="resetEditCostCalculator()">重置計算</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 12px;">採購幣別</label>
+              <select id="editCalcCurrency" class="input-text" style="padding: 7px;" onchange="changeEditCurrencyPreset()">
+                <option value="JPY">🇯🇵 日幣 (JPY)</option>
+                <option value="USD">🇺🇸 美金 (USD)</option>
+                <option value="KRW">🇰🇷 韓元 (KRW)</option>
+                <option value="TWD">🇹🇼 台幣 (TWD)</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 12px;">原幣稅前金額</label>
+              <input type="number" id="editCalcPricePreTax" class="input-text" style="padding: 7px;" placeholder="例：3000" oninput="calculateEditCost()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 12px;">稅金 (原幣)</label>
+              <input type="number" id="editCalcTaxAmount" class="input-text" style="padding: 7px;" placeholder="例：300" oninput="calculateEditCost()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 12px;">採購匯率</label>
+              <input type="number" step="0.0001" id="editCalcExchangeRate" class="input-text" style="padding: 7px;" value="0.2200" oninput="calculateEditCost()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 12px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240元/kg</span></label>
+              <input type="number" id="editCalcWeight" class="input-text" style="padding: 7px;" placeholder="例：350" oninput="calculateEditCost()">
+            </div>
+          </div>
+
+          <!-- 計算結果看板 -->
+          <div style="background: #ffffff; border-radius: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
+            <div style="font-size: 12.5px; line-height: 1.6;">
+              <div>採購金額：<span id="editResTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span id="editResItemTwd">0</span>)</div>
+              <div>國際空運：<span id="editResShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span id="editResWeightG">0</span>g)</div>
+              <div style="color: #047857; font-weight: 800; font-size: 13.5px; margin-top: 2px;">
+                👉 總成本價：NT$ <span id="editResTotalCost" style="font-size: 15px;">0</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div id="editResProfitBox" style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 4px;">預估毛利：NT$ 0 (0%)</div>
+              <input type="hidden" id="editFinalCostPrice" value="0">
+              <input type="hidden" id="editFinalCostNote" value="">
+              <input type="hidden" id="editFinalCostPreTax" value="0">
+              <input type="hidden" id="editFinalTaxAmount" value="0">
+              <input type="hidden" id="editFinalCostForeign" value="0">
+              <input type="hidden" id="editFinalExchangeRate" value="0">
+              <input type="hidden" id="editFinalWeightG" value="0">
+              <input type="hidden" id="editFinalShippingRate" value="240">
+              <button type="button" style="background: #0f172a; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;" onclick="applyEditCostToRecord()">📥 套用成本紀錄</button>
+            </div>
+            <div style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
+              ⚡ 試算表公式自動連動：原幣稅前金額與稅金獨立登記，儲存後試算表成本價公式將自動重新計算！
+            </div>
+          </div>
+        </div>
+
+        <!-- 🏷️ 規格款式與庫存數量設定 -->
+        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0;">
+              <span>🏷️ 規格款式、個別售價與庫存數量</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <input type="checkbox" id="editAdvancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleEditSpecMode()">
+              <span>啟用各規格「獨立價格」與「個別庫存」</span>
+            </label>
+          </div>
+
+          <!-- 模式 A：簡易規格模式 -->
+          <div id="editSimpleSpecBox">
+            <div class="row-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
+                <div style="padding: 6px 0;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="editUnlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleEditStockInput()">
+                    <span>連線時間不限名額跟庫存（無限接單）</span>
+                  </label>
+                </div>
+                <input type="number" id="editProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
+                <input type="text" id="editProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色">
+              </div>
+            </div>
+          </div>
+
+          <!-- 模式 B：進階規格表格模式 -->
+          <div id="editAdvancedSpecBox" style="display: none;">
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
+              💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方售價，有價差時再修改即可。
+            </div>
+
+            <!-- 快速批次轉換 -->
+            <div style="display: flex; gap: 8px; margin-bottom: 10px; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
+              <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
+              <input type="text" id="editBatchSpecInput" class="input-text" style="font-size: 12px; padding: 5px 8px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
+              <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddEditSpecs()">批次套用</button>
+            </div>
+
+            <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;" id="editSpecTable">
+                <thead>
+                  <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 7px 10px; font-weight: 700;">規格款式名稱 *</th>
+                    <th style="padding: 7px 10px; font-weight: 700; width: 130px;">規格售價 (NT$)</th>
+                    <th style="padding: 7px 10px; font-weight: 700; width: 120px;">現貨數量</th>
+                    <th style="padding: 7px 10px; font-weight: 700; width: 90px; text-align: center;">不限名額</th>
+                    <th style="padding: 7px 10px; font-weight: 700; width: 50px; text-align: center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="editSpecTableBody"></tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+              <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="addEditSpecRow()">
+                <span>➕ 新增規格款式</span>
+              </button>
+              <div id="editSpecSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⏰ 指定收單截止時間 -->
+        <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0;">
+              <span>⏰ 指定收單截止時間 (選填)</span>
+            </label>
+            <span style="font-size: 11px; color: #b45309;">預設空白（未指定則自動採用全站統一收單時間）</span>
+          </div>
+          
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+            <button type="button" class="btn-time-preset" onclick="setEditPresetDeadline('2026-10-02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島</button>
+            <button type="button" class="btn-time-preset" onclick="setEditPresetDeadline('2026-10-06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾</button>
+            <button type="button" class="btn-time-preset" onclick="setEditPresetDeadline('2026-10-10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本</button>
+            <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setEditPresetDeadline('', '')">✕ 預設空白</button>
+          </div>
+
+          <input type="text" id="editProdDeadline" class="input-text" placeholder="預設空白（例如：2026-10-06 13:30）" style="background: #fff;">
+          <div id="editDeadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
+        </div>
+
+        <!-- 📷 商品圖片維護 (支援附件上傳 + 既有照片管理 + 網址輸入) -->
+        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
+            <span>📷 商品圖片清單 (支援多張) *</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張為封面主圖，點擊可刪除或設為封面</span>
+          </label>
+
+          <!-- 方式一：照片上傳 -->
+          <div style="margin-bottom: 10px;">
+            <label for="editFileUploadInput" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer;">
+              <span>📁 追加上傳照片 (Google Drive 自動託管)</span>
+            </label>
+            <input type="file" id="editFileUploadInput" multiple accept="image/*" style="display: none;" onchange="handleEditLocalFilesSelected()">
+            <span id="editUploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
+          </div>
+
+          <!-- 現有縮圖清單 -->
+          <div id="editImageThumbsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
+
+          <!-- 方式二：網址輸入框 -->
+          <div>
+            <label class="form-label" style="font-size: 12px;">或貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
+            <textarea id="editProdImageUrls" class="input-textarea" rows="2" placeholder="https://example.com/image1.jpg" oninput="renderEditUrlThumbs()"></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">商品詳細描述 / 規格說明（支援換行與條列排版）</label>
+          <textarea id="editProdDesc" class="input-textarea" rows="3" placeholder="商品詳細規格描述"></textarea>
+        </div>
+
+        <!-- 建立與最後更新時間顯示 -->
+        <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <div>📅 建立時間：<span id="editCreatedAtText" style="font-weight: 700; color: #334155;">--</span></div>
+          <div>🕒 最後更新：<span id="editUpdatedAtText" style="font-weight: 700; color: #0f172a;">--</span></div>
+        </div>
+      </div>
+
+      <div class="edit-modal-footer">
+        <button type="button" class="btn-card-action" onclick="closeEditProductModal()">✕ 取消</button>
+        <button type="button" class="btn-action btn-secondary" id="btnSaveEditProduct" style="margin: 0; width: auto; padding: 9px 22px;" onclick="saveEditProduct()">
+          <span>💾 儲存修改並同步至 Google 試算表</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 🏷️ 批次修改商品分類視窗 (Modal) ================= -->
+  <div id="batchCategoryModal" class="edit-modal-overlay">
+    <div class="edit-modal-container" style="max-width: 480px;">
+      <div class="edit-modal-header">
+        <div style="font-weight: 800; font-size: 15px;">🏷️ 批次修改商品分類標籤</div>
+        <button type="button" onclick="closeBatchCategoryModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1;">✕</button>
+      </div>
+      <div class="edit-modal-body" style="padding: 16px 20px;">
+        <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+          即將為已選取的 <b id="batchCategoryCount" style="color: var(--accent);">0</b> 件商品設定新的活動分類標籤：
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">活動分類標籤名稱 *</label>
+          <input type="text" id="batchNewCategoryInput" class="input-text" placeholder="例：2026.11月連線、日本限定好物">
+        </div>
+
+        <div style="margin-top: 10px;">
+          <div style="font-size: 11.5px; color: #64748b; font-weight: 700; margin-bottom: 6px;">⚡ 點擊快速套用常用分類：</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="batchCategoryQuickChips">
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('2026.10月連線')">2026.10月連線</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('2026.11月連線')">2026.11月連線</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🇯🇵 日本專櫃限定')">🇯🇵 日本專櫃限定</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🇰🇷 韓國美妝零食')">🇰🇷 韓國美妝零食</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🔥 現貨搶購專區')">🔥 現貨搶購專區</button>
+          </div>
+        </div>
+      </div>
+      <div class="edit-modal-footer">
+        <button type="button" class="btn-card-action" onclick="closeBatchCategoryModal()">取消</button>
+        <button type="button" class="btn-action btn-secondary" id="btnConfirmBatchCategory" style="margin: 0; width: auto; padding: 8px 18px;" onclick="confirmBatchCategoryUpdate()">
+          <span>確認套用分類</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const CONFIG = {
       LIFF_ID: '2011732923-rcjz7Igd',
@@ -1085,7 +1623,13 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
-      const tabMap = { 'tabPublish': 0, 'tabCreate': 1, 'tabNotifyCustomer': 2, 'tabAnalytics': 3 };
+      const tabMap = { 
+        'tabPublish': 0, 
+        'tabCreate': 1, 
+        'tabManageProducts': 2, 
+        'tabNotifyCustomer': 3, 
+        'tabAnalytics': 4 
+      };
       const tabIdx = tabMap[tabId] !== undefined ? tabMap[tabId] : 0;
       const allBtns = document.querySelectorAll('.tab-btn');
 
@@ -1100,7 +1644,9 @@
         targetContent.classList.add('active');
       }
 
-      if (tabId === 'tabNotifyCustomer') {
+      if (tabId === 'tabManageProducts') {
+        loadManageProducts();
+      } else if (tabId === 'tabNotifyCustomer') {
         loadCustomerNotifyList();
       } else if (tabId === 'tabAnalytics') {
         loadViewStats();
@@ -2625,6 +3171,1109 @@
       if (input) input.value = val;
       if (hint) {
         hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已設為預設空白（自動依照全站系統統一收單時間）';
+      }
+    }
+
+    // =========================================================================
+    // 🛠️ 分頁 3：商品資料線上維護與批次管理 (免開啟 Google 試算表)
+    // =========================================================================
+    let manageAllProducts = [];
+    let manageSelectedIds = new Set();
+    let manageSearchKeyword = '';
+    let manageCurrentStatusFilter = 'all';
+    let editCurrentImages = [];
+    let editLocalSelectedFiles = [];
+
+    // 載入商品維護清單 (包含上架中與已下架商品)
+    async function loadManageProducts(forceRefresh = false) {
+      const loading = document.getElementById('manageLoadingBox');
+      const container = document.getElementById('manageProductListContainer');
+      if (loading) loading.style.display = 'block';
+      if (container) container.innerHTML = '';
+
+      try {
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getAllProducts`);
+        const json = await res.json();
+        if (loading) loading.style.display = 'none';
+
+        if (json.success && Array.isArray(json.data)) {
+          manageAllProducts = json.data;
+          updateManageStats();
+          populateManageCategoryOptions();
+          renderManageProductsList();
+        } else {
+          if (container) {
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444;">載入失敗：${json.message || '未知錯誤'}</div>`;
+          }
+        }
+      } catch (err) {
+        if (loading) loading.style.display = 'none';
+        if (container) {
+          container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444;">連線異常，請檢查網路後點擊重新整理！</div>`;
+        }
+      }
+    }
+
+    // 更新頂部統計數據
+    function updateManageStats() {
+      const total = manageAllProducts.length;
+      const active = manageAllProducts.filter(p => p.status === '上架中').length;
+      const inactive = total - active;
+
+      const statAll = document.getElementById('manageStatAll');
+      const statActive = document.getElementById('manageStatActive');
+      const statInactive = document.getElementById('manageStatInactive');
+
+      if (statAll) statAll.textContent = total;
+      if (statActive) statActive.textContent = active;
+      if (statInactive) statInactive.textContent = inactive;
+    }
+
+    // 動態填充分類選單
+    function populateManageCategoryOptions() {
+      const catSelect = document.getElementById('manageCategoryFilter');
+      if (!catSelect) return;
+      const currentVal = catSelect.value;
+      const categories = new Set();
+      manageAllProducts.forEach(p => {
+        if (p.category && String(p.category).trim()) {
+          categories.add(String(p.category).trim());
+        }
+      });
+
+      let html = '<option value="">全部活動分類</option>';
+      categories.forEach(cat => {
+        html += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`;
+      });
+      catSelect.innerHTML = html;
+      if (currentVal && categories.has(currentVal)) {
+        catSelect.value = currentVal;
+      }
+    }
+
+    // 處理搜尋
+    function handleManageSearch() {
+      const input = document.getElementById('manageSearchInput');
+      manageSearchKeyword = input ? input.value.trim().toLowerCase() : '';
+      const clearBtn = document.getElementById('btnManageClearSearch');
+      if (clearBtn) clearBtn.style.display = manageSearchKeyword ? 'block' : 'none';
+      renderManageProductsList();
+    }
+
+    // 清空搜尋
+    function clearManageSearch() {
+      const input = document.getElementById('manageSearchInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      manageSearchKeyword = '';
+      const clearBtn = document.getElementById('btnManageClearSearch');
+      if (clearBtn) clearBtn.style.display = 'none';
+      renderManageProductsList();
+    }
+
+    // 切換狀態篩選
+    function filterManageStatus(status, btn) {
+      manageCurrentStatusFilter = status;
+      const btnGroup = document.getElementById('manageFilterBtnGroup');
+      if (btnGroup) {
+        btnGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      }
+      if (btn) btn.classList.add('active');
+      renderManageProductsList();
+    }
+
+    // 渲染商品管理清單 (卡片式)
+    function renderManageProductsList() {
+      const container = document.getElementById('manageProductListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const catFilter = document.getElementById('manageCategoryFilter');
+      const selectedCat = catFilter ? catFilter.value : '';
+
+      // 依狀態、分類與搜尋關鍵字篩選
+      const filtered = manageAllProducts.filter(p => {
+        if (manageCurrentStatusFilter === 'active' && p.status !== '上架中') return false;
+        if (manageCurrentStatusFilter === 'inactive' && p.status === '上架中') return false;
+        if (selectedCat && p.category !== selectedCat) return false;
+
+        if (!manageSearchKeyword) return true;
+        const nameStr = (p.name || '').toLowerCase();
+        const idStr = (p.id || '').toLowerCase();
+        const catStr = (p.category || '').toLowerCase();
+        let specsStr = '';
+        if (Array.isArray(p.specs)) {
+          specsStr = p.specs.map(s => typeof s === 'object' ? s.name : s).join(' ').toLowerCase();
+        } else if (typeof p.specs === 'string') {
+          specsStr = p.specs.toLowerCase();
+        }
+        return nameStr.includes(manageSearchKeyword) || 
+               idStr.includes(manageSearchKeyword) || 
+               catStr.includes(manageSearchKeyword) || 
+               specsStr.includes(manageSearchKeyword);
+      });
+
+      // 依編號/時間新到舊排序
+      filtered.sort((a, b) => {
+        const matchA = String(a.id || '').match(/\d+/);
+        const matchB = String(b.id || '').match(/\d+/);
+        const numA = matchA ? parseInt(matchA[0], 10) : 0;
+        const numB = matchB ? parseInt(matchB[0], 10) : 0;
+        if (numB !== numA) return numB - numA;
+        return (b.id || '').localeCompare(a.id || '');
+      });
+
+      const countText = document.getElementById('manageResultCountText');
+      if (countText) {
+        countText.textContent = `顯示 ${filtered.length} / ${manageAllProducts.length} 件`;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:40px; color:#94a3b8; font-size:13.5px;">🔍 沒有符合條件的商品</div>';
+        updateBatchToolbar();
+        return;
+      }
+
+      filtered.forEach(p => {
+        const isSelected = manageSelectedIds.has(p.id);
+        const isOff = p.status === '已下架';
+        const card = document.createElement('div');
+        card.className = `manage-card ${isOff ? 'status-off' : ''} ${isSelected ? 'selected' : ''}`;
+        card.id = `manageCard_${p.id}`;
+
+        // 圖片處理
+        const thumbUrl = p.imageUrl || (p.imageUrls && p.imageUrls[0]) || 'https://via.placeholder.com/80?text=No+Image';
+
+        // 規格摘要文字
+        let specsBadgesHtml = '';
+        if (Array.isArray(p.specs) && p.specs.length > 0) {
+          const specPills = p.specs.slice(0, 4).map(s => {
+            const sName = typeof s === 'object' ? s.name : s;
+            const sPrice = (typeof s === 'object' && s.price && s.price !== p.price) ? ` ($${s.price})` : '';
+            return `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(sName)}${sPrice}</span>`;
+          }).join('');
+          const moreCount = p.specs.length > 4 ? `<span style="color:#64748b; font-size:11px;">+${p.specs.length - 4}</span>` : '';
+          specsBadgesHtml = `<div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">${specPills}${moreCount}</div>`;
+        }
+
+        // 庫存標籤
+        let stockHtml = '';
+        if (p.stock >= 9999) {
+          stockHtml = `<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">📦 不限庫存</span>`;
+        } else if (p.stock <= 0) {
+          stockHtml = `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">⚠️ 庫存 0 (已售罄)</span>`;
+        } else {
+          stockHtml = `<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">📦 現貨庫存: ${p.stock}</span>`;
+        }
+
+        // 截單標籤
+        const deadlineHtml = p.deadline ? `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">⏰ 截單: ${escapeHtml(p.deadline)}</span>` : '';
+
+        // 最後更新時間
+        const updateTimeStr = p.updatedAt || p.createdAt || '--';
+
+        card.innerHTML = `
+          <div style="display:flex; align-items:center; height:100%; padding-top:4px;">
+            <input type="checkbox" style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);" 
+              ${isSelected ? 'checked' : ''} onchange="toggleManageSelect('${p.id}', this.checked)">
+          </div>
+
+          <img src="${escapeHtml(thumbUrl)}" class="manage-card-thumb" alt="${escapeHtml(p.name)}" 
+            onerror="this.src='https://via.placeholder.com/80?text=No+Image'">
+
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:5px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">
+                  <span style="font-family:'Outfit', monospace; font-size:11.5px; font-weight:800; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px;">#${escapeHtml(p.id)}</span>
+                  <span style="font-size:11px; background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(p.category || '連線好物')}</span>
+                  ${p.status === '上架中' 
+                    ? '<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">🟢 上架中</span>' 
+                    : '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">⚪️ 已下架</span>'}
+                </div>
+                <div style="font-size:14px; font-weight:800; color:#0f172a; line-height:1.4; word-break:break-word;">
+                  ${escapeHtml(p.name)}
+                </div>
+              </div>
+
+              <div style="text-align:right; flex-shrink:0;">
+                <div style="font-family:'Outfit', sans-serif; font-size:16px; font-weight:900; color:var(--accent);">
+                  NT$ ${Number(p.price).toLocaleString()}
+                </div>
+                ${(p.originalPrice && Number(p.originalPrice) > Number(p.price)) 
+                  ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through;">NT$ ${Number(p.originalPrice).toLocaleString()}</div>` 
+                  : ''}
+              </div>
+            </div>
+
+            <!-- 規格與庫存資訊 -->
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+              ${stockHtml}
+              ${deadlineHtml}
+              ${specsBadgesHtml}
+            </div>
+
+            <!-- 時間戳記與操作按鈕 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px; padding-top:6px; border-top:1px dashed #e2e8f0;">
+              <div style="font-size:11px; color:#64748b;">
+                🕒 最後更新：<span style="color:#0f172a; font-weight:600;">${escapeHtml(updateTimeStr)}</span>
+              </div>
+
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="btn-card-action btn-card-edit" onclick="openEditProductModal('${p.id}')">
+                  <span>✏️ 編輯商品</span>
+                </button>
+                ${p.status === '上架中'
+                  ? `<button type="button" class="btn-card-action" style="color:#dc2626; border-color:#fecaca;" onclick="quickToggleProductStatus('${p.id}', '已下架')">⚪️ 點擊下架</button>`
+                  : `<button type="button" class="btn-card-action" style="color:#16a34a; border-color:#bbf7d0;" onclick="quickToggleProductStatus('${p.id}', '上架中')">🟢 點擊上架</button>`}
+                <button type="button" class="btn-card-action" onclick="copyProductOrderUrl('${p.id}')" title="複製前台直達下單連結">
+                  <span>🔗 複製連結</span>
+                </button>
+                <button type="button" class="btn-card-action" onclick="window.open('product.html?pid=${p.id}', '_blank')" title="前往商品詳情頁">
+                  <span>👁️</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      updateBatchToolbar();
+    }
+
+    // 單一商品核取方塊切換
+    function toggleManageSelect(productId, checked) {
+      if (checked) {
+        manageSelectedIds.add(productId);
+      } else {
+        manageSelectedIds.delete(productId);
+      }
+      const card = document.getElementById(`manageCard_${productId}`);
+      if (card) {
+        card.classList.toggle('selected', checked);
+      }
+      updateBatchToolbar();
+    }
+
+    // 全選/取消全選
+    function toggleSelectAllManage(checked) {
+      const container = document.getElementById('manageProductListContainer');
+      if (!container) return;
+      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        cb.checked = checked;
+        const card = cb.closest('.manage-card');
+        if (card && card.id) {
+          const pid = card.id.replace('manageCard_', '');
+          if (checked) {
+            manageSelectedIds.add(pid);
+            card.classList.add('selected');
+          } else {
+            manageSelectedIds.delete(pid);
+            card.classList.remove('selected');
+          }
+        }
+      });
+      updateBatchToolbar();
+    }
+
+    // 清除選取
+    function clearManageSelection() {
+      manageSelectedIds.clear();
+      const container = document.getElementById('manageProductListContainer');
+      if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        container.querySelectorAll('.manage-card').forEach(c => c.classList.remove('selected'));
+      }
+      updateBatchToolbar();
+    }
+
+    // 更新批次操作工具列顯示
+    function updateBatchToolbar() {
+      const bar = document.getElementById('batchToolbar');
+      const countEl = document.getElementById('batchSelectedCount');
+      const selectAllEl = document.getElementById('batchSelectAllCheck');
+      if (!bar) return;
+
+      const count = manageSelectedIds.size;
+      if (countEl) countEl.textContent = count;
+
+      if (count > 0) {
+        bar.style.display = 'flex';
+      } else {
+        bar.style.display = 'none';
+        if (selectAllEl) selectAllEl.checked = false;
+      }
+    }
+
+    // 批次上下架
+    async function batchUpdateStatus(newStatus) {
+      if (manageSelectedIds.size === 0) {
+        alert('請先勾選欲操作的商品！');
+        return;
+      }
+      const ids = Array.from(manageSelectedIds);
+      const actionLabel = newStatus === '上架中' ? '批次上架' : '批次下架';
+      if (!confirm(`確定要將選取的 ${ids.length} 件商品進行【${actionLabel}】（設為「${newStatus}」）？`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'batchUpdateProducts',
+            data: {
+              productIds: ids,
+              updateType: 'status',
+              value: newStatus
+            }
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          const nowStr = result.updatedAt || new Date().toLocaleString();
+          manageAllProducts.forEach(p => {
+            if (ids.includes(p.id)) {
+              p.status = newStatus;
+              p.updatedAt = nowStr;
+            }
+          });
+          if (Array.isArray(allProducts)) {
+            allProducts.forEach(p => {
+              if (ids.includes(p.id)) {
+                p.status = newStatus;
+                p.updatedAt = nowStr;
+              }
+            });
+            if (newStatus === '已下架') {
+              allProducts = allProducts.filter(p => !ids.includes(p.id));
+            }
+            renderProductCheckboxes();
+          }
+
+          clearManageSelection();
+          updateManageStats();
+          renderManageProductsList();
+          alert(`🎉 成功${actionLabel} ${result.updatedCount || ids.length} 件商品！試算表最後更新時間已同步完成。`);
+        } else {
+          alert('批次操作失敗：' + (result.message || '未知錯誤'));
+        }
+      } catch (err) {
+        alert('連線失敗，請檢查網路連線後重試：' + err.toString());
+      }
+    }
+
+    // 打開批次修改分類視窗
+    function openBatchCategoryModal() {
+      if (manageSelectedIds.size === 0) {
+        alert('請先勾選欲修改分類的商品！');
+        return;
+      }
+      const countEl = document.getElementById('batchCategoryCount');
+      if (countEl) countEl.textContent = manageSelectedIds.size;
+      const modal = document.getElementById('batchCategoryModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    // 關閉批次修改分類視窗
+    function closeBatchCategoryModal() {
+      const modal = document.getElementById('batchCategoryModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    // 快捷填入分類
+    function setBatchCategoryPreset(val) {
+      const input = document.getElementById('batchNewCategoryInput');
+      if (input) input.value = val;
+    }
+
+    // 確認執行批次修改分類
+    async function confirmBatchCategoryUpdate() {
+      const input = document.getElementById('batchNewCategoryInput');
+      const newCat = input ? input.value.trim() : '';
+      if (!newCat) {
+        alert('請填寫欲更新的活動分類標籤名稱！');
+        return;
+      }
+      const ids = Array.from(manageSelectedIds);
+      const btn = document.getElementById('btnConfirmBatchCategory');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'batchUpdateProducts',
+            data: {
+              productIds: ids,
+              updateType: 'category',
+              value: newCat
+            }
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          const nowStr = result.updatedAt || new Date().toLocaleString();
+          manageAllProducts.forEach(p => {
+            if (ids.includes(p.id)) {
+              p.category = newCat;
+              p.updatedAt = nowStr;
+            }
+          });
+          if (Array.isArray(allProducts)) {
+            allProducts.forEach(p => {
+              if (ids.includes(p.id)) {
+                p.category = newCat;
+                p.updatedAt = nowStr;
+              }
+            });
+            renderProductCheckboxes();
+          }
+
+          closeBatchCategoryModal();
+          clearManageSelection();
+          populateManageCategoryOptions();
+          renderManageProductsList();
+          alert(`🎉 成功更新 ${result.updatedCount || ids.length} 件商品的分類標籤為【${newCat}】！最後更新時間已同步完成。`);
+        } else {
+          alert('更新分類失敗：' + (result.message || '未知錯誤'));
+        }
+      } catch (err) {
+        alert('連線失敗：' + err.toString());
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // 卡片單鍵上下架快速切換
+    async function quickToggleProductStatus(productId, newStatus) {
+      try {
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'batchUpdateProducts',
+            data: {
+              productIds: [productId],
+              updateType: 'status',
+              value: newStatus
+            }
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          const nowStr = result.updatedAt || new Date().toLocaleString();
+          const p = manageAllProducts.find(item => item.id === productId);
+          if (p) {
+            p.status = newStatus;
+            p.updatedAt = nowStr;
+          }
+          if (Array.isArray(allProducts)) {
+            const tapProd = allProducts.find(item => item.id === productId);
+            if (tapProd) {
+              tapProd.status = newStatus;
+              tapProd.updatedAt = nowStr;
+            }
+            if (newStatus === '已下架') {
+              allProducts = allProducts.filter(item => item.id !== productId);
+            }
+            renderProductCheckboxes();
+          }
+          updateManageStats();
+          renderManageProductsList();
+        } else {
+          alert('切換狀態失敗：' + result.message);
+        }
+      } catch (e) {
+        alert('網路異常，切換狀態失敗：' + e.toString());
+      }
+    }
+
+    // 複製商品前台下單直達連結
+    function copyProductOrderUrl(productId) {
+      const url = `${window.location.origin}${window.location.pathname.replace('admin-card-generator.html', 'product.html')}?pid=${productId}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert(`📋 已複製商品 [${productId}] 專屬直達下單連結：\n${url}`);
+        }).catch(() => {
+          prompt('請複製以下商品連結：', url);
+        });
+      } else {
+        prompt('請複製以下商品連結：', url);
+      }
+    }
+
+    // =========================================================================
+    // ✏️ 商品完整資料線上編輯 (100% 全欄位對齊 Tab 2 建檔)
+    // =========================================================================
+
+    // 開啟編輯商品彈窗
+    function openEditProductModal(productId) {
+      const prod = manageAllProducts.find(p => p.id === productId);
+      if (!prod) {
+        alert('找不到該商品資料！');
+        return;
+      }
+
+      // 基本欄位填入
+      document.getElementById('editProdId').value = prod.id;
+      document.getElementById('editModalProdIdBadge').textContent = '#' + prod.id;
+      document.getElementById('editProdCategory').value = prod.category || '連線好物';
+      document.getElementById('editProdStatus').value = prod.status || '上架中';
+      document.getElementById('editProdName').value = prod.name || '';
+      document.getElementById('editProdPrice').value = prod.price || '';
+      document.getElementById('editProdOriginalPrice').value = (prod.originalPrice && Number(prod.originalPrice) > 0) ? prod.originalPrice : '';
+
+      // 成本計算機欄位填入
+      document.getElementById('editCalcCurrency').value = prod.currency || 'JPY';
+      document.getElementById('editCalcPricePreTax').value = prod.costPreTax || '';
+      document.getElementById('editCalcTaxAmount').value = prod.costTax || '';
+      document.getElementById('editCalcExchangeRate').value = prod.exchangeRate || 0.22;
+      document.getElementById('editCalcWeight').value = prod.weightG || '';
+      document.getElementById('editCalcShippingRate').value = prod.shippingRate || 240;
+
+      // 觸發成本計算
+      calculateEditCost();
+
+      // 規格模式判斷與資料填入
+      const specBoxSimple = document.getElementById('editSimpleSpecBox');
+      const specBoxAdv = document.getElementById('editAdvancedSpecBox');
+      const advCheck = document.getElementById('editAdvancedSpecModeCheck');
+      const tableBody = document.getElementById('editSpecTableBody');
+      if (tableBody) tableBody.innerHTML = '';
+
+      const isAdvSpecs = Array.isArray(prod.specs) && prod.specs.some(s => typeof s === 'object' && s !== null);
+
+      if (isAdvSpecs) {
+        advCheck.checked = true;
+        specBoxSimple.style.display = 'none';
+        specBoxAdv.style.display = 'block';
+
+        prod.specs.forEach(s => {
+          if (typeof s === 'object' && s) {
+            addEditSpecRow(s);
+          } else if (typeof s === 'string') {
+            addEditSpecRow({ name: s, price: prod.price, stock: prod.stock, isUnlimited: prod.stock >= 9999 });
+          }
+        });
+      } else {
+        advCheck.checked = false;
+        specBoxSimple.style.display = 'block';
+        specBoxAdv.style.display = 'none';
+
+        const specsStr = Array.isArray(prod.specs) ? prod.specs.join(', ') : (prod.specs || '');
+        document.getElementById('editProdSpecs').value = specsStr;
+
+        const isUnlimited = prod.stock >= 9999;
+        document.getElementById('editUnlimitedStockCheck').checked = isUnlimited;
+        const stockInput = document.getElementById('editProdStock');
+        stockInput.value = isUnlimited ? 9999 : (prod.stock || 10);
+        stockInput.style.display = isUnlimited ? 'none' : 'block';
+      }
+
+      // 截單時間
+      document.getElementById('editProdDeadline').value = prod.deadline || '';
+      const deadlineHint = document.getElementById('editDeadlineHintText');
+      if (deadlineHint) {
+        deadlineHint.textContent = prod.deadline ? `已指定截止時間：${prod.deadline}` : '預設空白（依照全站收單時間）';
+      }
+
+      // 圖片初始化
+      let imgs = [];
+      if (Array.isArray(prod.imageUrls) && prod.imageUrls.length > 0) {
+        imgs = [...prod.imageUrls];
+      } else if (prod.imageUrl) {
+        imgs = [prod.imageUrl];
+      }
+      editCurrentImages = imgs.filter(Boolean);
+      editLocalSelectedFiles = [];
+      renderEditImageThumbs();
+      document.getElementById('editProdImageUrls').value = '';
+      document.getElementById('editUploadStatusText').textContent = '';
+
+      // 詳細描述
+      document.getElementById('editProdDesc').value = prod.description || '';
+
+      // 時間戳記
+      document.getElementById('editCreatedAtText').textContent = prod.createdAt || '--';
+      document.getElementById('editUpdatedAtText').textContent = prod.updatedAt || prod.createdAt || '--';
+
+      // 顯示視窗
+      document.getElementById('editProductModal').classList.add('active');
+    }
+
+    // 關閉編輯彈窗
+    function closeEditProductModal() {
+      const modal = document.getElementById('editProductModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    // 編輯成本計算機
+    function calculateEditCost() {
+      const cur = document.getElementById('editCalcCurrency').value;
+      const preTax = Number(document.getElementById('editCalcPricePreTax').value) || 0;
+      const tax = Number(document.getElementById('editCalcTaxAmount').value) || 0;
+      const rate = Number(document.getElementById('editCalcExchangeRate').value) || 0;
+      const weight = Number(document.getElementById('editCalcWeight').value) || 0;
+      const shipRate = Number(document.getElementById('editCalcShippingRate').value) || 240;
+      const sellPrice = Number(document.getElementById('editProdPrice').value) || 0;
+
+      const totalForeign = preTax + tax;
+      const itemTwd = Math.round(totalForeign * rate);
+      const shipTwd = Math.round((weight / 1000) * shipRate);
+      const totalCost = itemTwd + shipTwd;
+
+      const profit = sellPrice - totalCost;
+      const profitRate = sellPrice > 0 ? Math.round((profit / sellPrice) * 100) : 0;
+
+      const totalForeignEl = document.getElementById('editResTotalForeign');
+      const itemTwdEl = document.getElementById('editResItemTwd');
+      const shipTwdEl = document.getElementById('editResShippingTwd');
+      const weightGEl = document.getElementById('editResWeightG');
+      const totalCostEl = document.getElementById('editResTotalCost');
+      const profitBoxEl = document.getElementById('editResProfitBox');
+
+      if (totalForeignEl) totalForeignEl.textContent = `${totalForeign.toLocaleString()} ${cur}`;
+      if (itemTwdEl) itemTwdEl.textContent = itemTwd.toLocaleString();
+      if (shipTwdEl) shipTwdEl.textContent = `NT$ ${shipTwd.toLocaleString()}`;
+      if (weightGEl) weightGEl.textContent = weight;
+      if (totalCostEl) totalCostEl.textContent = totalCost.toLocaleString();
+
+      if (profitBoxEl) {
+        if (profit >= 0) {
+          profitBoxEl.innerHTML = `預估毛利：<span style="color:#047857;">NT$ ${profit.toLocaleString()} (${profitRate}%)</span>`;
+        } else {
+          profitBoxEl.innerHTML = `預估毛利：<span style="color:#dc2626;">NT$ ${profit.toLocaleString()} (${profitRate}%) ⚠️ 虧損</span>`;
+        }
+      }
+
+      document.getElementById('editFinalCostPrice').value = totalCost;
+      document.getElementById('editFinalCostPreTax').value = preTax;
+      document.getElementById('editFinalTaxAmount').value = tax;
+      document.getElementById('editFinalCostForeign').value = totalForeign;
+      document.getElementById('editFinalExchangeRate').value = rate;
+      document.getElementById('editFinalWeightG').value = weight;
+      document.getElementById('editFinalShippingRate').value = shipRate;
+      document.getElementById('editFinalCostNote').value = `${cur} ${totalForeign} (稅前${preTax}+稅${tax}) * ${rate} + ${weight}g空運 = 成本NT$${totalCost}`;
+    }
+
+    function resetEditCostCalculator() {
+      document.getElementById('editCalcPricePreTax').value = '';
+      document.getElementById('editCalcTaxAmount').value = '';
+      document.getElementById('editCalcWeight').value = '';
+      calculateEditCost();
+    }
+
+    function changeEditCurrencyPreset() {
+      const cur = document.getElementById('editCalcCurrency').value;
+      const rateInput = document.getElementById('editCalcExchangeRate');
+      if (cur === 'JPY') rateInput.value = '0.2200';
+      else if (cur === 'USD') rateInput.value = '32.5000';
+      else if (cur === 'KRW') rateInput.value = '0.0260';
+      else if (cur === 'TWD') rateInput.value = '1.0000';
+      calculateEditCost();
+    }
+
+    function applyEditCostToRecord() {
+      calculateEditCost();
+      alert('✅ 成本數據已套用！儲存商品時將同步至 Google 試算表公式！');
+    }
+
+    // 編輯規格模式切換
+    function toggleEditSpecMode() {
+      const isAdv = document.getElementById('editAdvancedSpecModeCheck').checked;
+      document.getElementById('editSimpleSpecBox').style.display = isAdv ? 'none' : 'block';
+      document.getElementById('editAdvancedSpecBox').style.display = isAdv ? 'block' : 'none';
+
+      if (isAdv) {
+        const tableBody = document.getElementById('editSpecTableBody');
+        if (tableBody && tableBody.children.length === 0) {
+          const simpleSpecs = document.getElementById('editProdSpecs').value.trim();
+          if (simpleSpecs) {
+            batchAddEditSpecs(simpleSpecs);
+          } else {
+            addEditSpecRow();
+          }
+        }
+      }
+    }
+
+    function toggleEditStockInput() {
+      const isUnlimited = document.getElementById('editUnlimitedStockCheck').checked;
+      const stockInput = document.getElementById('editProdStock');
+      if (stockInput) stockInput.style.display = isUnlimited ? 'none' : 'block';
+    }
+
+    // 新增進階規格列
+    function addEditSpecRow(specData = null) {
+      const tableBody = document.getElementById('editSpecTableBody');
+      if (!tableBody) return;
+
+      const basePrice = Number(document.getElementById('editProdPrice').value) || 0;
+      const sName = specData ? specData.name : '';
+      const sPrice = (specData && specData.price !== undefined) ? specData.price : basePrice;
+      const sUnlimited = specData ? Boolean(specData.isUnlimited || specData.stock >= 9999) : true;
+      const sStock = (specData && !sUnlimited) ? (specData.stock || 0) : 9999;
+
+      const tr = document.createElement('tr');
+      tr.className = 'edit-spec-table-row';
+      tr.style.borderBottom = '1px solid #e2e8f0';
+
+      tr.innerHTML = `
+        <td style="padding: 6px 8px;">
+          <input type="text" class="input-text edit-spec-name-input" value="${escapeHtml(sName)}" placeholder="規格名稱 (如：白色 S)" style="padding: 6px 8px; font-size: 12.5px;">
+        </td>
+        <td style="padding: 6px 8px;">
+          <input type="number" class="input-text edit-spec-price-input" value="${sPrice}" placeholder="${basePrice}" style="padding: 6px 8px; font-size: 12.5px;" oninput="updateEditSpecSummary()">
+        </td>
+        <td style="padding: 6px 8px;">
+          <input type="number" class="input-text edit-spec-stock-input" value="${sUnlimited ? 9999 : sStock}" ${sUnlimited ? 'style="display:none;"' : ''} style="padding: 6px 8px; font-size: 12.5px;" oninput="updateEditSpecSummary()">
+          <span class="edit-spec-unlimited-label" style="font-size: 11px; color: #059669; font-weight: 700; ${sUnlimited ? '' : 'display:none;'}">不限庫存</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center;">
+          <input type="checkbox" class="edit-spec-unlimited-check" ${sUnlimited ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleEditRowUnlimited(this)">
+        </td>
+        <td style="padding: 6px 8px; text-align: center;">
+          <button type="button" style="background: none; border: none; color: #ef4444; font-size: 14px; cursor: pointer; padding: 4px;" onclick="this.closest('tr').remove(); updateEditSpecSummary();">🗑️</button>
+        </td>
+      `;
+
+      tableBody.appendChild(tr);
+      updateEditSpecSummary();
+    }
+
+    function toggleEditRowUnlimited(checkEl) {
+      const tr = checkEl.closest('tr');
+      const stockInput = tr.querySelector('.edit-spec-stock-input');
+      const unLabel = tr.querySelector('.edit-spec-unlimited-label');
+      if (checkEl.checked) {
+        if (stockInput) stockInput.style.display = 'none';
+        if (unLabel) unLabel.style.display = 'inline';
+      } else {
+        if (stockInput) {
+          stockInput.style.display = 'block';
+          if (Number(stockInput.value) >= 9999) stockInput.value = 10;
+        }
+        if (unLabel) unLabel.style.display = 'none';
+      }
+      updateEditSpecSummary();
+    }
+
+    function batchAddEditSpecs(customInput = null) {
+      const input = customInput || document.getElementById('editBatchSpecInput').value;
+      if (!input || !input.trim()) {
+        alert('請先輸入規格名稱（以逗號隔開）！');
+        return;
+      }
+      const names = input.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      names.forEach(n => {
+        addEditSpecRow({ name: n, isUnlimited: true, stock: 9999 });
+      });
+      if (!customInput) {
+        document.getElementById('editBatchSpecInput').value = '';
+      }
+    }
+
+    function updateEditSpecSummary() {
+      const rows = document.querySelectorAll('.edit-spec-table-row');
+      let totalStock = 0;
+      let hasUnlimited = false;
+      rows.forEach(r => {
+        const unCheck = r.querySelector('.edit-spec-unlimited-check');
+        if (unCheck && unCheck.checked) {
+          hasUnlimited = true;
+        } else {
+          const stockInput = r.querySelector('.edit-spec-stock-input');
+          totalStock += Number(stockInput ? stockInput.value : 0) || 0;
+        }
+      });
+      const summaryEl = document.getElementById('editSpecSummaryText');
+      if (summaryEl) {
+        summaryEl.textContent = `📊 規格合計：${rows.length} 種 ｜ 總庫存：${hasUnlimited ? '不限名額接單' : totalStock + ' 件'}`;
+      }
+    }
+
+    // 快捷設定截單時間 (編輯模式)
+    function setEditPresetDeadline(val, label) {
+      const input = document.getElementById('editProdDeadline');
+      const hint = document.getElementById('editDeadlineHintText');
+      if (input) input.value = val;
+      if (hint) {
+        hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已設為預設空白（自動依照全站系統統一收單時間）';
+      }
+    }
+
+    // 圖片管理 (編輯模式)
+    function renderEditImageThumbs() {
+      const container = document.getElementById('editImageThumbsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      editCurrentImages.forEach((url, idx) => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position: relative; width: 72px; height: 72px; border-radius: 8px; border: 1.5px solid ' + (idx === 0 ? 'var(--primary)' : '#cbd5e1') + '; overflow: hidden; background: #fff;';
+
+        wrap.innerHTML = `
+          <img src="${escapeHtml(url)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/72?text=Error'">
+          ${idx === 0 ? '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: var(--primary); color: #fff; font-size: 9px; font-weight: 800; text-align: center; padding: 1px 0;">封面主圖</div>' : ''}
+          <button type="button" onclick="removeEditImage(${idx})" style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.65); color: #fff; border: none; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="刪除圖片">✕</button>
+          ${idx !== 0 ? `<button type="button" onclick="setEditCoverImage(${idx})" style="position: absolute; bottom: 2px; left: 2px; right: 2px; background: rgba(15,23,42,0.75); color: #fff; border: none; border-radius: 4px; font-size: 9px; cursor: pointer; padding: 2px 0;" title="設為封面主圖">設為封面</button>` : ''}
+        `;
+        container.appendChild(wrap);
+      });
+    }
+
+    function removeEditImage(idx) {
+      editCurrentImages.splice(idx, 1);
+      renderEditImageThumbs();
+    }
+
+    function setEditCoverImage(idx) {
+      const [img] = editCurrentImages.splice(idx, 1);
+      editCurrentImages.unshift(img);
+      renderEditImageThumbs();
+    }
+
+    function handleEditLocalFilesSelected() {
+      const fileInput = document.getElementById('editFileUploadInput');
+      const statusText = document.getElementById('editUploadStatusText');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+
+      const newFiles = Array.from(fileInput.files);
+      editLocalSelectedFiles = editLocalSelectedFiles.concat(newFiles);
+      if (statusText) statusText.textContent = `已選取 ${editLocalSelectedFiles.length} 張新照片待上傳`;
+
+      // 預覽新選取的本地圖片
+      newFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          editCurrentImages.push(e.target.result);
+          renderEditImageThumbs();
+        };
+        reader.readAsDataURL(file);
+      });
+      fileInput.value = '';
+    }
+
+    function renderEditUrlThumbs() {
+      // 網址改變時不即時重繪以免打斷輸入，儲存時合併
+    }
+
+    // 儲存商品修改
+    async function saveEditProduct() {
+      const pid = document.getElementById('editProdId').value.trim();
+      const name = document.getElementById('editProdName').value.trim();
+      const price = document.getElementById('editProdPrice').value.trim();
+      const origPrice = document.getElementById('editProdOriginalPrice').value.trim();
+      const category = document.getElementById('editProdCategory').value.trim();
+      const status = document.getElementById('editProdStatus').value;
+      const desc = document.getElementById('editProdDesc').value.trim();
+      const deadline = document.getElementById('editProdDeadline').value.trim();
+
+      if (!name || !price) {
+        alert('請務必填寫「商品名稱」與「連線代購價」！');
+        return;
+      }
+
+      const saveBtn = document.getElementById('btnSaveEditProduct');
+      saveBtn.disabled = true;
+
+      try {
+        // 1. 圖片處理：若有本地檔案先壓縮上傳至 Drive
+        let finalImages = editCurrentImages.filter(img => !img.startsWith('data:image/')); // 排除 base64 預覽暫存
+
+        if (editLocalSelectedFiles.length > 0) {
+          saveBtn.textContent = `⚡ 正在壓縮 ${editLocalSelectedFiles.length} 張圖片...`;
+          const base64Files = [];
+          for (let i = 0; i < editLocalSelectedFiles.length; i++) {
+            saveBtn.textContent = `⚡ 正在壓縮圖片 (${i + 1}/${editLocalSelectedFiles.length})...`;
+            const comp = await compressImage(editLocalSelectedFiles[i]);
+            base64Files.push(comp);
+          }
+
+          saveBtn.textContent = `☁️ 正在上傳至 Google Drive...`;
+          const uploadRes = await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'uploadImages',
+              data: { files: base64Files }
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success && uploadResult.urls && uploadResult.urls.length > 0) {
+            finalImages = finalImages.concat(uploadResult.urls);
+          } else {
+            alert('⚠️ 圖片上傳至 Google Drive 失敗：' + (uploadResult.message || '未知錯誤'));
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
+            return;
+          }
+        }
+
+        // 加上多行網址輸入框的圖片
+        const urlInput = document.getElementById('editProdImageUrls').value.trim();
+        if (urlInput) {
+          const directUrls = urlInput.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+          finalImages = finalImages.concat(directUrls);
+        }
+
+        if (finalImages.length === 0) {
+          alert('請至少保留 1 張商品照片或網址！');
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
+          return;
+        }
+
+        // 2. 規格與庫存處理
+        const isAdv = document.getElementById('editAdvancedSpecModeCheck').checked;
+        let specsPayload = [];
+        let calculatedTotalStock = 0;
+        let hasUnlimitedSpec = false;
+
+        if (isAdv) {
+          const rows = document.querySelectorAll('.edit-spec-table-row');
+          rows.forEach(r => {
+            const sName = r.querySelector('.edit-spec-name-input').value.trim();
+            if (!sName) return;
+            const sPrice = Number(r.querySelector('.edit-spec-price-input').value) || Number(price);
+            const sUn = r.querySelector('.edit-spec-unlimited-check').checked;
+            const sStock = sUn ? 999999 : (Number(r.querySelector('.edit-spec-stock-input').value) || 0);
+            if (sUn) hasUnlimitedSpec = true;
+            else calculatedTotalStock += sStock;
+
+            specsPayload.push({
+              name: sName,
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUn
+            });
+          });
+
+          if (specsPayload.length === 0) {
+            alert('啟用獨立規格時，請至少填寫一個規格名稱！');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
+            return;
+          }
+        } else {
+          specsPayload = document.getElementById('editProdSpecs').value.trim();
+          hasUnlimitedSpec = document.getElementById('editUnlimitedStockCheck').checked;
+          calculatedTotalStock = hasUnlimitedSpec ? 999999 : (Number(document.getElementById('editProdStock').value) || 10);
+        }
+
+        const finalStock = isAdv 
+          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock) 
+          : calculatedTotalStock;
+
+        // 3. 成本計算數值
+        calculateEditCost();
+        const costPrice = Number(document.getElementById('editFinalCostPrice').value) || 0;
+        const costNote = document.getElementById('editFinalCostNote').value;
+        const cur = document.getElementById('editCalcCurrency').value;
+        const preTax = Number(document.getElementById('editFinalCostPreTax').value) || 0;
+        const tax = Number(document.getElementById('editFinalTaxAmount').value) || 0;
+        const rate = Number(document.getElementById('editFinalExchangeRate').value) || 0;
+        const weight = Number(document.getElementById('editFinalWeightG').value) || 0;
+        const shipRate = Number(document.getElementById('editFinalShippingRate').value) || 240;
+
+        saveBtn.textContent = '⏳ 正在更新至 Google 試算表...';
+
+        const payload = {
+          action: 'updateProduct',
+          data: {
+            id: pid,
+            name: name,
+            category: category,
+            price: Number(price),
+            originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
+            status: status,
+            stock: finalStock,
+            isUnlimitedStock: hasUnlimitedSpec,
+            specs: specsPayload,
+            imageUrl: finalImages[0] || '',
+            imageUrls: finalImages,
+            description: desc,
+            deadline: deadline,
+            currency: cur,
+            costPrice: costPrice,
+            costNote: costNote,
+            costPricePreTax: preTax,
+            taxAmount: tax,
+            exchangeRate: rate,
+            weightG: weight,
+            shippingRate: shipRate
+          }
+        };
+
+        const res = await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          const nowStr = result.updatedAt || new Date().toLocaleString();
+          // 更新本地管理清單快取
+          const targetIndex = manageAllProducts.findIndex(p => p.id === pid);
+          if (targetIndex !== -1) {
+            manageAllProducts[targetIndex] = {
+              ...manageAllProducts[targetIndex],
+              name: name,
+              category: category,
+              price: Number(price),
+              originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
+              status: status,
+              stock: finalStock,
+              specs: Array.isArray(specsPayload) ? specsPayload : (typeof specsPayload === 'string' ? specsPayload.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []),
+              imageUrl: finalImages[0] || '',
+              imageUrls: finalImages,
+              description: desc,
+              deadline: deadline,
+              currency: cur,
+              costPrice: costPrice,
+              costNote: costNote,
+              costPreTax: preTax,
+              costTax: tax,
+              exchangeRate: rate,
+              weightG: weight,
+              shippingRate: shipRate,
+              updatedAt: nowStr
+            };
+          }
+
+          // 同步更新 Tab 1
+          if (Array.isArray(allProducts)) {
+            const pubIdx = allProducts.findIndex(p => p.id === pid);
+            if (pubIdx !== -1) {
+              if (status === '已下架') {
+                allProducts.splice(pubIdx, 1);
+              } else {
+                allProducts[pubIdx] = { ...allProducts[pubIdx], ...manageAllProducts[targetIndex] };
+              }
+            } else if (status === '上架中') {
+              allProducts.unshift(manageAllProducts[targetIndex]);
+            }
+            renderProductCheckboxes();
+          }
+
+          closeEditProductModal();
+          updateManageStats();
+          populateManageCategoryOptions();
+          renderManageProductsList();
+
+          alert(`🎉 商品 [${pid}] 【${name}】資料更新成功！最後更新時間已記錄，試算表公式已同步連動。`);
+        } else {
+          alert('更新失敗：' + (result.message || '未知錯誤'));
+        }
+      } catch (err) {
+        alert('儲存過程發生錯誤：' + err.toString());
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
       }
     }
   </script>

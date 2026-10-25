@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品資料維護與管理介面 - 操作展示雛形</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #e11d48;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #f1f5f9;
+      color: var(--text);
+      padding: 20px 16px 80px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 24px;
+      border-radius: 18px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+    }
+    .header-banner h1 {
+      font-size: 22px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-banner p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+
+    /* 頂部控制列：搜尋、篩選與統計 */
+    .controls-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .controls-top {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .search-input-wrap {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 13.5px;
+      background: #f8fafc;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.5;
+      font-size: 14px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 10px;
+    }
+    .filter-btn {
+      border: none;
+      background: transparent;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn.active {
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stats-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #64748b;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+    }
+
+    /* 商品列表 (沿用方案 A 精緻分層卡片排版) */
+    .product-list-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .prod-manage-card {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .prod-manage-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+    }
+    .prod-manage-card.status-off {
+      background: #f8fafc;
+      opacity: 0.75;
+    }
+
+    .card-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+    .card-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .card-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 11.5px;
+    }
+    .tag-code {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: 'Outfit', monospace;
+      font-weight: 700;
+    }
+    .tag-stock {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-weight: 700;
+    }
+    .tag-stock.out {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+    .tag-deadline {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 700;
+    }
+
+    .card-actions-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .btn-card-action {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: #334155;
+      transition: all 0.15s;
+    }
+    .btn-card-action:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+    .btn-card-edit {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+    .btn-card-edit:hover {
+      background: #dbeafe;
+    }
+    .btn-card-status {
+      color: #059669;
+    }
+    .btn-card-status.off {
+      color: #94a3b8;
+    }
+
+    /* 編輯視窗 Modal (Drawer) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 18px 22px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .modal-body {
+      padding: 20px 22px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .form-row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .form-field label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+    }
+    .form-field input, .form-field select, .form-field textarea {
+      padding: 9px 12px;
+      border-radius: 9px;
+      border: 1.5px solid var(--border);
+      font-size: 13.5px;
+      outline: none;
+      background: #f8fafc;
+      font-family: inherit;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-save-submit {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-cancel {
+      background: #fff;
+      color: #64748b;
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- 頂部橫幅 -->
+    <div class="header-banner">
+      <h1>🛠️ 商品資料維護與即時管理中心</h1>
+      <p>免開 Google Sheets 試算表！直接在網頁上一鍵修改商品品名、代購價、庫存名額、規格選項、上下架狀態與截止時間，自動雙向同步試算表。</p>
+    </div>
+
+    <!-- 頂部控制列 -->
+    <div class="controls-panel">
+      <div class="controls-top">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱、編號 (如 J2610)、活動分類或規格..." oninput="handleFilter()">
+        </div>
+        <div class="filter-tabs">
+          <button type="button" class="filter-btn active" onclick="setFilter('all', this)">全部商品 (4)</button>
+          <button type="button" class="filter-btn" onclick="setFilter('on', this)">🟢 上架中 (3)</button>
+          <button type="button" class="filter-btn" onclick="setFilter('off', this)">⚪️ 已下架 (1)</button>
+        </div>
+      </div>
+      <div class="stats-summary">
+        <span>📦 目前篩選顯示共 <b>4</b> 件商品</span>
+        <span style="color: #059669; font-weight: 700;">🟢 Google 試算表即時連線正常</span>
+      </div>
+    </div>
+
+    <!-- 商品管理清單 -->
+    <div class="product-list-grid" id="productGrid">
+
+      <!-- 商品 1 -->
+      <div class="prod-manage-card" data-status="on" data-id="J2610020006">
+        <img class="card-thumb" src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+        <div class="card-info">
+          <div class="card-header-row">
+            <div class="card-title">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</div>
+            <div class="card-price">NT$ 1,500</div>
+          </div>
+          <div class="card-meta-row">
+            <span class="tag-code">#J2610020006</span>
+            <span class="tag-stock">🟢 不限量接單 (庫存充足)</span>
+            <span class="tag-deadline">⏰ 2026-10-28 23:59 截單</span>
+            <span style="font-size:11px; color:#64748b;">分類: 2026.10月連線 ｜ 規格: 單一規格</span>
+          </div>
+          <div class="card-actions-row">
+            <button type="button" class="btn-card-action btn-card-edit" onclick="openEditModal('J2610020006', '日本🇯🇵境內版 武田合利他命EX PLUS 270錠', 1500, 1880, '999999', '2026-10-28 23:59', '2026.10月連線', '單一規格')">
+              ✏️ 編輯商品資料
+            </button>
+            <button type="button" class="btn-card-action btn-card-status" onclick="toggleStatus(this)">
+              🟢 上架中 (點擊下架)
+            </button>
+            <button type="button" class="btn-card-action" onclick="copyLink('J2610020006')">
+              🔗 複製下單連結
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 商品 2 -->
+      <div class="prod-manage-card" data-status="on" data-id="K2610020001">
+        <img class="card-thumb" src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+        <div class="card-info">
+          <div class="card-header-row">
+            <div class="card-title">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL (專櫃回饋)</div>
+            <div class="card-price">NT$ 790</div>
+          </div>
+          <div class="card-meta-row">
+            <span class="tag-code">#K2610020001</span>
+            <span class="tag-stock">📦 現貨剩餘 15 件</span>
+            <span class="tag-deadline">⏰ 2026-10-25 23:59 截單</span>
+            <span style="font-size:11px; color:#64748b;">分類: 2026.10月連線 ｜ 規格: 正裝 15ml</span>
+          </div>
+          <div class="card-actions-row">
+            <button type="button" class="btn-card-action btn-card-edit" onclick="openEditModal('K2610020001', '韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL (專櫃回饋)', 790, 950, '15', '2026-10-25 23:59', '2026.10月連線', '正裝 15ml')">
+              ✏️ 編輯商品資料
+            </button>
+            <button type="button" class="btn-card-action btn-card-status" onclick="toggleStatus(this)">
+              🟢 上架中 (點擊下架)
+            </button>
+            <button type="button" class="btn-card-action" onclick="copyLink('K2610020001')">
+              🔗 複製下單連結
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 商品 3 (已下架示範) -->
+      <div class="prod-manage-card status-off" data-status="off" data-id="J2610050011">
+        <img class="card-thumb" src="https://via.placeholder.com/72" alt="">
+        <div class="card-info">
+          <div class="card-header-row">
+            <div class="card-title">韓國🇰🇷 longchamp LE PLIAGE XTRA 零錢包 灰 (已結單)</div>
+            <div class="card-price" style="color: #64748b;">NT$ 5,150</div>
+          </div>
+          <div class="card-meta-row">
+            <span class="tag-code">#J2610050011</span>
+            <span class="tag-stock out">⚪️ 已下架 (前台隱藏)</span>
+            <span style="font-size:11px; color:#94a3b8;">分類: 2026.10月連線 ｜ 規格: 灰色</span>
+          </div>
+          <div class="card-actions-row">
+            <button type="button" class="btn-card-action btn-card-edit" onclick="openEditModal('J2610050011', '韓國🇰🇷 longchamp LE PLIAGE XTRA 零錢包 灰', 5150, 5800, '0', '', '2026.10月連線', '灰色')">
+              ✏️ 編輯商品資料
+            </button>
+            <button type="button" class="btn-card-action btn-card-status off" onclick="toggleStatus(this)">
+              ⚪️ 已下架 (點擊重新上架)
+            </button>
+            <button type="button" class="btn-card-action" onclick="copyLink('J2610050011')">
+              🔗 複製下單連結
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ✏️ 商品資料編輯 Modal 視窗 -->
+  <div id="editModalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>✏️ 編輯商品詳細資料</span>
+          <span id="modalProdIdBadge" style="font-size: 11.5px; background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 6px; font-family: monospace;">#J2610020006</span>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeEditModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="editProdId">
+
+        <div class="form-field">
+          <label>商品名稱 *</label>
+          <input type="text" id="editProdName" placeholder="請填寫完整商品名稱">
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-field">
+            <label>連線代購價 (NT$) *</label>
+            <input type="number" id="editProdPrice" placeholder="例：1500" style="font-weight: 800; color: #e11d48;">
+          </div>
+          <div class="form-field">
+            <label>專櫃原價 (NT$ / 選填)</label>
+            <input type="number" id="editProdOrigPrice" placeholder="例：1880">
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-field">
+            <label>現貨庫存名額</label>
+            <input type="number" id="editProdStock" placeholder="例：10 (不限量請填 999999)">
+          </div>
+          <div class="form-field">
+            <label>指定收單截止時間</label>
+            <input type="text" id="editProdDeadline" placeholder="例如：2026-10-28 23:59 (留空依全站)">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>活動分類標籤</label>
+          <input type="text" id="editProdCategory" placeholder="例：2026.10月連線">
+        </div>
+
+        <div class="form-field">
+          <label>規格款式 (用逗號隔開)</label>
+          <input type="text" id="editProdSpecs" placeholder="例：經典黑, 燕麥白, 櫻花粉">
+        </div>
+
+        <div class="form-field">
+          <label>商品詳細說明 / 文案描述</label>
+          <textarea id="editProdDesc" rows="3" placeholder="日本正品採購，輕便好收納..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeEditModal()">取消</button>
+        <button type="button" class="btn-save-submit" onclick="saveProductEdit()">
+          💾 儲存並同步更新至 Google 試算表
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openEditModal(id, name, price, origPrice, stock, deadline, cat, specs) {
+      document.getElementById('editProdId').value = id;
+      document.getElementById('modalProdIdBadge').textContent = '#' + id;
+      document.getElementById('editProdName').value = name;
+      document.getElementById('editProdPrice').value = price;
+      document.getElementById('editProdOrigPrice').value = origPrice || '';
+      document.getElementById('editProdStock').value = stock;
+      document.getElementById('editProdDeadline').value = deadline || '';
+      document.getElementById('editProdCategory').value = cat || '';
+      document.getElementById('editProdSpecs').value = specs || '';
+      document.getElementById('editModalOverlay').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModalOverlay').classList.remove('active');
+    }
+
+    function toggleStatus(btn) {
+      const card = btn.closest('.prod-manage-card');
+      const isOff = card.classList.contains('status-off');
+      if (isOff) {
+        card.classList.remove('status-off');
+        btn.classList.remove('off');
+        btn.textContent = '🟢 上架中 (點擊下架)';
+        card.dataset.status = 'on';
+        alert('🎉 商品已切換為【上架中】，前台大廳即時開放下單！');
+      } else {
+        card.classList.add('status-off');
+        btn.classList.add('off');
+        btn.textContent = '⚪️ 已下架 (點擊重新上架)';
+        card.dataset.status = 'off';
+        alert('📦 商品已切換為【已下架】，前台將自動隱藏此商品！');
+      }
+    }
+
+    function copyLink(pid) {
+      const url = `${window.location.origin}/product.html?pid=${pid}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert(`📋 已複製商品下單直達連結：\n${url}`);
+        });
+      } else {
+        prompt('請複製商品連結：', url);
+      }
+    }
+
+    function saveProductEdit() {
+      const pid = document.getElementById('editProdId').value;
+      const name = document.getElementById('editProdName').value;
+      const price = document.getElementById('editProdPrice').value;
+
+      if (!name || !price) {
+        alert('商品名稱與價格為必填欄位！');
+        return;
+      }
+
+      alert(`✅ 商品【${name}】資料已成功修改！\n（正式版本將直接透過 API 寫入 Google 試算表，免開 Sheets 編輯！）`);
+      closeEditModal();
+    }
+
+    function setFilter(type, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.prod-manage-card');
+      cards.forEach(card => {
+        if (type === 'all') {
+          card.style.display = 'flex';
+        } else if (type === 'on') {
+          card.style.display = (card.dataset.status === 'on') ? 'flex' : 'none';
+        } else if (type === 'off') {
+          card.style.display = (card.dataset.status === 'off') ? 'flex' : 'none';
+        }
+      });
+    }
+
+    function handleFilter() {
+      const kw = document.getElementById('searchInput').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('.prod-manage-card');
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(kw) ? 'flex' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>
