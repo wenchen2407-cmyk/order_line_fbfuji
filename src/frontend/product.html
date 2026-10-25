@@ -1089,6 +1089,9 @@
 
           // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名進站通報
           triggerProductPageView(true);
+
+          // 🌟 關鍵解鎖：取得真實身分後，立即執行會員核對（老客 0 秒自動無感解鎖）
+          checkFirstTimeCustomerOnLoad();
         }
 
         // 同步導航按鈕帶入 uid, name, avatar

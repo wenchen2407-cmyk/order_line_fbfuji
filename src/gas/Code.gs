@@ -2295,27 +2295,63 @@ function sendPageViewAlertEmail(info) {
     const now = info.now instanceof Date ? info.now : new Date();
     const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
 
-    // 🔍 智慧身分反查：若有 userId，自動從【顧客歸戶】工作表反查真實姓名、最新暱稱與電話
+    // 🔍 智慧身分反查與「進站即自動建立初階顧客歸戶卡」
     let customerRealName = '';
     let customerLineNick = '';
     let customerPhone = '';
     if (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999') {
       try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
-        if (custSheet) {
-          const custData = custSheet.getDataRange().getValues();
-          for (let c = 1; c < custData.length; c++) {
-            if (String(custData[c][0]).trim() === userId) {
-              customerLineNick = String(custData[c][1] || '').trim();
-              customerRealName = String(custData[c][2] || '').trim();
-              customerPhone = String(custData[c][3] || '').trim();
-              break;
+        let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+        if (!custSheet) {
+          custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+          custSheet.appendRow([
+            'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
+            '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+          ]);
+          custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+          custSheet.getRange("D:D").setNumberFormat('@');
+        }
+
+        const custData = custSheet.getDataRange().getValues();
+        let userFound = false;
+        for (let c = 1; c < custData.length; c++) {
+          if (String(custData[c][0]).trim() === userId) {
+            userFound = true;
+            customerLineNick = String(custData[c][1] || '').trim();
+            customerRealName = String(custData[c][2] || '').trim();
+            customerPhone = String(custData[c][3] || '').trim();
+            
+            // 若有最新 LINE 暱稱且試算表為空或不同，自動更新暱稱
+            if (userName && customerLineNick !== userName) {
+              custSheet.getRange(c + 1, 2).setValue(userName);
+              customerLineNick = userName;
             }
+            break;
           }
         }
+
+        // 🌟 核心功能：進站即自動建立初階顧客歸戶卡
+        // 若該真實 LINE 好友在試算表中完全無資料，第一時間自動建立初階檔案
+        if (!userFound && (userName || userId)) {
+          const defaultSource = 'LINE 好友進站';
+          custSheet.appendRow([
+            userId,                 // LINE_User_ID
+            userName || 'LINE 會員', // 最新暱稱
+            '',                     // 真實姓名 (待填寫)
+            '',                     // 電話 (待填寫)
+            '',                     // 常用寄送地址
+            0,                      // 歷史訂單數
+            0,                      // 總消費金額
+            '',                     // 首購日期
+            nowStr,                 // 最後進站/活動日期
+            '',                     // 黑名單標記
+            defaultSource           // 顧客來源
+          ]);
+          customerLineNick = userName || 'LINE 會員';
+        }
       } catch (custErr) {
-        console.warn('反查顧客歸戶失敗:', custErr);
+        console.warn('反查或自動建立初階顧客歸戶失敗:', custErr);
       }
     }
 
