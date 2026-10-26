@@ -83,11 +83,37 @@
       margin-bottom: 14px;
     }
     .manage-stat-box {
-      background: #f8fafc;
-      border: 1px solid var(--border);
+      background: #ffffff;
+      border: 1.5px solid var(--border);
       border-radius: 12px;
       padding: 10px 14px;
       text-align: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      position: relative;
+    }
+    .manage-stat-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .manage-stat-box.active {
+      border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    .manage-stat-box.active[data-status="all"] {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .manage-stat-box.active[data-status="active"] {
+      border-color: #16a34a;
+      background: #f0fdf4;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    }
+    .manage-stat-box.active[data-status="inactive"] {
+      border-color: #64748b;
+      background: #f1f5f9;
+      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
     }
     .manage-stat-label {
       font-size: 11.5px;
@@ -1102,42 +1128,37 @@
           </button>
         </div>
 
-        <!-- 頂部即時統計指標 -->
+        <!-- 頂部即時統計看板 (點擊直接切換狀態，直覺免多一列按鈕) -->
         <div class="manage-stats-grid">
-          <div class="manage-stat-box">
+          <div class="manage-stat-box active" id="statBoxAll" data-status="all" onclick="selectManageStatus('all')" title="點擊切換：檢視全部商品">
             <div class="manage-stat-label">📦 全部品項數</div>
             <div id="manageStatAll" class="manage-stat-num">--</div>
+            <div class="stat-indicator" style="font-size: 10px; color: #2563eb; font-weight: 800; margin-top: 3px;">● 目前檢視中</div>
           </div>
-          <div class="manage-stat-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+          <div class="manage-stat-box" id="statBoxActive" data-status="active" onclick="selectManageStatus('active')" title="點擊切換：僅看上架中商品" style="background: #f0fdf4; border-color: #bbf7d0;">
             <div class="manage-stat-label" style="color: #15803d;">🟢 上架中 (前台可買)</div>
             <div id="manageStatActive" class="manage-stat-num" style="color: #15803d;">--</div>
+            <div class="stat-indicator" style="font-size: 10px; color: #16a34a; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
           </div>
-          <div class="manage-stat-box" style="background: #f8fafc; border-color: #cbd5e1;">
+          <div class="manage-stat-box" id="statBoxInactive" data-status="inactive" onclick="selectManageStatus('inactive')" title="點擊切換：僅看已下架商品" style="background: #f8fafc; border-color: #cbd5e1;">
             <div class="manage-stat-label" style="color: #64748b;">⚪️ 已下架 (暫停販售)</div>
             <div id="manageStatInactive" class="manage-stat-num" style="color: #64748b;">--</div>
+            <div class="stat-indicator" style="font-size: 10px; color: #64748b; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
           </div>
         </div>
 
-        <!-- 搜尋與狀態切換篩選列 -->
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;">
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-            <div style="flex: 1; min-width: 220px; position: relative;">
-              <input type="text" id="manageSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
-              <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
-              <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
-            </div>
-            <select id="manageCategoryFilter" class="input-text" style="width: auto; min-width: 150px; font-size: 13px; padding: 9px 12px;" onchange="handleManageSearch()">
+        <!-- 搜尋與活動分類過濾列 (簡約整併，移除下方冗餘狀態按鈕) -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+          <div style="flex: 1; min-width: 220px; position: relative;">
+            <input type="text" id="manageSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
+            <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="manageCategoryFilter" class="input-text" style="width: auto; min-width: 150px; font-size: 13px; padding: 8px 12px;" onchange="handleManageSearch()">
               <option value="">全部活動分類</option>
             </select>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; gap: 6px;" id="manageFilterBtnGroup">
-              <button type="button" class="btn-time-preset active" data-status="all" onclick="filterManageStatus('all', this)">全部</button>
-              <button type="button" class="btn-time-preset" data-status="active" onclick="filterManageStatus('active', this)">🟢 僅看上架中</button>
-              <button type="button" class="btn-time-preset" data-status="inactive" onclick="filterManageStatus('inactive', this)">⚪️ 僅看已下架</button>
-            </div>
-            <div id="manageResultCountText" style="font-size: 12px; color: var(--text-muted); font-weight: 600;"></div>
+            <div id="manageResultCountText" style="font-size: 12px; color: var(--text-muted); font-weight: 700; white-space: nowrap;"></div>
           </div>
         </div>
 
@@ -1370,6 +1391,10 @@
             <div>
               <label class="form-label" style="font-size: 12px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240元/kg</span></label>
               <input type="number" id="editCalcWeight" class="input-text" style="padding: 7px;" placeholder="例：350" oninput="calculateEditCost()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 12px;">空運單價 (元/kg)</label>
+              <input type="number" id="editCalcShippingRate" class="input-text" style="padding: 7px;" value="240" oninput="calculateEditCost()">
             </div>
           </div>
 
@@ -3290,15 +3315,33 @@
       renderManageProductsList();
     }
 
-    // 切換狀態篩選
-    function filterManageStatus(status, btn) {
+    // 切換狀態篩選 (直覺式儀表板點擊)
+    function selectManageStatus(status) {
       manageCurrentStatusFilter = status;
-      const btnGroup = document.getElementById('manageFilterBtnGroup');
-      if (btnGroup) {
-        btnGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-      }
-      if (btn) btn.classList.add('active');
+
+      const boxMap = {
+        'all': 'statBoxAll',
+        'active': 'statBoxActive',
+        'inactive': 'statBoxInactive'
+      };
+
+      Object.entries(boxMap).forEach(([st, boxId]) => {
+        const box = document.getElementById(boxId);
+        if (!box) return;
+        const isMatch = (st === status);
+        box.classList.toggle('active', isMatch);
+        const indicator = box.querySelector('.stat-indicator');
+        if (indicator) {
+          indicator.style.display = isMatch ? 'block' : 'none';
+        }
+      });
+
       renderManageProductsList();
+    }
+
+    // 相容性函式別名
+    function filterManageStatus(status, btn) {
+      selectManageStatus(status);
     }
 
     // 渲染商品管理清單 (卡片式)
@@ -3741,22 +3784,22 @@
         return;
       }
 
-      // 基本欄位填入
-      document.getElementById('editProdId').value = prod.id;
-      document.getElementById('editModalProdIdBadge').textContent = '#' + prod.id;
-      document.getElementById('editProdCategory').value = prod.category || '連線好物';
-      document.getElementById('editProdStatus').value = prod.status || '上架中';
-      document.getElementById('editProdName').value = prod.name || '';
-      document.getElementById('editProdPrice').value = prod.price || '';
-      document.getElementById('editProdOriginalPrice').value = (prod.originalPrice && Number(prod.originalPrice) > 0) ? prod.originalPrice : '';
+      // 基本欄位填入 (含安全防呆驗證)
+      if (document.getElementById('editProdId')) document.getElementById('editProdId').value = prod.id;
+      if (document.getElementById('editModalProdIdBadge')) document.getElementById('editModalProdIdBadge').textContent = '#' + prod.id;
+      if (document.getElementById('editProdCategory')) document.getElementById('editProdCategory').value = prod.category || '連線好物';
+      if (document.getElementById('editProdStatus')) document.getElementById('editProdStatus').value = prod.status || '上架中';
+      if (document.getElementById('editProdName')) document.getElementById('editProdName').value = prod.name || '';
+      if (document.getElementById('editProdPrice')) document.getElementById('editProdPrice').value = prod.price || '';
+      if (document.getElementById('editProdOriginalPrice')) document.getElementById('editProdOriginalPrice').value = (prod.originalPrice && Number(prod.originalPrice) > 0) ? prod.originalPrice : '';
 
       // 成本計算機欄位填入
-      document.getElementById('editCalcCurrency').value = prod.currency || 'JPY';
-      document.getElementById('editCalcPricePreTax').value = prod.costPreTax || '';
-      document.getElementById('editCalcTaxAmount').value = prod.costTax || '';
-      document.getElementById('editCalcExchangeRate').value = prod.exchangeRate || 0.22;
-      document.getElementById('editCalcWeight').value = prod.weightG || '';
-      document.getElementById('editCalcShippingRate').value = prod.shippingRate || 240;
+      if (document.getElementById('editCalcCurrency')) document.getElementById('editCalcCurrency').value = prod.currency || 'JPY';
+      if (document.getElementById('editCalcPricePreTax')) document.getElementById('editCalcPricePreTax').value = prod.costPreTax || '';
+      if (document.getElementById('editCalcTaxAmount')) document.getElementById('editCalcTaxAmount').value = prod.costTax || '';
+      if (document.getElementById('editCalcExchangeRate')) document.getElementById('editCalcExchangeRate').value = prod.exchangeRate || 0.22;
+      if (document.getElementById('editCalcWeight')) document.getElementById('editCalcWeight').value = prod.weightG || '';
+      if (document.getElementById('editCalcShippingRate')) document.getElementById('editCalcShippingRate').value = prod.shippingRate || 240;
 
       // 觸發成本計算
       calculateEditCost();
@@ -3771,9 +3814,9 @@
       const isAdvSpecs = Array.isArray(prod.specs) && prod.specs.some(s => typeof s === 'object' && s !== null);
 
       if (isAdvSpecs) {
-        advCheck.checked = true;
-        specBoxSimple.style.display = 'none';
-        specBoxAdv.style.display = 'block';
+        if (advCheck) advCheck.checked = true;
+        if (specBoxSimple) specBoxSimple.style.display = 'none';
+        if (specBoxAdv) specBoxAdv.style.display = 'block';
 
         prod.specs.forEach(s => {
           if (typeof s === 'object' && s) {
@@ -3783,22 +3826,29 @@
           }
         });
       } else {
-        advCheck.checked = false;
-        specBoxSimple.style.display = 'block';
-        specBoxAdv.style.display = 'none';
+        if (advCheck) advCheck.checked = false;
+        if (specBoxSimple) specBoxSimple.style.display = 'block';
+        if (specBoxAdv) specBoxAdv.style.display = 'none';
 
-        const specsStr = Array.isArray(prod.specs) ? prod.specs.join(', ') : (prod.specs || '');
-        document.getElementById('editProdSpecs').value = specsStr;
+        let specsStr = '';
+        if (Array.isArray(prod.specs)) {
+          specsStr = prod.specs.map(s => (typeof s === 'object' && s) ? s.name : s).filter(Boolean).join(', ');
+        } else if (typeof prod.specs === 'string') {
+          specsStr = prod.specs;
+        }
+        if (document.getElementById('editProdSpecs')) document.getElementById('editProdSpecs').value = specsStr;
 
-        const isUnlimited = prod.stock >= 9999;
-        document.getElementById('editUnlimitedStockCheck').checked = isUnlimited;
+        const isUnlimited = Number(prod.stock) >= 9999;
+        if (document.getElementById('editUnlimitedStockCheck')) document.getElementById('editUnlimitedStockCheck').checked = isUnlimited;
         const stockInput = document.getElementById('editProdStock');
-        stockInput.value = isUnlimited ? 9999 : (prod.stock || 10);
-        stockInput.style.display = isUnlimited ? 'none' : 'block';
+        if (stockInput) {
+          stockInput.value = isUnlimited ? 9999 : (prod.stock || 10);
+          stockInput.style.display = isUnlimited ? 'none' : 'block';
+        }
       }
 
       // 截單時間
-      document.getElementById('editProdDeadline').value = prod.deadline || '';
+      if (document.getElementById('editProdDeadline')) document.getElementById('editProdDeadline').value = prod.deadline || '';
       const deadlineHint = document.getElementById('editDeadlineHintText');
       if (deadlineHint) {
         deadlineHint.textContent = prod.deadline ? `已指定截止時間：${prod.deadline}` : '預設空白（依照全站收單時間）';
@@ -3814,18 +3864,19 @@
       editCurrentImages = imgs.filter(Boolean);
       editLocalSelectedFiles = [];
       renderEditImageThumbs();
-      document.getElementById('editProdImageUrls').value = '';
-      document.getElementById('editUploadStatusText').textContent = '';
+      if (document.getElementById('editProdImageUrls')) document.getElementById('editProdImageUrls').value = '';
+      if (document.getElementById('editUploadStatusText')) document.getElementById('editUploadStatusText').textContent = '';
 
       // 詳細描述
-      document.getElementById('editProdDesc').value = prod.description || '';
+      if (document.getElementById('editProdDesc')) document.getElementById('editProdDesc').value = prod.description || '';
 
       // 時間戳記
-      document.getElementById('editCreatedAtText').textContent = prod.createdAt || '--';
-      document.getElementById('editUpdatedAtText').textContent = prod.updatedAt || prod.createdAt || '--';
+      if (document.getElementById('editCreatedAtText')) document.getElementById('editCreatedAtText').textContent = prod.createdAt || '--';
+      if (document.getElementById('editUpdatedAtText')) document.getElementById('editUpdatedAtText').textContent = prod.updatedAt || prod.createdAt || '--';
 
       // 顯示視窗
-      document.getElementById('editProductModal').classList.add('active');
+      const modal = document.getElementById('editProductModal');
+      if (modal) modal.classList.add('active');
     }
 
     // 關閉編輯彈窗
@@ -3836,13 +3887,14 @@
 
     // 編輯成本計算機
     function calculateEditCost() {
-      const cur = document.getElementById('editCalcCurrency').value;
-      const preTax = Number(document.getElementById('editCalcPricePreTax').value) || 0;
-      const tax = Number(document.getElementById('editCalcTaxAmount').value) || 0;
-      const rate = Number(document.getElementById('editCalcExchangeRate').value) || 0;
-      const weight = Number(document.getElementById('editCalcWeight').value) || 0;
-      const shipRate = Number(document.getElementById('editCalcShippingRate').value) || 240;
-      const sellPrice = Number(document.getElementById('editProdPrice').value) || 0;
+      const curEl = document.getElementById('editCalcCurrency');
+      const cur = curEl ? curEl.value : 'JPY';
+      const preTax = Number(document.getElementById('editCalcPricePreTax') ? document.getElementById('editCalcPricePreTax').value : 0) || 0;
+      const tax = Number(document.getElementById('editCalcTaxAmount') ? document.getElementById('editCalcTaxAmount').value : 0) || 0;
+      const rate = Number(document.getElementById('editCalcExchangeRate') ? document.getElementById('editCalcExchangeRate').value : 0) || 0;
+      const weight = Number(document.getElementById('editCalcWeight') ? document.getElementById('editCalcWeight').value : 0) || 0;
+      const shipRate = Number(document.getElementById('editCalcShippingRate') ? document.getElementById('editCalcShippingRate').value : 240) || 240;
+      const sellPrice = Number(document.getElementById('editProdPrice') ? document.getElementById('editProdPrice').value : 0) || 0;
 
       const totalForeign = preTax + tax;
       const itemTwd = Math.round(totalForeign * rate);
@@ -3873,30 +3925,33 @@
         }
       }
 
-      document.getElementById('editFinalCostPrice').value = totalCost;
-      document.getElementById('editFinalCostPreTax').value = preTax;
-      document.getElementById('editFinalTaxAmount').value = tax;
-      document.getElementById('editFinalCostForeign').value = totalForeign;
-      document.getElementById('editFinalExchangeRate').value = rate;
-      document.getElementById('editFinalWeightG').value = weight;
-      document.getElementById('editFinalShippingRate').value = shipRate;
-      document.getElementById('editFinalCostNote').value = `${cur} ${totalForeign} (稅前${preTax}+稅${tax}) * ${rate} + ${weight}g空運 = 成本NT$${totalCost}`;
+      if (document.getElementById('editFinalCostPrice')) document.getElementById('editFinalCostPrice').value = totalCost;
+      if (document.getElementById('editFinalCostPreTax')) document.getElementById('editFinalCostPreTax').value = preTax;
+      if (document.getElementById('editFinalTaxAmount')) document.getElementById('editFinalTaxAmount').value = tax;
+      if (document.getElementById('editFinalCostForeign')) document.getElementById('editFinalCostForeign').value = totalForeign;
+      if (document.getElementById('editFinalExchangeRate')) document.getElementById('editFinalExchangeRate').value = rate;
+      if (document.getElementById('editFinalWeightG')) document.getElementById('editFinalWeightG').value = weight;
+      if (document.getElementById('editFinalShippingRate')) document.getElementById('editFinalShippingRate').value = shipRate;
+      if (document.getElementById('editFinalCostNote')) document.getElementById('editFinalCostNote').value = `${cur} ${totalForeign} (稅前${preTax}+稅${tax}) * ${rate} + ${weight}g空運 = 成本NT$${totalCost}`;
     }
 
     function resetEditCostCalculator() {
-      document.getElementById('editCalcPricePreTax').value = '';
-      document.getElementById('editCalcTaxAmount').value = '';
-      document.getElementById('editCalcWeight').value = '';
+      if (document.getElementById('editCalcPricePreTax')) document.getElementById('editCalcPricePreTax').value = '';
+      if (document.getElementById('editCalcTaxAmount')) document.getElementById('editCalcTaxAmount').value = '';
+      if (document.getElementById('editCalcWeight')) document.getElementById('editCalcWeight').value = '';
       calculateEditCost();
     }
 
     function changeEditCurrencyPreset() {
-      const cur = document.getElementById('editCalcCurrency').value;
+      const curEl = document.getElementById('editCalcCurrency');
+      const cur = curEl ? curEl.value : 'JPY';
       const rateInput = document.getElementById('editCalcExchangeRate');
-      if (cur === 'JPY') rateInput.value = '0.2200';
-      else if (cur === 'USD') rateInput.value = '32.5000';
-      else if (cur === 'KRW') rateInput.value = '0.0260';
-      else if (cur === 'TWD') rateInput.value = '1.0000';
+      if (rateInput) {
+        if (cur === 'JPY') rateInput.value = '0.2200';
+        else if (cur === 'USD') rateInput.value = '32.5000';
+        else if (cur === 'KRW') rateInput.value = '0.0260';
+        else if (cur === 'TWD') rateInput.value = '1.0000';
+      }
       calculateEditCost();
     }
 
