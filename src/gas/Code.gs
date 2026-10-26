@@ -30,7 +30,7 @@ function setupSpreadsheet() {
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
-    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
+    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定結單時間',
     '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
     '最後更新時間'
   ];
@@ -285,7 +285,7 @@ function upgradeExistingProductsToFormula(targetSheet) {
   const prodHeaders = [
     '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
     '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
-    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定截單時間',
+    '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定結單時間',
     '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
     '最後更新時間'
   ];
@@ -665,7 +665,7 @@ function getProductsList(includeAll = false) {
         status: status || '上架中',
         costPrice: Number(row[11]) || 0,
         costNote: row[12] || '',
-        deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定截單時間 (選填)
+        deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定結單時間 (選填)
         currency: row[15] || 'JPY',                          // 欄位 16 (P): 採購幣別
         costPreTax: Number(row[16]) || 0,                    // 欄位 17 (Q): 原幣稅前金額
         costTax: Number(row[17]) || 0,                       // 欄位 18 (R): 稅金 (原幣)
@@ -683,7 +683,7 @@ function getProductsList(includeAll = false) {
 }
 
 /**
- * 格式化截單時間字串 (相容 Date 物件與字串)
+ * 格式化結單時間字串 (相容 Date 物件與字串)
  */
 function formatDeadlineStr(val) {
   if (!val) return '';
@@ -773,7 +773,7 @@ function handleCreateOrder(orderData) {
       return { success: false, message: '找不到此商品！' };
     }
 
-    // 2. 檢查收單截止時間防呆 (優先以各商品指定截單時間為準，未填則採用系統設定 ORDER_DEADLINE)
+    // 2. 檢查收單截止時間防呆 (優先以各商品指定結單時間為準，未填則採用系統設定 ORDER_DEADLINE)
     const settings = getSystemSettings().data || {};
     let prodDeadlineStr = '';
     if (targetProduct && targetProduct.length > 14 && targetProduct[14]) {
@@ -2023,7 +2023,7 @@ function handleAddProduct(data) {
       costCellVal,                 // 欄位 12 (L): 成本價 (NT$) -> 支援試算表公式連動
       data.costNote || '',         // 欄位 13 (M): 採購備註說明
       JSON.stringify(imagesArray), // 欄位 14 (N): 所有圖片清單
-      data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定截單時間
+      data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定結單時間
       cur,                         // 欄位 16 (P): 採購幣別
       preTax,                      // 欄位 17 (Q): 原幣稅前金額
       tax,                         // 欄位 18 (R): 稅金 (原幣)
@@ -2195,7 +2195,7 @@ function handleUpdateProduct(data) {
     }
     sheet.getRange(rowIndex, 13).setValue(data.costNote || ''); // M: 採購備註說明
     sheet.getRange(rowIndex, 14).setValue(JSON.stringify(imagesArray)); // N: 所有圖片清單
-    sheet.getRange(rowIndex, 15).setValue(data.deadline ? String(data.deadline).trim() : ''); // O: 指定截單時間
+    sheet.getRange(rowIndex, 15).setValue(data.deadline ? String(data.deadline).trim() : ''); // O: 指定結單時間
     sheet.getRange(rowIndex, 16).setValue(cur); // P: 採購幣別
     sheet.getRange(rowIndex, 17).setValue(preTax); // Q: 原幣稅前金額
     sheet.getRange(rowIndex, 18).setValue(tax); // R: 稅金(原幣)

@@ -1058,7 +1058,7 @@
           </div>
         </div>
 
-        <!-- ⏰ 本次連線三大時段快捷指定截單時間 -->
+        <!-- ⏰ 本次連線三大時段快捷指定結單時間 -->
         <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
@@ -2169,7 +2169,7 @@
       }
     }
 
-    // 截單時間字串解析工具
+    // 結單時間字串解析工具
     function parseDeadline(str) {
       if (!str || !String(str).trim()) return null;
       const s = String(str).trim().replace(/-/g, '/');
@@ -2189,12 +2189,12 @@
       if (prod.status && (prod.status.includes('結單') || prod.status.includes('截止') || prod.status.includes('已下架'))) {
         return true;
       }
-      // 2. 若個別商品有指定截單時間且已超過
+      // 2. 若個別商品有指定結單時間且已超過
       if (prod.deadline) {
         const dl = parseDeadline(prod.deadline);
         if (dl && new Date() >= dl) return true;
       }
-      // 3. 若全店系統設定有統一截單時間且已超過
+      // 3. 若全店系統設定有統一結單時間且已超過
       if (storeSettings && storeSettings.ORDER_DEADLINE) {
         const storeDl = parseDeadline(storeSettings.ORDER_DEADLINE);
         if (storeDl && new Date() >= storeDl) return true;
@@ -2376,7 +2376,7 @@
 
         let deadlineBadge = '';
         if (prod.deadline) {
-          deadlineBadge = `<span class="deadline-badge-pill">⏰ ${prod.deadline} 截單</span>`;
+          deadlineBadge = `<span class="deadline-badge-pill">⏰ ${prod.deadline} 結單</span>`;
         }
 
         item.innerHTML = `
@@ -3206,7 +3206,7 @@
       }
     }
 
-    // 快捷設定連線各時段截單時間
+    // 快捷設定連線各時段結單時間
     function setPresetDeadline(val, label) {
       const input = document.getElementById('newProdDeadline');
       const hint = document.getElementById('deadlineHintText');
@@ -3428,8 +3428,8 @@
           stockHtml = `<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">📦 現貨庫存: ${p.stock}</span>`;
         }
 
-        // 截單標籤
-        const deadlineHtml = p.deadline ? `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">⏰ 截單: ${escapeHtml(p.deadline)}</span>` : '';
+        // 結單標籤
+        const deadlineHtml = p.deadline ? `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-weight:700; font-size:11px;">⏰ 結單: ${escapeHtml(p.deadline)}</span>` : '';
 
         // 最後更新時間
         const updateTimeStr = p.updatedAt || p.createdAt || '--';
@@ -3847,7 +3847,7 @@
         }
       }
 
-      // 截單時間
+      // 結單時間
       if (document.getElementById('editProdDeadline')) document.getElementById('editProdDeadline').value = prod.deadline || '';
       const deadlineHint = document.getElementById('editDeadlineHintText');
       if (deadlineHint) {
@@ -4074,7 +4074,7 @@
       }
     }
 
-    // 快捷設定截單時間 (編輯模式)
+    // 快捷設定結單時間 (編輯模式)
     function setEditPresetDeadline(val, label) {
       const input = document.getElementById('editProdDeadline');
       const hint = document.getElementById('editDeadlineHintText');

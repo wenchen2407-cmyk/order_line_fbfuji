@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>連線代購管理中心 - 全站跨螢幕 (電腦/手機) 3種視覺重構方案提案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --bg-slate: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #f1f5f9;
+      color: var(--text-main);
+      padding: 24px 16px 80px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* 頂部引言與規劃背景 */
+    .master-header {
+      background: linear-gradient(135deg, #090d16 0%, #1e293b 100%);
+      color: #fff;
+      padding: 28px 24px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .master-header::after {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle, rgba(6, 199, 85, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge-scope {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #38bdf8;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    .master-header h1 {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .master-header p {
+      font-size: 13.5px;
+      color: #94a3b8;
+      max-width: 820px;
+      line-height: 1.6;
+    }
+
+    /* 互動控制列：方案切換與螢幕切換 */
+    .control-toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .theme-selector {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .theme-btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .theme-btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    .theme-btn.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+    }
+
+    .device-selector {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 10px;
+      gap: 4px;
+    }
+    .device-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .device-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* 模擬器舞台外框 (切換手機時約束寬度) */
+    .viewport-stage {
+      margin: 0 auto;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
+    }
+    .viewport-stage.mobile-view {
+      max-width: 410px;
+      border: 8px solid #1e293b;
+      border-radius: 36px;
+      background: #fff;
+      padding: 14px 10px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+    .viewport-stage.mobile-view::before {
+      content: '';
+      display: block;
+      width: 100px;
+      height: 4px;
+      background: #334155;
+      border-radius: 10px;
+      margin: 0 auto 12px;
+    }
+
+    /* =========================================================================
+       通用組件與架構 (全站 4 大區塊完全還原)
+       ========================================================================= */
+    .mock-hub-container {
+      width: 100%;
+    }
+
+    /* 方案專屬外層樣式包覆 (THEMES) */
+    
+    /* -------------------------------------------------------------
+       THEME 1：極簡輕奢現代風 (Minimal Luxury Clean) - ⭐️ 旗艦推薦
+       - 特色：白底微投影卡片、精緻呼吸邊距、淡綠膠囊高亮、極佳資訊分層
+       ------------------------------------------------------------- */
+    .theme-luxury {
+      --hub-bg: #f8fafc;
+      --hub-panel-bg: #ffffff;
+      --hub-border: #e2e8f0;
+      --hub-accent: #06c755;
+      --hub-price: #e11d48;
+      --hub-tag-bg: #f1f5f9;
+      --hub-tag-text: #475569;
+    }
+    .theme-luxury .hub-header {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .theme-luxury .hub-tab-bar {
+      display: flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      scrollbar-width: none;
+    }
+    .theme-luxury .hub-tab-btn {
+      flex: 1;
+      min-width: fit-content;
+      padding: 9px 16px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .theme-luxury .hub-tab-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* -------------------------------------------------------------
+       THEME 2：科技黑曜夜間/漸層風 (Sleek Obsidian Pro)
+       - 特色：暗夜曜石深底、霓虹翡翠與流光漸層、抗視覺疲勞
+       ------------------------------------------------------------- */
+    .theme-obsidian {
+      --hub-bg: #0b0f19;
+      --hub-panel-bg: #111827;
+      --hub-border: #1f2937;
+      --hub-accent: #10b981;
+      --hub-price: #f43f5e;
+      --hub-tag-bg: #1f2937;
+      --hub-tag-text: #9ca3af;
+    }
+    .theme-obsidian .hub-workspace {
+      background: #0b0f19;
+      color: #f3f4f6;
+      padding: 16px;
+      border-radius: 20px;
+    }
+    .theme-obsidian .hub-header {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .theme-obsidian .hub-tab-bar {
+      display: flex;
+      background: #111827;
+      border: 1px solid #1f2937;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+    .theme-obsidian .hub-tab-btn {
+      flex: 1;
+      min-width: fit-content;
+      padding: 9px 16px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      color: #9ca3af;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .theme-obsidian .hub-tab-btn.active {
+      background: #1f2937;
+      color: #34d399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+    .theme-obsidian .hub-panel {
+      background: #111827 !important;
+      border-color: #1f2937 !important;
+      color: #f3f4f6 !important;
+    }
+    .theme-obsidian .prod-card-box {
+      background: #172033 !important;
+      border-color: #1f2937 !important;
+    }
+    .theme-obsidian .prod-card-box.selected {
+      background: #064e3b !important;
+      border-color: #10b981 !important;
+    }
+    .theme-obsidian .prod-title {
+      color: #f9fafb !important;
+    }
+    .theme-obsidian .input-mock {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+      color: #fff !important;
+    }
+
+    /* -------------------------------------------------------------
+       THEME 3：高效緊湊工作台風 (High-Density Enterprise)
+       - 特色：高資訊密度、乾淨邊界、微圓角、操作指引極致明確
+       ------------------------------------------------------------- */
+    .theme-enterprise {
+      --hub-bg: #f1f5f9;
+      --hub-panel-bg: #ffffff;
+      --hub-border: #cbd5e1;
+      --hub-accent: #2563eb;
+      --hub-price: #dc2626;
+      --hub-tag-bg: #e2e8f0;
+      --hub-tag-text: #334155;
+    }
+    .theme-enterprise .hub-header {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .theme-enterprise .hub-tab-bar {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 3px;
+      overflow-x: auto;
+      margin-bottom: 14px;
+    }
+    .theme-enterprise .hub-tab-btn {
+      flex: 1;
+      min-width: fit-content;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .theme-enterprise .hub-tab-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .theme-enterprise .hub-panel {
+      border-radius: 10px !important;
+      border: 1.5px solid #cbd5e1 !important;
+    }
+
+    /* 雙欄主工作區佈局 (電腦 1.2 : 0.8 / 手機自動單欄) */
+    .hub-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 16px;
+    }
+    .viewport-stage.mobile-view .hub-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hub-panel {
+      background: var(--hub-panel-bg, #ffffff);
+      border: 1px solid var(--hub-border, #e2e8f0);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .hub-panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    /* =========================================================================
+       重構亮點 1：商品清單全面分層 (不再黏在一起！)
+       ========================================================================= */
+    .product-cards-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .prod-card-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .prod-card-box:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+    .prod-card-box.selected {
+      border-color: var(--primary);
+      background: #f0fdf4;
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .prod-card-chk {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 3px;
+      flex-shrink: 0;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      transition: all 0.15s;
+    }
+    .prod-card-box.selected .prod-card-chk {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .prod-thumb-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .prod-detail-col {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .prod-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .prod-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .prod-price-val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: #e11d48;
+      white-space: nowrap;
+    }
+
+    .prod-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 11.5px;
+    }
+    .pill-code {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: 'Outfit', monospace;
+      font-weight: 700;
+    }
+    .pill-spec {
+      background: #f8fafc;
+      color: #334155;
+      padding: 2px 8px;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pill-deadline {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* LINE 預覽視窗 (右側) */
+    .preview-phone-case {
+      background: #849ebf;
+      border-radius: 18px;
+      padding: 14px 10px;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .flex-card-mock {
+      width: 180px;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+    }
+    .flex-card-mock img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+    }
+    .flex-card-body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .flex-card-name {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+      height: 32px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .flex-card-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #e11d48;
+    }
+    .flex-card-btn {
+      margin: 8px;
+      background: #06c755;
+      color: #fff;
+      border: none;
+      padding: 6px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* 顧客結帳通知 KPI 看板模擬 */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .kpi-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .kpi-title {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .kpi-val {
+      font-size: 20px;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .btn-main-action {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
+      margin-top: 14px;
+    }
+
+    /* 方案差異對照說明表 */
+    .comparison-section {
+      background: #fff;
+      border-radius: 18px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      margin-top: 30px;
+      box-shadow: var(--shadow-sm);
+    }
+    .comparison-section h2 {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      color: #0f172a;
+    }
+    .plan-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 800px) {
+      .plan-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .plan-card {
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .plan-card.highlight {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+    .plan-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .plan-desc {
+      font-size: 12.5px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .plan-feature-list {
+      list-style: none;
+      font-size: 12px;
+      color: #334155;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .plan-feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- 頂部頁頭 -->
+    <div class="master-header">
+      <div class="badge-scope">✨ 連線代購管理中心 • 全站跨端 UI/UX 重新規劃</div>
+      <h1>連線代購管理中心：跨端 3 種重構風格提案</h1>
+      <p>針對連線代購賣家核心場景：<b>「電腦大螢幕快速建檔／批次勾選」</b>與<b>「手機在國外現場一鍵推播與結帳通知」</b>進行全站資訊階層重組。徹底解決資訊黏稠擠壓、手機橫向破版問題，提供兼具視覺美感與極致操作手感的 3 種風格提案。</p>
+    </div>
+
+    <!-- 互動操作面板 (選擇主題與切換螢幕) -->
+    <div class="control-toolbar">
+      <div class="theme-selector">
+        <span style="font-size: 12.5px; font-weight: 700; color: #475569;">選擇重構方案：</span>
+        <button type="button" class="theme-btn active" onclick="switchHubTheme('luxury', this)">
+          <span>⭐️ 方案 A：極簡輕奢現代風 (推薦)</span>
+        </button>
+        <button type="button" class="theme-btn" onclick="switchHubTheme('obsidian', this)">
+          <span>🌙 方案 B：科技黑曜夜間風</span>
+        </button>
+        <button type="button" class="theme-btn" onclick="switchHubTheme('enterprise', this)">
+          <span>⚡️ 方案 C：高效緊湊工作台</span>
+        </button>
+      </div>
+
+      <div class="device-selector">
+        <button type="button" class="device-btn active" onclick="setDeviceView('desktop', this)">
+          💻 電腦寬螢幕
+        </button>
+        <button type="button" class="device-btn" onclick="setDeviceView('mobile', this)">
+          📱 手機窄螢幕 (390px)
+        </button>
+      </div>
+    </div>
+
+    <!-- 主工作區舞台 (受切換器控制) -->
+    <div id="viewportStage" class="viewport-stage">
+      <div id="hubWorkspace" class="hub-workspace theme-luxury">
+        
+        <!-- 頂部導航列 (Hub Header) -->
+        <div class="hub-header">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: #06c755; letter-spacing: 0.5px;">W.W. BUYING HUB v2.0</div>
+            <div style="font-size: 19px; font-weight: 900; color: #0f172a; margin-top: 2px;">連線代購管理中心</div>
+            <div style="font-size: 12px; color: #64748b;">電腦商品建檔 ➔ 手機勾選打包發布到 LINE 群組</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 12px; font-weight: 700; padding: 5px 12px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 20px;">
+              🟢 LINE LIFF 連線正常
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 大分頁 Tab 標籤列 (滑動不受壓迫) -->
+        <div class="hub-tab-bar">
+          <button type="button" class="hub-tab-btn active" onclick="switchMockTab('tab1', this)">📱 勾選商品發群組 (多選輪播)</button>
+          <button type="button" class="hub-tab-btn" onclick="switchMockTab('tab2', this)">💻 電腦快速建檔</button>
+          <button type="button" class="hub-tab-btn" onclick="switchMockTab('tab3', this)">📢 顧客結帳通知 (1對1免額度)</button>
+          <button type="button" class="hub-tab-btn" onclick="switchMockTab('tab4', this)">📊 瀏覽統計與熱門排行</button>
+        </div>
+
+        <!-- ======================= 分頁 1 內容：勾選商品與預覽 ======================= -->
+        <div id="mockContentTab1" class="hub-tab-content">
+          <div class="hub-grid">
+            
+            <!-- 左側：商品勾選與搜尋 -->
+            <div class="hub-panel">
+              <div class="hub-panel-title">
+                <span>📦 選擇要推播的商品 (可選 1~10 件)</span>
+                <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">共 42 件在架商品</span>
+              </div>
+
+              <!-- 搜尋框 -->
+              <div style="margin-bottom: 12px;">
+                <input type="text" class="input-mock" placeholder="🔍 搜尋商品名稱、編號 (如 J2610)、規格..." style="width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 13px; background: #f8fafc;">
+              </div>
+
+              <!-- 重構核心：商品資訊分層卡片串流 (徹底告別沾黏！) -->
+              <div class="product-cards-stream">
+                
+                <!-- 卡片 1 (已選取) -->
+                <div class="prod-card-box selected" onclick="toggleProdSelect(this)">
+                  <div class="prod-card-chk">✓</div>
+                  <img class="prod-thumb-img" src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+                  <div class="prod-detail-col">
+                    <div class="prod-title-row">
+                      <div class="prod-title">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</div>
+                      <div class="prod-price-val">NT$ 1,500</div>
+                    </div>
+                    <div class="prod-pills-row">
+                      <span class="pill-code">#J2610020006</span>
+                      <span class="pill-spec">規格：單一規格</span>
+                      <span class="pill-deadline">⏰ 10/28 23:59 結單</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 卡片 2 (已選取) -->
+                <div class="prod-card-box selected" onclick="toggleProdSelect(this)">
+                  <div class="prod-card-chk">✓</div>
+                  <img class="prod-thumb-img" src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+                  <div class="prod-detail-col">
+                    <div class="prod-title-row">
+                      <div class="prod-title">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL (專櫃回饋)</div>
+                      <div class="prod-price-val">NT$ 790</div>
+                    </div>
+                    <div class="prod-pills-row">
+                      <span class="pill-code">#K2610020001</span>
+                      <span class="pill-spec">規格：正裝 15ml、限定加大版</span>
+                      <span class="pill-deadline">⏰ 10/25 23:59 結單</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 卡片 3 (未選取) -->
+                <div class="prod-card-box" onclick="toggleProdSelect(this)">
+                  <div class="prod-card-chk"></div>
+                  <img class="prod-thumb-img" src="https://lh3.googleusercontent.com/d/15PbFhQDqv03cCm3VXUWjo5i0KpPGCIJA" alt="">
+                  <div class="prod-detail-col">
+                    <div class="prod-title-row">
+                      <div class="prod-title">韓國🇰🇷 Daiso大創 膠囊面膜 多款可選 (茶樹 / 積雪草 / 玻尿酸)</div>
+                      <div class="prod-price-val">NT$ 60</div>
+                    </div>
+                    <div class="prod-pills-row">
+                      <span class="pill-code">#K2610030005</span>
+                      <span class="pill-spec">規格：茶樹舒緩、積雪草修護、玻尿酸</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- 推播標題輸入 -->
+              <div style="margin-top: 14px;">
+                <label style="font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">📢 LINE 群組推播標題 (通知外層文字)</label>
+                <input type="text" value="【W.W.親飛連線中～10/11】商品上架囉～～🔥" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+              </div>
+
+              <button type="button" class="btn-main-action">
+                🚀 一鍵打包推播至 LINE 群組 (已選 2 件)
+              </button>
+            </div>
+
+            <!-- 右側：LINE 輪播預覽區 (卡片動態滑動) -->
+            <div class="hub-panel">
+              <div class="hub-panel-title">
+                <span>📱 LINE 輪播卡片預覽 (可橫向滑動)</span>
+                <span style="font-size: 11px; color: #64748b;">即時同步左側勾選</span>
+              </div>
+
+              <div class="preview-phone-case">
+                <!-- 預覽卡片 1 -->
+                <div class="flex-card-mock">
+                  <img src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+                  <div class="flex-card-body">
+                    <div class="flex-card-name">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</div>
+                    <div class="flex-card-price">NT$ 1,500</div>
+                    <div style="font-size: 10px; color: #94a3b8;">#J2610020006</div>
+                  </div>
+                  <div class="flex-card-btn">搶先登記</div>
+                </div>
+
+                <!-- 預覽卡片 2 -->
+                <div class="flex-card-mock">
+                  <img src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+                  <div class="flex-card-body">
+                    <div class="flex-card-name">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL</div>
+                    <div class="flex-card-price">NT$ 790</div>
+                    <div style="font-size: 10px; color: #94a3b8;">#K2610020001</div>
+                  </div>
+                  <div class="flex-card-btn">搶先登記</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ======================= 分頁 2 內容：電腦建檔示範 ======================= -->
+        <div id="mockContentTab2" class="hub-tab-content" style="display: none;">
+          <div class="hub-panel" style="max-width: 720px; margin: 0 auto;">
+            <div class="hub-panel-title">
+              <span>📝 新增商品至 Google 試算表商品庫</span>
+              <span style="font-size: 12px; color: #64748b;">自動匯率換算 & 多圖上傳</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div>
+                <label style="font-size: 12.5px; font-weight: 700; display: block; margin-bottom: 4px;">商品編號</label>
+                <input type="text" value="J2610250001" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+              </div>
+              <div>
+                <label style="font-size: 12.5px; font-weight: 700; display: block; margin-bottom: 4px;">活動分類</label>
+                <input type="text" value="2026.10月連線" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+              </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 12.5px; font-weight: 700; display: block; margin-bottom: 4px;">商品名稱</label>
+              <input type="text" value="日本🇯🇵限定 富士山隨行保溫瓶 500ml" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+              <div>
+                <label style="font-size: 12px; font-weight: 700;">外幣原價</label>
+                <input type="number" value="3800" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+              </div>
+              <div>
+                <label style="font-size: 12px; font-weight: 700;">幣別</label>
+                <select style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px;">
+                  <option selected>JPY 日圓</option>
+                  <option>KRW 韓元</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 12px; font-weight: 700;">台幣售價 (NT$)</label>
+                <input type="number" value="980" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; font-weight: 800; color: #e11d48;">
+              </div>
+            </div>
+            <button type="button" class="btn-main-action" style="background: #334155;">
+              💾 儲存並同步至 Google 試算表
+            </button>
+          </div>
+        </div>
+
+        <!-- ======================= 分頁 3 內容：1對1結帳通知示範 ======================= -->
+        <div id="mockContentTab3" class="hub-tab-content" style="display: none;">
+          <div class="hub-panel" style="max-width: 720px; margin: 0 auto;">
+            <div class="hub-panel-title">
+              <span>📢 顧客專屬採購清單推播 (0 額度消耗)</span>
+              <span style="font-size: 12px; color: #06c755; font-weight: 700;">🔄 即時連線中</span>
+            </div>
+
+            <!-- KPI 看板 -->
+            <div class="kpi-row">
+              <div class="kpi-box">
+                <div class="kpi-title">👥 待結帳顧客數</div>
+                <div class="kpi-val" style="color: #0f172a;">4 人</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-title">📦 待出貨成功件數</div>
+                <div class="kpi-val" style="color: #15803d;">8 件</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-title">💰 待收回總款項</div>
+                <div class="kpi-val" style="color: #e11d48;">NT$ 4,420</div>
+              </div>
+            </div>
+
+            <!-- 顧客名單 -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <div style="font-weight: 800; font-size: 15px;">曾鈺淩 <span style="font-size: 12px; color: #64748b; font-weight: normal;">(0919756829)</span></div>
+                  <div style="font-size: 12.5px; color: #475569; margin-top: 4px;">
+                    <span style="color: #15803d; font-weight: 700;">✅ 完成 2 件</span> ｜ 
+                    <b>商品總額：NT$ 1,700</b>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" style="padding: 7px 12px; background: #06c755; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">🚀 發送 1 對 1 卡片</button>
+                  <button type="button" style="padding: 7px 12px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">📋 複製純文字</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================= 分頁 4 內容：統計與熱門排行 ======================= -->
+        <div id="mockContentTab4" class="hub-tab-content" style="display: none;">
+          <div class="hub-panel" style="max-width: 800px; margin: 0 auto;">
+            <div class="hub-panel-title">
+              <span>📊 全站與商品即時人氣排行榜</span>
+              <span style="font-size: 12px; color: #64748b;">即時雷達數據</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+              <div class="kpi-box">
+                <div class="kpi-title">🔥 總瀏覽次數 (PV)</div>
+                <div class="kpi-val" style="color: #0284c7;">1,420 次</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-title">👥 不重複訪客 (UV)</div>
+                <div class="kpi-val" style="color: #7c3aed;">386 人</div>
+              </div>
+            </div>
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">🏆 本期熱搜商品 Top 3</div>
+            <div style="font-size: 12.5px; color: #475569; display: flex; flex-direction: column; gap: 6px;">
+              <div>🥇 日本🇯🇵 武田合利他命EX PLUS 270錠 (182次瀏覽)</div>
+              <div>🥈 韓國🇰🇷 Celimax 視黃醇精華液 (145次瀏覽)</div>
+              <div>🥉 日本🇯🇵 The Matcha Tokyo 抹茶隨身包 (98次瀏覽)</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 底部：3大重構方案核心特點對照與選型建議 -->
+    <div class="comparison-section">
+      <h2>📋 3 種重構風格架構對照與決策指南</h2>
+      <div class="plan-grid-3">
+        
+        <!-- 方案 A -->
+        <div class="plan-card highlight">
+          <div>
+            <div class="plan-title">
+              <span>⭐️ 方案 A：極簡輕奢現代風</span>
+            </div>
+            <div class="plan-desc">
+              最符合連線代購精緻選品風格。採用純白卡片、階梯式垂直分層，以自然圓角膠囊區隔編號、規格與結單時間。
+            </div>
+            <ul class="plan-feature-list">
+              <li>✅ <b>徹底解決沾黏</b>：獨立膠囊排版，文字呼吸感強</li>
+              <li>✅ <b>手機螢幕極限優化</b>：高度彈性延展，手指好點擊</li>
+              <li>✅ <b>雙端視覺一致</b>：電腦寬廣大器、手機優雅俐落</li>
+            </ul>
+          </div>
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #bbf7d0; font-size: 11.5px; color: #15803d; font-weight: 700;">
+            👑 推薦首選：兼顧高質感與最佳易讀性
+          </div>
+        </div>
+
+        <!-- 方案 B -->
+        <div class="plan-card">
+          <div>
+            <div class="plan-title">
+              <span>🌙 方案 B：科技黑曜夜間風</span>
+            </div>
+            <div class="plan-desc">
+              適合長時間在昏暗環境或海外夜間連線作業的小幫手。深色黑曜背景搭配翡翠綠與玫瑰紅高對比高亮。
+            </div>
+            <ul class="plan-feature-list">
+              <li>✅ <b>護眼降疲勞</b>：極致深色對比，適合長時間盯螢幕</li>
+              <li>✅ <b>科技儀表板質感</b>：數據圖表與狀態標籤醒目突出</li>
+              <li>⚠️ <b>視覺偏暗</b>：商品商品情境照需要良好的去底或邊框</li>
+            </ul>
+          </div>
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 11.5px; color: #475569; font-weight: 700;">
+            適合：習慣夜間作業、偏好專業暗色系團隊
+          </div>
+        </div>
+
+        <!-- 方案 C -->
+        <div class="plan-card">
+          <div>
+            <div class="plan-title">
+              <span>⚡️ 方案 C：高效緊湊工作台</span>
+            </div>
+            <div class="plan-desc">
+              追求最高資料密度與操作速度。類似現代化的 Notion / Airtable 表格排版，邊界清晰俐落。
+            </div>
+            <ul class="plan-feature-list">
+              <li>✅ <b>極度節省垂直空間</b>：一螢幕可容納最多筆數</li>
+              <li>✅ <b>固定欄位對齊</b>：找編號、看金額一眼定位</li>
+              <li>⚠️ <b>視覺留白較少</b>：多規格商品需點開或摺疊</li>
+            </ul>
+          </div>
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 11.5px; color: #475569; font-weight: 700;">
+            適合：商品量極大（每期上百件）追求極速作業
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 切換 3 種風格佈景主題
+    function switchHubTheme(themeName, btn) {
+      const workspace = document.getElementById('hubWorkspace');
+      const themeBtns = document.querySelectorAll('.theme-btn');
+      
+      themeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      workspace.className = 'hub-workspace theme-' + themeName;
+    }
+
+    // 切換 電腦寬螢幕 / 手機窄螢幕 (390px)
+    function setDeviceView(device, btn) {
+      const stage = document.getElementById('viewportStage');
+      const devBtns = document.querySelectorAll('.device-btn');
+
+      devBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (device === 'mobile') {
+        stage.classList.add('mobile-view');
+      } else {
+        stage.classList.remove('mobile-view');
+      }
+    }
+
+    // 模擬 Tab 切換
+    function switchMockTab(tabKey, btn) {
+      const allTabs = document.querySelectorAll('.hub-tab-btn');
+      allTabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.getElementById('mockContentTab1').style.display = (tabKey === 'tab1') ? 'block' : 'none';
+      document.getElementById('mockContentTab2').style.display = (tabKey === 'tab2') ? 'block' : 'none';
+      document.getElementById('mockContentTab3').style.display = (tabKey === 'tab3') ? 'block' : 'none';
+      document.getElementById('mockContentTab4').style.display = (tabKey === 'tab4') ? 'block' : 'none';
+    }
+
+    // 模擬商品卡片選取反饋
+    function toggleProdSelect(elem) {
+      elem.classList.toggle('selected');
+      const chk = elem.querySelector('.prod-card-chk');
+      if (chk) {
+        chk.textContent = elem.classList.contains('selected') ? '✓' : '';
+      }
+    }
+  </script>
+</body>
+</html>

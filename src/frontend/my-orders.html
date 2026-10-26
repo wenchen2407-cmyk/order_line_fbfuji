@@ -672,7 +672,7 @@
             <b>• ⏳ 連線登記：</b>正在當地現場採購中
           </div>
           <div style="margin-bottom: 6px;">
-            <b>• 🎉 採購成功：</b>已完成採買，等待整批截單結算
+            <b>• 🎉 採購成功：</b>已完成採買，等待整批結單結算
           </div>
           <div style="margin-bottom: 6px;">
             <b>• ⚠️ 缺貨斷貨：</b>已無庫存或斷貨，金額自動歸零排除
@@ -2006,7 +2006,7 @@
         }
       });
 
-      // 3. 判定是否已經截單 (已過收單截止時間，或賣家在後台開放通知結帳)
+      // 3. 判定是否已經結單 (已過收單截止時間，或賣家在後台開放通知結帳)
       let isCutoffExpired = false;
       const deadline = parseDeadline(systemSettings.ORDER_DEADLINE);
       if (deadline && new Date() >= deadline) {
@@ -2018,7 +2018,7 @@
       const isAfterCutoff = isCutoffExpired || isAllowCheckout;
 
       // 顯示/隱藏連線登記中警示提示框
-      // 🌟 嚴格規範：僅在「截單後」且尚有商品未確定採購結果時才呈現，連線採購期間正常隱藏！
+      // 🌟 嚴格規範：僅在「結單後」且尚有商品未確定採購結果時才呈現，連線採購期間正常隱藏！
       const alertBox = document.getElementById('pendingProcureAlertBox');
       const alertCountText = document.getElementById('pendingProcureCountText');
       if (isAfterCutoff && pendingRegisterCount > 0 && !hasCheckedOutOrder) {
@@ -2059,7 +2059,7 @@
           totalRegisteredQty += qty;
         }
 
-        // 採購成功或已結帳且非缺貨的商品計入採購成功總額 (供截單結算使用)
+        // 採購成功或已結帳且非缺貨的商品計入採購成功總額 (供結單結算使用)
         if (!isOut && (isProcured || isCheckedOut)) {
           successfulGoodsTotal += sub;
           successfulQty += qty;
@@ -2110,7 +2110,7 @@
         container.appendChild(card);
       });
 
-      // 統計行更新：結帳後或截單無登記品項時呈現「已採購商品合計」，連線中只要加入進來就呈現「連線訂購商品合計」並統計金額
+      // 統計行更新：結帳後或結單無登記品項時呈現「已採購商品合計」，連線中只要加入進來就呈現「連線訂購商品合計」並統計金額
       subtotalRow.style.display = 'flex';
       const isShowProcuredSubtotal = hasCheckedOutOrder || (isAfterCutoff && pendingRegisterCount === 0);
       const displayTotalAmount = isShowProcuredSubtotal ? successfulGoodsTotal : totalRegisteredAmount;

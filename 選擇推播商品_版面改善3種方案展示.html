@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>推播商品清單版面重新規劃 - 3種視覺風格評估展示</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #05a847;
+      --accent-price: #e11d48;
+      --bg-page: #f1f5f9;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-sub: #475569;
+      --border: #e2e8f0;
+      --border-focus: #06c755;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      padding: 24px 16px 60px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* 頂部導言與評估說明 */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 24px;
+      border-radius: 18px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-md);
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-size: 13.5px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .problem-alert {
+      margin-top: 14px;
+      background: rgba(239, 68, 68, 0.15);
+      border-left: 4px solid #ef4444;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: #fca5a5;
+    }
+
+    /* 視圖切換器 (電腦/手機模擬切換) */
+    .device-switcher {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .device-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #334155;
+    }
+    .device-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .device-btn {
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .device-btn.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    /* 方案選擇卡片區 */
+    .layout-wrapper {
+      transition: max-width 0.3s ease;
+      margin: 0 auto;
+    }
+    .layout-wrapper.mobile-mode {
+      max-width: 420px;
+    }
+
+    .option-section {
+      background: var(--surface);
+      border-radius: 18px;
+      border: 1.5px solid var(--border);
+      margin-bottom: 30px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .option-header {
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .option-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .badge-recommend {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .badge-modern {
+      background: #e0e7ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+    }
+    .badge-compact {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .option-body {
+      padding: 20px;
+    }
+    .option-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    /* ==========================================================
+       【方案 A：精緻分層卡片型 (推薦首選)】
+       - 標題可2行、獨立價格徽章、分行規格與標籤、清晰勾選區塊
+       ========================================================== */
+    .card-list-a {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .item-a {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .item-a:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-sm);
+    }
+    .item-a.selected {
+      border-color: var(--primary);
+      background: #f0fdf4;
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+    .item-a-checkbox {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      background: #fff;
+    }
+    .item-a.selected .item-a-checkbox {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .item-a-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+    .item-a-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .item-a-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .item-a-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item-a-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent-price);
+      white-space: nowrap;
+      text-align: right;
+    }
+    .item-a-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 11.5px;
+    }
+    .tag-id {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: 'Outfit', monospace;
+      font-weight: 600;
+    }
+    .tag-spec {
+      background: #f8fafc;
+      color: #334155;
+      padding: 2px 8px;
+      border-radius: 5px;
+      border: 1px solid #e2e8f0;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tag-deadline {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* ==========================================================
+       【方案 B：雙欄/卡片網格型 (現代電商陳列)】
+       - 電腦為 2 欄 Grid，手機自動切換為 1 欄，視覺呼吸感強
+       ========================================================== */
+    .grid-list-b {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .item-b {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .item-b:hover {
+      border-color: #cbd5e1;
+    }
+    .item-b.selected {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .item-b-thumb-wrap {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      flex-shrink: 0;
+    }
+    .item-b-thumb {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid #e2e8f0;
+    }
+    .item-b-check-badge {
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      transition: all 0.15s;
+    }
+    .item-b.selected .item-b-check-badge {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+    .item-b-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .item-b-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .item-b-spec {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-b-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .item-b-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: #2563eb;
+    }
+
+    /* ==========================================================
+       【方案 C：緊湊表格/列條型 (高密度高效率)】
+       - 類似管理後台清單，單列呈現、水平對齊，一目了然
+       ========================================================== */
+    .table-list-c {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .item-c {
+      display: grid;
+      grid-template-columns: 24px 44px 85px 1fr 100px;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 12.5px;
+      transition: all 0.15s ease;
+    }
+    .item-c:hover {
+      background: #f8fafc;
+    }
+    .item-c.selected {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    .item-c-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid #e2e8f0;
+    }
+    .item-c-id {
+      font-family: 'Outfit', monospace;
+      font-weight: 700;
+      color: #475569;
+      font-size: 11.5px;
+    }
+    .item-c-name {
+      font-weight: 600;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-c-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #b45309;
+      text-align: right;
+    }
+
+    /* 手機模式時方案 C 的降級適配 */
+    .layout-wrapper.mobile-mode .item-c {
+      grid-template-columns: 20px 40px 1fr 80px;
+    }
+    .layout-wrapper.mobile-mode .item-c-id {
+      display: none;
+    }
+
+    /* 比較與決策說明區 */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 12.5px;
+    }
+    .comparison-table th, .comparison-table td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .comparison-table th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- 頂部頁頭 -->
+    <div class="header">
+      <h1>🎨 選擇要推播的商品：版面重構 3 種方案評估</h1>
+      <p>針對目前「商品名稱、編號、規格、價格與結單時間擠在單行造成文字斷行黏在一起」之問題，提供 3 種最適合電腦大螢幕與手機窄螢幕之重構方案，您可以切換下方視圖親自體驗操作手感。</p>
+      <div class="problem-alert">
+        <b>🚨 原有問題診斷：</b> 原版設定 <code>white-space: nowrap</code> 與 <code>flex-wrap: wrap</code> 互相衝突，導致規格與商品編號直接貼在價格旁；且在手機版（小於 400px）寬度時，文字常被縮減截斷或破版。
+      </div>
+    </div>
+
+    <!-- 裝置模擬切換器 -->
+    <div class="device-switcher">
+      <div class="device-title">🖥️ 📱 點擊切換檢視環境：</div>
+      <div class="device-buttons">
+        <button type="button" class="device-btn active" onclick="setDeviceMode('desktop')">
+          <span>💻 電腦寬螢幕視圖 (Desktop)</span>
+        </button>
+        <button type="button" class="device-btn" onclick="setDeviceMode('mobile')">
+          <span>📱 手機窄螢幕視圖 (Mobile 390px)</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="layoutWrapper" class="layout-wrapper">
+
+      <!-- ====================================================================
+           方案 A：精緻分層卡片型 (⭐️ 最佳推薦)
+           ==================================================================== -->
+      <div class="option-section">
+        <div class="option-header">
+          <div>
+            <span style="font-size: 16px; font-weight: 800; color: #0f172a;">方案 A：【分層精緻卡片型】</span>
+            <span class="option-badge badge-recommend">⭐️ 最推薦首選 • 視覺最清晰</span>
+          </div>
+          <span style="font-size: 12px; color: #64748b;">特色：多行標題、獨立膠囊標籤、文字完全不黏膩</span>
+        </div>
+        <div class="option-body">
+          <p class="option-desc">
+            <b>設計重點：</b> 將原本擠在一起的資料採「垂直結構階梯化」。商品名稱允許完整 2 行顯示；右上角保留醒目價格；商品編號、多規格與結單時間以「獨立膠囊（Pill）」呈現，即使品名很長或規格很多也絕不壓迫黏在一起。
+          </p>
+
+          <div class="card-list-a">
+            <!-- 示範品項 1 (已勾選) -->
+            <div class="item-a selected" onclick="toggleCard(this, 'a')">
+              <div class="item-a-checkbox">✓</div>
+              <img class="item-a-thumb" src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+              <div class="item-a-content">
+                <div class="item-a-top">
+                  <span class="item-a-name">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</span>
+                  <span class="item-a-price">NT$ 1,500</span>
+                </div>
+                <div class="item-a-meta">
+                  <span class="tag-id">#J2610020006</span>
+                  <span class="tag-spec">規格：單一規格</span>
+                  <span class="tag-deadline">⏰ 10/28 23:59 結單</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 示範品項 2 -->
+            <div class="item-a" onclick="toggleCard(this, 'a')">
+              <div class="item-a-checkbox"></div>
+              <img class="item-a-thumb" src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+              <div class="item-a-content">
+                <div class="item-a-top">
+                  <span class="item-a-name">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL (專櫃熱銷回饋)</span>
+                  <span class="item-a-price">NT$ 790</span>
+                </div>
+                <div class="item-a-meta">
+                  <span class="tag-id">#K2610020001</span>
+                  <span class="tag-spec">規格：正裝 15ml、加量限定版</span>
+                  <span class="tag-deadline">⏰ 10/25 23:59 結單</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 示範品項 3 -->
+            <div class="item-a" onclick="toggleCard(this, 'a')">
+              <div class="item-a-checkbox"></div>
+              <img class="item-a-thumb" src="https://lh3.googleusercontent.com/d/15PbFhQDqv03cCm3VXUWjo5i0KpPGCIJA" alt="">
+              <div class="item-a-content">
+                <div class="item-a-top">
+                  <span class="item-a-name">韓國🇰🇷 Daiso大創 膠囊面膜 多款可選 (茶樹 / 積雪草 / 玻尿酸保濕)</span>
+                  <span class="item-a-price">NT$ 60</span>
+                </div>
+                <div class="item-a-meta">
+                  <span class="tag-id">#K2610030005</span>
+                  <span class="tag-spec">規格：茶樹舒緩、積雪草修護、玻尿酸補水</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           方案 B：現代網格卡片型 (電商購物感)
+           ==================================================================== -->
+      <div class="option-section">
+        <div class="option-header">
+          <div>
+            <span style="font-size: 16px; font-weight: 800; color: #0f172a;">方案 B：【現代網格卡片型 (Grid)】</span>
+            <span class="option-badge badge-modern">雙欄陳列 • 呼吸感強</span>
+          </div>
+          <span style="font-size: 12px; color: #64748b;">特色：電腦端 2 欄並排快速挑選、手機端自動切換 1 欄</span>
+        </div>
+        <div class="option-body">
+          <p class="option-desc">
+            <b>設計重點：</b> 運用現代電商 Grid 網格佈局。電腦螢幕下可同時看到兩倍數量的商品，提升挑選效率；勾選標記設計於圖片左上角，右側資訊乾淨俐落，底部獨立標籤。
+          </p>
+
+          <div class="grid-list-b">
+            <!-- 示範品項 1 (已勾選) -->
+            <div class="item-b selected" onclick="toggleCard(this, 'b')">
+              <div class="item-b-thumb-wrap">
+                <img class="item-b-thumb" src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+                <div class="item-b-check-badge">✓</div>
+              </div>
+              <div class="item-b-content">
+                <div>
+                  <div class="item-b-title">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</div>
+                  <div class="item-b-spec">#J2610020006 ｜ 單一規格</div>
+                </div>
+                <div class="item-b-bottom">
+                  <span class="item-b-price">NT$ 1,500</span>
+                  <span class="tag-deadline" style="font-size:10.5px;">⏰ 10/28 結單</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 示範品項 2 -->
+            <div class="item-b" onclick="toggleCard(this, 'b')">
+              <div class="item-b-thumb-wrap">
+                <img class="item-b-thumb" src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+                <div class="item-b-check-badge"></div>
+              </div>
+              <div class="item-b-content">
+                <div>
+                  <div class="item-b-title">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL</div>
+                  <div class="item-b-spec">#K2610020001 ｜ 正裝 15ml</div>
+                </div>
+                <div class="item-b-bottom">
+                  <span class="item-b-price">NT$ 790</span>
+                  <span class="tag-deadline" style="font-size:10.5px;">⏰ 10/25 結單</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 示範品項 3 -->
+            <div class="item-b" onclick="toggleCard(this, 'b')">
+              <div class="item-b-thumb-wrap">
+                <img class="item-b-thumb" src="https://lh3.googleusercontent.com/d/15PbFhQDqv03cCm3VXUWjo5i0KpPGCIJA" alt="">
+                <div class="item-b-check-badge"></div>
+              </div>
+              <div class="item-b-content">
+                <div>
+                  <div class="item-b-title">韓國🇰🇷 Daiso大創 膠囊面膜 多款可選</div>
+                  <div class="item-b-spec">#K2610030005 ｜ 3款可選</div>
+                </div>
+                <div class="item-b-bottom">
+                  <span class="item-b-price">NT$ 60</span>
+                  <span style="font-size:11px; color:#15803d; font-weight:700;">現貨連線</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 示範品項 4 -->
+            <div class="item-b" onclick="toggleCard(this, 'b')">
+              <div class="item-b-thumb-wrap">
+                <img class="item-b-thumb" src="https://lh3.googleusercontent.com/d/1HmHpJHdwlzcsjoZPhZuvwFXg9K2bC7Kw" alt="">
+                <div class="item-b-check-badge"></div>
+              </div>
+              <div class="item-b-content">
+                <div>
+                  <div class="item-b-title">日本🇯🇵 The Matcha Tokyo 濃郁抹茶拿鐵隨身包 5入</div>
+                  <div class="item-b-spec">#J2610100004 ｜ 15g/5入</div>
+                </div>
+                <div class="item-b-bottom">
+                  <span class="item-b-price">NT$ 450</span>
+                  <span class="tag-deadline" style="font-size:10.5px;">⏰ 10/30 結單</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           方案 C：高密度表格列條型 (後台管理導向)
+           ==================================================================== -->
+      <div class="option-section">
+        <div class="option-header">
+          <div>
+            <span style="font-size: 16px; font-weight: 800; color: #0f172a;">方案 C：【高密度後台條列型】</span>
+            <span class="option-badge badge-compact">高密度 • 一屏看最多件</span>
+          </div>
+          <span style="font-size: 12px; color: #64748b;">特色：類似 Excel 清單，垂直高度極省空間</span>
+        </div>
+        <div class="option-body">
+          <p class="option-desc">
+            <b>設計重點：</b> 適合習慣一次瀏覽大量商品（30~50件）的小幫手。將每一行固定欄位寬度（勾選 ➜ 縮圖 ➜ 編號 ➜ 品名 ➜ 價格），商品資料各自在專屬欄位中，絕不會互相干擾。
+          </p>
+
+          <div class="table-list-c">
+            <!-- 示範品項 1 (已勾選) -->
+            <div class="item-c selected" onclick="toggleCard(this, 'c')">
+              <input type="checkbox" checked style="pointer-events:none;">
+              <img class="item-c-thumb" src="https://lh3.googleusercontent.com/d/1VIcgkfgpp0ExbOgmxevzXGr5GhETmvZ_" alt="">
+              <span class="item-c-id">J2610020006</span>
+              <span class="item-c-name">日本🇯🇵境內版 武田合利他命EX PLUS 270錠</span>
+              <span class="item-c-price">NT$ 1,500</span>
+            </div>
+
+            <!-- 示範品項 2 -->
+            <div class="item-c" onclick="toggleCard(this, 'c')">
+              <input type="checkbox" style="pointer-events:none;">
+              <img class="item-c-thumb" src="https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF" alt="">
+              <span class="item-c-id">K2610020001</span>
+              <span class="item-c-name">韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL</span>
+              <span class="item-c-price">NT$ 790</span>
+            </div>
+
+            <!-- 示範品項 3 -->
+            <div class="item-c" onclick="toggleCard(this, 'c')">
+              <input type="checkbox" style="pointer-events:none;">
+              <img class="item-c-thumb" src="https://lh3.googleusercontent.com/d/15PbFhQDqv03cCm3VXUWjo5i0KpPGCIJA" alt="">
+              <span class="item-c-id">K2610030005</span>
+              <span class="item-c-name">韓國🇰🇷 Daiso大創 膠囊面膜 多款可選</span>
+              <span class="item-c-price">NT$ 60</span>
+            </div>
+
+            <!-- 示範品項 4 -->
+            <div class="item-c" onclick="toggleCard(this, 'c')">
+              <input type="checkbox" style="pointer-events:none;">
+              <img class="item-c-thumb" src="https://lh3.googleusercontent.com/d/1HmHpJHdwlzcsjoZPhZuvwFXg9K2bC7Kw" alt="">
+              <span class="item-c-id">J2610100004</span>
+              <span class="item-c-name">日本🇯🇵 The Matcha Tokyo 濃郁抹茶拿鐵隨身包 5入</span>
+              <span class="item-c-price">NT$ 450</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 評估比較總結表格 -->
+    <div style="background:#fff; border-radius:18px; padding:22px; border:1px solid var(--border); box-shadow:var(--shadow-sm); margin-top:24px;">
+      <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:12px;">📊 3 種版面方案綜合對比與建議</h3>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>評估指標</th>
+            <th>方案 A：分層精緻卡片 (推薦)</th>
+            <th>方案 B：現代網格卡片</th>
+            <th>方案 C：高密度條列型</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>資料黏著度解決</b></td>
+            <td>⭐️⭐️⭐️⭐️⭐️ (100% 獨立分層)</td>
+            <td>⭐️⭐️⭐️⭐️ (左右空間分明)</td>
+            <td>⭐️⭐️⭐️⭐️ (固定欄位對齊)</td>
+          </tr>
+          <tr>
+            <td><b>手機窄螢幕適配</b></td>
+            <td>⭐️⭐️⭐️⭐️⭐️ (高度自然延展，不壓迫)</td>
+            <td>⭐️⭐️⭐️⭐️ (自動單欄排列)</td>
+            <td>⭐️⭐️⭐️ (手機需隱藏部分欄位)</td>
+          </tr>
+          <tr>
+            <td><b>商品名稱完整度</b></td>
+            <td>完整 2 行顯示，長品名不截斷</td>
+            <td>限 2 行，空間適中</td>
+            <td>單行超出省略 (...)</td>
+          </tr>
+          <tr>
+            <td><b>挑選商品視覺反饋</b></td>
+            <td>綠色立體高亮 + 勾選框跳色</td>
+            <td>藍色氣泡底色 + 圓形打勾徽章</td>
+            <td>橘黃條列底色 + 標準勾選框</td>
+          </tr>
+          <tr>
+            <td><b>推薦適用對象</b></td>
+            <td><b>最符合連線代購精緻風格與圖文並茂需求</b></td>
+            <td>習慣電商卡片式挑選者</td>
+            <td>講求極致速度與資料行數者</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    function setDeviceMode(mode) {
+      const wrapper = document.getElementById('layoutWrapper');
+      const buttons = document.querySelectorAll('.device-btn');
+      
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      if (mode === 'mobile') {
+        wrapper.classList.add('mobile-mode');
+        buttons[1].classList.add('active');
+      } else {
+        wrapper.classList.remove('mobile-mode');
+        buttons[0].classList.add('active');
+      }
+    }
+
+    function toggleCard(elem, type) {
+      elem.classList.toggle('selected');
+      if (type === 'a') {
+        const box = elem.querySelector('.item-a-checkbox');
+        box.textContent = elem.classList.contains('selected') ? '✓' : '';
+      } else if (type === 'b') {
+        const badge = elem.querySelector('.item-b-check-badge');
+        badge.textContent = elem.classList.contains('selected') ? '✓' : '';
+      } else if (type === 'c') {
+        const chk = elem.querySelector('input[type="checkbox"]');
+        chk.checked = elem.classList.contains('selected');
+      }
+    }
+  </script>
+</body>
+</html>

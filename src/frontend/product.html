@@ -837,7 +837,7 @@
       <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13.5px;">✈️ 連線代購必讀</div>
       <div style="margin-bottom: 6px;">• 🚫 <b>下單即確定購買，不可取消或刪改</b>，下單前請確認規格、數量。</div>
       <div style="margin-bottom: 6px;">• ⚡ <b>依下單順序配貨</b>，若遇缺貨將主動變更狀態。</div>
-      <div style="margin-bottom: 6px;">• ⏰ <b>收單截止時間</b>以群組最後公告之截單時間為主。確認結單時間也會同步於商品清單頁上。</div>
+      <div style="margin-bottom: 6px;">• ⏰ <b>收單截止時間</b>以群組最後公告之結單時間為主。確認結單時間也會同步於商品清單頁上。</div>
       <div style="margin-bottom: 6px;">• 📦 <b>待清查完畢後</b>，將於群組或私訊確認訂單資料並發送專屬賣場連結供下單出貨。</div>
       <div>• 🚚 <b>出貨運費</b>：超商純取 0 元免運；賣貨便/好賣+ 滿 3,000 元免運；亦支援郵寄與宅配（依選擇之寄送方式計費）。</div>
     </div>
@@ -1259,7 +1259,7 @@
           const json = await res.json();
           if (json.success) {
             currentProduct = json.data;
-            // 🌟 核心規範：優先以商品指定之截單時間為準！
+            // 🌟 核心規範：優先以商品指定之結單時間為準！
             const targetDeadline = currentProduct.deadline || globalDeadline;
             initDeadlineCountdown(targetDeadline);
           } else {
