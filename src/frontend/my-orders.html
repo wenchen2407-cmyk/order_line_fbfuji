@@ -971,6 +971,13 @@
     };
 
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('liff.state')) {
+      const stateRaw = decodeURIComponent(urlParams.get('liff.state') || '');
+      const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
+      for (const [k, v] of stateParams.entries()) {
+        if (!urlParams.has(k)) urlParams.set(k, v);
+      }
+    }
     let currentUserId = urlParams.get('uid') || '';
     let currentUserName = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : '';
     let currentUserAvatar = urlParams.get('avatar') ? decodeURIComponent(urlParams.get('avatar')) : '';
@@ -1249,8 +1256,9 @@
         await liff.init({ liffId: CONFIG.LIFF_ID });
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (!liff.isLoggedIn()) {
-          if (!isLocal && urlParams.get('demo') !== '1') {
-            // 徹底消滅 GUEST：查看訂單清單時強制導向 LINE 登入授權
+          // 若已有帶入專屬 uid (例如從 1 對 1 專屬結帳通知或後台進入)，直接放行顯示訂單，無需強制踢去登入
+          if (!isLocal && urlParams.get('demo') !== '1' && !currentUserId) {
+            // 徹底消滅 GUEST：僅在完全無法辨識身分時強制導向 LINE 登入授權
             liff.login({ redirectUri: window.location.href });
             return;
           }

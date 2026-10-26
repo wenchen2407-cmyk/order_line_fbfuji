@@ -1934,12 +1934,15 @@
               <b style="color:${cust.totalAmount > 0 ? '#e11d48' : '#64748b'};">商品總額：NT$ ${cust.totalAmount.toLocaleString()}</b>
             </div>
           </div>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
               🚀 發送 1 對 1 卡片
             </button>
             <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
               📋 複製純文字
+            </button>
+            <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" onclick="window.open('my-orders.html?uid=' + encodeURIComponent('${cust.userId}') + '&name=' + encodeURIComponent('${cust.name}'), '_blank')">
+              👁️ 預覽訂單
             </button>
           </div>
         `;

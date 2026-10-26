@@ -14,12 +14,50 @@
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <script>
-    // 舊版單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+    // 智慧路由分流 (相容單一 LIFF Endpoint URL 轉跳)
     (function() {
-      const p = new URLSearchParams(window.location.search);
+      let search = window.location.search;
+      let p = new URLSearchParams(search);
+
+      // 0. 支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
+      if (p.has('liff.state')) {
+        const stateRaw = decodeURIComponent(p.get('liff.state') || '');
+        if (stateRaw.includes('action=orders') || stateRaw.includes('my-orders') || stateRaw.includes('orders') || stateRaw.includes('uid=')) {
+          const cleanQuery = stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw);
+          window.location.replace('my-orders.html' + cleanQuery);
+          return;
+        }
+        const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
+        const sAction = (stateParams.get('action') || stateParams.get('page') || '').toLowerCase();
+        if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders') || stateParams.has('uid')) {
+          window.location.replace('my-orders.html?' + stateParams.toString());
+          return;
+        }
+        const sPid = stateParams.get('p') || stateParams.get('pid') || stateParams.get('productId') || stateParams.get('id');
+        if (sPid) {
+          window.location.replace('product.html?' + stateParams.toString());
+          return;
+        }
+      }
+
+      // 1. 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
+      const action = (p.get('action') || p.get('page') || '').toLowerCase();
+      if (action === 'orders' || action === 'myorders' || action === 'checkout' || p.has('orders')) {
+        window.location.replace('my-orders.html' + search);
+        return;
+      }
+
+      // 2. 若網址直接帶有專屬 uid 且非單品網址 (例如 1 對 1 結帳通報直連)
+      if (p.has('uid') && !p.has('p') && !p.has('pid') && !p.has('productId') && !p.has('id')) {
+        window.location.replace('my-orders.html' + search);
+        return;
+      }
+
+      // 3. 舊版單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
       const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
       if (pid) {
-        window.location.replace('product.html' + window.location.search);
+        window.location.replace('product.html' + search);
+        return;
       }
     })();
   </script>
