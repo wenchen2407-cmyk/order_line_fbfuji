@@ -1941,13 +1941,22 @@
             <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
               📋 複製純文字
             </button>
-            <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" onclick="window.open('my-orders.html?uid=' + encodeURIComponent('${cust.userId}') + '&name=' + encodeURIComponent('${cust.name}'), '_blank')">
+            <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
               👁️ 預覽訂單
             </button>
           </div>
         `;
         container.appendChild(item);
       });
+    }
+
+    function previewCustomerOrders(userId, name) {
+      if (!userId) {
+        alert('⚠️ 該顧客缺少 LINE User ID，無法預覽專屬訂單！');
+        return;
+      }
+      const url = `my-orders.html?uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(name || '')}&preview=1`;
+      window.open(url, '_blank');
     }
 
     function copyCustomerRawText(userId, name, successCount, outCount, totalAmount) {

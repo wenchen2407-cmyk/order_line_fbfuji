@@ -386,6 +386,24 @@
       </div>
     </div>
 
+    <!-- 管理員預覽顧客訂單提示列 -->
+    <div id="adminPreviewBanner" style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(37,99,235,0.06);">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">🛡️</span>
+          <div>
+            <div style="font-weight: 800; font-size: 13px; color: #1e40af;">
+              管理員預覽顧客訂單模式
+            </div>
+            <div style="font-size: 11.5px; color: #3b82f6; margin-top: 1px;">
+              正在檢視顧客：<b id="previewCustomerName" style="color: #1e3a8a;">-</b>（UID: <span id="previewCustomerUid" style="font-family: monospace; font-size: 11px;">-</span>）
+            </div>
+          </div>
+        </div>
+        <span style="font-size: 11px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 6px; font-weight: 700;">唯讀預覽模式</span>
+      </div>
+    </div>
+
     <!-- 買家身分簡介卡 -->
     <div class="user-profile-header">
       <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/44" alt="頭像">
@@ -1213,19 +1231,23 @@
     // 0 毫秒訂單快取還原
     function restoreInstantOrdersCache() {
       try {
-        const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
-        if (cachedProfile) {
-          const p = JSON.parse(cachedProfile);
-          if (p.userId && !currentUserId) currentUserId = p.userId;
-          if (p.displayName && !currentUserName) {
-            currentUserName = p.displayName;
-            const nameElem = document.getElementById('displayUserName');
-            if (nameElem) nameElem.textContent = p.displayName;
-          }
-          if (p.pictureUrl && !currentUserAvatar) {
-            currentUserAvatar = p.pictureUrl;
-            const avatarElem = document.getElementById('userAvatar');
-            if (avatarElem) avatarElem.src = p.pictureUrl;
+        const explicitUid = urlParams.get('uid');
+        // 🌟 核心防護：若網址已有明確指定的 uid (例如管理員預覽或專屬結帳連結)，絕不可讀取瀏覽器中管理員自己的快取身分！
+        if (!explicitUid) {
+          const cachedProfile = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
+          if (cachedProfile) {
+            const p = JSON.parse(cachedProfile);
+            if (p.userId && !currentUserId) currentUserId = p.userId;
+            if (p.displayName && !currentUserName) {
+              currentUserName = p.displayName;
+              const nameElem = document.getElementById('displayUserName');
+              if (nameElem) nameElem.textContent = p.displayName;
+            }
+            if (p.pictureUrl && !currentUserAvatar) {
+              currentUserAvatar = p.pictureUrl;
+              const avatarElem = document.getElementById('userAvatar');
+              if (avatarElem) avatarElem.src = p.pictureUrl;
+            }
           }
         }
 
@@ -1255,6 +1277,8 @@
       try {
         await liff.init({ liffId: CONFIG.LIFF_ID });
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const explicitUid = urlParams.get('uid');
+
         if (!liff.isLoggedIn()) {
           // 若已有帶入專屬 uid (例如從 1 對 1 專屬結帳通知或後台進入)，直接放行顯示訂單，無需強制踢去登入
           if (!isLocal && urlParams.get('demo') !== '1' && !currentUserId) {
@@ -1264,33 +1288,52 @@
           }
         } else {
           const profile = await liff.getProfile();
-          const prevId = currentUserId;
-          currentUserId = profile.userId;
-          currentUserName = profile.displayName || currentUserName;
-          currentUserAvatar = profile.pictureUrl || currentUserAvatar;
 
-          const avatarElem = document.getElementById('userAvatar');
-          if (avatarElem && currentUserAvatar) avatarElem.src = currentUserAvatar;
-          const nameElem = document.getElementById('displayUserName');
-          if (nameElem && currentUserName) nameElem.textContent = currentUserName;
+          // 🌟 核心修復：若網址未指定 uid，才以登入者 profile 身分取代 currentUserId
+          if (!explicitUid) {
+            const prevId = currentUserId;
+            currentUserId = profile.userId;
+            currentUserName = profile.displayName || currentUserName;
+            currentUserAvatar = profile.pictureUrl || currentUserAvatar;
 
-          // 同步存入 sessionStorage 與 localStorage 雙快取
-          try {
-            const profStr = JSON.stringify({
-              userId: profile.userId,
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl
-            });
-            sessionStorage.setItem('liff_user_profile', profStr);
-            localStorage.setItem('liff_user_profile', profStr);
-          } catch (e) {}
+            const avatarElem = document.getElementById('userAvatar');
+            if (avatarElem && currentUserAvatar) avatarElem.src = currentUserAvatar;
+            const nameElem = document.getElementById('displayUserName');
+            if (nameElem && currentUserName) nameElem.textContent = currentUserName;
 
-          // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名查單進站通報
-          triggerOrdersPageView(true);
+            // 同步存入 sessionStorage 與 localStorage 雙快取
+            try {
+              const profStr = JSON.stringify({
+                userId: profile.userId,
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl
+              });
+              sessionStorage.setItem('liff_user_profile', profStr);
+              localStorage.setItem('liff_user_profile', profStr);
+            } catch (e) {}
 
-          // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
-          if (prevId !== currentUserId) {
-            fetchUserData();
+            // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
+            if (prevId !== currentUserId) {
+              fetchUserData();
+            }
+          } else {
+            // 🌟 網址已明確指定 uid（例如管理員預覽或 1 對 1 結帳），鎖定為該顧客的 uid
+            currentUserId = explicitUid;
+            if (urlParams.get('name')) {
+              currentUserName = decodeURIComponent(urlParams.get('name'));
+              const nameElem = document.getElementById('displayUserName');
+              if (nameElem && currentUserName) nameElem.textContent = currentUserName;
+            }
+            // 若目前登入身分與欲檢視顧客不同，或網址有 preview=1，代表是管理員預覽他人訂單
+            if ((profile.userId && profile.userId !== explicitUid) || urlParams.get('preview') === '1') {
+              console.log('🛡️ 管理員預覽顧客訂單模式：', explicitUid, '登入者身分：', profile.userId);
+              showAdminPreviewBanner(currentUserName || explicitUid, explicitUid);
+            }
+          }
+
+          // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名查單進站通報 (非管理員預覽時)
+          if (!explicitUid || (profile && profile.userId === explicitUid)) {
+            triggerOrdersPageView(true);
           }
         }
       } catch (e) {
@@ -1300,6 +1343,17 @@
           window.location.replace(`https://liff.line.me/${CONFIG.LIFF_ID}?action=orders`);
           return;
         }
+      }
+    }
+
+    function showAdminPreviewBanner(targetName, targetUid) {
+      const banner = document.getElementById('adminPreviewBanner');
+      if (banner) {
+        banner.style.display = 'block';
+        const nameSpan = document.getElementById('previewCustomerName');
+        const uidSpan = document.getElementById('previewCustomerUid');
+        if (nameSpan) nameSpan.textContent = targetName || '顧客';
+        if (uidSpan) uidSpan.textContent = targetUid || '';
       }
     }
 
@@ -1334,8 +1388,9 @@
         completedOrders = [];
       }
 
-      // 搶救 currentUserId：從 localStorage 或 sessionStorage 快取中讀取
-      if (!currentUserId) {
+      // 搶救 currentUserId：從 localStorage 或 sessionStorage 快取中讀取 (僅在沒有 explicitUid 時)
+      const explicitUid = urlParams.get('uid');
+      if (!currentUserId && !explicitUid) {
         try {
           const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
           if (cached) {
@@ -1345,6 +1400,9 @@
             if (p.pictureUrl && !currentUserAvatar) currentUserAvatar = p.pictureUrl;
           }
         } catch (e) {}
+      }
+      if (explicitUid && currentUserId !== explicitUid) {
+        currentUserId = explicitUid;
       }
 
       // 若線上環境依然尚未獲得 UID，且非本機/demo，先暫緩發送無效請求
@@ -2532,6 +2590,10 @@
 
     // 送出結帳表單
     async function submitCheckoutForm() {
+      if (urlParams.get('preview') === '1') {
+        alert('🛡️ 目前處於「管理員預覽顧客訂單模式」，僅供查閱顧客清單與狀態，無法代顧客送出結帳！');
+        return;
+      }
       // 結帳前置防呆檢查：排除已結帳與缺貨斷貨品項，若有任何未確認之商品處於「連線登記」，禁止送出！
       const registeringItems = pendingOrders.filter(it => {
         const s = String(it.shippingStatus || '').trim();
@@ -2696,6 +2758,10 @@
     }
 
     async function submitReportPaymentForm() {
+      if (urlParams.get('preview') === '1') {
+        alert('🛡️ 目前處於「管理員預覽顧客訂單模式」，僅供查閱顧客清單與狀態，無法代顧客送出付款回報！');
+        return;
+      }
       const payMethod = document.getElementById('reportPayMethodSelect').value;
       const payTime = document.getElementById('reportPayTimeInput').value.trim();
       const lastFive = document.getElementById('reportPayLastFiveInput').value.trim();
