@@ -2058,7 +2058,7 @@
       const queryStr = params.toString() ? `?${params.toString()}` : '';
 
       const catBtn = document.getElementById('linkBackToCatalog');
-      if (catBtn) catBtn.href = `catalog.html${queryStr}`;
+      if (catBtn) catBtn.href = `index.html${queryStr}`;
       const ordBtn = document.getElementById('linkToMyOrders');
       if (ordBtn) ordBtn.href = `my-orders.html${queryStr}`;
     }
@@ -2073,8 +2073,14 @@
       if (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') {
         params.set('uid', currentUser.userId);
       }
+      if (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') {
+        params.set('name', currentUser.displayName);
+      }
+      if (currentUser && currentUser.pictureUrl && !currentUser.pictureUrl.includes('placeholder')) {
+        params.set('avatar', currentUser.pictureUrl);
+      }
       const queryStr = params.toString() ? `?${params.toString()}` : '';
-      window.location.href = `catalog.html${queryStr}`;
+      window.location.href = `index.html${queryStr}`;
     }
 
     function goToMyOrders() {

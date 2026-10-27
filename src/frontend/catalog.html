@@ -22,14 +22,9 @@
       // 0. 支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
       if (p.has('liff.state')) {
         const stateRaw = decodeURIComponent(p.get('liff.state') || '');
-        if (stateRaw.includes('action=orders') || stateRaw.includes('my-orders') || stateRaw.includes('orders') || stateRaw.includes('uid=')) {
-          const cleanQuery = stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw);
-          window.location.replace('my-orders.html' + cleanQuery);
-          return;
-        }
         const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
         const sAction = (stateParams.get('action') || stateParams.get('page') || '').toLowerCase();
-        if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders') || stateParams.has('uid')) {
+        if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders')) {
           window.location.replace('my-orders.html?' + stateParams.toString());
           return;
         }
@@ -47,13 +42,7 @@
         return;
       }
 
-      // 2. 若網址直接帶有專屬 uid 且非單品網址 (例如 1 對 1 結帳通報直連)
-      if (p.has('uid') && !p.has('p') && !p.has('pid') && !p.has('productId') && !p.has('id')) {
-        window.location.replace('my-orders.html' + search);
-        return;
-      }
-
-      // 3. 舊版單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+      // 2. 單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
       const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
       if (pid) {
         window.location.replace('product.html' + search);
@@ -746,9 +735,17 @@
     const PAGE_SIZE = 25;
     let currentPage = 1;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('liff.state')) {
+      const stateRaw = decodeURIComponent(urlParams.get('liff.state') || '');
+      const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
+      for (const [k, v] of stateParams.entries()) {
+        if (!urlParams.has(k)) urlParams.set(k, v);
+      }
+    }
+
     // 智慧來源管道解析與保存 (支援 ?src=fb / line / ig / friend / other 或自動辨識 referrer)
     function detectAndSaveVisitorSource() {
-      const urlParams = new URLSearchParams(window.location.search);
       const srcParam = (urlParams.get('src') || urlParams.get('source') || urlParams.get('ref') || '').toLowerCase().trim();
       let detectedSource = '';
 
@@ -1049,7 +1046,6 @@
 
     // 初始化 LINE LIFF (身分驗證與後端歸戶自動對齊)
     async function initLiff() {
-      const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('uid')) {
         currentUserId = urlParams.get('uid');
         updateOrderLinks();

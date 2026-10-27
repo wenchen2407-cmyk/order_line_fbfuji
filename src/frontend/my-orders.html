@@ -1739,11 +1739,27 @@
         }
       }
 
-      const uidParam = currentUserId ? `?uid=${encodeURIComponent(currentUserId)}` : '';
+      const catalogParams = new URLSearchParams();
+      if (currentUserId && currentUserId !== 'TEST_USER_999') {
+        catalogParams.set('uid', currentUserId);
+      }
+      if (currentUserName && currentUserName !== '連線貴賓' && currentUserName !== 'LINE 買家') {
+        catalogParams.set('name', currentUserName);
+      }
+      if (currentUserAvatar && !currentUserAvatar.includes('placeholder')) {
+        catalogParams.set('avatar', currentUserAvatar);
+      }
+      if (urlParams.get('demo') === '1') {
+        catalogParams.set('demo', '1');
+      }
+      const catalogQuery = catalogParams.toString() ? `?${catalogParams.toString()}` : '';
+
       const catBtn = document.getElementById('topCatalogLink');
-      if (catBtn) catBtn.href = `index.html${uidParam}`;
+      if (catBtn) catBtn.href = `index.html${catalogQuery}`;
       const emptyBtn = document.getElementById('emptyCatalogBtn');
-      if (emptyBtn) emptyBtn.href = `index.html${uidParam}`;
+      if (emptyBtn) emptyBtn.href = `index.html${catalogQuery}`;
+      const continueBtn = document.getElementById('btnContinueShoppingOrders');
+      if (continueBtn) continueBtn.href = `index.html${catalogQuery}`;
     }
 
     // 核心渲染訂單介面
