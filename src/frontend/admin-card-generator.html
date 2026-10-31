@@ -1804,10 +1804,17 @@
         } else {
           tableBody.innerHTML = pages.map(pg => {
             const isProduct = pg.productId && pg.productId !== '-';
+            let displayTitle = pg.title || '';
+            if (isProduct && (displayTitle.includes('連線代購即時訂購單') || displayTitle === '商品內頁' || !displayTitle)) {
+              const matchedProd = allProducts.find(p => p.id === pg.productId);
+              if (matchedProd && matchedProd.name) {
+                displayTitle = `【商品】${matchedProd.name}`;
+              }
+            }
             return `
               <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 10px 12px; font-weight: 600; color: var(--text-main);">
-                  ${isProduct ? '🛍️ ' : '📄 '} ${pg.title}
+                  ${isProduct ? '🛍️ ' : '📄 '} ${displayTitle}
                 </td>
                 <td style="padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #64748b;">
                   ${pg.path}

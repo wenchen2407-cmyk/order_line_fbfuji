@@ -1285,6 +1285,9 @@
     let pvTimer = null;
 
     function triggerProductPageView(forceIdentified = false) {
+      // 🛡️ 關鍵防護：若商品資料尚未下載完成，絕對不發送通報，杜絕發出「連線代購即時訂購單」等通用未就緒標題！
+      if (!currentProduct || !currentProduct.name) return;
+
       if (hasSentIdentifiedPv && !forceIdentified) return;
 
       const uid = (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
@@ -1292,7 +1295,7 @@
       const hasIdentity = Boolean(uid || uname);
 
       const pageKey = `product.html?p=${targetProductId}`;
-      const pageTitle = currentProduct ? `【商品】${currentProduct.name}` : (document.title || '商品內頁');
+      const pageTitle = `【商品】${currentProduct.name}`;
 
       if (hasIdentity) {
         hasSentIdentifiedPv = true;
@@ -1304,8 +1307,8 @@
           const isLineApp = navigator.userAgent && navigator.userAgent.includes('Line');
           const waitTime = isLineApp ? 3000 : 2500;
           pvTimer = setTimeout(() => {
-            if (!hasSentIdentifiedPv) {
-              recordPageView(pageKey, pageTitle, targetProductId, false);
+            if (!hasSentIdentifiedPv && currentProduct && currentProduct.name) {
+              recordPageView(pageKey, `【商品】${currentProduct.name}`, targetProductId, false);
             }
           }, waitTime);
         }
@@ -1373,6 +1376,11 @@
         }
         return u;
       });
+
+      // 動態更新網頁標籤頁標題
+      if (currentProduct && currentProduct.name) {
+        document.title = `【連線代購】${currentProduct.name}`;
+      }
 
       // 設定主圖片
       const mainImgElem = document.getElementById('productImage');

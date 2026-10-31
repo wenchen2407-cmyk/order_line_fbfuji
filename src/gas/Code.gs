@@ -2477,8 +2477,28 @@ function handleRecordPageView(data) {
     }
 
     const pagePath = String(data.page || '').trim();
-    const pageTitle = String(data.title || pagePath).trim();
+    let pageTitle = String(data.title || pagePath).trim();
     const productId = String(data.productId || '-').trim();
+
+    // 🛡️ 關鍵防護 1：若為商品且傳入通用未就緒標題（例如「連線代購即時訂購單」或「商品內頁」），自動反查商品表中的真實商品名稱
+    if (productId && productId !== '-') {
+      const isGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁' || !pageTitle;
+      if (isGeneric) {
+        const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+        if (prodSheet) {
+          const pValues = prodSheet.getDataRange().getValues();
+          for (let pIdx = 1; pIdx < pValues.length; pIdx++) {
+            if (String(pValues[pIdx][0] || '').trim() === productId) {
+              const actualName = String(pValues[pIdx][1] || '').trim();
+              if (actualName) {
+                pageTitle = `【商品】${actualName}`;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
 
     // 僅排除「賣家管理中心」，買家查單與商品瀏覽皆正常統計並寄發觸擊通報
     const pLower = pagePath.toLowerCase();
@@ -2492,6 +2512,7 @@ function handleRecordPageView(data) {
     const values = range.getValues();
     let targetRow = -1;
     let currentViews = 0;
+    let existingRowTitle = '';
 
     for (let r = 1; r < values.length; r++) {
       const existingPath = String(values[r][1] || '').trim();
@@ -2500,12 +2521,14 @@ function handleRecordPageView(data) {
       if (productId !== '-' && productId !== '') {
         if (existingPid === productId || existingPath === pagePath) {
           targetRow = r + 1;
+          existingRowTitle = String(values[r][0] || '').trim();
           currentViews = Number(values[r][3]) || 0;
           break;
         }
       } else {
         if (existingPath === pagePath) {
           targetRow = r + 1;
+          existingRowTitle = String(values[r][0] || '').trim();
           currentViews = Number(values[r][3]) || 0;
           break;
         }
@@ -2515,7 +2538,13 @@ function handleRecordPageView(data) {
     const newViews = currentViews + 1;
 
     if (targetRow > 0) {
-      if (pageTitle) sheet.getRange(targetRow, 1).setValue(pageTitle);
+      // 🛡️ 關鍵防護 2：嚴禁以「連線代購即時訂購單」覆蓋現有的真實商品名稱！
+      const isNewGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁';
+      const isExistingGood = existingRowTitle && !existingRowTitle.includes('連線代購即時訂購單') && existingRowTitle !== '商品內頁';
+
+      if (pageTitle && (!isExistingGood || !isNewGeneric)) {
+        sheet.getRange(targetRow, 1).setValue(pageTitle);
+      }
       if (productId && productId !== '-') sheet.getRange(targetRow, 3).setValue(productId);
       sheet.getRange(targetRow, 4).setValue(newViews);
       sheet.getRange(targetRow, 5).setValue(now);
@@ -2739,6 +2768,22 @@ function getViewStats() {
     console.warn('清理排除頁面列失敗:', cleanErr);
   }
 
+  // 先行載入商品清單以利標題自動校正與資訊豐富化 (圖片、價格)
+  const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  const productsMeta = {};
+  if (prodSheet) {
+    const prodData = prodSheet.getDataRange().getValues();
+    for (let r = 1; r < prodData.length; r++) {
+      const pid = String(prodData[r][0] || '').trim();
+      const pName = String(prodData[r][1] || '').trim();
+      const pImg = String(prodData[r][7] || '').trim();
+      const pPrice = Number(prodData[r][4]) || 0;
+      if (pid) {
+        productsMeta[pid] = { name: pName, imageUrl: pImg, price: pPrice };
+      }
+    }
+  }
+
   const currentValues = sheet.getDataRange().getValues();
 
   let totalViews = 0;
@@ -2746,13 +2791,27 @@ function getViewStats() {
   const productViewsMap = {};
 
   for (let r = 1; r < currentValues.length; r++) {
-    const title = String(currentValues[r][0] || '').trim();
+    let title = String(currentValues[r][0] || '').trim();
     const path = String(currentValues[r][1] || '').trim();
     const pid = String(currentValues[r][2] || '').trim();
     const views = Number(currentValues[r][3]) || 0;
     const lastTime = currentValues[r][4] ? Utilities.formatDate(new Date(currentValues[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
 
     if (isExcludedPageView(path, title)) continue;
+
+    // 🌟 自動校正並回寫試算表：若商品標題曾被暫存覆蓋成「連線代購即時訂購單」或「商品內頁」，自動換回商品真實名稱！
+    if (pid && pid !== '-') {
+      if (title.includes('連線代購即時訂購單') || title === '商品內頁' || !title) {
+        if (productsMeta[pid] && productsMeta[pid].name) {
+          title = `【商品】${productsMeta[pid].name}`;
+          try {
+            sheet.getRange(r + 1, 1).setValue(title);
+          } catch (healErr) {
+            console.warn('自動校正試算表標題失敗:', healErr);
+          }
+        }
+      }
+    }
 
     totalViews += views;
 
@@ -2772,22 +2831,6 @@ function getViewStats() {
   }
 
   pages.sort((a, b) => b.views - a.views);
-
-  // 取得商品清單進行資訊豐富化 (圖片、價格)
-  const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-  const productsMeta = {};
-  if (prodSheet) {
-    const prodData = prodSheet.getDataRange().getValues();
-    for (let r = 1; r < prodData.length; r++) {
-      const pid = String(prodData[r][0] || '').trim();
-      const pName = String(prodData[r][1] || '').trim();
-      const pImg = String(prodData[r][7] || '').trim();
-      const pPrice = Number(prodData[r][4]) || 0;
-      if (pid) {
-        productsMeta[pid] = { name: pName, imageUrl: pImg, price: pPrice };
-      }
-    }
-  }
 
   const topProducts = [];
   for (const pid in productViewsMap) {
