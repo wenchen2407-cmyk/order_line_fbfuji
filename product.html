@@ -217,6 +217,10 @@
       letter-spacing: 0.01em;
     }
 
+    .product-desc:empty {
+      display: none;
+    }
+
     /* 表單區塊 */
     .form-section {
       background: var(--card-bg);
@@ -800,13 +804,13 @@
           </div>
         </div>
 
-        <span id="productCategory" class="product-tag">2026.10月連線</span>
+        <span id="productCategory" class="product-tag" style="display: none;"></span>
         <h1 id="productTitle" class="product-title">載入商品資料中...</h1>
         <div class="price-box">
           <span class="current-price" id="productPrice">NT$ ---</span>
           <span class="original-price" id="originalPrice" style="display: none;">NT$ ---</span>
         </div>
-        <p id="productDesc" class="product-desc">商品描述準備中...</p>
+        <p id="productDesc" class="product-desc" style="display: none;"></p>
       </div>
     </div>
 
@@ -1407,7 +1411,13 @@
       }
 
       document.getElementById('productTitle').textContent = currentProduct.name;
-      document.getElementById('productCategory').textContent = currentProduct.category || '2026.10月連線';
+      const catElem = document.getElementById('productCategory');
+      if (currentProduct.category) {
+        catElem.textContent = currentProduct.category;
+        catElem.style.display = 'inline-block';
+      } else {
+        catElem.style.display = 'none';
+      }
       
       const priceNum = Number(currentProduct.price) || 0;
       const origPriceNum = Number(currentProduct.originalPrice) || 0;
@@ -1422,11 +1432,13 @@
         origPriceElem.style.display = 'none';
       }
 
-      const rawDesc = currentProduct.description || '日本專櫃代購正品，數量有限敬請把握！';
+      const rawDesc = currentProduct.description || '';
       const cleanDesc = (typeof rawDesc === 'string') 
         ? rawDesc.replace(/\\n/g, '\n').replace(/\\r/g, '').trim() 
-        : String(rawDesc);
-      document.getElementById('productDesc').textContent = cleanDesc;
+        : String(rawDesc || '').trim();
+      const descElem = document.getElementById('productDesc');
+      descElem.textContent = cleanDesc;
+      descElem.style.display = cleanDesc ? 'block' : 'none';
       
       const stockNum = Number(currentProduct.stock) || 0;
       const stockElem = document.getElementById('productStock');

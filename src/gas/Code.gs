@@ -43,7 +43,7 @@ function setupSpreadsheet() {
     // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
     const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
     prodSheet.appendRow([
-      'J2609270001', '日本代購限定 輕量防潑水後背包', '2026.10月連線', 1880, 1450, 999999,
+      'J2609270001', '日本代購限定 輕量防潑水後背包', '親飛連線', 1880, 1450, 999999,
       JSON.stringify(['米白色', '經典黑', '海軍藍']),
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
       '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
@@ -501,11 +501,15 @@ function doGet(e) {
   
   try {
     let result = {};
-    if (action === 'getProducts' || action === 'getAllProducts') {
-      const includeAll = action === 'getAllProducts' || (e && e.parameter && (e.parameter.includeAll === '1' || e.parameter.includeAll === 'true'));
-      result = getProductsList(includeAll);
+    if (action === 'getProducts') {
+      // 買家前台商品大廳公開 API：僅回傳上架中商品，嚴格排除採購成本、匯率與毛利等商業機密
+      result = getProductsList(false, false);
+    } else if (action === 'getAllProducts') {
+      // 賣家後台管理中心專用 (商品資料維護與成本計算機)：回傳所有商品含完整採購成本欄位
+      result = getProductsList(true, true);
     } else if (action === 'getProductById') {
       const pid = e.parameter.productId;
+      // 買家單品詳情頁公開 API：嚴格排除採購成本、匯率與毛利等商業機密
       result = getProductDetail(pid);
     } else if (action === 'getOrdersByUserId') {
       const uid = e.parameter.userId;
@@ -594,9 +598,11 @@ function doPost(e) {
 }
 
 /**
- * 取得上架商品清單 (支援 includeAll: true 時取得所有商品包含已下架，供管理後台維護)
+ * 取得商品清單
+ * @param {boolean} includeAll - 是否包含已下架商品 (預設 false: 僅回傳上架中商品)
+ * @param {boolean} includeCost - 是否包含採購成本、匯率與利潤欄位 (預設 false: 嚴格禁止回傳商業機密)
  */
-function getProductsList(includeAll = false) {
+function getProductsList(includeAll = false, includeCost = false) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   if (!sheet) return { success: false, message: '尚未初始化商品表' };
@@ -651,7 +657,7 @@ function getProductsList(includeAll = false) {
       const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
       const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
 
-      products.push({
+      const prodItem = {
         id: row[0],
         name: row[1],
         category: row[2],
@@ -663,18 +669,25 @@ function getProductsList(includeAll = false) {
         imageUrls: allImages,
         description: row[8],
         status: status || '上架中',
-        costPrice: Number(row[11]) || 0,
-        costNote: row[12] || '',
         deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定結單時間 (選填)
-        currency: row[15] || 'JPY',                          // 欄位 16 (P): 採購幣別
-        costPreTax: Number(row[16]) || 0,                    // 欄位 17 (Q): 原幣稅前金額
-        costTax: Number(row[17]) || 0,                       // 欄位 18 (R): 稅金 (原幣)
-        exchangeRate: Number(row[18]) || 0,                  // 欄位 19 (S): 採購匯率
-        weightG: Number(row[19]) || 0,                       // 欄位 20 (T): 商品重量 (g)
-        shippingRate: Number(row[20]) || 240,                // 欄位 21 (U): 國際運費單價 (元/kg)
         createdAt: createdAtStr,                             // 欄位 11 (K): 建立時間
         updatedAt: updatedAtStr                              // 欄位 22 (V): 最後更新時間
-      });
+      };
+
+      // 🛡️ 商業機密嚴格保護：採購成本、匯率、稅金、重量與運費僅在賣家管理後台明確請求 (includeCost=true) 時才附加
+      // 前台買家公開 API (getProducts, getProductById) 絕對不包含任何成本欄位，防止客人窺探定價與利潤！
+      if (includeCost) {
+        prodItem.costPrice = Number(row[11]) || 0;
+        prodItem.costNote = row[12] || '';
+        prodItem.currency = row[15] || 'JPY';
+        prodItem.costPreTax = Number(row[16]) || 0;
+        prodItem.costTax = Number(row[17]) || 0;
+        prodItem.exchangeRate = Number(row[18]) || 0;
+        prodItem.weightG = Number(row[19]) || 0;
+        prodItem.shippingRate = Number(row[20]) || 240;
+      }
+
+      products.push(prodItem);
     }
   }
 
@@ -696,10 +709,10 @@ function formatDeadlineStr(val) {
 }
 
 /**
- * 取得單一商品詳情
+ * 取得單一商品詳情 (前台買家專用：嚴格禁止回傳任何採購成本與利潤資訊)
  */
 function getProductDetail(productId) {
-  const list = getProductsList();
+  const list = getProductsList(false, false);
   if (!list.success) return list;
   const prod = list.data.find(p => p.id === productId);
   if (prod) {

@@ -899,8 +899,13 @@
             <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)">
           </div>
           <div class="form-group">
-            <label class="form-label">活動分類標籤</label>
-            <input type="text" id="newProdCategory" class="input-text" value="2026.10月連線">
+            <label class="form-label">活動分類標籤 *</label>
+            <select id="newProdCategory" class="input-text" style="cursor: pointer;">
+              <option value="預購">預購</option>
+              <option value="現貨">現貨</option>
+              <option value="親飛連線">親飛連線</option>
+              <option value="每週採購">每週採購</option>
+            </select>
           </div>
         </div>
 
@@ -1329,7 +1334,13 @@
         <div class="row-2">
           <div class="form-group">
             <label class="form-label">活動分類標籤 *</label>
-            <input type="text" id="editProdCategory" class="input-text" placeholder="例：2026.10月連線">
+            <input type="text" id="editProdCategory" class="input-text" list="categoryOptionsList" placeholder="例：預購、現貨、親飛連線...">
+            <datalist id="categoryOptionsList">
+              <option value="預購"></option>
+              <option value="現貨"></option>
+              <option value="親飛連線"></option>
+              <option value="每週採購"></option>
+            </datalist>
           </div>
           <div class="form-group">
             <label class="form-label">商品上下架狀態 *</label>
@@ -1581,11 +1592,10 @@
         <div style="margin-top: 10px;">
           <div style="font-size: 11.5px; color: #64748b; font-weight: 700; margin-bottom: 6px;">⚡ 點擊快速套用常用分類：</div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="batchCategoryQuickChips">
-            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('2026.10月連線')">2026.10月連線</button>
-            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('2026.11月連線')">2026.11月連線</button>
-            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🇯🇵 日本專櫃限定')">🇯🇵 日本專櫃限定</button>
-            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🇰🇷 韓國美妝零食')">🇰🇷 韓國美妝零食</button>
-            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('🔥 現貨搶購專區')">🔥 現貨搶購專區</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('預購')">預購</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('現貨')">現貨</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('親飛連線')">親飛連線</button>
+            <button type="button" class="btn-time-preset" onclick="setBatchCategoryPreset('每週採購')">每週採購</button>
           </div>
         </div>
       </div>
@@ -3134,7 +3144,7 @@
           document.getElementById('newProdImageUrls').value = '';
           document.getElementById('newProdSpecs').value = '';
           document.getElementById('newProdDesc').value = '';
-          document.getElementById('newProdCategory').value = '2026.10月連線';
+          document.getElementById('newProdCategory').value = '預購';
           if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
           if (document.getElementById('deadlineHintText')) document.getElementById('deadlineHintText').textContent = '';
           
@@ -3159,7 +3169,7 @@
           const newProdItem = {
             id: newProdId,
             name: name,
-            category: category || '2026.10月連線',
+            category: category || '預購',
             price: Number(price),
             originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
             stock: finalStock,
