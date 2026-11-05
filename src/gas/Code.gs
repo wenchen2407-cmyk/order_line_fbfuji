@@ -18,6 +18,40 @@ const DRIVE_FOLDER_ID = '1dqoqS4VJK7Fn56-L-mM5Afwyb6dvTQMB';
 // 📧 管理者接收【網址觸擊 / 訪客進站】即時通報的 Email 信箱
 const ADMIN_ALERT_EMAIL = 'wen.chen2407@gmail.com';
 
+// 🛡️ 管理者 LINE User ID 白名單（最高權限白名單：可查看進貨成本、毛利計算機與顧客通知）
+const DEFAULT_ADMIN_LINE_UIDS = [
+  'Uee7765ed3c1819cb94fd404cfab8553b' // 賣家主要管理員
+];
+
+/**
+ * 檢查傳入之 LINE User ID 是否具備管理者白名單權限
+ * 優先比對常數白名單，並支援連動 Google 試算表【系統設定】中的 ADMIN_LINE_UIDS 欄位（以逗號或換行分隔）
+ */
+function checkIsAdmin(userId) {
+  if (!userId) return false;
+  const uid = String(userId).trim();
+  if (DEFAULT_ADMIN_LINE_UIDS.includes(uid)) return true;
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    if (settSheet) {
+      const data = settSheet.getDataRange().getValues();
+      for (let r = 1; r < data.length; r++) {
+        const key = String(data[r][0] || '').trim();
+        if (key === 'ADMIN_LINE_UIDS') {
+          const val = String(data[r][1] || '').trim();
+          const list = val.split(/[,\n;|\s]+/).map(s => s.trim()).filter(Boolean);
+          if (list.includes(uid)) return true;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('檢查試算表管理者白名單失敗:', err);
+  }
+  return false;
+}
+
 /**
  * 試算表初次安裝設定與欄位升級：自動補齊成本價、重量備註與多圖欄位
  * 可在 Apps Script 編輯器中直接執行此函式升級試算表結構
@@ -162,7 +196,8 @@ function setupSpreadsheet() {
     ['SHIP_FEE_POST_COD', '130', '郵局貨到付款郵資 (NT$)'],
     ['SHIP_FEE_BLACKCAT', '100', '黑貓宅配到府 (需先匯款) 運費 (NT$)'],
     ['STORE_NAME', 'W.W.連線代購', '商店名稱'],
-    ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明']
+    ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明'],
+    ['ADMIN_LINE_UIDS', 'Uee7765ed3c1819cb94fd404cfab8553b', '管理者 LINE User ID 白名單 (多筆以逗號或換行分隔)']
   ];
 
   if (!settSheet) {
@@ -505,8 +540,20 @@ function doGet(e) {
       // 買家前台商品大廳公開 API：僅回傳上架中商品，嚴格排除採購成本、匯率與毛利等商業機密
       result = getProductsList(false, false);
     } else if (action === 'getAllProducts') {
-      // 賣家後台管理中心專用 (商品資料維護與成本計算機)：回傳所有商品含完整採購成本欄位
-      result = getProductsList(true, true);
+      // 賣家後台管理中心專用：強制驗證管理者 LINE User ID 白名單！
+      // 只有在白名單內的管理者才允許取得採購成本、匯率與毛利，否則一律自動剔除商業機密！
+      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      const isAdmin = checkIsAdmin(reqUserId);
+      result = getProductsList(true, isAdmin);
+      result.isAdmin = isAdmin;
+      if (!isAdmin) {
+        result.securityNotice = '⚠️ 訪客未在管理者白名單中，已自動隱藏所有進貨成本與利潤資訊。';
+      }
+    } else if (action === 'verifyAdmin') {
+      // 提供管理中心前端快速校驗當前 LINE 使用者身分
+      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      const isAdmin = checkIsAdmin(reqUserId);
+      result = { success: true, isAdmin: isAdmin, userId: reqUserId };
     } else if (action === 'getProductById') {
       const pid = e.parameter.productId;
       // 買家單品詳情頁公開 API：嚴格排除採購成本、匯率與毛利等商業機密
@@ -528,7 +575,13 @@ function doGet(e) {
         productId: e.parameter.productId
       });
     } else if (action === 'getCustomerNotifyList') {
-      result = getCustomerNotifyList();
+      // 顧客結帳通知清單包含買家個資與消費，需驗證管理者身分
+      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者查閱顧客通知清單！', isAdmin: false };
+      } else {
+        result = getCustomerNotifyList();
+      }
     } else if (action === 'recalculateCustomerStats') {
       result = recalculateCustomerStats();
     } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
