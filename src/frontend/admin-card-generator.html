@@ -828,10 +828,23 @@
       
       <div style="margin-top: 8px;">
         <div id="liffStatusBadge" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 20px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <span style="color:#64748b;">⏳ 正在連線 LINE 服務...</span>
+          <span style="color:#64748b;">⏳ 正在驗證賣家管理員身分...</span>
         </div>
       </div>
     </div>
+
+    <!-- 🛡️ 全頁門禁鎖定畫面 (未驗證白名單管理員前，嚴格隱藏下方所有後台介面) -->
+    <div id="adminAuthGate" style="max-width: 520px; margin: 28px auto; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 32px 24px; text-align: center; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);">
+      <div id="adminAuthGateIcon" style="font-size: 42px; margin-bottom: 12px;">🛡️</div>
+      <h2 id="adminAuthGateTitle" style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">正在驗證賣家管理員權限...</h2>
+      <p id="adminAuthGateDesc" style="font-size: 13.5px; color: #64748b; line-height: 1.6; margin-bottom: 20px;">
+        連線代購管理中心受白名單雙重門禁保護，僅限授權管理員帳號進入操作與編輯。
+      </p>
+      <div id="adminAuthGateActions" style="display: flex; flex-direction: column; gap: 10px; align-items: center;"></div>
+    </div>
+
+    <!-- 🔒 受保護的後台管理主畫面 (通過白名單驗證後才解鎖顯示) -->
+    <div id="adminProtectedContent" style="display: none;">
 
     <!-- 功能切換 Tab -->
     <div class="tabs-nav">
@@ -1313,6 +1326,8 @@
       </div>
     </div>
 
+    </div><!-- /#adminProtectedContent -->
+
   </div>
 
   <!-- ================= ✏️ 編輯商品完整資料彈出視窗 (Modal Drawer) ================= -->
@@ -1623,13 +1638,14 @@
     let liffReady = false;
     let liffInClient = false;
     let liffCanShare = false;
+    const PRIMARY_ADMIN_UID = 'Uee7765ed3c1819cb94fd404cfab8553b';
     let currentAdminUserId = '';
     let currentAdminUserName = '';
     let isVerifiedAdmin = false;
 
     window.onload = async () => {
       await initLiff();
-      await fetchProductList();
+      await verifyAndUnlockAdminHub();
     };
 
     async function initLiff() {
@@ -1655,6 +1671,106 @@
       }
     }
 
+    // 🛡️ 全頁門禁檢查：必須是白名單管理員才能進入後台操作
+    async function verifyAndUnlockAdminHub() {
+      const gate = document.getElementById('adminAuthGate');
+      const gateIcon = document.getElementById('adminAuthGateIcon');
+      const gateTitle = document.getElementById('adminAuthGateTitle');
+      const gateDesc = document.getElementById('adminAuthGateDesc');
+      const gateActions = document.getElementById('adminAuthGateActions');
+      const protectedContent = document.getElementById('adminProtectedContent');
+
+      // 情境 1：尚未登入 LINE
+      if (!currentAdminUserId) {
+        isVerifiedAdmin = false;
+        if (protectedContent) protectedContent.style.display = 'none';
+        if (gate) gate.style.display = 'block';
+        if (gateIcon) gateIcon.textContent = '🔒';
+        if (gateTitle) gateTitle.textContent = '賣家專屬管理中心｜請先登入驗證身分';
+        if (gateDesc) {
+          gateDesc.innerHTML = '本後台受<b>雙重白名單門禁保護</b>，僅限授權管理員進入。<br>請先使用管理員 LINE 帳號登入以解鎖商品建檔、資料維護與顧客通知功能。';
+        }
+        if (gateActions) {
+          gateActions.innerHTML = `
+            <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+              🟢 使用 LINE 帳號登入驗證
+            </button>
+            <a href="index.html" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
+          `;
+        }
+        updateLiffStatusBadge();
+        return;
+      }
+
+      // 情境 2：已登入 LINE，向後端或主管理員白名單校驗權限
+      let adminPass = (currentAdminUserId === PRIMARY_ADMIN_UID);
+      if (!adminPass) {
+        try {
+          const res = await fetch(`${CONFIG.GAS_API_URL}?action=verifyAdmin&userId=${encodeURIComponent(currentAdminUserId)}`);
+          const json = await res.json();
+          if (json && json.success && json.isAdmin) {
+            adminPass = true;
+          }
+        } catch (err) {
+          console.warn('向後端驗證管理員權限失敗:', err);
+        }
+      }
+
+      isVerifiedAdmin = adminPass;
+      updateLiffStatusBadge();
+
+      if (isVerifiedAdmin) {
+        // ✅ 通過白名單驗證：隱藏門禁卡、解鎖完整後台介面並載入資料
+        if (gate) gate.style.display = 'none';
+        if (protectedContent) protectedContent.style.display = 'block';
+        await fetchProductList();
+      } else {
+        // 🚫 非白名單管理員：徹底封鎖並移除後台 DOM，禁止查看或操作任何功能
+        if (protectedContent) {
+          protectedContent.style.display = 'none';
+          protectedContent.innerHTML = '';
+        }
+        const editModal = document.getElementById('editProductModal');
+        if (editModal) editModal.remove();
+        const batchModal = document.getElementById('batchCategoryModal');
+        if (batchModal) batchModal.remove();
+
+        if (gate) {
+          gate.style.display = 'block';
+          gate.style.borderColor = '#fecaca';
+          gate.style.background = '#fffafa';
+        }
+        if (gateIcon) gateIcon.textContent = '🚫';
+        if (gateTitle) {
+          gateTitle.textContent = '存取遭拒：您的帳號未獲管理員授權';
+          gateTitle.style.color = '#dc2626';
+        }
+        if (gateDesc) {
+          gateDesc.innerHTML = `
+            目前登入帳號：<b>${escapeHtml(currentAdminUserName || 'LINE 用戶')}</b><br>
+            <div style="margin:8px auto; padding:6px 10px; background:#f1f5f9; border-radius:8px; font-family:monospace; font-size:12px; color:#334155; word-break:break-all;">
+              UID: ${escapeHtml(currentAdminUserId)}
+            </div>
+            此帳號不在賣家管理員白名單中，無法瀏覽或編輯後台資料。<br>
+            <span style="font-size:12px; color:#94a3b8;">（若您為小幫手，請複製上方 UID 提供給主管理員加入試算表【系統設定】的 ADMIN_LINE_UIDS 白名單）</span>
+          `;
+        }
+        if (gateActions) {
+          gateActions.innerHTML = `
+            <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(currentAdminUserId)}').then(() => alert('✅ 已複製您的 LINE UID！請傳給主管理員加入白名單。'))" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; border-radius:10px; cursor:pointer; font-weight:700;">
+              📋 複製我的 LINE UID
+            </button>
+            <button type="button" onclick="liff.logout(); window.location.reload();" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:10px; cursor:pointer; font-weight:700;">
+              🔄 登出並切換管理員 LINE 帳號
+            </button>
+            <a href="index.html" style="display:inline-block; margin-top:6px; padding:10px 20px; background:var(--primary); color:#fff; border-radius:10px; font-size:13.5px; font-weight:800; text-decoration:none;">
+              🛍️ 前往買家連線商品大廳
+            </a>
+          `;
+        }
+      }
+    }
+
     function updateLiffStatusBadge(errMsg) {
       const badge = document.getElementById('liffStatusBadge');
       if (!badge) return;
@@ -1662,9 +1778,11 @@
       if (errMsg) {
         badge.innerHTML = `<span style="color:#ef4444;">⚠️ LIFF 初始化異常 (${errMsg})</span>`;
       } else if (currentAdminUserId) {
-        const adminTag = (currentAdminUserId === 'Uee7765ed3c1819cb94fd404cfab8553b')
+        const adminTag = (currentAdminUserId === PRIMARY_ADMIN_UID)
           ? '<span style="color:#10b981; font-weight:800;">👑 主管理員</span>'
-          : '<span style="color:#0ea5e9; font-weight:700;">👤 LINE 會員</span>';
+          : (isVerifiedAdmin
+              ? '<span style="color:#10b981; font-weight:800;">🛡️ 授權管理員</span>'
+              : '<span style="color:#ef4444; font-weight:700;">🚫 未授權訪客</span>');
         const clientTag = liffInClient 
           ? '<span style="color:#10b981;">📱 LINE 內</span>' 
           : '<span style="color:#6366f1;">💻 外部瀏覽器</span>';
@@ -1681,12 +1799,13 @@
           </div>
         `;
       } else {
-        badge.innerHTML = `<span style="color:#f59e0b;">🟡 外部瀏覽器｜未登入 LINE (僅能使用公開預覽)</span> <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="margin-left:8px; padding:3px 10px; font-size:11.5px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">點此登入 LINE 解鎖管理權限</button>`;
+        badge.innerHTML = `<span style="color:#f59e0b;">🔒 尚未登入 LINE 管理員帳號</span> <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="margin-left:8px; padding:3px 10px; font-size:11.5px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">點此登入 LINE 解鎖</button>`;
       }
     }
 
     // 1. Tab 切換 (防呆強化：安全支援手動點選與程式非同步切換)
     function switchTab(tabId, btnElement) {
+      if (!isVerifiedAdmin) return;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
@@ -1736,7 +1855,8 @@
       if (tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">⏳ 正在讀取「瀏覽統計」工作表...</td></tr>';
 
       try {
-        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getViewStats`);
+        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '';
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getViewStats${uidParam}`);
         const data = await res.json();
         if (data.success) {
           viewStatsCache = data;
@@ -2196,7 +2316,7 @@
             fetch(CONFIG.GAS_API_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ action: 'markCustomerNotified', userId: userId }),
+              body: JSON.stringify({ action: 'markCustomerNotified', userId: userId, adminUserId: currentAdminUserId }),
               keepalive: true
             }).catch(() => {});
             // 更新本地顧客狀態
@@ -3062,6 +3182,7 @@
               method: 'POST',
               body: JSON.stringify({
                 action: 'uploadImages',
+                adminUserId: currentAdminUserId,
                 data: { files: base64Files }
               })
             });
@@ -3128,6 +3249,7 @@
 
         const payload = {
           action: 'addProduct',
+          adminUserId: currentAdminUserId,
           data: {
             id: customId,
             currency: document.getElementById('calcCurrency') ? document.getElementById('calcCurrency').value : 'JPY',
@@ -3646,6 +3768,7 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'batchUpdateProducts',
+            adminUserId: currentAdminUserId,
             data: {
               productIds: ids,
               updateType: 'status',
@@ -3728,6 +3851,7 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'batchUpdateProducts',
+            adminUserId: currentAdminUserId,
             data: {
               productIds: ids,
               updateType: 'category',
@@ -3776,6 +3900,7 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'batchUpdateProducts',
+            adminUserId: currentAdminUserId,
             data: {
               productIds: [productId],
               updateType: 'status',
@@ -4236,6 +4361,7 @@
             method: 'POST',
             body: JSON.stringify({
               action: 'uploadImages',
+              adminUserId: currentAdminUserId,
               data: { files: base64Files }
             })
           });
@@ -4320,6 +4446,7 @@
 
         const payload = {
           action: 'updateProduct',
+          adminUserId: currentAdminUserId,
           data: {
             id: pid,
             name: name,

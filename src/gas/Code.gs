@@ -533,6 +533,7 @@ function clearOrdersAndCustomers() {
  */
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'getProducts';
+  const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid || e.parameter.adminUserId)) || '';
   
   try {
     let result = {};
@@ -540,18 +541,16 @@ function doGet(e) {
       // 買家前台商品大廳公開 API：僅回傳上架中商品，嚴格排除採購成本、匯率與毛利等商業機密
       result = getProductsList(false, false);
     } else if (action === 'getAllProducts') {
-      // 賣家後台管理中心專用：強制驗證管理者 LINE User ID 白名單！
-      // 只有在白名單內的管理者才允許取得採購成本、匯率與毛利，否則一律自動剔除商業機密！
-      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      // 賣家後台管理中心專用：強制驗證管理者 LINE User ID 白名單！非白名單直接拒絕存取！
       const isAdmin = checkIsAdmin(reqUserId);
-      result = getProductsList(true, isAdmin);
-      result.isAdmin = isAdmin;
       if (!isAdmin) {
-        result.securityNotice = '⚠️ 訪客未在管理者白名單中，已自動隱藏所有進貨成本與利潤資訊。';
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理員存取後台商品維護資料！', isAdmin: false };
+      } else {
+        result = getProductsList(true, true);
+        result.isAdmin = true;
       }
     } else if (action === 'verifyAdmin') {
-      // 提供管理中心前端快速校驗當前 LINE 使用者身分
-      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      // 提供管理中心前端門禁系統快速校驗當前 LINE 使用者身分
       const isAdmin = checkIsAdmin(reqUserId);
       result = { success: true, isAdmin: isAdmin, userId: reqUserId };
     } else if (action === 'getProductById') {
@@ -567,7 +566,11 @@ function doGet(e) {
     } else if (action === 'getSettings') {
       result = getSystemSettings();
     } else if (action === 'getViewStats') {
-      result = getViewStats();
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理員查閱瀏覽統計數據！', isAdmin: false };
+      } else {
+        result = getViewStats();
+      }
     } else if (action === 'recordPageView') {
       result = handleRecordPageView({
         page: e.parameter.page,
@@ -575,17 +578,24 @@ function doGet(e) {
         productId: e.parameter.productId
       });
     } else if (action === 'getCustomerNotifyList') {
-      // 顧客結帳通知清單包含買家個資與消費，需驗證管理者身分
-      const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid)) || '';
+      // 顧客結帳通知清單包含買家個資與消費，強制驗證管理者身分
       if (!checkIsAdmin(reqUserId)) {
         result = { success: false, message: '🔒 存取遭拒：僅限授權管理者查閱顧客通知清單！', isAdmin: false };
       } else {
         result = getCustomerNotifyList();
       }
     } else if (action === 'recalculateCustomerStats') {
-      result = recalculateCustomerStats();
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行統計重算！', isAdmin: false };
+      } else {
+        result = recalculateCustomerStats();
+      }
     } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
-      result = { success: true, message: upgradeExistingProductsToFormula() };
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行公式修復！', isAdmin: false };
+      } else {
+        result = { success: true, message: upgradeExistingProductsToFormula() };
+      }
     } else if (action === 'clearTestData' || action === 'clearTestProducts') {
       result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
     } else {
@@ -603,16 +613,38 @@ function doGet(e) {
  * - createOrder (連線搶購登記下單)
  * - checkoutOrders (出貨合併結帳：6大配送方式與收件資料)
  * - reportPayment (客人回填匯款後五碼)
- * - addProduct (賣家快速上架商品)
- * - updateProduct (賣家線上完整維護商品資料)
- * - batchUpdateProducts (批次上架/下架/修改分類)
- * - uploadImages (圖片上傳 Google Drive)
- * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知)
+ * - addProduct (賣家快速上架商品 - 需管理員白名單權限)
+ * - updateProduct (賣家線上完整維護商品資料 - 需管理員白名單權限)
+ * - batchUpdateProducts (批次上架/下架/修改分類 - 需管理員白名單權限)
+ * - uploadImages (圖片上傳 Google Drive - 需管理員白名單權限)
+ * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知 - 需管理員白名單權限)
  */
 function doPost(e) {
   try {
     const postData = JSON.parse(e.postData.contents);
     const action = postData.action;
+    const reqAdminId = (postData && (
+      postData.adminUserId ||
+      postData.userId ||
+      (postData.data && (postData.data.adminUserId || postData.data.userId))
+    )) || '';
+
+    // 🛡️ 後台管理專屬寫入與統計操作：強制驗證管理員 LINE UID 白名單
+    const adminProtectedActions = [
+      'addProduct',
+      'updateProduct',
+      'batchUpdateProducts',
+      'uploadImages',
+      'markCustomerNotified',
+      'getViewStats'
+    ];
+    if (adminProtectedActions.includes(action) && !checkIsAdmin(reqAdminId)) {
+      return jsonResponse({
+        success: false,
+        isAdmin: false,
+        message: '🚫 權限不足：您的 LINE 帳號未在管理員白名單中，系統已拒絕執行此後台操作！'
+      });
+    }
 
     let result = {};
     if (action === 'createOrder') {
@@ -1794,6 +1826,8 @@ function getSystemSettings() {
     const key = rows[i][0];
     const val = rows[i][1];
     if (key) {
+      // 🛡️ 嚴格排除後台管理員白名單 UID，禁止透過公開設定 API 外洩
+      if (String(key).trim() === 'ADMIN_LINE_UIDS') continue;
       if (key === 'ORDER_DEADLINE' && val) {
         settings[key] = formatDeadlineStr(val);
       } else {
