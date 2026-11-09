@@ -1445,6 +1445,27 @@
           completedOrders = json.data.completedOrders || [];
 
           customerProfile = json.data.customerProfile || customerProfile;
+
+          // 🌟 自動治癒：若從後端取得會員的真實姓名與電話，且非訪客，自動校準 localStorage 的會員資料
+          try {
+            if (customerProfile && customerProfile.realName && customerProfile.phone && currentUserId && !currentUserId.startsWith('GUEST_')) {
+              const localRaw = localStorage.getItem('line_order_customer_profile');
+              let localObj = {};
+              if (localRaw) {
+                try { localObj = JSON.parse(localRaw); } catch (e) {}
+              }
+              // 若本地暫存的真實姓名與雲端顧客歸戶不一致 (例如先前被收件人卓建谷污染)，自動導正修復！
+              if (localObj.realName !== customerProfile.realName || localObj.phone !== customerProfile.phone) {
+                localObj.userId = currentUserId;
+                localObj.realName = customerProfile.realName;
+                localObj.phone = customerProfile.phone;
+                if (customerProfile.userName) localObj.userName = customerProfile.userName;
+                localStorage.setItem('line_order_customer_profile', JSON.stringify(localObj));
+              }
+            }
+          } catch (healErr) {
+            console.warn('同步顧客本地快取警告:', healErr);
+          }
           if (json.data.settings) {
             if (!json.data.settings.BANK_ACCOUNT || 
                 json.data.settings.BANK_ACCOUNT.includes('123-4567') || 
@@ -1697,12 +1718,13 @@
       let rName = customerProfile.realName || '';
       let rPhone = customerProfile.phone || '';
 
-      // 🌟 雙重備援：若顧客歸戶尚未帶入，直接從訂單明細的第一筆取出真實姓名與電話
+      // 🌟 雙重備援：若顧客歸戶尚未帶入，直接從訂單明細的第一筆取出會員真實姓名 (realName) 與電話 (memberPhone)
+      // ⚠️ 嚴格禁止 fallback 到 recipientName！收件人是包裹包裹送達人，不代表 LINE 會員本人！
       if (!rName || !rPhone) {
         const anyOrder = (pendingOrders && pendingOrders[0]) || (completedOrders && completedOrders[0]);
         if (anyOrder) {
-          if (!rName && anyOrder.recipientName) rName = anyOrder.recipientName;
-          if (!rPhone && anyOrder.phone) rPhone = anyOrder.phone;
+          if (!rName && anyOrder.realName) rName = anyOrder.realName;
+          if (!rPhone && (anyOrder.memberPhone || anyOrder.phone)) rPhone = anyOrder.memberPhone || anyOrder.phone;
         }
       }
 

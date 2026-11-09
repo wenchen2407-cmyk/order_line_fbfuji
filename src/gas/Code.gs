@@ -101,27 +101,31 @@ function setupSpreadsheet() {
   // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
   prodSheet.getRange("O:O").setNumberFormat('@');
 
-  // 2. 訂單明細工作表 (升級採購狀態表頭與專屬下拉選單、包裹追蹤碼欄位)
+  // 2. 訂單明細工作表 (升級為 24 欄規格：徹底分離 M/N 欄「結帳收件人姓名/電話」與 W/X 欄「LINE 會員真實姓名/電話」)
   let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
   const orderHeaders = [
     '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
     '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
-    '訂單總額', '收件人姓名', '聯絡電話', '取件方式與地址', 
+    '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
     '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
-    '包裹追蹤編號', '結帳編號'
+    '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
   ];
   if (!orderSheet) {
     orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
     orderSheet.appendRow(orderHeaders);
   } else {
-    // 既有表格：升級表頭
+    const curOrderCols = orderSheet.getMaxColumns();
+    if (curOrderCols < orderHeaders.length) {
+      orderSheet.insertColumnsAfter(curOrderCols, orderHeaders.length - curOrderCols);
+    }
     orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
   }
   orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
-  orderSheet.getRange("N:N").setNumberFormat('@');
+  orderSheet.getRange("N:N").setNumberFormat('@'); // 收件人電話純文字格式
   orderSheet.getRange("R:R").setNumberFormat('@');
   orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
   orderSheet.getRange("V:V").setNumberFormat('@'); // 結帳編號 (Checkout_ID) 純文字格式
+  orderSheet.getRange("X:X").setNumberFormat('@'); // 會員電話純文字格式防止開頭 0 丟失
 
   // 為 S 欄 (第19欄) 建立「採購/出貨狀態」快速下拉選單 (與系統全流程 100% 精準對齊)
   try {
@@ -156,26 +160,34 @@ function setupSpreadsheet() {
     console.warn('建立下拉選單略過:', e);
   }
 
-  // 3. 顧客歸戶表
+  // 3. 顧客歸戶表 (升級為 13 欄規格：C/D 欄專屬於 LINE 帳號登記之真實姓名与電話，L/M 欄獨立紀錄結帳時建立之最近收件人姓名與電話)
   const custHeaders = [
     'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-    '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+    '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源',
+    '最近收件人姓名', '最近收件人電話'
   ];
   let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
   if (!custSheet) {
     custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
     custSheet.appendRow(custHeaders);
-    custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
   } else {
-    // 檢查既有表頭是否已有第 11 欄 (顧客來源)
-    const headerVals = custSheet.getRange(1, 1, 1, Math.max(custSheet.getLastColumn(), 10)).getValues()[0];
-    if (headerVals.length < 11 || !headerVals[10]) {
-      custSheet.getRange(1, 11).setValue('顧客來源');
-      custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    const curCustCols = custSheet.getMaxColumns();
+    if (curCustCols < custHeaders.length) {
+      custSheet.insertColumnsAfter(curCustCols, custHeaders.length - curCustCols);
     }
+    custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
   }
-  // 將電話欄 (第4欄 D) 設為純文字格式，避免開頭 0 被截斷
+  custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+  // 將會員電話欄 (第4欄 D) 與最近收件人電話欄 (第13欄 M) 設為純文字格式，避免開頭 0 被截斷
   custSheet.getRange("D:D").setNumberFormat('@');
+  custSheet.getRange("M:M").setNumberFormat('@');
+
+  // 🌟 自動遷移與校準既有訂單明細與顧客歸戶資料（徹底分離「會員真實姓名/電話」與「結帳收件人姓名/電話」）
+  try {
+    upgradeOrderAndCustomerSheets(ss);
+  } catch (migErr) {
+    console.warn('遷移訂單與顧客收件人欄位警告:', migErr);
+  }
 
   // 4. 系統設定表 (自動補齊新欄位並強制更新 STORE_NAME 為 W.W.連線代購)
   let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
@@ -490,6 +502,343 @@ function repairProductCostData() {
 }
 
 /**
+ * 🌟 確保【訂單明細】(24 欄) 與【顧客歸戶】(13 欄) 表頭與欄數已升級，若尚未升級則自動觸發無損升級與資料遷移
+ */
+function ensureOrderAndCustomerSchema(ss, orderSheet, custSheet) {
+  try {
+    const activeSs = ss || SpreadsheetApp.getActiveSpreadsheet();
+    const oSheet = orderSheet || activeSs.getSheetByName(SHEET_NAMES.ORDERS);
+    const cSheet = custSheet || activeSs.getSheetByName(SHEET_NAMES.CUSTOMERS);
+
+    let needsUpgrade = false;
+    if (oSheet) {
+      const oCols = oSheet.getLastColumn();
+      if (oCols < 24) {
+        needsUpgrade = true;
+      } else {
+        const wHeader = String(oSheet.getRange(1, 23).getValue() || '').trim();
+        const nHeader = String(oSheet.getRange(1, 14).getValue() || '').trim();
+        if (wHeader !== '真實姓名' || nHeader !== '收件人電話') {
+          needsUpgrade = true;
+        }
+      }
+    }
+    if (cSheet && !needsUpgrade) {
+      const cCols = cSheet.getLastColumn();
+      if (cCols < 13) {
+        needsUpgrade = true;
+      } else {
+        const lHeader = String(cSheet.getRange(1, 12).getValue() || '').trim();
+        if (lHeader !== '最近收件人姓名') {
+          needsUpgrade = true;
+        }
+      }
+    }
+
+    if (needsUpgrade) {
+      upgradeOrderAndCustomerSheets(activeSs);
+    }
+  } catch (err) {
+    console.warn('自動檢查訂單與顧客表結構略過:', err);
+  }
+}
+
+/**
+ * 🌟 自動升級與校準【訂單明細】與【顧客歸戶】欄位結構，徹底分離「LINE 帳號登記真實姓名/電話」與「結帳收件人姓名/電話」
+ * 可直接在 Apps Script 編輯器選取此函式執行，或由 setupSpreadsheet() / API 自動觸發
+ */
+function upgradeOrderAndCustomerSheets(targetSs) {
+  const ss = targetSs || SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+
+  const orderHeaders = [
+    '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
+    '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
+    '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
+    '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
+    '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
+  ];
+
+  const custHeaders = [
+    'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
+    '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源',
+    '最近收件人姓名', '最近收件人電話'
+  ];
+
+  // 1. 升級【顧客歸戶】為 13 欄
+  if (custSheet) {
+    const maxCustCols = custSheet.getMaxColumns();
+    if (maxCustCols < custHeaders.length) {
+      custSheet.insertColumnsAfter(maxCustCols, custHeaders.length - maxCustCols);
+    }
+    custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
+    custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange("D:D").setNumberFormat('@');
+    custSheet.getRange("M:M").setNumberFormat('@');
+  }
+
+  // 2. 升級【訂單明細】為 24 欄
+  if (orderSheet) {
+    const maxOrderCols = orderSheet.getMaxColumns();
+    if (maxOrderCols < orderHeaders.length) {
+      orderSheet.insertColumnsAfter(maxOrderCols, orderHeaders.length - maxOrderCols);
+    }
+    orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
+    orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
+    orderSheet.getRange("N:N").setNumberFormat('@');
+    orderSheet.getRange("R:R").setNumberFormat('@');
+    orderSheet.getRange("U:U").setNumberFormat('@');
+    orderSheet.getRange("V:V").setNumberFormat('@');
+    orderSheet.getRange("X:X").setNumberFormat('@');
+  }
+
+  if (!orderSheet || !custSheet) {
+    return '表頭升級完成';
+  }
+
+  const custLastRow = custSheet.getLastRow();
+  const orderLastRow = orderSheet.getLastRow();
+
+  // 讀取顧客表資料，建立 uid -> 會員真實姓名與電話映射
+  const custMap = {};
+  let custValues = [];
+  if (custLastRow > 1) {
+    custValues = custSheet.getRange(2, 1, custLastRow - 1, 13).getValues();
+    for (let c = 0; c < custValues.length; c++) {
+      const uid = String(custValues[c][0] || '').trim();
+      if (uid) {
+        custMap[uid] = {
+          rowIdx: c,
+          realName: String(custValues[c][2] || '').trim(),
+          phone: String(custValues[c][3] || '').trim(),
+          address: String(custValues[c][4] || '').trim(),
+          lastRecipName: String(custValues[c][11] || '').trim(),
+          lastRecipPhone: String(custValues[c][12] || '').trim()
+        };
+      }
+    }
+  }
+
+  // 記錄每位顧客最近一次「已結帳」的包裹收件人資訊與未結帳時的會員本人姓名
+  const latestCheckoutRecipByUid = {};
+  const inferredMemberByUid = {};
+
+  if (orderLastRow > 1) {
+    const orderRange = orderSheet.getRange(2, 1, orderLastRow - 1, 24);
+    const orderValues = orderRange.getValues();
+    let orderModified = false;
+
+    for (let i = 0; i < orderValues.length; i++) {
+      const row = orderValues[i];
+      const uid = String(row[2] || '').trim();
+      const colRecipName = String(row[12] || '').trim();  // M 欄 (13): 收件人姓名
+      const colRecipPhone = String(row[13] || '').trim(); // N 欄 (14): 收件人電話
+      const colDelivery = String(row[14] || '').trim();   // O 欄 (15): 取件方式與地址
+      const payStatus = String(row[16] || '').trim();     // Q 欄 (17): 付款狀態
+      const shipStatus = String(row[18] || '').trim();    // S 欄 (19): 採購/出貨狀態
+      const checkoutId = String(row[21] || '').trim();    // V 欄 (22): 結帳編號
+      let colMemberName = String(row[22] || '').trim();   // W 欄 (23): 真實姓名 (訂購會員)
+      let colMemberPhone = String(row[23] || '').trim();  // X 欄 (24): 會員電話 (訂購會員)
+
+      const isCheckedOut = Boolean(checkoutId) ||
+                           shipStatus.includes('已完成結帳') ||
+                           shipStatus.includes('出貨') ||
+                           shipStatus.includes('完成取貨') ||
+                           payStatus.includes('待付款') ||
+                           payStatus.includes('貨到付款') ||
+                           payStatus.includes('對帳') ||
+                           (Boolean(colDelivery) && colDelivery !== '[待出貨結帳填寫]');
+
+      if (!isCheckedOut) {
+        // 🌟 尚未結帳的訂單：舊版曾將會員真實姓名與電話暫存於 M/N 欄，自動遷移至 W/X 欄並清空 M/N 收件人欄
+        if (!colMemberName && colRecipName) {
+          colMemberName = colRecipName;
+          row[22] = colMemberName;
+          orderModified = true;
+        }
+        if (!colMemberPhone && colRecipPhone) {
+          colMemberPhone = colRecipPhone;
+          row[23] = formatPhoneAsText(colMemberPhone);
+          orderModified = true;
+        }
+        if (colRecipName !== '' || colRecipPhone !== '') {
+          row[12] = '';
+          row[13] = '';
+          orderModified = true;
+        }
+        if (uid && (colMemberName || colMemberPhone)) {
+          inferredMemberByUid[uid] = {
+            realName: colMemberName,
+            phone: colMemberPhone
+          };
+        }
+      } else {
+        // 🌟 已經結帳的訂單：M 欄與 N 欄為包裹「收件人姓名」與「收件人電話」
+        if (colRecipPhone && !String(row[13]).startsWith("'")) {
+          row[13] = formatPhoneAsText(colRecipPhone);
+          orderModified = true;
+        }
+        if (uid && (colRecipName || colRecipPhone)) {
+          latestCheckoutRecipByUid[uid] = {
+            recipientName: colRecipName,
+            recipientPhone: colRecipPhone,
+            deliveryAddress: (colDelivery && colDelivery !== '[待出貨結帳填寫]') ? colDelivery : ''
+          };
+        }
+      }
+
+      // 🌟 將【顧客歸戶】中的會員本人「真實姓名 (C欄)」與「電話 (D欄)」權威同步至【訂單明細】W 欄與 X 欄
+      const custInfo = uid ? custMap[uid] : null;
+      if (custInfo) {
+        if (custInfo.realName && colMemberName !== custInfo.realName) {
+          row[22] = custInfo.realName;
+          colMemberName = custInfo.realName;
+          orderModified = true;
+        }
+        if (custInfo.phone) {
+          const formattedCustPhone = formatPhoneAsText(custInfo.phone);
+          if (String(row[23] || '').replace(/^'/, '').trim() !== custInfo.phone.replace(/^'/, '').trim()) {
+            row[23] = formattedCustPhone;
+            colMemberPhone = custInfo.phone;
+            orderModified = true;
+          }
+        }
+      } else if (colMemberPhone && !String(row[23]).startsWith("'")) {
+        row[23] = formatPhoneAsText(colMemberPhone);
+        orderModified = true;
+      }
+    }
+
+    if (orderModified) {
+      orderRange.setValues(orderValues);
+      orderSheet.getRange("N:N").setNumberFormat('@');
+      orderSheet.getRange("X:X").setNumberFormat('@');
+    }
+  }
+
+  // 3. 將已結帳包裹之「最近收件人姓名 (L欄)」、「最近收件人電話 (M欄)」與「常用寄送地址 (E欄)」回填至【顧客歸戶】
+  if (custLastRow > 1 && custValues.length > 0) {
+    let custModified = false;
+    for (let c = 0; c < custValues.length; c++) {
+      const uid = String(custValues[c][0] || '').trim();
+      if (!uid) continue;
+
+      const latestRecip = latestCheckoutRecipByUid[uid];
+      if (latestRecip) {
+        if (latestRecip.recipientName && String(custValues[c][11] || '').trim() !== latestRecip.recipientName) {
+          custValues[c][11] = latestRecip.recipientName; // 第 12 欄 (L): 最近收件人姓名
+          custModified = true;
+        }
+        if (latestRecip.recipientPhone) {
+          const cleanRPhone = latestRecip.recipientPhone.replace(/^'/, '').trim();
+          if (String(custValues[c][12] || '').replace(/^'/, '').trim() !== cleanRPhone) {
+            custValues[c][12] = formatPhoneAsText(cleanRPhone); // 第 13 欄 (M): 最近收件人電話
+            custModified = true;
+          }
+        }
+        if (latestRecip.deliveryAddress && !String(custValues[c][4] || '').trim()) {
+          custValues[c][4] = latestRecip.deliveryAddress; // 第 5 欄 (E): 常用寄送地址
+          custModified = true;
+        }
+      }
+
+      // 若顧客歸戶 C/D 欄為空，且有未結帳訂單推導出的會員姓名電話，則補齊
+      const inferred = inferredMemberByUid[uid];
+      if (inferred) {
+        if (!String(custValues[c][2] || '').trim() && inferred.realName) {
+          custValues[c][2] = inferred.realName;
+          custModified = true;
+        }
+        if (!String(custValues[c][3] || '').trim() && inferred.phone) {
+          custValues[c][3] = formatPhoneAsText(inferred.phone);
+          custModified = true;
+        }
+      }
+      if (custValues[c][3] && !String(custValues[c][3]).startsWith("'")) {
+        custValues[c][3] = formatPhoneAsText(custValues[c][3]);
+        custModified = true;
+      }
+      if (custValues[c][12] && !String(custValues[c][12]).startsWith("'")) {
+        custValues[c][12] = formatPhoneAsText(custValues[c][12]);
+        custModified = true;
+      }
+    }
+
+    if (custModified) {
+      custSheet.getRange(2, 1, custValues.length, 13).setValues(custValues);
+      custSheet.getRange("D:D").setNumberFormat('@');
+      custSheet.getRange("M:M").setNumberFormat('@');
+    }
+  }
+
+  SpreadsheetApp.flush();
+  return '✅ 已完成【訂單明細】(24欄) 與【顧客歸戶】(13欄) 欄位升級與會員/收件人資料分離校準！';
+}
+
+/**
+ * 🌟 試算表即時編輯觸發器 (Simple Trigger)：
+ * 當賣家在【顧客歸戶】手動修改 C 欄「真實姓名」或 D 欄「電話」時（例如修正被舊版覆蓋的會員真實姓名），
+ * 自動即時將最新的會員真實姓名與電話同步至【訂單明細】該會員所有訂單的第 23 欄 (W: 真實姓名) 與第 24 欄 (X: 會員電話)，
+ * 且完全保留第 13/14 欄 (M/N: 結帳收件人姓名與電話) 不受影響！
+ */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    if (!sheet || sheet.getName() !== SHEET_NAMES.CUSTOMERS) return;
+
+    const row = e.range.getRow();
+    const col = e.range.getColumn();
+    const numCols = e.range.getNumColumns();
+    if (row <= 1) return;
+
+    // 檢查是否編輯了第 3 欄 (C: 真實姓名) 或 第 4 欄 (D: 電話)
+    const touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
+    if (!touchesNameOrPhone) return;
+
+    const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (!orderSheet) return;
+
+    ensureOrderAndCustomerSchema(ss, orderSheet, sheet);
+
+    const numRows = e.range.getNumRows();
+    const custRows = sheet.getRange(row, 1, numRows, 4).getValues();
+    const updatesByUid = {};
+
+    for (let r = 0; r < custRows.length; r++) {
+      const uid = String(custRows[r][0] || '').trim();
+      const realName = String(custRows[r][2] || '').trim();
+      const phone = String(custRows[r][3] || '').trim();
+      if (uid) {
+        updatesByUid[uid] = { realName: realName, phone: phone };
+      }
+    }
+
+    const orderLastRow = orderSheet.getLastRow();
+    if (orderLastRow <= 1) return;
+
+    const orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
+    for (let i = 0; i < orderData.length; i++) {
+      const oUid = String(orderData[i][2] || '').trim();
+      if (oUid && updatesByUid[oUid]) {
+        const targetRow = i + 2;
+        const u = updatesByUid[oUid];
+        if (u.realName) {
+          orderSheet.getRange(targetRow, 23).setValue(u.realName); // W 欄: 訂購會員真實姓名
+        }
+        if (u.phone) {
+          orderSheet.getRange(targetRow, 24).setValue(formatPhoneAsText(u.phone)); // X 欄: 訂購會員電話
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('onEdit 同步會員真實姓名略過:', err);
+  }
+}
+
+/**
  * 一鍵清空【訂單明細】與【顧客歸戶】所有資料（自動保留第 1 列標題列）
  * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」
  */
@@ -589,6 +938,12 @@ function doGet(e) {
         result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行統計重算！', isAdmin: false };
       } else {
         result = recalculateCustomerStats();
+      }
+    } else if (action === 'upgradeSheets' || action === 'upgradeOrderAndCustomerSheets') {
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行欄位升級！', isAdmin: false };
+      } else {
+        result = upgradeOrderAndCustomerSheets();
       }
     } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
       if (!checkIsAdmin(reqUserId)) {
@@ -815,6 +1170,9 @@ function checkCustomerExists(userId) {
   const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
   if (!custSheet) return { success: true, exists: false };
 
+  // 確保 13 欄結構支援最近收件人姓名與電話
+  ensureOrderAndCustomerSchema(ss, null, custSheet);
+
   const data = custSheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === userId) {
@@ -827,7 +1185,9 @@ function checkCustomerExists(userId) {
           realName: data[i][2],
           phone: data[i][3],
           defaultAddress: data[i][4],
-          source: data[i][10] || ''
+          source: data[i][10] || '',
+          lastRecipientName: data[i][11] || '',
+          lastRecipientPhone: data[i][12] || ''
         }
       };
     }
@@ -1029,6 +1389,22 @@ function handleCreateOrder(orderData) {
       orderSheet.getRange(existingOrderRow, 10).setValue(finalSubtotal);
       orderSheet.getRange(existingOrderRow, 12).setValue(finalTotalAmount);
 
+      // 補全可能遺漏的 W欄(23:真實姓名) 與 X欄(24:會員電話)
+      try {
+        const currentRealNameInOrder = String(orderSheet.getRange(existingOrderRow, 23).getValue() || '').trim();
+        const currentMemberPhoneInOrder = String(orderSheet.getRange(existingOrderRow, 24).getValue() || '').trim();
+        const targetRealName = (orderData.realName || '').trim();
+        const targetMemberPhone = formatPhoneAsText(orderData.phone);
+        if (!currentRealNameInOrder && targetRealName) {
+          orderSheet.getRange(existingOrderRow, 23).setValue(targetRealName);
+        }
+        if (!currentMemberPhoneInOrder && targetMemberPhone) {
+          orderSheet.getRange(existingOrderRow, 24).setValue(targetMemberPhone);
+        }
+      } catch (colSyncErr) {
+        console.warn('合單補全真實姓名電話警告:', colSyncErr);
+      }
+
       // 若有新備註則追加
       if (orderData.note && orderData.note.trim()) {
         const mergedNote = existingNote ? `${existingNote}；${orderData.note.trim()}` : orderData.note.trim();
@@ -1050,6 +1426,9 @@ function handleCreateOrder(orderData) {
       const shippingFee = 0; // 連線期間運費先設為 0，出貨結帳時統一合併計算
       const totalAmount = finalSubtotal;
 
+      // 確保訂單表具備 24 欄結構 (M/N 欄保留給出貨結帳收件人，W/X 欄記錄會員真實身分)
+      ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
       orderSheet.appendRow([
         finalOrderId,
         now,
@@ -1063,16 +1442,18 @@ function handleCreateOrder(orderData) {
         finalSubtotal,
         shippingFee,
         totalAmount,
-        orderData.realName || orderData.recipientName || '',
-        formatPhoneAsText(orderData.phone),
-        '[待出貨結帳填寫]',
-        orderData.note || '',
-        '未結帳',
-        '',
-        '連線登記', // 訂單採購/出貨處理狀態
-        '',         // 處理備註
-        '',         // 包裹追蹤編號
-        ''          // 結帳編號 (待回國合併結帳時產生)
+        '',                                        // 第 13 欄 (M: 收件人姓名 - 待回國結帳時填寫包裹收件人)
+        '',                                        // 第 14 欄 (N: 收件人電話 - 待回國結帳時填寫包裹收件人電話)
+        '[待出貨結帳填寫]',                         // 第 15 欄 (O: 取件方式與地址)
+        orderData.note || '',                      // 第 16 欄 (P: 訂單備註)
+        '未結帳',                                   // 第 17 欄 (Q: 付款狀態)
+        '',                                        // 第 18 欄 (R: 匯款後五碼)
+        '連線登記',                                 // 第 19 欄 (S: 訂單採購/出貨處理狀態)
+        '',                                        // 第 20 欄 (T: 處理備註)
+        '',                                        // 第 21 欄 (U: 包裹追蹤編號)
+        '',                                        // 第 22 欄 (V: 結帳編號)
+        orderData.realName || '',                  // 第 23 欄 (W: 真實姓名 - LINE帳號會員本人登記真實姓名)
+        formatPhoneAsText(orderData.phone)         // 第 24 欄 (X: 會員電話 - LINE帳號會員本人登記電話)
       ]);
     }
 
@@ -1246,6 +1627,23 @@ function handleCheckoutOrders(checkoutData) {
   const orderStatus = '已完成結帳';
   const deliveryInfo = `[${methodName}] ${checkoutData.recipientAddress || ''}`;
 
+  // 確保 24 欄與 13 欄擴充欄位存在
+  ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
+  // 反查會員本人登記之真實姓名與電話，確保寫入 W 欄與 X 欄
+  let memberRealName = '';
+  let memberPhone = '';
+  if (custSheet) {
+    const custValues = custSheet.getDataRange().getValues();
+    for (let c = 1; c < custValues.length; c++) {
+      if (String(custValues[c][0] || '').trim() === userId) {
+        memberRealName = String(custValues[c][2] || '').trim();
+        memberPhone = String(custValues[c][3] || '').trim();
+        break;
+      }
+    }
+  }
+
   // 1. 更新所有採購成功列：第一筆記單筆運費，其餘記 0，寫入同一結帳編號 (第22欄)
   for (let idx = 0; idx < successfulIndices.length; idx++) {
     const r = successfulIndices[idx];
@@ -1271,6 +1669,18 @@ function handleCheckoutOrders(checkoutData) {
     }
     orderSheet.getRange(r, 19).setValue(orderStatus);
     orderSheet.getRange(r, 22).setValue(checkoutId); // 第 22 欄：結帳編號
+
+    // 同步/維持會員本人真實姓名 (第 23 欄 W) 與會員電話 (第 24 欄 X)
+    try {
+      const existingW = String(orderSheet.getRange(r, 23).getValue() || '').trim();
+      const existingX = String(orderSheet.getRange(r, 24).getValue() || '').trim();
+      if (!existingW && memberRealName) {
+        orderSheet.getRange(r, 23).setValue(memberRealName);
+      }
+      if (!existingX && memberPhone) {
+        orderSheet.getRange(r, 24).setValue(formatPhoneAsText(memberPhone));
+      }
+    } catch (e) {}
   }
 
   // 2. 更新缺貨/斷貨/取消列：同樣綁定同一結帳編號，運費為0，總額為0，標記免付款，結算時排除
@@ -1286,11 +1696,23 @@ function handleCheckoutOrders(checkoutData) {
     orderSheet.getRange(r, 17).setValue('免付款(缺貨取消)');
     orderSheet.getRange(r, 19).setValue('缺貨斷貨');
     orderSheet.getRange(r, 22).setValue(checkoutId); // 第 22 欄：同樣綁定本批結帳編號！
+
+    // 同步/維持會員本人真實姓名 (第 23 欄 W) 與會員電話 (第 24 欄 X)
+    try {
+      const existingW = String(orderSheet.getRange(r, 23).getValue() || '').trim();
+      const existingX = String(orderSheet.getRange(r, 24).getValue() || '').trim();
+      if (!existingW && memberRealName) {
+        orderSheet.getRange(r, 23).setValue(memberRealName);
+      }
+      if (!existingX && memberPhone) {
+        orderSheet.getRange(r, 24).setValue(formatPhoneAsText(memberPhone));
+      }
+    } catch (e) {}
   }
 
-  // 更新顧客歸戶 (姓名與電話，不另外紀錄常用寄送地址)
+  // 更新顧客歸戶 (更新最近包裹收件人姓名/電話與常用地址，嚴格不覆蓋會員真實姓名與會員電話)
   if (custSheet) {
-    updateCustomerAddress(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone);
+    updateCustomerRecipientInfo(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone, deliveryInfo);
   }
 
   return {
@@ -1310,7 +1732,7 @@ function handleCheckoutOrders(checkoutData) {
 
 /**
  * 更新或建立顧客檔案歸戶
- * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源']
+ * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源', '最近收件人姓名', '最近收件人電話']
  */
 function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
   try {
@@ -1321,15 +1743,19 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
         custSheet.appendRow([
           'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-          '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+          '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源',
+          '最近收件人姓名', '最近收件人電話'
         ]);
-        custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+        custSheet.getRange(1, 1, 1, 13).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
       }
     }
 
+    ensureOrderAndCustomerSchema(ss, null, custSheet);
+
     const userId = orderData.userId || 'LINE_GUEST';
     const userName = orderData.userName || '訪客';
-    const realName = orderData.realName || orderData.recipientName || '';
+    // 嚴格僅使用會員登記之真實姓名 (絕不以收件人姓名覆蓋會員真實姓名)
+    const realName = (orderData.realName || '').trim();
     const phone = formatPhoneAsText(orderData.phone);
     const source = (orderData.source || '').trim();
     const data = custSheet.getDataRange().getValues();
@@ -1340,8 +1766,13 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         found = true;
         const row = i + 1;
         if (userName) custSheet.getRange(row, 2).setValue(userName);
-        if (realName) custSheet.getRange(row, 3).setValue(realName);
-        if (phone) custSheet.getRange(row, 4).setValue(phone);
+        // 只有在試算表真實姓名原本為空，或傳入明確的 realName 時才補齊
+        if (realName && (!data[i][2] || String(data[i][2]).trim() === '')) {
+          custSheet.getRange(row, 3).setValue(realName);
+        }
+        if (phone && (!data[i][3] || String(data[i][3]).trim() === '')) {
+          custSheet.getRange(row, 4).setValue(phone);
+        }
         if (source && (!data[i][10] || data[i][10] === '')) {
           custSheet.getRange(row, 11).setValue(source);
         }
@@ -1370,7 +1801,9 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         now,
         now,
         '',
-        source
+        source,
+        '',
+        ''
       ]);
     }
   } catch (err) {
@@ -1379,25 +1812,47 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
 }
 
 /**
- * 更新顧客歸戶姓名電話 (純文字格式防止 0 被吃掉，不另外紀錄常用寄送地址)
+ * 更新結帳時之最近收件人資訊與常用寄送地址
+ * 嚴格只更新第 5 欄(E: 常用寄送地址)、第 12 欄(L: 最近收件人姓名)、第 13 欄(M: 最近收件人電話)
+ * 絕不覆蓋第 3 欄 (C: 真實姓名) 或第 4 欄 (D: 電話)！
  */
-function updateCustomerAddress(custSheet, userId, name, phone) {
+function updateCustomerRecipientInfo(custSheet, userId, recipientName, recipientPhone, deliveryInfo) {
   try {
     if (!custSheet) return;
-    const cleanPhone = formatPhoneAsText(phone);
+    const cleanPhone = formatPhoneAsText(recipientPhone);
     const data = custSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === userId) {
         const row = i + 1;
-        if (name) custSheet.getRange(row, 3).setValue(name);
-        if (cleanPhone) custSheet.getRange(row, 4).setValue(cleanPhone);
-        // 不另外紀錄常用寄送地址
+        // 第 12 欄 (L): 最近收件人姓名
+        if (recipientName) custSheet.getRange(row, 12).setValue(recipientName);
+        // 第 13 欄 (M): 最近收件人電話
+        if (cleanPhone) custSheet.getRange(row, 13).setValue(cleanPhone);
+        // 第 5 欄 (E): 常用寄送地址
+        if (deliveryInfo) custSheet.getRange(row, 5).setValue(deliveryInfo);
+
+        // 防呆：若該顧客 C欄(真實姓名) 或 D欄(電話) 原本完全空白，則順道補齊
+        const currentRealName = String(data[i][2] || '').trim();
+        const currentPhone = String(data[i][3] || '').trim();
+        if (!currentRealName && recipientName) {
+          custSheet.getRange(row, 3).setValue(recipientName);
+        }
+        if (!currentPhone && cleanPhone) {
+          custSheet.getRange(row, 4).setValue(cleanPhone);
+        }
         break;
       }
     }
   } catch (err) {
-    console.error('更新顧客歸戶失敗: ' + err.toString());
+    console.error('更新收件人資訊失敗: ' + err.toString());
   }
+}
+
+/**
+ * 相容舊函式命名：轉向呼叫 updateCustomerRecipientInfo
+ */
+function updateCustomerAddress(custSheet, userId, name, phone) {
+  updateCustomerRecipientInfo(custSheet, userId, name, phone, '');
 }
 
 /**
@@ -1417,6 +1872,10 @@ function recalculateCustomerStats() {
   if (!orderSheet || !custSheet) {
     return { success: false, message: '找不到訂單或顧客工作表' };
   }
+
+  // 自動執行欄位升級與資料同步 (將顧客表的真實姓名回寫至訂單表第 23 欄 W)
+  ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+  upgradeOrderAndCustomerSheets(ss);
 
   const orderData = orderSheet.getDataRange().getValues();
   const custData = custSheet.getDataRange().getValues();
@@ -1446,7 +1905,10 @@ function recalculateCustomerStats() {
   for (let o = 1; o < orderData.length; o++) {
     const row = orderData[o];
     let uid = String(row[2] || '').trim(); // 第 3 欄 LINE_User_ID
-    const phone = String(row[13] || '').replace(/[-\s]/g, '').trim(); // 第 14 欄 電話
+    // 優先以第 24 欄 (X: 會員電話) 比對，其次以第 14 欄 (N: 收件人電話)
+    const memberPhone = String(row[23] || '').replace(/[-\s]/g, '').trim();
+    const recipientPhone = String(row[13] || '').replace(/[-\s]/g, '').trim();
+    const phone = memberPhone || recipientPhone;
     const rawDate = row[1]; // 第 2 欄 下單時間
     const orderTime = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
     const amount = Number(row[11]) || Number(row[9]) || 0; // 第 12 欄總金額或第 10 欄商品小計
@@ -1606,6 +2068,38 @@ function getOrdersForUser(userId) {
   const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
   if (!orderSheet) return { success: false, message: '訂單表不存在' };
 
+  // 確保 24 欄與 13 欄結構
+  ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
+  // 取得顧客檔案 (含最近收件人姓名/電話)
+  let customerProfile = { 
+    userId: userId, 
+    realName: '', 
+    phone: '', 
+    defaultAddress: '',
+    lastRecipientName: '',
+    lastRecipientPhone: ''
+  };
+  let memberRealName = '';
+  let memberPhone = '';
+
+  if (custSheet) {
+    const custData = custSheet.getDataRange().getValues();
+    for (let c = 1; c < custData.length; c++) {
+      if (String(custData[c][0] || '').trim() === userId) {
+        customerProfile.userName = custData[c][1];
+        customerProfile.realName = custData[c][2];
+        customerProfile.phone = custData[c][3];
+        customerProfile.defaultAddress = custData[c][4];
+        customerProfile.lastRecipientName = custData[c][11] || '';
+        customerProfile.lastRecipientPhone = custData[c][12] || '';
+        memberRealName = String(custData[c][2] || '').trim();
+        memberPhone = String(custData[c][3] || '').trim();
+        break;
+      }
+    }
+  }
+
   const rows = orderSheet.getDataRange().getValues();
   const pendingCheckoutOrders = []; // 待出貨結帳或配送中（連線中登記/採購成功/已完成出貨配送中）
   const completedOrders = [];       // 已完成取貨結案之歷史訂單
@@ -1626,7 +2120,7 @@ function getOrdersForUser(userId) {
   // 預先找出所有「已完成取貨」或「已結案」的結帳單號 (checkoutId)，確保該包裹之缺貨與成功品項整批同進歷史
   const closedCheckoutIds = new Set();
   for (let i = 1; i < rows.length; i++) {
-    if (rows[i][2] === userId) {
+    if (String(rows[i][2] || '').trim() === userId) {
       const sStatus = String(rows[i][18] || '').trim();
       const cid = String(rows[i][21] || '').trim();
       if (cid && (sStatus.includes('已完成取貨') || sStatus.includes('結案') || sStatus.includes('已取消'))) {
@@ -1635,9 +2129,32 @@ function getOrdersForUser(userId) {
     }
   }
 
+  let needOrderSheetSync = false;
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (row[2] === userId) {
+    if (String(row[2] || '').trim() === userId) {
+      const orderRealName = String(row[22] || '').trim();
+      const orderMemberPhone = String(row[23] || '').trim();
+
+      // 若【訂單明細】W/X 欄空白，但【顧客歸戶】已有資料，自動同步回寫！
+      if ((!orderRealName && memberRealName) || (!orderMemberPhone && memberPhone)) {
+        try {
+          if (!orderRealName && memberRealName) {
+            orderSheet.getRange(i + 1, 23).setValue(memberRealName);
+          }
+          if (!orderMemberPhone && memberPhone) {
+            orderSheet.getRange(i + 1, 24).setValue(formatPhoneAsText(memberPhone));
+          }
+          needOrderSheetSync = true;
+        } catch (e) {}
+      }
+
+      const effectiveRealName = orderRealName || memberRealName || '';
+      const effectiveMemberPhone = orderMemberPhone || memberPhone || '';
+      const recipientName = String(row[12] || '').trim();
+      const recipientPhone = String(row[13] || '').trim();
+
       const item = {
         orderId: row[0],
         orderDate: row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : row[1],
@@ -1649,8 +2166,11 @@ function getOrdersForUser(userId) {
         subtotal: row[9],
         shippingFee: row[10],
         totalAmount: row[11],
-        recipientName: row[12],
-        phone: row[13],
+        recipientName: recipientName,
+        recipientPhone: recipientPhone,
+        phone: recipientPhone || effectiveMemberPhone,
+        realName: effectiveRealName,
+        memberPhone: effectiveMemberPhone,
         deliveryAddress: formatDeliveryText(row[14]),
         note: row[15],
         paymentStatus: row[16],
@@ -1672,21 +2192,6 @@ function getOrdersForUser(userId) {
         pendingCheckoutOrders.push(item);
       } else {
         completedOrders.push(item);
-      }
-    }
-  }
-
-  // 取得顧客檔案
-  let customerProfile = { userId: userId, realName: '', phone: '', defaultAddress: '' };
-  if (custSheet) {
-    const custData = custSheet.getDataRange().getValues();
-    for (let c = 1; c < custData.length; c++) {
-      if (custData[c][0] === userId) {
-        customerProfile.userName = custData[c][1];
-        customerProfile.realName = custData[c][2];
-        customerProfile.phone = custData[c][3];
-        customerProfile.defaultAddress = custData[c][4];
-        break;
       }
     }
   }
@@ -1728,11 +2233,15 @@ function handleRegisterCustomer(data) {
     custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
     custSheet.appendRow([
       'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+      '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源',
+      '最近收件人姓名', '最近收件人電話'
     ]);
-    custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange(1, 1, 1, 13).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
     custSheet.getRange("D:D").setNumberFormat('@');
   }
+
+  // 確保 13 欄結構
+  ensureOrderAndCustomerSchema(ss, null, custSheet);
 
   const now = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
   const values = custSheet.getDataRange().getValues();
@@ -1794,8 +2303,27 @@ function handleRegisterCustomer(data) {
       '',
       now,
       '',
-      source
+      source,
+      '',
+      ''
     ]);
+  }
+
+  // 同步會員本人真實姓名與電話回寫至該買家現有訂單之 W 欄 (col 23) 與 X 欄 (col 24)
+  try {
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (orderSheet) {
+      ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+      const orderValues = orderSheet.getDataRange().getValues();
+      for (let o = 1; o < orderValues.length; o++) {
+        if (String(orderValues[o][2] || '').trim() === userId) {
+          orderSheet.getRange(o + 1, 23).setValue(realName);
+          orderSheet.getRange(o + 1, 24).setValue(phone);
+        }
+      }
+    }
+  } catch (syncErr) {
+    console.warn('同步訂單 W/X 欄警告:', syncErr);
   }
 
   return {
@@ -2691,11 +3219,14 @@ function sendPageViewAlertEmail(info) {
           custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
           custSheet.appendRow([
             'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', 
-            '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源'
+            '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源',
+            '最近收件人姓名', '最近收件人電話'
           ]);
-          custSheet.getRange(1, 1, 1, 11).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
+          custSheet.getRange(1, 1, 1, 13).setBackground('#6c757d').setFontColor('#ffffff').setFontWeight('bold');
           custSheet.getRange("D:D").setNumberFormat('@');
         }
+
+        ensureOrderAndCustomerSchema(ss, null, custSheet);
 
         const custData = custSheet.getDataRange().getValues();
         let userFound = false;
@@ -2730,7 +3261,9 @@ function sendPageViewAlertEmail(info) {
             '',                     // 首購日期
             nowStr,                 // 最後進站/活動日期
             '',                     // 黑名單標記
-            defaultSource           // 顧客來源
+            defaultSource,          // 顧客來源
+            '',                     // 最近收件人姓名
+            ''                      // 最近收件人電話
           ]);
           customerLineNick = userName || 'LINE 會員';
         }
@@ -2952,6 +3485,9 @@ function getCustomerNotifyList() {
     return { success: false, message: '訂單工作表不存在' };
   }
 
+  // 確保 24 欄與 13 欄結構
+  ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
   const orderRows = orderSheet.getDataRange().getValues();
   const custRows = custSheet ? custSheet.getDataRange().getValues() : [];
 
@@ -3000,14 +3536,19 @@ function getCustomerNotifyList() {
     const qty = Number(row[7]) || 1;
     const unitPrice = Number(row[8]) || 0;
     const subtotal = Number(row[9]) || (unitPrice * qty);
-    const phone = String(row[13] || '').replace(/[-\s]/g, '').trim();
+    // 優先以會員登記電話 (X: col 24)，其次以收件人電話 (N: col 14)
+    const phone = String(row[23] || row[13] || '').replace(/[-\s]/g, '').trim();
 
     if (!customerGroups[userId]) {
       const profile = customerInfoMap[userId] || (phone && phoneToCustomerMap[phone]) || {};
+      // 姓名優先使用會員真實姓名 (row[22] W 欄或 profile.realName)，絕不以包裹收件人姓名 (row[12]) 混充會員姓名！
+      const memberDisplayName = profile.realName || String(row[22] || '').trim() || profile.lineNick || String(row[3] || '').trim() || '顧客';
+      const memberContactPhone = profile.phone || String(row[23] || '').trim() || String(row[13] || '').trim();
+
       customerGroups[userId] = {
         userId: userId,
-        name: profile.realName || String(row[12] || '').trim() || profile.lineNick || String(row[3] || '').trim() || '顧客',
-        phone: profile.phone || String(row[13] || '').trim(),
+        name: memberDisplayName,
+        phone: memberContactPhone,
         successCount: 0,
         outOfStockCount: 0,
         pendingCount: 0,
