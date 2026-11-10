@@ -3,41 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <script>
-    // ⚡ 0 毫秒智慧路由分流 (單一 LIFF ID 核心優化：在任何外部樣式與字型載入前瞬間攔截)
+    // ⚡ 0 毫秒極速路由與靜默授權中繼 (單一 LIFF ID 終極優化)
     (function() {
       let search = window.location.search;
       let p = new URLSearchParams(search);
 
-      // 0. 支援管理員登入意圖瞬間恢復 (外部瀏覽器 OAuth 回調大廳時 0 毫秒直接轉回後台)
-      try {
-        const loginRedirect = sessionStorage.getItem('liff_admin_login_pending');
-        if (loginRedirect === '1') {
-          sessionStorage.removeItem('liff_admin_login_pending');
-          const returnUrl = sessionStorage.getItem('liff_admin_return_url') || 'admin-card-generator.html';
-          sessionStorage.removeItem('liff_admin_return_url');
-          document.documentElement.style.display = 'none';
-          window.location.replace(returnUrl);
-          return;
-        }
-      } catch (e) {}
-
-      // 0-1. 🛡️ 賣家白名單管理員自動直通 (若此裝置已驗證為管理員，且非明確指定預覽賣場 ?view=store，0毫秒直達後台)
+      // 判斷是否為明確指定預覽賣場大廳
       const isStoreMode = p.get('view') === 'store' || p.get('mode') === 'buyer' || p.has('store');
-      if (!isStoreMode) {
-        try {
-          if (localStorage.getItem('line_order_is_admin') === '1') {
-            document.documentElement.style.display = 'none';
-            window.location.replace('admin-card-generator.html' + search);
-            return;
-          }
-        } catch (e) {}
+
+      // 檢查是否為管理員相關意圖或回調
+      const hasAdminPending = sessionStorage.getItem('liff_admin_login_pending') === '1';
+      const action = (p.get('action') || p.get('page') || '').toLowerCase();
+      const isAdminAction = action === 'admin' || action === 'card' || action === 'manage' || p.has('admin') || p.has('manage');
+      const isAdminCached = localStorage.getItem('line_order_is_admin') === '1';
+
+      // 🛡️ 核心情境 A：管理員在外部瀏覽器 (Chrome/Safari) OAuth 授權回跳中繼
+      // 必須留在 index.html 完成 liff.init() 換取 Token，但 100% 阻斷大廳渲染與商品下載！
+      if (hasAdminPending || (p.has('code') && (isAdminAction || hasAdminPending))) {
+        document.documentElement.style.display = 'none';
+        window.IS_SILENT_ADMIN_RELAY = true;
+        return;
       }
 
-      // 1. 支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
+      // 🛡️ 核心情境 B：純管理員直通 (已有快取或帶有 admin 參數)，且非預覽大廳，0 毫秒直接直達後台
+      if (!isStoreMode && (isAdminAction || isAdminCached)) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('admin-card-generator.html' + search);
+        return;
+      }
+
+      // 🛡️ 核心情境 C：支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
       if (p.has('liff.state')) {
         const stateRaw = decodeURIComponent(p.get('liff.state') || '');
 
-        // 🛡️ 管理中心分流：若 liff.state 指向後台管理中心或包含 admin 參數
+        // 若 liff.state 指向後台管理中心或包含 admin 參數
         if (stateRaw.includes('admin-card-generator') || stateRaw.includes('action=admin') || stateRaw.includes('page=admin') || stateRaw.includes('admin=1') || stateRaw.includes('action=card')) {
           document.documentElement.style.display = 'none';
           const qIndex = stateRaw.indexOf('?');
@@ -66,22 +65,14 @@
         }
       }
 
-      // 2. 賣家管理中心入口分流 (帶有 action=admin / page=admin / admin / manage / card)
-      const action = (p.get('action') || p.get('page') || '').toLowerCase();
-      if (action === 'admin' || action === 'card' || action === 'manage' || p.has('admin') || p.has('manage')) {
-        document.documentElement.style.display = 'none';
-        window.location.replace('admin-card-generator.html' + search);
-        return;
-      }
-
-      // 3. 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
+      // 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
       if (action === 'orders' || action === 'myorders' || action === 'checkout' || p.has('orders')) {
         document.documentElement.style.display = 'none';
         window.location.replace('my-orders.html' + search);
         return;
       }
 
-      // 4. 單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+      // 單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
       const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
       if (pid) {
         document.documentElement.style.display = 'none';
@@ -983,6 +974,12 @@
     }
 
     window.onload = function() {
+      // 🛡️ 核心：若為靜默後台授權中繼，絕對不加載大廳任何畫面或商品，僅完成 Token 換取後直達後台
+      if (window.IS_SILENT_ADMIN_RELAY) {
+        initLiff();
+        return;
+      }
+
       // 0. 瞬間檢查 VIP 資格 (老客 0 毫秒無感秒開)
       checkVipGateOnLoad();
 
@@ -1176,9 +1173,11 @@
                   nameElem.innerHTML = `${safeName} <span style="font-size:10px; background:#1e293b; color:#38bdf8; padding:1px 6px; border-radius:10px; margin-left:4px; font-weight:700;">👑 賣家</span>`;
                 }
 
-                // 🌟 若非明確指定預覽賣場 (?view=store)，首次登入識別為白名單管理員時，直接秒切換至後台管理中心
+                // 🌟 若為靜默授權中繼，或非明確指定預覽賣場 (?view=store)，秒速直達管理中心！
                 const isExplicitStore = urlParams.get('view') === 'store' || urlParams.get('mode') === 'buyer' || urlParams.has('store');
-                if (!isExplicitStore) {
+                if (window.IS_SILENT_ADMIN_RELAY || !isExplicitStore) {
+                  sessionStorage.removeItem('liff_admin_login_pending');
+                  sessionStorage.removeItem('liff_admin_return_url');
                   window.location.replace('admin-card-generator.html');
                   return;
                 }

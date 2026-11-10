@@ -1681,7 +1681,15 @@
         sessionStorage.setItem('liff_admin_return_url', window.location.href);
       } catch (e) {}
       if (typeof liff !== 'undefined') {
-        liff.login({ redirectUri: window.location.href });
+        // 核心：傳遞與 LINE Developers Console Endpoint 嚴格一致的 redirectUri (index.html?action=admin)
+        // 確保 LINE OAuth 100% 接受不報錯，並由 index.html 的靜默授權中繼完成換 Token 後瞬間切換回後台
+        const isOnline = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        let redirectTarget = window.location.href;
+        if (isOnline) {
+          const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+          redirectTarget = window.location.origin + basePath + 'index.html?action=admin';
+        }
+        liff.login({ redirectUri: redirectTarget });
       }
     }
 
