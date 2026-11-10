@@ -1158,12 +1158,28 @@
               localStorage.setItem('liff_user_profile', profStr);
             } catch (e) {}
 
-            // 🛡️ 賣家管理員白名單智慧識別 (最高權限常數或快取)
+            // 🛡️ 賣家管理員白名單嚴格識別 (比對主管理員 UID 或白名單綁定之 UID，買家絕不出現)
             const PRIMARY_ADMIN_UID = 'Uee7765ed3c1819cb94fd404cfab8553b';
-            const isAdminUser = (currentUserId === PRIMARY_ADMIN_UID) || (localStorage.getItem('line_order_is_admin') === '1');
+            const cachedAdminUid = localStorage.getItem('line_order_admin_uid');
+            const isAdminCached = localStorage.getItem('line_order_is_admin') === '1';
+
+            let isAdminUser = false;
+            if (currentUserId === PRIMARY_ADMIN_UID) {
+              isAdminUser = true;
+            } else if (isAdminCached && cachedAdminUid && currentUserId === cachedAdminUid) {
+              isAdminUser = true;
+            } else {
+              // 🚫 非管理員白名單帳號：徹底清理本地管理員標記，確保管理中心按鈕嚴格隱藏
+              try {
+                localStorage.removeItem('line_order_is_admin');
+                localStorage.removeItem('line_order_admin_uid');
+              } catch (e) {}
+            }
+
             if (isAdminUser) {
               try {
                 localStorage.setItem('line_order_is_admin', '1');
+                localStorage.setItem('line_order_admin_uid', currentUserId);
                 unlockVipGate();
                 const topAdminBtn = document.getElementById('topAdminBtn');
                 if (topAdminBtn) topAdminBtn.style.display = 'inline-flex';
