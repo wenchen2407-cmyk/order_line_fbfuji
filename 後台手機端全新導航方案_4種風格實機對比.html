@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>後台手機端全新導航 ｜ 4種風格即時對比體驗</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --accent: #ff4757;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #0f172a;
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: clip;
+    }
+
+    /* 頂部切換風格總控列 */
+    .showcase-control-bar {
+      background: #1e293b;
+      padding: 12px 16px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .control-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .style-picker-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    @media (min-width: 600px) {
+      .style-picker-group {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .style-btn {
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      color: #cbd5e1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .style-btn:hover {
+      border-color: #64748b;
+    }
+    .style-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
+    }
+
+    /* 模擬手機視窗外框 */
+    .preview-container {
+      display: flex;
+      justify-content: center;
+      padding: 20px 10px 40px;
+    }
+    .phone-mockup {
+      width: 100%;
+      max-width: 390px; /* 標準 iPhone 寬度 */
+      height: 780px;
+      background: var(--bg);
+      border-radius: 40px;
+      border: 10px solid #1e293b;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    @media (max-width: 500px) {
+      .preview-container {
+        padding: 0;
+      }
+      .phone-mockup {
+        max-width: 100%;
+        height: calc(100vh - 120px);
+        border: none;
+        border-radius: 0;
+      }
+    }
+
+    /* 手機內部內容滾動區 */
+    .phone-inner-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: clip;
+      padding: 12px;
+      position: relative;
+    }
+
+    /* 模擬內容卡片 */
+    .demo-panel {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 16px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .demo-panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 提示徽章 */
+    .style-intro-badge {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    /* ============================================================ */
+    /* 🌟 風格 A：底部固定 App 標籤列 (Bottom Navigation Bar) */
+    /* ============================================================ */
+    .style-a-bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+      z-index: 100;
+    }
+    .style-a-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 2px;
+      color: #64748b;
+      transition: all 0.15s;
+    }
+    .style-a-tab.active {
+      color: var(--primary);
+    }
+    .style-a-tab .tab-icon {
+      font-size: 18px;
+    }
+    .style-a-tab .tab-text {
+      font-size: 10.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* ============================================================ */
+    /* 🌟 風格 B：頂部 5 等分極窄緊湊列 (Compact 5-Col Grid) */
+    /* 100% 剛好塞進一行，完全 0 滑動！ */
+    /* ============================================================ */
+    .style-b-top-nav {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 4px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+    .style-b-tab {
+      background: none;
+      border: none;
+      padding: 6px 2px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+      gap: 2px;
+      transition: all 0.15s;
+    }
+    .style-b-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(6, 199, 85, 0.25);
+    }
+    .style-b-tab .tab-icon {
+      font-size: 16px;
+    }
+    .style-b-tab .tab-text {
+      font-size: 10.5px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* ============================================================ */
+    /* 🌟 風格 C：頂部標題內嵌極簡原生下拉膠囊 (Inline Dropdown Select) */
+    /* ============================================================ */
+    .style-c-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .style-c-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .style-c-select-wrapper {
+      position: relative;
+    }
+    .style-c-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      padding: 6px 26px 6px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      outline: none;
+    }
+    .style-c-select-arrow {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: #64748b;
+      pointer-events: none;
+    }
+
+    /* ============================================================ */
+    /* 🌟 風格 D：首頁磁貼儀表板 (Dashboard Tiles) */
+    /* ============================================================ */
+    .style-d-dashboard {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .style-d-tile {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .style-d-tile:active {
+      transform: scale(0.97);
+      background: #f8fafc;
+    }
+    .style-d-tile.active {
+      border-color: var(--primary);
+      background: #f0fdf4;
+    }
+    .style-d-tile-icon {
+      font-size: 24px;
+    }
+    .style-d-tile-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .style-d-tile-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+    .style-d-return-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #2563eb;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 上方風格切換總控台 (點擊即時變換) -->
+  <div class="showcase-control-bar">
+    <div class="control-title">
+      <span>💡 請點擊切換 4 種全新設計風格：</span>
+      <span style="font-size:11px; color:#94a3b8;">直接在下方手機體驗點擊</span>
+    </div>
+    
+    <div class="style-picker-group">
+      <button type="button" class="style-btn active" onclick="switchDesignStyle('A', this)">
+        📱 風格 A：底部 App 標籤列
+      </button>
+      <button type="button" class="style-btn" onclick="switchDesignStyle('B', this)">
+        ⚡ 風格 B：頂部 5 等分 0 滑動
+      </button>
+      <button type="button" class="style-btn" onclick="switchDesignStyle('C', this)">
+        🔻 風格 C：標題內嵌極簡選單
+      </button>
+      <button type="button" class="style-btn" onclick="switchDesignStyle('D', this)">
+        🗂️ 風格 D：首頁磁貼儀表板
+      </button>
+    </div>
+  </div>
+
+  <div class="preview-container">
+    <div class="phone-mockup">
+      
+      <!-- 內部滾動區 -->
+      <div class="phone-inner-scroll" id="phoneInnerScroll">
+
+        <!-- 風格簡介徽章 (動態更換) -->
+        <div class="style-intro-badge" id="styleIntroBadge">
+          <b>📱 風格 A：底部固定 App 標籤列</b><br>
+          頂部 100% 乾淨不佔空間！像 LINE / 蝦皮一樣，5 個按鈕固定在手機最下方，大拇指最容易點擊直達。
+        </div>
+
+        <!-- ============================== -->
+        <!-- 導航容器：動態由 JS 切換渲染 -->
+        <!-- ============================== -->
+        <div id="dynamicNavContainer"></div>
+
+        <!-- ============================== -->
+        <!-- 分頁內容展示區 (模擬真實畫面) -->
+        <!-- ============================== -->
+        <div id="tabContentBox">
+          
+          <!-- 分頁 1：批次推播群組 -->
+          <div id="content_publish" class="tab-pane">
+            <div class="demo-panel">
+              <div class="demo-panel-title">📦 選擇要推播的商品 (已選 2 件)</div>
+              
+              <div style="display:flex; align-items:center; gap:8px; padding:8px; border:1.5px solid var(--primary); background:#f0fdf4; border-radius:10px; margin-bottom:8px;">
+                <span style="color:var(--primary); font-weight:800;">✓</span>
+                <img src="https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=80&auto=format&fit=crop" style="width:40px; height:40px; border-radius:6px; object-fit:cover;" alt="">
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">韓國 Biodance 爽海藻舒緩保濕精華液</div>
+                  <div style="font-size:13px; font-weight:800; color:var(--accent);">NT$ 650</div>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px; padding:8px; border:1.5px solid var(--primary); background:#f0fdf4; border-radius:10px; margin-bottom:10px;">
+                <span style="color:var(--primary); font-weight:800;">✓</span>
+                <img src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=80&auto=format&fit=crop" style="width:40px; height:40px; border-radius:6px; object-fit:cover;" alt="">
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">日本 Okamoto 發熱保暖機能襪 2入</div>
+                  <div style="font-size:13px; font-weight:800; color:var(--accent);">NT$ 390</div>
+                </div>
+              </div>
+
+              <button type="button" style="width:100%; padding:11px; font-size:13.5px; background:var(--primary); color:#fff; border:none; border-radius:10px; font-weight:800; cursor:pointer;">
+                🚀 一鍵打包推播至 LINE 群組
+              </button>
+            </div>
+          </div>
+
+          <!-- 分頁 2：商品維護 -->
+          <div id="content_manage" class="tab-pane" style="display:none;">
+            <div class="demo-panel">
+              <div class="demo-panel-title">🛠️ 商品資料線上維護與批次改價</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px; text-align:center;">
+                  <div style="font-size:11px; color:#15803d; font-weight:700;">🟢 上架中</div>
+                  <div style="font-size:18px; font-weight:900; color:#15803d;">42 件</div>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                  <div style="font-size:11px; color:#64748b; font-weight:700;">⚪ 已下架</div>
+                  <div style="font-size:18px; font-weight:900; color:#64748b;">18 件</div>
+                </div>
+              </div>
+              <p style="font-size:12px; color:#64748b;">可直接切換上下架、即時改價，手機上隨時管理。</p>
+            </div>
+          </div>
+
+          <!-- 分頁 3：結帳通知 -->
+          <div id="content_notify" class="tab-pane" style="display:none;">
+            <div class="demo-panel">
+              <div class="demo-panel-title">📢 顧客結帳通知 (1對1免額度)</div>
+              <p style="font-size:12px; color:#64748b; margin-bottom:10px;">不消耗官方帳號則數，直接傳送買家個人專屬購物明細！</p>
+              <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px;">
+                👤 顧客：王*明（待結帳 3 件 / NT$ 2,480）
+              </div>
+            </div>
+          </div>
+
+          <!-- 分頁 4：瀏覽統計 -->
+          <div id="content_stats" class="tab-pane" style="display:none;">
+            <div class="demo-panel">
+              <div class="demo-panel-title">📊 賣場即時瀏覽點擊排行</div>
+              <div style="font-size:12.5px; color:#334155; display:flex; flex-direction:column; gap:6px;">
+                <div>🥇 <b>韓國 Biodance 精華液</b> (142 次)</div>
+                <div>🥈 <b>日本 Okamoto 保暖襪</b> (98 次)</div>
+                <div>🥉 <b>富士拍立得 mini 底片</b> (76 次)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分頁 5：電腦快速建檔 -->
+          <div id="content_create" class="tab-pane" style="display:none;">
+            <div class="demo-panel">
+              <div class="demo-panel-title">💻 新增商品至試算表商品庫</div>
+              <p style="font-size:12px; color:#64748b;">此功能欄位較多，建議在大螢幕或電腦上使用鍵盤輸入最快速！</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- 風格 A 專用底部吸底導航 (若切換其他風格會隱藏) -->
+      <div id="bottomNavHolder"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // 5 大模組定義
+    const modules = [
+      { id: 'publish', icon: '📱', name: '推播', fullName: '批次推播群組', desc: '勾選商品發布至群組' },
+      { id: 'manage',  icon: '🛠️', name: '維護', fullName: '商品資料維護', desc: '線上改價與上下架' },
+      { id: 'notify',  icon: '📢', name: '結帳', fullName: '顧客結帳通知', desc: '1對1傳送採購清單' },
+      { id: 'stats',   icon: '📊', name: '統計', fullName: '瀏覽統計排行', desc: '熱門商品點擊榜' },
+      { id: 'create',  icon: '💻', name: '建檔', fullName: '電腦快速建檔', desc: '新增商品至資料庫' }
+    ];
+
+    let currentStyle = 'A';
+    let currentModuleId = 'publish';
+
+    // 1. 切換外層 4 種設計風格
+    function switchDesignStyle(styleKey, btn) {
+      currentStyle = styleKey;
+      document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      renderCurrentStyle();
+    }
+
+    // 2. 渲染對應風格的導航
+    function renderCurrentStyle() {
+      const topContainer = document.getElementById('dynamicNavContainer');
+      const bottomHolder = document.getElementById('bottomNavHolder');
+      const introBadge = document.getElementById('styleIntroBadge');
+      const scrollBody = document.getElementById('phoneInnerScroll');
+
+      topContainer.innerHTML = '';
+      bottomHolder.innerHTML = '';
+      scrollBody.style.paddingBottom = '12px';
+
+      if (currentStyle === 'A') {
+        // ========== 🌟 風格 A：底部固定 App 標籤列 ==========
+        introBadge.innerHTML = `
+          <b>📱 風格 A：底部固定 App 標籤列</b><br>
+          頂部 100% 乾淨不佔空間！像 LINE / 蝦皮一樣，5 個按鈕釘在手機最下方，大拇指最容易單手一鍵直達。
+        `;
+        scrollBody.style.paddingBottom = '70px'; // 騰出底部空間避開 bottom bar
+
+        bottomHolder.innerHTML = `
+          <div class="style-a-bottom-bar">
+            ${modules.map(m => `
+              <button type="button" class="style-a-tab ${m.id === currentModuleId ? 'active' : ''}" onclick="selectModule('${m.id}')">
+                <span class="tab-icon">${m.icon}</span>
+                <span class="tab-text">${m.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } 
+      else if (currentStyle === 'B') {
+        // ========== 🌟 風格 B：頂部 5 等分 0 滑動 ==========
+        introBadge.innerHTML = `
+          <b>⚡ 風格 B：頂部 5 等分極窄緊湊列 (0 滑動)</b><br>
+          5 個按鈕 100% 剛好塞進一行（每格佔 20%），一眼看清所有功能，徹底告別左右滑動！
+        `;
+
+        topContainer.innerHTML = `
+          <div class="style-b-top-nav">
+            ${modules.map(m => `
+              <button type="button" class="style-b-tab ${m.id === currentModuleId ? 'active' : ''}" onclick="selectModule('${m.id}')">
+                <span class="tab-icon">${m.icon}</span>
+                <span class="tab-text">${m.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } 
+      else if (currentStyle === 'C') {
+        // ========== 🌟 風格 C：標題內嵌極簡選單 ==========
+        const activeMod = modules.find(m => m.id === currentModuleId) || modules[0];
+        introBadge.innerHTML = `
+          <b>🔻 風格 C：標題內嵌極簡原生下拉膠囊</b><br>
+          最節省版面的極致做法！頂部只佔 1 行，右側直接下拉秒選切換，乾淨純粹。
+        `;
+
+        topContainer.innerHTML = `
+          <div class="style-c-header-bar">
+            <div class="style-c-title">
+              <span>連線代購管理中心</span>
+            </div>
+            <div class="style-c-select-wrapper">
+              <select class="style-c-select" onchange="selectModule(this.value)">
+                ${modules.map(m => `
+                  <option value="${m.id}" ${m.id === currentModuleId ? 'selected' : ''}>
+                    ${m.icon} ${m.fullName}
+                  </option>
+                `).join('')}
+              </select>
+              <span class="style-c-select-arrow">▼</span>
+            </div>
+          </div>
+        `;
+      } 
+      else if (currentStyle === 'D') {
+        // ========== 🌟 風格 D：首頁磁貼儀表板 ==========
+        introBadge.innerHTML = `
+          <b>🗂️ 風格 D：首頁磁貼儀表板 (Dashboard Tiles)</b><br>
+          像 iOS 桌面卡片一樣，功能直覺大圖示陳列；點選任一磁貼立即展開該功能！
+        `;
+
+        topContainer.innerHTML = `
+          <div class="style-d-dashboard">
+            ${modules.map(m => `
+              <div class="style-d-tile ${m.id === currentModuleId ? 'active' : ''}" onclick="selectModule('${m.id}')">
+                <div class="style-d-tile-icon">${m.icon}</div>
+                <div class="style-d-tile-title">${m.fullName}</div>
+                <div class="style-d-tile-desc">${m.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      updateTabContentDisplay();
+    }
+
+    // 3. 模組切換共用函數
+    function selectModule(modId) {
+      currentModuleId = modId;
+      renderCurrentStyle(); // 重新渲染標籤的高亮狀態
+    }
+
+    // 4. 更新下方模擬內容
+    function updateTabContentDisplay() {
+      document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+      const target = document.getElementById(`content_${currentModuleId}`);
+      if (target) {
+        target.style.display = 'block';
+      }
+    }
+
+    // 初始載入渲染
+    renderCurrentStyle();
+  </script>
+</body>
+</html>
