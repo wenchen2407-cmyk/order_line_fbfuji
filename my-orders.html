@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>W.W.連線代購 ｜ 訂單查詢與合併結帳</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,16 +26,45 @@
       --radius: 16px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      overflow-x: clip;
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
+    }
+
     body {
       font-family: 'Noto Sans TC', sans-serif;
       background: var(--bg);
       color: var(--text-main);
-      padding: 14px 14px 90px;
+      padding: 12px 10px calc(90px + env(safe-area-inset-bottom));
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
       line-height: 1.5;
     }
 
-    .container { max-width: 540px; margin: 0 auto; }
+    .container {
+      width: 100%;
+      max-width: 540px;
+      margin: 0 auto;
+      box-sizing: border-box;
+      overflow-x: clip;
+    }
+
+    /* 防止 iOS 聚焦輸入框時視窗自動縮放 */
+    input[type="text"], input[type="tel"], input[type="number"], select, textarea {
+      font-size: 16px !important;
+    }
 
     /* 買家會員簡介卡 */
     .user-profile-header {
@@ -269,7 +298,8 @@
       max-height: 90vh;
       overflow-y: auto;
       border-radius: 24px 24px 0 0;
-      padding: 24px 20px 40px;
+      padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+      box-sizing: border-box;
       animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes slideUp {

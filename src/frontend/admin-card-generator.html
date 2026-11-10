@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>賣家商品建檔 & 多商品輪播推播中心</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,11 +24,20 @@
       --text-muted: #64748b;
     }
 
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      overflow-x: clip; /* 現代防溢出標準，阻斷 WebKit 橫向滾動畫布擴張 */
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -36,12 +45,19 @@
       background: var(--bg);
       color: var(--text);
       padding: 16px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
       line-height: 1.5;
     }
 
     .container {
+      width: 100%;
       max-width: 1040px;
       margin: 0 auto;
+      box-sizing: border-box;
+      overflow-x: clip;
     }
 
     /* 頂部標題 */
@@ -299,16 +315,27 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* 左右雙欄佈局 */
+    /* 左右雙欄佈局 (全方位防禦性 CSS：強制 minmax(0, 1fr) 防止子元素撐爆 Grid) */
     .grid-layout {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 20px;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .grid-layout > * {
+      min-width: 0;
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     @media (min-width: 820px) {
       .grid-layout {
-        grid-template-columns: 1.15fr 0.85fr;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
       }
     }
 
@@ -650,23 +677,18 @@
       box-shadow: 0 4px 12px rgba(51, 65, 85, 0.2);
     }
 
-    /* 📱 手機螢幕比例專屬優化 (100% 符合手機螢幕寬度，徹底消除橫向溢出) */
-    html, body {
-      overflow-x: hidden;
-      max-width: 100vw;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
+    /* 📱 手機螢幕比例專屬優化 (100% 符合手機螢幕寬度，徹底消除橫向溢出與邊界位移) */
     @media (max-width: 768px) {
       body {
-        padding: 8px 6px;
+        padding: 6px 6px 20px 6px;
       }
       .container {
-        width: 100%;
-        max-width: 100%;
-        padding: 0;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: clip !important;
       }
       .header {
         margin-bottom: 12px;
@@ -679,7 +701,9 @@
       }
       #liffStatusBadge {
         font-size: 11px !important;
-        padding: 3px 10px !important;
+        padding: 4px 10px !important;
+        max-width: 100% !important;
+        word-break: break-word !important;
       }
 
       /* Tab 列支援平滑橫向滑動，不被壓縮撐爆螢幕 */
@@ -688,12 +712,14 @@
         overflow-x: auto;
         white-space: nowrap;
         -webkit-overflow-scrolling: touch;
-        padding: 3px;
-        gap: 4px;
+        overscroll-behavior-x: contain;
+        padding: 4px;
+        gap: 6px;
         border-radius: 12px;
         margin-bottom: 12px;
-        max-width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
         scrollbar-width: none;
       }
       .tabs-nav::-webkit-scrollbar {
@@ -706,81 +732,139 @@
         border-radius: 9px;
       }
 
-      /* 面板容器完全貼合手機寬度 */
+      /* 面板容器完全貼合手機寬度，阻斷子元素撐爆 */
       .grid-layout {
-        gap: 12px;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .grid-layout > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
       }
       .panel {
-        padding: 12px 10px;
-        border-radius: 14px;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        overflow: hidden;
+        padding: 12px 10px !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
       }
       .panel-title {
         font-size: 14px;
         margin-bottom: 10px;
       }
 
-      /* 勾選清單項目尺寸適配手機螢幕 */
+      /* 勾選清單項目尺寸適配手機螢幕，價格緊貼右邊框不溢出 */
       .product-select-list {
-        max-height: 400px;
+        max-height: 420px;
         gap: 8px;
         padding-right: 0;
-        width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
       }
       .product-check-item {
-        padding: 10px 12px;
-        gap: 10px;
+        padding: 10px 10px !important;
+        gap: 8px !important;
         border-radius: 12px;
-        width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
       }
       .prod-card-chk {
-        width: 18px;
-        height: 18px;
-        border-radius: 5px;
-        font-size: 10px;
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        font-size: 11px;
+        flex-shrink: 0;
       }
       .prod-thumb {
-        width: 52px;
-        height: 52px;
+        width: 50px;
+        height: 50px;
         border-radius: 8px;
+        flex-shrink: 0;
+      }
+      .prod-info {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        overflow: hidden !important;
+      }
+      .prod-name-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        gap: 6px !important;
       }
       .prod-name {
-        font-size: 13px;
-        line-height: 1.35;
+        font-size: 13px !important;
+        line-height: 1.35 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        word-break: break-word !important;
       }
       .prod-price-tag {
-        font-size: 14px;
+        font-size: 14px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        margin-left: auto !important;
       }
       .prod-meta-row {
         gap: 4px;
         font-size: 10.5px;
+        width: 100% !important;
+        min-width: 0 !important;
       }
       .pill-code, .pill-spec, .deadline-badge-pill {
         font-size: 10px;
-        padding: 1px 6px;
+        padding: 2px 6px;
+      }
+      .pill-spec {
+        max-width: 100% !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
       }
 
-      /* 手機端 LINE 輪播卡片預覽容器：限制寬度與高度，橫向平滑滾動 */
+      /* 手機端 LINE 輪播卡片預覽容器：限制寬度與高度，橫向平滑滾動且不破版 */
+      .preview-column-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+      }
       .line-chat-simulator {
         min-height: 250px;
         padding: 10px 8px;
         border-radius: 14px;
         gap: 10px;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        overscroll-behavior-x: contain !important;
       }
       .flex-preview-bubble {
-        width: 185px;
+        width: 180px;
         border-radius: 12px;
+        flex-shrink: 0;
       }
       .preview-img {
         height: 110px;
@@ -808,12 +892,29 @@
         font-size: 11px;
       }
 
-      /* 操作按鈕尺寸貼合手機 */
+      /* 操作按鈕尺寸貼合手機，文字可折行永不截斷 */
       .btn-action {
-        padding: 11px 12px;
-        font-size: 13.5px;
-        border-radius: 11px;
-        margin-top: 10px;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 12px 10px !important;
+        font-size: 13.5px !important;
+        border-radius: 12px !important;
+        margin-top: 10px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.35 !important;
+        text-align: center !important;
+      }
+
+      /* 防止 iOS 聚焦輸入框時視窗自動縮放產生橫向溢出 */
+      .input-text, .input-textarea, select {
+        font-size: 16px !important;
+      }
+
+      /* 表格手機響應式容器保全 */
+      table {
+        min-width: 500px;
       }
     }
   </style>
@@ -822,7 +923,7 @@
 
   <div class="container">
     <div class="header">
-      <span class="badge-pro">SELLER HUB v1.2</span>
+      <span class="badge-pro">SELLER HUB v1.3 (防溢出優化版)</span>
       <h1 style="font-size: 22px; font-weight: 900;">連線代購管理中心</h1>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">電腦商品建檔 ➔ 手機勾選多樣商品打包發布到 LINE 群組</p>
       
@@ -895,8 +996,11 @@
         </div>
 
         <!-- 右側：即時 Carousel 輪播預覽 -->
-        <div>
-          <div class="panel-title">📱 LINE 輪播卡片預覽 (可橫向滑動)</div>
+        <div class="preview-column-wrapper">
+          <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📱 LINE 輪播卡片預覽</span>
+            <span style="font-size:11px; color:#64748b; font-weight:normal;">👈 左右可滑動預覽 👉</span>
+          </div>
           <div class="line-chat-simulator" id="carouselPreview">
             <!-- 輪播 Bubble 預覽由 JS 動態生成 -->
           </div>
@@ -1171,15 +1275,15 @@
           </div>
         </div>
 
-        <!-- 搜尋與活動分類過濾列 (簡約整併，移除下方冗餘狀態按鈕) -->
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-          <div style="flex: 1; min-width: 220px; position: relative;">
+        <!-- 搜尋與活動分類過濾列 (防溢出優化：自適應換行與 min-width: 0) -->
+        <div class="manage-filter-bar" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+          <div class="manage-search-col" style="flex: 1 1 200px; min-width: 0; position: relative; width: 100%;">
             <input type="text" id="manageSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
             <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
             <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
           </div>
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <select id="manageCategoryFilter" class="input-text" style="width: auto; min-width: 150px; font-size: 13px; padding: 8px 12px;" onchange="handleManageSearch()">
+          <div class="manage-filter-col" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; width: 100%; justify-content: space-between;">
+            <select id="manageCategoryFilter" class="input-text" style="flex: 1; min-width: 0; max-width: 100%; font-size: 13px; padding: 8px 12px;" onchange="handleManageSearch()">
               <option value="">全部活動分類</option>
             </select>
             <div id="manageResultCountText" style="font-size: 12px; color: var(--text-muted); font-weight: 700; white-space: nowrap;"></div>
@@ -1870,10 +1974,14 @@
       const tabIdx = tabMap[tabId] !== undefined ? tabMap[tabId] : 0;
       const allBtns = document.querySelectorAll('.tab-btn');
 
-      if (btnElement) {
-        btnElement.classList.add('active');
-      } else if (allBtns[tabIdx]) {
-        allBtns[tabIdx].classList.add('active');
+      const activeBtn = btnElement || allBtns[tabIdx];
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+        try {
+          if (typeof activeBtn.scrollIntoView === 'function') {
+            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }
+        } catch(e) {}
       }
 
       const targetContent = document.getElementById(tabId);
@@ -2568,14 +2676,27 @@
         item.id = `item_${prod.id}`;
         item.onclick = () => toggleSelectProduct(prod.id);
 
-        // 規格字串安全處理 (防呆：若是字串或陣列皆能正常處理)
+        // 規格字串安全處理 (防呆：若是字串或物件陣列皆能正常處理，防止出現 [object Object])
         let specsDisplay = '';
+        const formatSpecItem = (s) => {
+          if (!s) return '';
+          if (typeof s === 'string') return s.trim();
+          if (typeof s === 'object') return (s.name || s.specName || s.title || s.spec || '').toString().trim();
+          return String(s).trim();
+        };
+
         if (Array.isArray(prod.specs)) {
-          specsDisplay = prod.specs.join('、');
+          specsDisplay = prod.specs.map(formatSpecItem).filter(Boolean).join('、');
         } else if (typeof prod.specs === 'string' && prod.specs.trim()) {
           try {
             const parsed = JSON.parse(prod.specs);
-            specsDisplay = Array.isArray(parsed) ? parsed.join('、') : prod.specs;
+            if (Array.isArray(parsed)) {
+              specsDisplay = parsed.map(formatSpecItem).filter(Boolean).join('、');
+            } else if (typeof parsed === 'object' && parsed !== null) {
+              specsDisplay = formatSpecItem(parsed) || prod.specs;
+            } else {
+              specsDisplay = prod.specs;
+            }
           } catch(e) {
             specsDisplay = prod.specs;
           }

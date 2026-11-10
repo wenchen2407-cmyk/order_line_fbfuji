@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>連線代購即時訂購單</title>
   <!-- Google Fonts & LINE LIFF SDK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,11 +25,20 @@
       --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     }
 
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      overflow-x: clip;
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -37,13 +46,24 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       line-height: 1.5;
-      padding-bottom: 90px;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(90px + env(safe-area-inset-bottom));
+      padding-left: max(8px, env(safe-area-inset-left));
+      padding-right: max(8px, env(safe-area-inset-right));
     }
 
     .container {
+      width: 100%;
       max-width: 500px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 14px 10px;
+      box-sizing: border-box;
+      overflow-x: clip;
+    }
+
+    /* 防止 iOS 聚焦輸入框時自動縮放造成溢出 */
+    .form-input, .form-textarea, select {
+      font-size: 16px !important;
     }
 
     /* 頂部買家資訊列 (LIFF 自動帶入) */
@@ -392,7 +412,7 @@
       color: var(--primary-dark);
     }
 
-    /* 底部固定結帳 Bar */
+    /* 底部固定結帳 Bar (Safe Area 適配 iPhone 橫條) */
     .bottom-bar {
       position: fixed;
       bottom: 0;
@@ -401,12 +421,13 @@
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(12px);
       border-top: 1px solid var(--border-color);
-      padding: 12px 16px;
+      padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 100;
       box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+      box-sizing: border-box;
     }
 
     .bottom-bar-inner {

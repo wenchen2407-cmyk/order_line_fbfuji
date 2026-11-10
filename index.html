@@ -84,7 +84,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>連線商品清單 - W.W.連線代購</title>
   <!-- Google Fonts & LINE LIFF SDK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -247,18 +247,30 @@
       margin-top: 12px;
     }
 
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
 
+    html, body {
+      overflow-x: clip;
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
+    }
+
     body {
       font-family: 'Outfit', 'Noto Sans TC', sans-serif;
       background-color: var(--bg);
       color: var(--text-main);
-      padding-bottom: 90px;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(90px + env(safe-area-inset-bottom));
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
     /* 頂部 Header */
@@ -269,7 +281,9 @@
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
-      padding: 12px 16px;
+      padding: 12px 14px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .header-top {
@@ -389,11 +403,14 @@
       padding: 4px;
     }
 
-    /* 商品網格容器 */
+    /* 商品網格容器 (防禦性 CSS 防止任何子元素撐寬) */
     .catalog-container {
       max-width: 900px;
       margin: 0 auto;
-      padding: 14px;
+      padding: 12px 10px;
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: clip;
     }
 
     .stats-bar {
@@ -408,13 +425,15 @@
 
     .product-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     @media (min-width: 640px) {
       .product-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 16px;
       }
     }
