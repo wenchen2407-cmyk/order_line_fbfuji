@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>後台手機端導航優化 ｜ 方案1+方案2雙合一視覺與操作雛形</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --accent: #ff4757;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #0b1120;
+      color: var(--text);
+      line-height: 1.5;
+      overflow-x: clip;
+      min-height: 100vh;
+    }
+
+    /* 頂部展示說明列 (電腦看時顯示，可切換視角) */
+    .showcase-banner {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .showcase-title {
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #38bdf8;
+    }
+    .showcase-subtitle {
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+    .view-mode-toggle {
+      display: flex;
+      background: #0f172a;
+      border-radius: 20px;
+      padding: 3px;
+      border: 1px solid #334155;
+      gap: 4px;
+    }
+    .view-mode-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+    .view-mode-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    /* 外層展示容器 */
+    .app-viewport-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* 模擬 iPhone 手機螢幕外框 */
+    .mobile-phone-frame {
+      width: 100%;
+      max-width: 410px;
+      background: var(--bg);
+      border-radius: 36px;
+      border: 10px solid #1e293b;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      height: 840px;
+      transition: max-width 0.3s ease, border 0.3s ease, border-radius 0.3s ease;
+    }
+
+    /* 全螢幕模式 (手機開啟時自動鋪滿) */
+    @media (max-width: 768px) {
+      .app-viewport-wrapper {
+        padding: 0;
+      }
+      .mobile-phone-frame {
+        max-width: 100% !important;
+        border: none !important;
+        border-radius: 0 !important;
+        height: 100vh !important;
+        box-shadow: none !important;
+      }
+      .showcase-banner {
+        display: none; /* 手機開啟時隱藏上方黑色資訊列，直接體驗純淨手機畫面 */
+      }
+    }
+
+    /* 手機聽筒/動態島 */
+    .phone-dynamic-island {
+      height: 28px;
+      background: #000000;
+      width: 110px;
+      border-radius: 20px;
+      margin: 8px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .dynamic-camera {
+      width: 9px;
+      height: 9px;
+      background: #111827;
+      border-radius: 50%;
+      border: 1px solid #1f2937;
+    }
+
+    /* 手機內容滾動區 */
+    .phone-scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: clip;
+      position: relative;
+      background: var(--bg);
+      padding: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ============================================================ */
+    /* 🌟🌟🌟 核心亮點：方案 1 + 方案 2「雙合一導航架構」 🌟🌟🌟 */
+    /* ============================================================ */
+
+    .smart-nav-container {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(248, 250, 252, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 8px 0 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    /* 方案 2 體現：頂部「當前模組切換按鈕」 */
+    .nav-current-module-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nav-current-module-bar:active {
+      transform: scale(0.98);
+      background: #f8fafc;
+      border-color: var(--primary);
+    }
+    .nav-current-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .nav-current-icon {
+      font-size: 18px;
+      background: #f0fdf4;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #bbf7d0;
+      flex-shrink: 0;
+    }
+    .nav-current-text {
+      min-width: 0;
+    }
+    .nav-current-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-current-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-dropdown-trigger {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .nav-current-module-bar:hover .nav-dropdown-trigger {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    /* 方案 1 體現：下方「4 字精簡膠囊滑動列 (Short Pills Slider)」 */
+    .nav-short-pills-slider {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+      padding: 2px 2px;
+    }
+    .nav-short-pills-slider::-webkit-scrollbar {
+      display: none;
+    }
+
+    .pill-tab-btn {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #ffffff;
+      color: #475569;
+      border: 1.5px solid var(--border);
+      padding: 6px 11px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .pill-tab-btn:active {
+      transform: scale(0.96);
+    }
+    .pill-tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.25);
+    }
+
+    /* ============================================================ */
+    /* 📱 方案 2 彈出層：原生級「底部功能抽屜 (Action Sheet Drawer)」 */
+    /* ============================================================ */
+    .module-sheet-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 999;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .module-sheet-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .module-sheet-drawer {
+      width: 100%;
+      background: #ffffff;
+      border-radius: 24px 24px 0 0;
+      padding: 16px 16px 28px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .module-sheet-overlay.active .module-sheet-drawer {
+      transform: translateY(0);
+    }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: #cbd5e1;
+      border-radius: 4px;
+      margin: 0 auto 12px;
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-title {
+      font-size: 15px;
+      font-weight: 900;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sheet-close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* 抽屜內的 5 大功能大卡片 */
+    .module-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .module-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .module-item:active {
+      transform: scale(0.98);
+      background: #f8fafc;
+    }
+    .module-item.active {
+      background: #f0fdf4;
+      border-color: var(--primary);
+    }
+    .module-item-icon {
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .module-item.active .module-item-icon {
+      background: #ffffff;
+      border-color: #86efac;
+    }
+    .module-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .module-item-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .module-item.active .module-item-title {
+      color: #15803d;
+    }
+    .module-item-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .module-item-check {
+      font-size: 16px;
+      color: var(--primary);
+      font-weight: 900;
+      opacity: 0;
+      flex-shrink: 0;
+    }
+    .module-item.active .module-item-check {
+      opacity: 1;
+    }
+
+    /* ============================================================ */
+    /* 模擬真實內容區 (5 大分頁切換展示) */
+    /* ============================================================ */
+    .tab-content-panel {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    .tab-content-panel.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mock-panel {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 16px 14px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+      margin-bottom: 12px;
+    }
+    .mock-panel-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 模擬商品勾選卡 */
+    .mock-prod-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1.5px solid var(--primary);
+      background: #f0fdf4;
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .mock-chk {
+      width: 20px;
+      height: 20px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .mock-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #e2e8f0;
+    }
+    .mock-prod-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .mock-prod-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mock-prod-price {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-mock-action {
+      width: 100%;
+      background: linear-gradient(135deg, #06c755 0%, #05a847 100%);
+      color: #ffffff;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);
+      margin-top: 8px;
+    }
+
+    /* 說明提示卡片 */
+    .feature-tip-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 電腦寬螢幕展示說明列 -->
+  <div class="showcase-banner">
+    <div>
+      <div class="showcase-title">
+        <span>✨ 後台導航「方案 1 ＋ 方案 2」雙合一設計實機體驗</span>
+        <span style="font-size:11px; background:#0284c7; color:#fff; padding:2px 8px; border-radius:12px;">互動雛形</span>
+      </div>
+      <div class="showcase-subtitle">
+        上方短膠囊可「平滑滑動點擊」，點擊「當前功能標題」或「切換 ▾」立即彈出全覽抽屜！
+      </div>
+    </div>
+
+    <div class="view-mode-toggle">
+      <button type="button" class="view-mode-btn active" onclick="setPhoneWidth(410, this)">📱 iPhone 視角</button>
+      <button type="button" class="view-mode-btn" onclick="setPhoneWidth(375, this)">📱 iPhone SE 窄屏</button>
+      <button type="button" class="view-mode-btn" onclick="setPhoneWidth(600, this)">💻 寬版自適應</button>
+    </div>
+  </div>
+
+  <div class="app-viewport-wrapper">
+    <!-- 模擬手機外框 -->
+    <div class="mobile-phone-frame" id="phoneFrame">
+      
+      <!-- 動態島 -->
+      <div class="phone-dynamic-island">
+        <div class="dynamic-camera"></div>
+      </div>
+
+      <!-- 手機內容滾動區 -->
+      <div class="phone-scroll-body">
+        
+        <!-- 頂部管理員身分標籤 -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:11.5px; color:#64748b;">
+          <div>👑 <b>賣家小幫手</b> <span style="font-family:monospace; color:#94a3b8;">(Uee77...553b)</span></div>
+          <span style="background:#eefbf3; color:#15803d; padding:2px 7px; border-radius:10px; font-weight:700;">🟢 管理模式</span>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 🚀 核心 UI：方案 1 + 方案 2 雙合一導航元件實體 -->
+        <!-- ========================================================= -->
+        <div class="smart-nav-container">
+          
+          <!-- 💡 方案 2 體現：當前功能卡片 (點擊直接彈出全部功能選單) -->
+          <div class="nav-current-module-bar" onclick="openModuleSheet()" title="點此展開完整功能清單">
+            <div class="nav-current-left">
+              <div class="nav-current-icon" id="curModuleIcon">📱</div>
+              <div class="nav-current-text">
+                <div class="nav-current-title">
+                  <span id="curModuleTitle">批次推播群組</span>
+                  <span style="font-size:10px; background:#eff6ff; color:#2563eb; padding:1px 6px; border-radius:4px;">當前</span>
+                </div>
+                <div class="nav-current-desc" id="curModuleDesc">勾選 1~10 件商品打包成 LINE 輪播卡片</div>
+              </div>
+            </div>
+            <div class="nav-dropdown-trigger">
+              <span>切換</span>
+              <span style="font-size:10px;">▼</span>
+            </div>
+          </div>
+
+          <!-- 💡 方案 1 體現：4 字精簡膠囊列 (手機上一眼看 3~4 個，點擊滑順置中) -->
+          <div class="nav-short-pills-slider" id="pillsSlider">
+            <button type="button" class="pill-tab-btn active" data-id="tabPublish" onclick="selectModule('tabPublish', this)">
+              <span>📱 批次推播</span>
+            </button>
+            <button type="button" class="pill-tab-btn" data-id="tabManage" onclick="selectModule('tabManage', this)">
+              <span>🛠️ 商品維護</span>
+            </button>
+            <button type="button" class="pill-tab-btn" data-id="tabNotify" onclick="selectModule('tabNotify', this)">
+              <span>📢 結帳通知</span>
+            </button>
+            <button type="button" class="pill-tab-btn" data-id="tabStats" onclick="selectModule('tabStats', this)">
+              <span>📊 瀏覽統計</span>
+            </button>
+            <button type="button" class="pill-tab-btn" data-id="tabCreate" onclick="selectModule('tabCreate', this)">
+              <span>💻 快速建檔</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 模擬 5 大分頁內容 -->
+        <!-- ========================================================= -->
+
+        <!-- 分頁 1：批次推播群組 -->
+        <div id="tabPublish" class="tab-content-panel active">
+          <div class="mock-panel">
+            <div class="mock-panel-title">📦 選擇要推播的商品 (已選 2 件)</div>
+            
+            <div class="mock-prod-item">
+              <div class="mock-chk">✓</div>
+              <img class="mock-thumb" src="https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=100&auto=format&fit=crop" alt="">
+              <div class="mock-prod-info">
+                <div class="mock-prod-name">韓國 Biodance 爽海藻舒緩保濕精華液</div>
+                <div class="mock-prod-price">NT$ 650</div>
+              </div>
+            </div>
+
+            <div class="mock-prod-item">
+              <div class="mock-chk">✓</div>
+              <img class="mock-thumb" src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=100&auto=format&fit=crop" alt="">
+              <div class="mock-prod-info">
+                <div class="mock-prod-name">日本 Okamoto 發熱保暖機能襪 2入</div>
+                <div class="mock-prod-price">NT$ 390</div>
+              </div>
+            </div>
+
+            <button type="button" class="btn-mock-action">
+              🚀 一鍵打包推播至 LINE 群組
+            </button>
+          </div>
+        </div>
+
+        <!-- 分頁 2：商品資料維護 -->
+        <div id="tabManage" class="tab-content-panel">
+          <div class="mock-panel">
+            <div class="mock-panel-title">🛠️ 商品線上改價與快速上下架</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:11px; color:#15803d; font-weight:700;">🟢 上架中商品</div>
+                <div style="font-size:18px; font-weight:900; color:#15803d;">42 件</div>
+              </div>
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:11px; color:#64748b; font-weight:700;">⚪ 已下架/已完售</div>
+                <div style="font-size:18px; font-weight:900; color:#64748b;">18 件</div>
+              </div>
+            </div>
+            <p style="font-size:12.5px; color:#64748b;">支援手機隨時快速修改單價與名額，免開試算表！</p>
+          </div>
+        </div>
+
+        <!-- 分頁 3：顧客結帳通知 -->
+        <div id="tabNotify" class="tab-content-panel">
+          <div class="mock-panel">
+            <div class="mock-panel-title">📢 顧客採購清單 1對1 推播</div>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:10px;">完全不消耗 LINE 官方帳號收費訊息額度，直傳買家聊天室！</p>
+            <div style="padding:10px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; font-size:12px;">
+              👤 顧客：王*明（待結帳 3 件 / NT$ 2,480）
+            </div>
+          </div>
+        </div>
+
+        <!-- 分頁 4：瀏覽統計與排行 -->
+        <div id="tabStats" class="tab-content-panel">
+          <div class="mock-panel">
+            <div class="mock-panel-title">📊 賣場即時熱門點擊榜</div>
+            <div style="font-size:12.5px; color:#475569; display:flex; flex-direction:column; gap:6px;">
+              <div>🥇 <b>韓國 Biodance 精華液</b> ➔ 142 次點擊</div>
+              <div>🥈 <b>日本 Okamoto 保暖襪</b> ➔ 98 次點擊</div>
+              <div>🥉 <b>富士拍立得 mini 底片</b> ➔ 76 次點擊</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分頁 5：電腦快速建檔 -->
+        <div id="tabCreate" class="tab-content-panel">
+          <div class="mock-panel">
+            <div class="mock-panel-title">💻 新增商品至試算表資料庫</div>
+            <p style="font-size:12.5px; color:#64748b;">此介面具備大量規格與圖片網址輸入欄，建議在電腦端使用滑鼠鍵盤操作效率最高！</p>
+          </div>
+        </div>
+
+        <!-- 設計理念說明卡 -->
+        <div class="feature-tip-box">
+          <div style="font-weight:800; color:#0f172a; margin-bottom:4px;">💡 為什麼「雙合一設計」最好用？</div>
+          <div>1. <b>不浪費空間</b>：手機上一眼能看清 3~4 個 4 字膠囊，左右滑動極短。</div>
+          <div>2. <b>免滑動切換</b>：不想左右滑時，點一下頂部「切換 ▼」，5 個功能大卡片立即展開任選！</div>
+          <div>3. <b>雙向同步</b>：無論點膠囊或點抽屜，兩邊永遠自動同步置中。</div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- 📱 方案 2：底部功能抽屜彈出層 (Action Sheet Drawer) -->
+      <!-- ========================================================= -->
+      <div class="module-sheet-overlay" id="moduleSheet" onclick="closeModuleSheet(event)">
+        <div class="module-sheet-drawer" onclick="event.stopPropagation()">
+          <div class="sheet-handle"></div>
+          
+          <div class="sheet-header">
+            <div class="sheet-title">
+              <span>🗂️ 選擇後台管理功能</span>
+            </div>
+            <button type="button" class="sheet-close-btn" onclick="closeModuleSheet()">✕</button>
+          </div>
+
+          <div class="module-list">
+            
+            <div class="module-item active" data-id="tabPublish" onclick="selectFromSheet('tabPublish')">
+              <div class="module-item-icon">📱</div>
+              <div class="module-item-info">
+                <div class="module-item-title">
+                  <span>批次推播群組</span>
+                  <span style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:4px;">最常用</span>
+                </div>
+                <div class="module-item-desc">勾選 1~10 件商品，一鍵打包發布到 LINE 群組</div>
+              </div>
+              <div class="module-item-check">✓</div>
+            </div>
+
+            <div class="module-item" data-id="tabManage" onclick="selectFromSheet('tabManage')">
+              <div class="module-item-icon">🛠️</div>
+              <div class="module-item-info">
+                <div class="module-item-title">商品資料維護</div>
+                <div class="module-item-desc">線上快速改價、切換上下架、即時更新商品庫</div>
+              </div>
+              <div class="module-item-check">✓</div>
+            </div>
+
+            <div class="module-item" data-id="tabNotify" onclick="selectFromSheet('tabNotify')">
+              <div class="module-item-icon">📢</div>
+              <div class="module-item-info">
+                <div class="module-item-title">顧客結帳通知</div>
+                <div class="module-item-desc">1 對 1 免收費額度傳送專屬採購明細給已買顧客</div>
+              </div>
+              <div class="module-item-check">✓</div>
+            </div>
+
+            <div class="module-item" data-id="tabStats" onclick="selectFromSheet('tabStats')">
+              <div class="module-item-icon">📊</div>
+              <div class="module-item-info">
+                <div class="module-item-title">瀏覽統計與排行</div>
+                <div class="module-item-desc">查看賣場每日訪客人次與最高點擊商品榜單</div>
+              </div>
+              <div class="module-item-check">✓</div>
+            </div>
+
+            <div class="module-item" data-id="tabCreate" onclick="selectFromSheet('tabCreate')">
+              <div class="module-item-icon">💻</div>
+              <div class="module-item-info">
+                <div class="module-item-title">電腦快速建檔</div>
+                <div class="module-item-desc">輸入完整規格、成本計算與多張圖片 (建議電腦用)</div>
+              </div>
+              <div class="module-item-check">✓</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 模組定義資訊 (供雙向連動更新標題與說明)
+    const modulesData = {
+      'tabPublish': {
+        icon: '📱',
+        title: '批次推播群組',
+        desc: '勾選 1~10 件商品打包成 LINE 輪播卡片'
+      },
+      'tabManage': {
+        icon: '🛠️',
+        title: '商品資料維護',
+        desc: '線上改價、切換上下架、批次更新分類'
+      },
+      'tabNotify': {
+        icon: '📢',
+        title: '顧客結帳通知',
+        desc: '1 對 1 免額度傳送專屬採購清單'
+      },
+      'tabStats': {
+        icon: '📊',
+        title: '瀏覽統計排行',
+        desc: '即時訪客人次與熱門商品榜單'
+      },
+      'tabCreate': {
+        icon: '💻',
+        title: '電腦快速建檔',
+        desc: '新增商品、成本利潤試算 (建議電腦)'
+      }
+    };
+
+    let activeTabId = 'tabPublish';
+
+    // 1. 點擊短膠囊切換
+    function selectModule(tabId, btnElement) {
+      activeTabId = tabId;
+      
+      // 更新膠囊高亮
+      document.querySelectorAll('.pill-tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (btnElement) {
+        btnElement.classList.add('active');
+        btnElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
+      // 更新內容分頁
+      updateActiveContent(tabId);
+
+      // 同步更新頂部大卡片文字
+      syncTopBarInfo(tabId);
+
+      // 同步更新抽屜內的選取狀態
+      syncSheetActive(tabId);
+    }
+
+    // 2. 從抽屜內點選切換
+    function selectFromSheet(tabId) {
+      activeTabId = tabId;
+      
+      // 關閉抽屜
+      closeModuleSheet();
+
+      // 找到對應的膠囊並觸發平滑置中
+      const targetPill = document.querySelector(`.pill-tab-btn[data-id="${tabId}"]`);
+      if (targetPill) {
+        document.querySelectorAll('.pill-tab-btn').forEach(btn => btn.classList.remove('active'));
+        targetPill.classList.add('active');
+        targetPill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
+      // 更新內容與頂部資訊
+      updateActiveContent(tabId);
+      syncTopBarInfo(tabId);
+      syncSheetActive(tabId);
+    }
+
+    // 3. 更新內容分頁
+    function updateActiveContent(tabId) {
+      document.querySelectorAll('.tab-content-panel').forEach(panel => panel.classList.remove('active'));
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      }
+    }
+
+    // 4. 同步頂部資訊
+    function syncTopBarInfo(tabId) {
+      const info = modulesData[tabId];
+      if (!info) return;
+      document.getElementById('curModuleIcon').textContent = info.icon;
+      document.getElementById('curModuleTitle').textContent = info.title;
+      document.getElementById('curModuleDesc').textContent = info.desc;
+    }
+
+    // 5. 同步抽屜高亮
+    function syncSheetActive(tabId) {
+      document.querySelectorAll('.module-item').forEach(item => {
+        if (item.getAttribute('data-id') === tabId) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    // 6. 開啟/關閉抽屜
+    function openModuleSheet() {
+      document.getElementById('moduleSheet').classList.add('active');
+    }
+    function closeModuleSheet(e) {
+      if (e && e.target !== e.currentTarget && e.currentTarget.id !== 'moduleSheet') return;
+      document.getElementById('moduleSheet').classList.remove('active');
+    }
+
+    // 7. 切換模擬外框寬度
+    function setPhoneWidth(width, btn) {
+      const frame = document.getElementById('phoneFrame');
+      frame.style.maxWidth = width + 'px';
+      document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
