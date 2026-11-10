@@ -826,10 +826,13 @@
       <h1 style="font-size: 22px; font-weight: 900;">連線代購管理中心</h1>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">電腦商品建檔 ➔ 手機勾選多樣商品打包發布到 LINE 群組</p>
       
-      <div style="margin-top: 8px;">
+      <div style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
         <div id="liffStatusBadge" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 20px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <span style="color:#64748b;">⏳ 正在驗證賣家管理員身分...</span>
         </div>
+        <a href="index.html?view=store" target="_blank" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; color: #334155; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <span>🛍️ 預覽買家賣場</span>
+        </a>
       </div>
     </div>
 
@@ -1671,6 +1674,32 @@
       }
     }
 
+    // 🔐 管理員專用 LINE 登入引導 (自動標記意圖，防止 OAuth 回調落入大廳)
+    function loginWithLineAdmin() {
+      try {
+        sessionStorage.setItem('liff_admin_login_pending', '1');
+        sessionStorage.setItem('liff_admin_return_url', window.location.href);
+      } catch (e) {}
+      if (typeof liff !== 'undefined') {
+        liff.login({ redirectUri: window.location.href });
+      }
+    }
+
+    // 🚪 管理員登出與快取清理
+    function logoutAdmin() {
+      try {
+        localStorage.removeItem('line_order_is_admin');
+        localStorage.removeItem('line_order_admin_uid');
+        sessionStorage.removeItem('liff_admin_login_pending');
+        sessionStorage.removeItem('liff_admin_return_url');
+        sessionStorage.removeItem('liff_admin_heal_attempted');
+      } catch (e) {}
+      if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+        liff.logout();
+      }
+      window.location.reload();
+    }
+
     // 🛡️ 全頁門禁檢查：必須是白名單管理員才能進入後台操作
     async function verifyAndUnlockAdminHub() {
       const gate = document.getElementById('adminAuthGate');
@@ -1679,6 +1708,16 @@
       const gateDesc = document.getElementById('adminAuthGateDesc');
       const gateActions = document.getElementById('adminAuthGateActions');
       const protectedContent = document.getElementById('adminProtectedContent');
+
+      // 🌟 核心自癒防護：若在線上環境打開且在手機 LINE 內部卻未取得 UID (非 Endpoint 直接開啟導致)，自動透過官方 LIFF 中繼取回身分
+      const isOnline = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      if (!currentAdminUserId && isOnline && (liffInClient || (navigator.userAgent && navigator.userAgent.includes('Line')))) {
+        if (!sessionStorage.getItem('liff_admin_heal_attempted')) {
+          sessionStorage.setItem('liff_admin_heal_attempted', '1');
+          window.location.replace(`https://liff.line.me/${CONFIG.LIFF_ID}?action=admin`);
+          return;
+        }
+      }
 
       // 情境 1：尚未登入 LINE
       if (!currentAdminUserId) {
@@ -1692,10 +1731,10 @@
         }
         if (gateActions) {
           gateActions.innerHTML = `
-            <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+            <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
               🟢 使用 LINE 帳號登入驗證
             </button>
-            <a href="index.html" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
+            <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
           `;
         }
         updateLiffStatusBadge();
@@ -1721,6 +1760,10 @@
 
       if (isVerifiedAdmin) {
         // ✅ 通過白名單驗證：隱藏門禁卡、解鎖完整後台介面並載入資料
+        try {
+          localStorage.setItem('line_order_is_admin', '1');
+          localStorage.setItem('line_order_admin_uid', currentAdminUserId);
+        } catch (e) {}
         if (gate) gate.style.display = 'none';
         if (protectedContent) protectedContent.style.display = 'block';
         await fetchProductList();
@@ -1760,10 +1803,10 @@
             <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(currentAdminUserId)}').then(() => alert('✅ 已複製您的 LINE UID！請傳給主管理員加入白名單。'))" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; border-radius:10px; cursor:pointer; font-weight:700;">
               📋 複製我的 LINE UID
             </button>
-            <button type="button" onclick="liff.logout(); window.location.reload();" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:10px; cursor:pointer; font-weight:700;">
+            <button type="button" onclick="logoutAdmin()" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:10px; cursor:pointer; font-weight:700;">
               🔄 登出並切換管理員 LINE 帳號
             </button>
-            <a href="index.html" style="display:inline-block; margin-top:6px; padding:10px 20px; background:var(--primary); color:#fff; border-radius:10px; font-size:13.5px; font-weight:800; text-decoration:none;">
+            <a href="index.html?view=store" style="display:inline-block; margin-top:6px; padding:10px 20px; background:var(--primary); color:#fff; border-radius:10px; font-size:13.5px; font-weight:800; text-decoration:none;">
               🛍️ 前往買家連線商品大廳
             </a>
           `;
@@ -1795,11 +1838,11 @@
             <span>${adminTag} <b>${currentAdminUserName || '管理員'}</b></span>
             <span style="color:#94a3b8; font-size:11px; font-family:monospace;">(${currentAdminUserId.substring(0, 6)}...${currentAdminUserId.substring(currentAdminUserId.length - 4)})</span>
             <span style="font-size:11px;">[${clientTag}${shareTag}]</span>
-            <a href="javascript:void(0)" onclick="liff.logout(); window.location.reload();" style="font-size:11px; color:#ef4444; margin-left:6px; text-decoration:underline;">登出</a>
+            <a href="javascript:void(0)" onclick="logoutAdmin();" style="font-size:11px; color:#ef4444; margin-left:6px; text-decoration:underline;">登出</a>
           </div>
         `;
       } else {
-        badge.innerHTML = `<span style="color:#f59e0b;">🔒 尚未登入 LINE 管理員帳號</span> <button type="button" onclick="liff.login({redirectUri:window.location.href})" style="margin-left:8px; padding:3px 10px; font-size:11.5px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">點此登入 LINE 解鎖</button>`;
+        badge.innerHTML = `<span style="color:#f59e0b;">🔒 尚未登入 LINE 管理員帳號</span> <button type="button" onclick="loginWithLineAdmin()" style="margin-left:8px; padding:3px 10px; font-size:11.5px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:700;">點此登入 LINE 解鎖</button>`;
       }
     }
 
@@ -2180,7 +2223,7 @@
           `【取消】：改用「📋 複製純文字」按鈕，直接貼到 LINE 電腦版私訊！`
         );
         if (doLogin) {
-          liff.login({ redirectUri: window.location.href });
+          loginWithLineAdmin();
         }
         return;
       }
@@ -2758,7 +2801,7 @@
       // 檢查是否在 LINE 環境與登入
       if (!liff.isLoggedIn()) {
         alert('正在導向 LINE 登入，登入後請再次點選推播！');
-        liff.login();
+        loginWithLineAdmin();
         return;
       }
 

@@ -2,6 +2,94 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // ⚡ 0 毫秒智慧路由分流 (單一 LIFF ID 核心優化：在任何外部樣式與字型載入前瞬間攔截)
+    (function() {
+      let search = window.location.search;
+      let p = new URLSearchParams(search);
+
+      // 0. 支援管理員登入意圖瞬間恢復 (外部瀏覽器 OAuth 回調大廳時 0 毫秒直接轉回後台)
+      try {
+        const loginRedirect = sessionStorage.getItem('liff_admin_login_pending');
+        if (loginRedirect === '1') {
+          sessionStorage.removeItem('liff_admin_login_pending');
+          const returnUrl = sessionStorage.getItem('liff_admin_return_url') || 'admin-card-generator.html';
+          sessionStorage.removeItem('liff_admin_return_url');
+          document.documentElement.style.display = 'none';
+          window.location.replace(returnUrl);
+          return;
+        }
+      } catch (e) {}
+
+      // 0-1. 🛡️ 賣家白名單管理員自動直通 (若此裝置已驗證為管理員，且非明確指定預覽賣場 ?view=store，0毫秒直達後台)
+      const isStoreMode = p.get('view') === 'store' || p.get('mode') === 'buyer' || p.has('store');
+      if (!isStoreMode) {
+        try {
+          if (localStorage.getItem('line_order_is_admin') === '1') {
+            document.documentElement.style.display = 'none';
+            window.location.replace('admin-card-generator.html' + search);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // 1. 支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
+      if (p.has('liff.state')) {
+        const stateRaw = decodeURIComponent(p.get('liff.state') || '');
+
+        // 🛡️ 管理中心分流：若 liff.state 指向後台管理中心或包含 admin 參數
+        if (stateRaw.includes('admin-card-generator') || stateRaw.includes('action=admin') || stateRaw.includes('page=admin') || stateRaw.includes('admin=1') || stateRaw.includes('action=card')) {
+          document.documentElement.style.display = 'none';
+          const qIndex = stateRaw.indexOf('?');
+          const cleanQuery = qIndex !== -1 ? stateRaw.substring(qIndex) : '';
+          window.location.replace('admin-card-generator.html' + cleanQuery);
+          return;
+        }
+
+        const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
+        const sAction = (stateParams.get('action') || stateParams.get('page') || '').toLowerCase();
+        if (sAction === 'admin' || sAction === 'card' || sAction === 'manage') {
+          document.documentElement.style.display = 'none';
+          window.location.replace('admin-card-generator.html?' + stateParams.toString());
+          return;
+        }
+        if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders')) {
+          document.documentElement.style.display = 'none';
+          window.location.replace('my-orders.html?' + stateParams.toString());
+          return;
+        }
+        const sPid = stateParams.get('p') || stateParams.get('pid') || stateParams.get('productId') || stateParams.get('id');
+        if (sPid) {
+          document.documentElement.style.display = 'none';
+          window.location.replace('product.html?' + stateParams.toString());
+          return;
+        }
+      }
+
+      // 2. 賣家管理中心入口分流 (帶有 action=admin / page=admin / admin / manage / card)
+      const action = (p.get('action') || p.get('page') || '').toLowerCase();
+      if (action === 'admin' || action === 'card' || action === 'manage' || p.has('admin') || p.has('manage')) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('admin-card-generator.html' + search);
+        return;
+      }
+
+      // 3. 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
+      if (action === 'orders' || action === 'myorders' || action === 'checkout' || p.has('orders')) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('my-orders.html' + search);
+        return;
+      }
+
+      // 4. 單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
+      const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
+      if (pid) {
+        document.documentElement.style.display = 'none';
+        window.location.replace('product.html' + search);
+        return;
+      }
+    })();
+  </script>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -12,44 +100,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-  <script>
-    // 智慧路由分流 (相容單一 LIFF Endpoint URL 轉跳)
-    (function() {
-      let search = window.location.search;
-      let p = new URLSearchParams(search);
-
-      // 0. 支援 LINE LIFF 在外部瀏覽器轉向時將參數包裝於 liff.state
-      if (p.has('liff.state')) {
-        const stateRaw = decodeURIComponent(p.get('liff.state') || '');
-        const stateParams = new URLSearchParams(stateRaw.startsWith('?') ? stateRaw : ('?' + stateRaw));
-        const sAction = (stateParams.get('action') || stateParams.get('page') || '').toLowerCase();
-        if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders')) {
-          window.location.replace('my-orders.html?' + stateParams.toString());
-          return;
-        }
-        const sPid = stateParams.get('p') || stateParams.get('pid') || stateParams.get('productId') || stateParams.get('id');
-        if (sPid) {
-          window.location.replace('product.html?' + stateParams.toString());
-          return;
-        }
-      }
-
-      // 1. 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
-      const action = (p.get('action') || p.get('page') || '').toLowerCase();
-      if (action === 'orders' || action === 'myorders' || action === 'checkout' || p.has('orders')) {
-        window.location.replace('my-orders.html' + search);
-        return;
-      }
-
-      // 2. 單品推播網址相容轉跳 (例如 index.html?p=J2609270001)
-      const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
-      if (pid) {
-        window.location.replace('product.html' + search);
-        return;
-      }
-    })();
-  </script>
 
   <style>
     :root {
@@ -275,6 +325,30 @@
     .btn-my-orders:active {
       transform: scale(0.96);
       background: #e2e8f0;
+    }
+
+    .btn-admin-hub {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #38bdf8;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+    }
+
+    .btn-admin-hub:hover, .btn-admin-hub:active {
+      transform: scale(0.96);
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
     }
 
     /* 搜尋框 */
@@ -659,9 +733,14 @@
         <span>🇯🇵🇰🇷 W.W.連線代購</span>
         <span class="brand-badge">精選代購</span>
       </div>
-      <a href="my-orders.html" class="btn-my-orders" id="topOrderBtn">
-        <span>📦 訂購清單</span>
-      </a>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="admin-card-generator.html" class="btn-admin-hub" id="topAdminBtn" style="display: none;">
+          <span>⚙️ 管理中心</span>
+        </a>
+        <a href="my-orders.html" class="btn-my-orders" id="topOrderBtn">
+          <span>📦 訂購清單</span>
+        </a>
+      </div>
     </div>
 
     <!-- 搜尋框 -->
@@ -776,9 +855,10 @@
       return sessionStorage.getItem('store_visitor_source') || 'Facebook 社團/粉專';
     }
 
-    // ⚡ 0 毫秒會員身分檢查：老客秒通，新客即刻防護
+    // ⚡ 0 毫秒會員身分檢查：老客秒通，管理員免受限，新客即刻防護
     function isLocallyVerifiedMember() {
       try {
+        if (localStorage.getItem('line_order_is_admin') === '1') return true;
         const raw = localStorage.getItem('line_order_customer_profile');
         if (!raw) return false;
         const p = JSON.parse(raw);
@@ -1080,6 +1160,31 @@
               sessionStorage.setItem('liff_user_profile', profStr);
               localStorage.setItem('liff_user_profile', profStr);
             } catch (e) {}
+
+            // 🛡️ 賣家管理員白名單智慧識別 (最高權限常數或快取)
+            const PRIMARY_ADMIN_UID = 'Uee7765ed3c1819cb94fd404cfab8553b';
+            const isAdminUser = (currentUserId === PRIMARY_ADMIN_UID) || (localStorage.getItem('line_order_is_admin') === '1');
+            if (isAdminUser) {
+              try {
+                localStorage.setItem('line_order_is_admin', '1');
+                unlockVipGate();
+                const topAdminBtn = document.getElementById('topAdminBtn');
+                if (topAdminBtn) topAdminBtn.style.display = 'inline-flex';
+                const nameElem = document.getElementById('userNameText');
+                if (nameElem) {
+                  const safeName = (profile.displayName || '管理員').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                  nameElem.innerHTML = `${safeName} <span style="font-size:10px; background:#1e293b; color:#38bdf8; padding:1px 6px; border-radius:10px; margin-left:4px; font-weight:700;">👑 賣家</span>`;
+                }
+
+                // 🌟 若非明確指定預覽賣場 (?view=store)，首次登入識別為白名單管理員時，直接秒切換至後台管理中心
+                const isExplicitStore = urlParams.get('view') === 'store' || urlParams.get('mode') === 'buyer' || urlParams.has('store');
+                if (!isExplicitStore) {
+                  window.location.replace('admin-card-generator.html');
+                  return;
+                }
+              } catch (e) {}
+            }
+
             updateOrderLinks();
 
             // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名大廳進站通報
