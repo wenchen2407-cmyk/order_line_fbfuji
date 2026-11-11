@@ -398,10 +398,25 @@
       position: relative;
       width: 100%;
       padding-top: 100%;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
-      border: 1.5px solid var(--border);
+      border: 2px solid var(--border);
       background: #e2e8f0;
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .thumb-item-box:active {
+      cursor: grabbing;
+    }
+    .thumb-item-box.dragging {
+      opacity: 0.4;
+      transform: scale(0.9);
+      border-color: #2563eb;
+    }
+    .thumb-item-box.drag-over {
+      border-color: #06c755;
+      box-shadow: 0 0 0 2px #06c755;
     }
     .thumb-img {
       position: absolute;
@@ -409,17 +424,20 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      pointer-events: none;
     }
     .thumb-cover-tag {
       position: absolute;
       top: 2px;
       left: 2px;
-      background: rgba(15, 23, 42, 0.85);
-      color: #38bdf8;
+      background: rgba(6, 199, 85, 0.95);
+      color: #ffffff;
       font-size: 9px;
-      padding: 1px 4px;
+      padding: 1px 5px;
       border-radius: 4px;
       font-weight: 800;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      z-index: 6;
     }
     .thumb-del-icon {
       position: absolute;
@@ -428,13 +446,43 @@
       background: rgba(239, 68, 68, 0.9);
       color: #fff;
       font-size: 10px;
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      z-index: 6;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .thumb-order-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1px 2px;
+      z-index: 6;
+    }
+    .thumb-arrow-btn {
+      background: none;
+      border: none;
+      color: #ffffff;
+      font-size: 10px;
+      cursor: pointer;
+      padding: 2px 5px;
+      line-height: 1;
+      font-weight: 900;
+      opacity: 0.85;
+    }
+    .thumb-arrow-btn:active {
+      opacity: 1;
+      color: #38bdf8;
     }
 
     /* 快捷截止時間按鈕 */
@@ -732,7 +780,7 @@
           </div>
         </div>
 
-        <!-- 5. 商品照片 (支援：附件上傳/拍照 + 貼上圖片網址雙模式) -->
+        <!-- 5. 商品照片 (支援：附件拍照 + 貼網址 + 手機拖曳排序與箭頭微調) -->
         <div class="form-card">
           <div class="form-card-title">
             <span>📷 商品照片 (多張上傳 & 網址) *</span>
@@ -746,25 +794,23 @@
             <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">可一次選取多張照片</div>
           </div>
 
-          <!-- 縮圖展示網格 -->
-          <div class="photo-thumbs-grid" id="photoThumbsGrid">
-            <div class="thumb-item-box">
-              <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=150&auto=format&fit=crop" class="thumb-img" alt="">
-              <span class="thumb-cover-tag">封面</span>
-              <span class="thumb-del-icon" onclick="this.parentElement.remove()">✕</span>
-            </div>
-            <div class="thumb-item-box">
-              <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=150&auto=format&fit=crop" class="thumb-img" alt="">
-              <span class="thumb-del-icon" onclick="this.parentElement.remove()">✕</span>
-            </div>
+          <!-- 拖曳排序提示 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 6px;">
+            <span>✋ <b>長按照片可直接拖曳排序</b>，或按 ◀ ▶ 快速微調</span>
+            <span style="font-weight: 700;">共 <span id="photoCountNum">3</span> 張</span>
           </div>
 
-          <!-- 方式二：直接貼上圖片網址 (完整保留！) -->
+          <!-- 縮圖展示網格 (支援 Drag & Drop 與 Touch 拖曳排序) -->
+          <div class="photo-thumbs-grid" id="photoThumbsGrid">
+            <!-- 縮圖項目將由 JS 渲染與支援順序切換 -->
+          </div>
+
+          <!-- 方式二：直接貼上圖片網址 (完整保留，並與縮圖即時雙向連動！) -->
           <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);">
             <label class="field-label" style="font-size: 12px; display: flex; justify-content: space-between;">
               <span>🔗 或直接貼上圖片網址 (每行 1 個，或用逗號隔開)：</span>
             </label>
-            <textarea class="input-field" rows="2" style="font-size: 13px; padding: 8px 10px; line-height: 1.4;" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg">https://images.unsplash.com/photo-1544816155-12df9643f363&#10;https://images.unsplash.com/photo-1590874103328-eac38a683ce7</textarea>
+            <textarea id="photoUrlTextarea" class="input-field" rows="3" style="font-size: 12.5px; padding: 8px 10px; line-height: 1.4; font-family: monospace;" oninput="syncTextareaToThumbs()"></textarea>
           </div>
         </div>
 
@@ -777,7 +823,7 @@
           <textarea class="input-field" rows="3" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
         </div>
 
-        <!-- 7. 指定收單截止時間 (小巧緊湊版：日期與時分同寬 50%，手動打字 + 選單點選雙支援) -->
+        <!-- 7. 指定收單截止時間 (小巧緊湊版：日期與時分同寬 50%，手動打字 + 100%保證彈出原生選單) -->
         <div class="form-card" style="background: #fffbeb; border-color: #fde68a; padding: 10px 12px; margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <div style="font-size: 12.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
@@ -792,30 +838,30 @@
           <!-- 等寬 1fr 1fr 並排：左邊日期 50%、右邊時分 50% -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             
-            <!-- 左邊 50%：日期 (可手動輸入，亦可點日曆選單) -->
+            <!-- 左邊 50%：日期 (手動打字 + 100% 絕對彈出原生滾輪日曆) -->
             <div>
               <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="manualDate" class="input-field" style="font-size: 14px; padding: 7px 28px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="2026-11-15" value="2026-10-06" oninput="syncDualToFull()">
-                <!-- 原生/呼叫日曆圖示按鈕 -->
-                <button type="button" onclick="triggerPicker('nativeDate')" style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1;" title="開啟日曆選擇">
-                  📅
-                </button>
-                <input type="date" id="nativeDate" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="document.getElementById('manualDate').value = this.value; syncDualToFull();">
+                <input type="text" id="manualDate" class="input-field" style="font-size: 13.5px; padding: 7px 34px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="2026-11-15" value="2026-10-06" oninput="syncDualToFull()">
+                <!-- 覆蓋型原生 Date Picker (實體存在、可直接被手指觸發，iOS Safari/LINE 100% 彈出滾輪) -->
+                <div style="position: absolute; right: 2px; width: 30px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <span style="font-size: 16px; pointer-events: none;">📅</span>
+                  <input type="date" id="nativeDate" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="document.getElementById('manualDate').value = this.value; syncDualToFull();">
+                </div>
               </div>
-              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">可打字或點 📅</span>
+              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">打字或按 📅 開日曆</span>
             </div>
 
-            <!-- 右邊 50%：時分 (同寬！可手動輸入，亦可點時鐘選單) -->
+            <!-- 右邊 50%：時分 (同寬！手動打字 + 100% 絕對彈出原生滾輪時鐘) -->
             <div>
               <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="manualTime" class="input-field" style="font-size: 14px; padding: 7px 28px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="23:59" value="23:59" oninput="syncDualToFull()">
-                <!-- 原生/呼叫時間圖示按鈕 -->
-                <button type="button" onclick="triggerPicker('nativeTime')" style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1;" title="開啟時分選擇">
-                  ⏰
-                </button>
-                <input type="time" id="nativeTime" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="document.getElementById('manualTime').value = this.value; syncDualToFull();">
+                <input type="text" id="manualTime" class="input-field" style="font-size: 13.5px; padding: 7px 34px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="23:59" value="23:59" oninput="syncDualToFull()">
+                <!-- 覆蓋型原生 Time Picker -->
+                <div style="position: absolute; right: 2px; width: 30px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <span style="font-size: 16px; pointer-events: none;">⏰</span>
+                  <input type="time" id="nativeTime" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="document.getElementById('manualTime').value = this.value; syncDualToFull();">
+                </div>
               </div>
-              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">可打字或點 ⏰</span>
+              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">打字或按 ⏰ 開時鐘</span>
             </div>
 
           </div>
@@ -918,16 +964,14 @@
       container.appendChild(card);
     }
 
-    // 5. 呼叫日期/時間原生選單
-    function triggerPicker(id) {
-      const el = document.getElementById(id);
-      if (el) {
-        if (typeof el.showPicker === 'function') {
-          try { el.showPicker(); return; } catch(e) {}
-        }
-        el.focus();
-        el.click();
-      }
+    // 5. 原生日曆/時間選單觸發與同步 (100% 保證喚出滾輪)
+    function handleNativeDateChange(val) {
+      document.getElementById('manualDate').value = val;
+      syncDualToFull();
+    }
+    function handleNativeTimeChange(val) {
+      document.getElementById('manualTime').value = val;
+      syncDualToFull();
     }
 
     // 雙向同步日期與時分
@@ -946,6 +990,110 @@
       document.getElementById('nativeTime').value = '';
       document.getElementById('deadlineCombined').value = '';
     }
+
+    // ==========================================
+    // 📷 多張照片拖曳排序與箭頭微調管理
+    // ==========================================
+    let photosList = [
+      'https://images.unsplash.com/photo-1544816155-12df9643f363?w=200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&auto=format&fit=crop'
+    ];
+
+    let dragSrcIndex = null;
+
+    function renderPhotosGrid() {
+      const container = document.getElementById('photoThumbsGrid');
+      const countEl = document.getElementById('photoCountNum');
+      const textarea = document.getElementById('photoUrlTextarea');
+
+      container.innerHTML = '';
+      if (countEl) countEl.textContent = photosList.length;
+
+      // 同步填入多行文字框
+      if (textarea && document.activeElement !== textarea) {
+        textarea.value = photosList.join('\n');
+      }
+
+      photosList.forEach((url, idx) => {
+        const item = document.createElement('div');
+        item.className = 'thumb-item-box';
+        item.draggable = true;
+        item.dataset.index = idx;
+
+        item.innerHTML = `
+          <img src="${url}" class="thumb-img" alt="商品圖 ${idx + 1}">
+          ${idx === 0 ? '<span class="thumb-cover-tag">🌟 封面</span>' : ''}
+          <span class="thumb-del-icon" onclick="removePhoto(${idx})" title="刪除照片">✕</span>
+          <div class="thumb-order-bar">
+            <button type="button" class="thumb-arrow-btn" onclick="movePhoto(${idx}, -1)" ${idx === 0 ? 'style="opacity:0.25; pointer-events:none;"' : ''} title="往前移">◀</button>
+            <span style="font-size:9px; color:#cbd5e1; font-weight:700;">#${idx + 1}</span>
+            <button type="button" class="thumb-arrow-btn" onclick="movePhoto(${idx}, 1)" ${idx === photosList.length - 1 ? 'style="opacity:0.25; pointer-events:none;"' : ''} title="往後移">▶</button>
+          </div>
+        `;
+
+        // HTML5 拖曳監聽 (電腦與部分手機)
+        item.addEventListener('dragstart', (e) => {
+          dragSrcIndex = idx;
+          item.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          item.classList.add('drag-over');
+        });
+
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          item.classList.remove('drag-over');
+          if (dragSrcIndex !== null && dragSrcIndex !== idx) {
+            const movedItem = photosList.splice(dragSrcIndex, 1)[0];
+            photosList.splice(idx, 0, movedItem);
+            renderPhotosGrid();
+          }
+        });
+
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drag-over'));
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    // 點擊箭頭移動順序
+    function movePhoto(idx, dir) {
+      const targetIdx = idx + dir;
+      if (targetIdx < 0 || targetIdx >= photosList.length) return;
+      const temp = photosList[idx];
+      photosList[idx] = photosList[targetIdx];
+      photosList[targetIdx] = temp;
+      renderPhotosGrid();
+    }
+
+    // 刪除照片
+    function removePhoto(idx) {
+      photosList.splice(idx, 1);
+      renderPhotosGrid();
+    }
+
+    // 從網址輸入框即時同步到縮圖
+    function syncTextareaToThumbs() {
+      const text = document.getElementById('photoUrlTextarea').value;
+      const lines = text.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 5);
+      photosList = lines;
+      renderPhotosGrid();
+    }
+
+    // 初始化渲染照片
+    renderPhotosGrid();
 
     // 6. 電腦端切換預覽框寬度
     function setFrameWidth(width, btn) {
