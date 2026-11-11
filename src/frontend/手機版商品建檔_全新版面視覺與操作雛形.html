@@ -732,21 +732,22 @@
           </div>
         </div>
 
-        <!-- 5. 商品照片 (📷 現場拍照/相簿多選大按鈕) -->
+        <!-- 5. 商品照片 (支援：附件上傳/拍照 + 貼上圖片網址雙模式) -->
         <div class="form-card">
           <div class="form-card-title">
-            <span>📷 商品照片 (支援多張)</span>
-            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張為 LINE 卡片封面</span>
+            <span>📷 商品照片 (多張上傳 & 網址) *</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張為 LINE 封面主圖</span>
           </div>
 
+          <!-- 方式一：拍照或相簿多選 -->
           <div class="photo-upload-zone" onclick="alert('📱 在手機上點擊會直接開啟相機拍照或相簿多選！')">
-            <div style="font-size: 26px; margin-bottom: 4px;">📸</div>
-            <div style="font-size: 13.5px; font-weight: 800; color: #1d4ed8;">點此拍照 或 從手機相簿挑選</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">可一次選取多張照片</div>
+            <div style="font-size: 24px; margin-bottom: 2px;">📸</div>
+            <div style="font-size: 13px; font-weight: 800; color: #1d4ed8;">點此拍照 或 從手機相簿選取照片</div>
+            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">可一次選取多張照片</div>
           </div>
 
           <!-- 縮圖展示網格 -->
-          <div class="photo-thumbs-grid">
+          <div class="photo-thumbs-grid" id="photoThumbsGrid">
             <div class="thumb-item-box">
               <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=150&auto=format&fit=crop" class="thumb-img" alt="">
               <span class="thumb-cover-tag">封面</span>
@@ -757,9 +758,26 @@
               <span class="thumb-del-icon" onclick="this.parentElement.remove()">✕</span>
             </div>
           </div>
+
+          <!-- 方式二：直接貼上圖片網址 (完整保留！) -->
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);">
+            <label class="field-label" style="font-size: 12px; display: flex; justify-content: space-between;">
+              <span>🔗 或直接貼上圖片網址 (每行 1 個，或用逗號隔開)：</span>
+            </label>
+            <textarea class="input-field" rows="2" style="font-size: 13px; padding: 8px 10px; line-height: 1.4;" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg">https://images.unsplash.com/photo-1544816155-12df9643f363&#10;https://images.unsplash.com/photo-1590874103328-eac38a683ce7</textarea>
+          </div>
         </div>
 
-        <!-- 6. 指定收單截止時間 (快捷膠囊) -->
+        <!-- 6. 商品詳細描述 / 規格說明 (完整保留！) -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>📝 商品詳細描述 / 規格說明</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">選填，支援換行</span>
+          </div>
+          <textarea class="input-field" rows="3" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
+        </div>
+
+        <!-- 7. 指定收單截止時間 (快捷膠囊) -->
         <div class="form-card" style="background: #fffbeb; border-color: #fde68a;">
           <div class="form-card-title" style="color: #92400e;">
             <span>⏰ 指定收單時間 (選填)</span>
