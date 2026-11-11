@@ -398,92 +398,102 @@
       position: relative;
       width: 100%;
       padding-top: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 2px solid var(--border);
-      background: #e2e8f0;
-      cursor: grab;
-      user-select: none;
-      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-    .thumb-item-box:active {
-      cursor: grabbing;
-    }
-    .thumb-item-box.dragging {
-      opacity: 0.4;
-      transform: scale(0.9);
-      border-color: #2563eb;
-    }
-    .thumb-item-box.drag-over {
-      border-color: #06c755;
-      box-shadow: 0 0 0 2px #06c755;
-    }
-    .thumb-img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      pointer-events: none;
-    }
-    .thumb-cover-tag {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      background: rgba(6, 199, 85, 0.95);
-      color: #ffffff;
-      font-size: 9px;
-      padding: 1px 5px;
-      border-radius: 4px;
-      font-weight: 800;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      z-index: 6;
-    }
-    .thumb-del-icon {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      background: rgba(239, 68, 68, 0.9);
-      color: #fff;
-      font-size: 10px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 6;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-    .thumb-order-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1px 2px;
-      z-index: 6;
-    }
-    .thumb-arrow-btn {
-      background: none;
-      border: none;
-      color: #ffffff;
-      font-size: 10px;
-      cursor: pointer;
-      padding: 2px 5px;
-      line-height: 1;
-      font-weight: 900;
-      opacity: 0.85;
-    }
-    .thumb-arrow-btn:active {
-      opacity: 1;
-      color: #38bdf8;
-    }
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    background: #e2e8f0;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: pan-y;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .thumb-item-box:active {
+    cursor: grabbing;
+  }
+  .thumb-item-box.touch-dragging {
+    opacity: 0.92;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+    border-color: #06c755 !important;
+    cursor: grabbing;
+    transition: none !important;
+  }
+  .thumb-item-box.drop-hover-target {
+    border-color: #06c755 !important;
+    box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.45) !important;
+    transform: scale(0.94);
+    opacity: 0.65;
+  }
+  .thumb-item-box.dragging {
+    opacity: 0.4;
+    transform: scale(0.9);
+    border-color: #2563eb;
+  }
+  .thumb-item-box.drag-over {
+    border-color: #06c755;
+    box-shadow: 0 0 0 2px #06c755;
+  }
+  .thumb-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  .thumb-idx-badge {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 6px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .thumb-cover-tag {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: #06c755;
+    color: #ffffff;
+    font-size: 9.5px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 800;
+    box-shadow: 0 1px 4px rgba(6, 199, 85, 0.4);
+    z-index: 6;
+    pointer-events: none;
+  }
+  .thumb-del-icon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(239, 68, 68, 0.9);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 7;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    transition: transform 0.1s;
+  }
+  .thumb-del-icon:active {
+    transform: scale(0.85);
+  }
 
     /* 快捷截止時間按鈕 */
     .time-preset-grid {
@@ -795,14 +805,14 @@
           </div>
 
           <!-- 拖曳排序提示 -->
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 6px;">
-            <span>✋ <b>長按照片可直接拖曳排序</b>，或按 ◀ ▶ 快速微調</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 5px 8px; border-radius: 6px; border: 1px solid #bae6fd; margin-bottom: 8px;">
+            <span>✋ <b>長按照片可直接拖曳調整順序</b>（#1 為封面主圖）</span>
             <span style="font-weight: 700;">共 <span id="photoCountNum">3</span> 張</span>
           </div>
 
-          <!-- 縮圖展示網格 (支援 Drag & Drop 與 Touch 拖曳排序) -->
+          <!-- 縮圖展示網格 (支援手機原生觸控長按拖曳與電腦拖曳) -->
           <div class="photo-thumbs-grid" id="photoThumbsGrid">
-            <!-- 縮圖項目將由 JS 渲染與支援順序切換 -->
+            <!-- 縮圖項目由 JS 動態渲染與即時拖曳交換 -->
           </div>
 
           <!-- 方式二：直接貼上圖片網址 (完整保留，並與縮圖即時雙向連動！) -->
@@ -823,51 +833,28 @@
           <textarea class="input-field" rows="3" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
         </div>
 
-        <!-- 7. 指定收單截止時間 (小巧緊湊版：日期與時分同寬 50%，手動打字 + 100%保證彈出原生選單) -->
+        <!-- 7. 指定收單截止時間 (單一整合選單：手動打字 + 點選 📅 彈出單一日期時間滾輪) -->
         <div class="form-card" style="background: #fffbeb; border-color: #fde68a; padding: 10px 12px; margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div style="font-size: 12.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
               <span>⏰ 指定收單截止時間</span>
-              <span style="font-size: 10.5px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
+              <span style="font-size: 10.5px; font-weight: normal; color: #b45309;">(選填，留空依全站預設)</span>
             </div>
-            <button type="button" onclick="clearDeadlineDual()" style="background: none; border: none; color: #b91c1c; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 2px;">
+            <button type="button" onclick="clearDeadlineCombined()" style="background: none; border: none; color: #b91c1c; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 2px;">
               ✕ 清空
             </button>
           </div>
 
-          <!-- 等寬 1fr 1fr 並排：左邊日期 50%、右邊時分 50% -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            
-            <!-- 左邊 50%：日期 (手動打字 + 100% 絕對彈出原生滾輪日曆) -->
-            <div>
-              <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="manualDate" class="input-field" style="font-size: 13.5px; padding: 7px 34px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="2026-11-15" value="2026-10-06" oninput="syncDualToFull()">
-                <!-- 覆蓋型原生 Date Picker (實體存在、可直接被手指觸發，iOS Safari/LINE 100% 彈出滾輪) -->
-                <div style="position: absolute; right: 2px; width: 30px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                  <span style="font-size: 16px; pointer-events: none;">📅</span>
-                  <input type="date" id="nativeDate" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="document.getElementById('manualDate').value = this.value; syncDualToFull();">
-                </div>
-              </div>
-              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">打字或按 📅 開日曆</span>
+          <!-- 單一整列輸入框：同時容納年月日時分，右側附帶整合型日曆時鐘圖示 -->
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="text" id="deadlineCombined" class="input-field" style="font-size: 14.5px; font-weight: 700; padding: 8px 44px 8px 10px; background: #ffffff; border-radius: 8px; font-family: monospace; letter-spacing: 0.2px; color: #1e293b;" placeholder="例：2026-10-06 23:59" value="2026-10-06 23:59" oninput="handleManualCombinedInput(this.value)">
+            <!-- 覆蓋型原生 DateTime Picker (實體存在、可直接被手指觸發，iOS Safari/LINE 100% 彈出單一日期時間滾輪) -->
+            <div style="position: absolute; right: 3px; width: 36px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 6px; border: 1px solid #fde68a;">
+              <span style="font-size: 17px; pointer-events: none;">📅</span>
+              <input type="datetime-local" id="nativeDateTime" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" value="2026-10-06T23:59" onchange="handleNativeCombinedChange(this.value)">
             </div>
-
-            <!-- 右邊 50%：時分 (同寬！手動打字 + 100% 絕對彈出原生滾輪時鐘) -->
-            <div>
-              <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="manualTime" class="input-field" style="font-size: 13.5px; padding: 7px 34px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="23:59" value="23:59" oninput="syncDualToFull()">
-                <!-- 覆蓋型原生 Time Picker -->
-                <div style="position: absolute; right: 2px; width: 30px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                  <span style="font-size: 16px; pointer-events: none;">⏰</span>
-                  <input type="time" id="nativeTime" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="document.getElementById('manualTime').value = this.value; syncDualToFull();">
-                </div>
-              </div>
-              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">打字或按 ⏰ 開時鐘</span>
-            </div>
-
           </div>
-
-          <!-- 隱藏的合併完整時間 (存入資料庫使用) -->
-          <input type="hidden" id="deadlineCombined" value="2026-10-06 23:59">
+          <span style="font-size: 10.5px; color: #92400e; margin-top: 4px; display: block;">💡 點右側 📅 彈出單一日曆+時間滾輪選單，亦可直接鍵盤手動打字修改</span>
         </div>
 
         <!-- 7. 送出儲存大按鈕 (底部留空避讓，大拇指秒按) -->
@@ -964,35 +951,29 @@
       container.appendChild(card);
     }
 
-    // 5. 原生日曆/時間選單觸發與同步 (100% 保證喚出滾輪)
-    function handleNativeDateChange(val) {
-      document.getElementById('manualDate').value = val;
-      syncDualToFull();
-    }
-    function handleNativeTimeChange(val) {
-      document.getElementById('manualTime').value = val;
-      syncDualToFull();
+    // 5. 原生整合型單一日曆+時間選單觸發與同步
+    function handleNativeCombinedChange(val) {
+      if (!val) return;
+      // val 格式為 "2026-10-06T23:59"
+      const formatted = val.replace('T', ' ');
+      document.getElementById('deadlineCombined').value = formatted;
     }
 
-    // 雙向同步日期與時分
-    function syncDualToFull() {
-      const d = document.getElementById('manualDate').value.trim();
-      const t = document.getElementById('manualTime').value.trim();
-      const combined = (d && t) ? `${d} ${t}` : (d || '');
-      document.getElementById('deadlineCombined').value = combined;
+    function handleManualCombinedInput(val) {
+      const clean = val.trim();
+      if (clean.includes(' ')) {
+        const isoVal = clean.replace(' ', 'T');
+        document.getElementById('nativeDateTime').value = isoVal;
+      }
     }
 
-    // 清空日期與時間
-    function clearDeadlineDual() {
-      document.getElementById('manualDate').value = '';
-      document.getElementById('manualTime').value = '';
-      document.getElementById('nativeDate').value = '';
-      document.getElementById('nativeTime').value = '';
+    function clearDeadlineCombined() {
       document.getElementById('deadlineCombined').value = '';
+      document.getElementById('nativeDateTime').value = '';
     }
 
     // ==========================================
-    // 📷 多張照片拖曳排序與箭頭微調管理
+    // 📷 多張照片手機原生長按/觸控拖曳排序管理 (Touch & DnD)
     // ==========================================
     let photosList = [
       'https://images.unsplash.com/photo-1544816155-12df9643f363?w=200&auto=format&fit=crop',
@@ -1001,6 +982,14 @@
     ];
 
     let dragSrcIndex = null;
+
+    // 手機觸控拖曳全域狀態
+    let activeTouchItem = null;
+    let touchSrcIdx = null;
+    let currentHoverTarget = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isDragMode = false;
 
     function renderPhotosGrid() {
       const container = document.getElementById('photoThumbsGrid');
@@ -1023,16 +1012,105 @@
 
         item.innerHTML = `
           <img src="${url}" class="thumb-img" alt="商品圖 ${idx + 1}">
+          <span class="thumb-idx-badge">#${idx + 1}</span>
           ${idx === 0 ? '<span class="thumb-cover-tag">🌟 封面</span>' : ''}
-          <span class="thumb-del-icon" onclick="removePhoto(${idx})" title="刪除照片">✕</span>
-          <div class="thumb-order-bar">
-            <button type="button" class="thumb-arrow-btn" onclick="movePhoto(${idx}, -1)" ${idx === 0 ? 'style="opacity:0.25; pointer-events:none;"' : ''} title="往前移">◀</button>
-            <span style="font-size:9px; color:#cbd5e1; font-weight:700;">#${idx + 1}</span>
-            <button type="button" class="thumb-arrow-btn" onclick="movePhoto(${idx}, 1)" ${idx === photosList.length - 1 ? 'style="opacity:0.25; pointer-events:none;"' : ''} title="往後移">▶</button>
-          </div>
+          <span class="thumb-del-icon" onclick="event.stopPropagation(); removePhoto(${idx});" title="刪除照片">✕</span>
         `;
 
-        // HTML5 拖曳監聽 (電腦與部分手機)
+        // ----------------------------------------------------
+        // 📱 手機原生觸控長按/滑動拖曳排序 (iOS Safari / LINE WebView)
+        // ----------------------------------------------------
+        item.addEventListener('touchstart', (e) => {
+          if (e.target.closest('.thumb-del-icon')) return;
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          activeTouchItem = item;
+          touchSrcIdx = idx;
+          currentHoverTarget = null;
+          isDragMode = false;
+        }, { passive: false });
+
+        item.addEventListener('touchmove', (e) => {
+          if (!activeTouchItem || activeTouchItem !== item) return;
+          const touch = e.touches[0];
+          const dx = touch.clientX - touchStartX;
+          const dy = touch.clientY - touchStartY;
+
+          if (!isDragMode && (Math.hypot(dx, dy) > 8)) {
+            isDragMode = true;
+            activeTouchItem.classList.add('touch-dragging');
+            if (navigator.vibrate) navigator.vibrate(30);
+          }
+
+          if (isDragMode) {
+            if (e.cancelable) e.preventDefault(); // 阻止手機頁面上下滑動，專注於照片排序
+
+            activeTouchItem.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.08)`;
+            activeTouchItem.style.zIndex = '100';
+
+            // 穿透自身偵測手指下方的目標卡片
+            activeTouchItem.style.pointerEvents = 'none';
+            const under = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeTouchItem.style.pointerEvents = '';
+
+            const targetCard = under ? under.closest('.thumb-item-box') : null;
+            document.querySelectorAll('.thumb-item-box').forEach(b => {
+              if (b !== activeTouchItem) b.classList.remove('drop-hover-target');
+            });
+
+            if (targetCard && targetCard !== activeTouchItem) {
+              targetCard.classList.add('drop-hover-target');
+              currentHoverTarget = targetCard;
+            } else {
+              currentHoverTarget = null;
+            }
+          }
+        }, { passive: false });
+
+        item.addEventListener('touchend', (e) => {
+          if (!activeTouchItem || activeTouchItem !== item) return;
+          if (isDragMode && currentHoverTarget) {
+            const fromIdx = touchSrcIdx;
+            const toIdx = parseInt(currentHoverTarget.dataset.index);
+            if (!isNaN(fromIdx) && !isNaN(toIdx) && fromIdx !== toIdx) {
+              const moved = photosList.splice(fromIdx, 1)[0];
+              photosList.splice(toIdx, 0, moved);
+            }
+          }
+
+          if (activeTouchItem) {
+            activeTouchItem.classList.remove('touch-dragging');
+            activeTouchItem.style.transform = '';
+            activeTouchItem.style.zIndex = '';
+          }
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drop-hover-target'));
+
+          activeTouchItem = null;
+          touchSrcIdx = null;
+          currentHoverTarget = null;
+          isDragMode = false;
+
+          renderPhotosGrid();
+        });
+
+        item.addEventListener('touchcancel', () => {
+          if (activeTouchItem) {
+            activeTouchItem.classList.remove('touch-dragging');
+            activeTouchItem.style.transform = '';
+            activeTouchItem.style.zIndex = '';
+          }
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drop-hover-target'));
+          activeTouchItem = null;
+          touchSrcIdx = null;
+          currentHoverTarget = null;
+          isDragMode = false;
+          renderPhotosGrid();
+        });
+
+        // ----------------------------------------------------
+        // 💻 電腦端滑鼠 HTML5 拖曳監聽
+        // ----------------------------------------------------
         item.addEventListener('dragstart', (e) => {
           dragSrcIndex = idx;
           item.classList.add('dragging');
@@ -1066,16 +1144,6 @@
 
         container.appendChild(item);
       });
-    }
-
-    // 點擊箭頭移動順序
-    function movePhoto(idx, dir) {
-      const targetIdx = idx + dir;
-      if (targetIdx < 0 || targetIdx >= photosList.length) return;
-      const temp = photosList[idx];
-      photosList[idx] = photosList[targetIdx];
-      photosList[targetIdx] = temp;
-      renderPhotosGrid();
     }
 
     // 刪除照片
