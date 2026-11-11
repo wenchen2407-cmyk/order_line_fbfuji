@@ -960,10 +960,13 @@
     }
 
     function handleManualCombinedInput(val) {
-      const clean = val.trim();
+      // 相容斜線 2026/11/30 與連字號 2026-11-30，並同步至原生滾輪
+      const clean = val.trim().replace(/\//g, '-');
       if (clean.includes(' ')) {
         const isoVal = clean.replace(' ', 'T');
-        document.getElementById('nativeDateTime').value = isoVal;
+        try {
+          document.getElementById('nativeDateTime').value = isoVal;
+        } catch (e) {}
       }
     }
 
