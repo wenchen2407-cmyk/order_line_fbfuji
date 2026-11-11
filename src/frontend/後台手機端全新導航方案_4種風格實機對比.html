@@ -63,7 +63,7 @@
     }
     @media (min-width: 600px) {
       .style-picker-group {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
       }
     }
     .style-btn {
@@ -161,7 +161,7 @@
     }
 
     /* ============================================================ */
-    /* 🌟 風格 A：底部固定 App 標籤列 (Bottom Navigation Bar) */
+    /* 🌟 風格 A1：底部固定 App 標籤列 (防遮擋安全墊高版) */
     /* ============================================================ */
     .style-a-bottom-bar {
       position: absolute;
@@ -173,8 +173,8 @@
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-around;
-      padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+      padding: 8px 4px calc(14px + env(safe-area-inset-bottom, 16px));
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
       z-index: 100;
     }
     .style-a-tab {
@@ -200,6 +200,53 @@
     .style-a-tab .tab-text {
       font-size: 10.5px;
       font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* ============================================================ */
+    /* 🌟 風格 A2：懸浮膠囊島 (Floating Dock - 100% 徹底避開瀏覽器功能列) */
+    /* ============================================================ */
+    .style-a2-floating-bar {
+      position: absolute;
+      bottom: calc(14px + env(safe-area-inset-bottom, 10px));
+      left: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      justify-content: space-around;
+      padding: 7px 6px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      z-index: 100;
+    }
+    .style-a2-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 2px;
+      color: #94a3b8;
+      transition: all 0.15s;
+      border-radius: 18px;
+    }
+    .style-a2-tab.active {
+      color: #38bdf8;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .style-a2-tab .tab-icon {
+      font-size: 17px;
+    }
+    .style-a2-tab .tab-text {
+      font-size: 10px;
+      font-weight: 800;
       white-space: nowrap;
     }
 
@@ -361,8 +408,11 @@
     </div>
     
     <div class="style-picker-group">
-      <button type="button" class="style-btn active" onclick="switchDesignStyle('A', this)">
-        📱 風格 A：底部 App 標籤列
+      <button type="button" class="style-btn active" onclick="switchDesignStyle('A1', this)">
+        📱 風格 A1：底部安全墊高版
+      </button>
+      <button type="button" class="style-btn" onclick="switchDesignStyle('A2', this)">
+        ✨ 風格 A2：懸浮膠囊島 (防遮擋)
       </button>
       <button type="button" class="style-btn" onclick="switchDesignStyle('B', this)">
         ⚡ 風格 B：頂部 5 等分 0 滑動
@@ -496,10 +546,10 @@
       { id: 'create',  icon: '💻', name: '建檔', fullName: '電腦快速建檔', desc: '新增商品至資料庫' }
     ];
 
-    let currentStyle = 'A';
+    let currentStyle = 'A1';
     let currentModuleId = 'publish';
 
-    // 1. 切換外層 4 種設計風格
+    // 1. 切換外層設計風格
     function switchDesignStyle(styleKey, btn) {
       currentStyle = styleKey;
       document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
@@ -519,18 +569,37 @@
       bottomHolder.innerHTML = '';
       scrollBody.style.paddingBottom = '12px';
 
-      if (currentStyle === 'A') {
-        // ========== 🌟 風格 A：底部固定 App 標籤列 ==========
+      if (currentStyle === 'A1') {
+        // ========== 🌟 風格 A1：底部固定 App 標籤列 (安全墊高版) ==========
         introBadge.innerHTML = `
-          <b>📱 風格 A：底部固定 App 標籤列</b><br>
-          頂部 100% 乾淨不佔空間！像 LINE / 蝦皮一樣，5 個按鈕釘在手機最下方，大拇指最容易單手一鍵直達。
+          <b>📱 風格 A1：底部安全墊高版</b><br>
+          使用 <code>calc(14px + env(safe-area-inset-bottom))</code> 加深底層避讓邊界，保證按鈕浮在 Safari / LINE 底部工具列與黑色橫條之上，不再被遮擋！
         `;
-        scrollBody.style.paddingBottom = '70px'; // 騰出底部空間避開 bottom bar
+        scrollBody.style.paddingBottom = '78px'; // 騰出底部空間避開 bottom bar
 
         bottomHolder.innerHTML = `
           <div class="style-a-bottom-bar">
             ${modules.map(m => `
               <button type="button" class="style-a-tab ${m.id === currentModuleId ? 'active' : ''}" onclick="selectModule('${m.id}')">
+                <span class="tab-icon">${m.icon}</span>
+                <span class="tab-text">${m.name}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }
+      else if (currentStyle === 'A2') {
+        // ========== 🌟 風格 A2：懸浮膠囊島 (Floating Dock) ==========
+        introBadge.innerHTML = `
+          <b>✨ 風格 A2：懸浮膠囊島 (Floating Dock - 100% 徹底避開瀏覽器列)</b><br>
+          按鈕列不貼死螢幕底端，而是像 iOS 懸浮工具列一樣懸浮在半空中（距底 14px），徹底避開 Safari 底部原生按鈕，絕不遮擋、絕不誤觸！
+        `;
+        scrollBody.style.paddingBottom = '85px';
+
+        bottomHolder.innerHTML = `
+          <div class="style-a2-floating-bar">
+            ${modules.map(m => `
+              <button type="button" class="style-a2-tab ${m.id === currentModuleId ? 'active' : ''}" onclick="selectModule('${m.id}')">
                 <span class="tab-icon">${m.icon}</span>
                 <span class="tab-text">${m.name}</span>
               </button>
