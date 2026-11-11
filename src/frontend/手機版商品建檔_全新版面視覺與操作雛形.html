@@ -777,21 +777,26 @@
           <textarea class="input-field" rows="3" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
         </div>
 
-        <!-- 7. 指定收單截止時間 (快捷膠囊) -->
+        <!-- 7. 指定收單截止時間 (日曆選單選擇年月日時分) -->
         <div class="form-card" style="background: #fffbeb; border-color: #fde68a;">
-          <div class="form-card-title" style="color: #92400e;">
-            <span>⏰ 指定收單時間 (選填)</span>
+          <div class="form-card-title" style="color: #92400e; margin-bottom: 6px;">
+            <span>⏰ 指定收單截止時間 (選填)</span>
             <span style="font-size: 11px; color: #b45309; font-weight: normal;">留空則依全站</span>
           </div>
 
-          <div class="time-preset-grid">
-            <button type="button" class="btn-preset-pill" onclick="setDeadline('2026-10-02 23:59')">🍊 10/2 濟州島</button>
-            <button type="button" class="btn-preset-pill" onclick="setDeadline('2026-10-06 23:59')">🇰🇷 10/6 首爾連線</button>
-            <button type="button" class="btn-preset-pill" onclick="setDeadline('2026-10-10 23:59')">🇯🇵 10/10 日本連線</button>
-            <button type="button" class="btn-preset-pill" style="background:#f1f5f9; color:#64748b; border-color:#cbd5e1;" onclick="setDeadline('')">✕ 清空 (依全站)</button>
+          <div style="font-size: 11.5px; color: #78350f; margin-bottom: 8px; line-height: 1.4;">
+            點擊下方欄位直接喚起手機原生「年 / 月 / 日 / 時 / 分」日曆滾輪選擇：
           </div>
 
-          <input type="text" id="deadlineInput" class="input-field" style="font-size: 14px; background: #fff;" placeholder="選填，例：2026-10-10 23:59">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="datetime-local" id="deadlineInput" class="input-field" style="font-size: 15px; background: #fff; padding: 10px 12px; flex: 1; min-width: 0;">
+            <button type="button" onclick="document.getElementById('deadlineInput').value = '';" style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0;">
+              ✕ 清空
+            </button>
+          </div>
+          <div style="font-size: 11px; color: #92400e; margin-top: 6px;">
+            💡 若留空不填，系統將自動套用全站預設收單時間；若有指定，商品卡片將單獨倒數。
+          </div>
         </div>
 
         <!-- 7. 送出儲存大按鈕 (底部留空避讓，大拇指秒按) -->
