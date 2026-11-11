@@ -777,26 +777,51 @@
           <textarea class="input-field" rows="3" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
         </div>
 
-        <!-- 7. 指定收單截止時間 (日曆選單選擇年月日時分) -->
-        <div class="form-card" style="background: #fffbeb; border-color: #fde68a;">
-          <div class="form-card-title" style="color: #92400e; margin-bottom: 6px;">
-            <span>⏰ 指定收單截止時間 (選填)</span>
-            <span style="font-size: 11px; color: #b45309; font-weight: normal;">留空則依全站</span>
-          </div>
-
-          <div style="font-size: 11.5px; color: #78350f; margin-bottom: 8px; line-height: 1.4;">
-            點擊下方欄位直接喚起手機原生「年 / 月 / 日 / 時 / 分」日曆滾輪選擇：
-          </div>
-
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="datetime-local" id="deadlineInput" class="input-field" style="font-size: 15px; background: #fff; padding: 10px 12px; flex: 1; min-width: 0;">
-            <button type="button" onclick="document.getElementById('deadlineInput').value = '';" style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0;">
+        <!-- 7. 指定收單截止時間 (小巧緊湊版：日期與時分同寬 50%，手動打字 + 選單點選雙支援) -->
+        <div class="form-card" style="background: #fffbeb; border-color: #fde68a; padding: 10px 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 12.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
+              <span>⏰ 指定收單截止時間</span>
+              <span style="font-size: 10.5px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
+            </div>
+            <button type="button" onclick="clearDeadlineDual()" style="background: none; border: none; color: #b91c1c; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 2px;">
               ✕ 清空
             </button>
           </div>
-          <div style="font-size: 11px; color: #92400e; margin-top: 6px;">
-            💡 若留空不填，系統將自動套用全站預設收單時間；若有指定，商品卡片將單獨倒數。
+
+          <!-- 等寬 1fr 1fr 並排：左邊日期 50%、右邊時分 50% -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            
+            <!-- 左邊 50%：日期 (可手動輸入，亦可點日曆選單) -->
+            <div>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="text" id="manualDate" class="input-field" style="font-size: 14px; padding: 7px 28px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="2026-11-15" value="2026-10-06" oninput="syncDualToFull()">
+                <!-- 原生/呼叫日曆圖示按鈕 -->
+                <button type="button" onclick="triggerPicker('nativeDate')" style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1;" title="開啟日曆選擇">
+                  📅
+                </button>
+                <input type="date" id="nativeDate" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="document.getElementById('manualDate').value = this.value; syncDualToFull();">
+              </div>
+              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">可打字或點 📅</span>
+            </div>
+
+            <!-- 右邊 50%：時分 (同寬！可手動輸入，亦可點時鐘選單) -->
+            <div>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="text" id="manualTime" class="input-field" style="font-size: 14px; padding: 7px 28px 7px 8px; background: #fff; border-radius: 8px; font-family: monospace; letter-spacing: -0.2px;" placeholder="23:59" value="23:59" oninput="syncDualToFull()">
+                <!-- 原生/呼叫時間圖示按鈕 -->
+                <button type="button" onclick="triggerPicker('nativeTime')" style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0; line-height: 1;" title="開啟時分選擇">
+                  ⏰
+                </button>
+                <input type="time" id="nativeTime" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="document.getElementById('manualTime').value = this.value; syncDualToFull();">
+              </div>
+              <span style="font-size: 10px; color: #92400e; margin-top: 2px; display: block;">可打字或點 ⏰</span>
+            </div>
+
           </div>
+
+          <!-- 隱藏的合併完整時間 (存入資料庫使用) -->
+          <input type="hidden" id="deadlineCombined" value="2026-10-06 23:59">
         </div>
 
         <!-- 7. 送出儲存大按鈕 (底部留空避讓，大拇指秒按) -->
@@ -893,9 +918,33 @@
       container.appendChild(card);
     }
 
-    // 5. 快捷設定截止時間
-    function setDeadline(val) {
-      document.getElementById('deadlineInput').value = val;
+    // 5. 呼叫日期/時間原生選單
+    function triggerPicker(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        if (typeof el.showPicker === 'function') {
+          try { el.showPicker(); return; } catch(e) {}
+        }
+        el.focus();
+        el.click();
+      }
+    }
+
+    // 雙向同步日期與時分
+    function syncDualToFull() {
+      const d = document.getElementById('manualDate').value.trim();
+      const t = document.getElementById('manualTime').value.trim();
+      const combined = (d && t) ? `${d} ${t}` : (d || '');
+      document.getElementById('deadlineCombined').value = combined;
+    }
+
+    // 清空日期與時間
+    function clearDeadlineDual() {
+      document.getElementById('manualDate').value = '';
+      document.getElementById('manualTime').value = '';
+      document.getElementById('nativeDate').value = '';
+      document.getElementById('nativeTime').value = '';
+      document.getElementById('deadlineCombined').value = '';
     }
 
     // 6. 電腦端切換預覽框寬度
