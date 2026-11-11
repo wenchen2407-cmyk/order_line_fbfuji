@@ -227,48 +227,54 @@
     }
 
     /* ============================================================ */
-    /* 🌟 風格 A2：懸浮膠囊島 (Floating Dock - 100% 徹底避開瀏覽器功能列) */
+    /* 🌟 風格 A2：懸浮膠囊島 (採用風格 B 白底綠高亮配色 + 0滑動常駐吸底) */
     /* ============================================================ */
     .style-a2-floating-bar {
       position: absolute;
       bottom: calc(14px + env(safe-area-inset-bottom, 10px));
-      left: 12px;
-      right: 12px;
-      background: rgba(15, 23, 42, 0.92);
+      left: 10px;
+      right: 10px;
+      max-width: 420px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border-radius: 26px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      display: flex;
-      justify-content: space-around;
-      padding: 7px 6px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-      z-index: 100;
+      border-radius: 22px;
+      border: 1.5px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+      padding: 5px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.05);
+      z-index: 9999;
     }
     .style-a2-tab {
-      flex: 1;
+      background: none;
+      border: none;
+      padding: 6px 2px;
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
-      background: none;
-      border: none;
       cursor: pointer;
-      padding: 4px 2px;
-      color: #94a3b8;
-      transition: all 0.15s;
-      border-radius: 18px;
+      color: #64748b;
+      gap: 2px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .style-a2-tab:active {
+      transform: scale(0.95);
     }
     .style-a2-tab.active {
-      color: #38bdf8;
-      background: rgba(255, 255, 255, 0.12);
+      background: var(--primary); /* 與風格 B 相同之 LINE 綠色 */
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.35);
     }
     .style-a2-tab .tab-icon {
-      font-size: 17px;
+      font-size: 16px;
     }
     .style-a2-tab .tab-text {
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -431,11 +437,11 @@
     </div>
     
     <div class="style-picker-group">
-      <button type="button" class="style-btn active" onclick="switchDesignStyle('A1', this)">
-        📱 風格 A1：底部安全墊高版
+      <button type="button" class="style-btn active" onclick="switchDesignStyle('A2', this)">
+        ✨ 風格 A2：懸浮膠囊島 (風格B白底綠配色)
       </button>
-      <button type="button" class="style-btn" onclick="switchDesignStyle('A2', this)">
-        ✨ 風格 A2：懸浮膠囊島 (防遮擋)
+      <button type="button" class="style-btn" onclick="switchDesignStyle('A1', this)">
+        📱 風格 A1：底部平貼墊高版
       </button>
       <button type="button" class="style-btn" onclick="switchDesignStyle('B', this)">
         ⚡ 風格 B：頂部 5 等分 0 滑動
@@ -560,16 +566,16 @@
   </div>
 
   <script>
-    // 5 大模組定義
+    // 5 大模組定義 (依指定順序：推播 ➔ 建檔 ➔ 維護 ➔ 結帳 ➔ 統計)
     const modules = [
       { id: 'publish', icon: '📱', name: '推播', fullName: '批次推播群組', desc: '勾選商品發布至群組' },
+      { id: 'create',  icon: '💻', name: '建檔', fullName: '電腦快速建檔', desc: '新增商品至資料庫' },
       { id: 'manage',  icon: '🛠️', name: '維護', fullName: '商品資料維護', desc: '線上改價與上下架' },
       { id: 'notify',  icon: '📢', name: '結帳', fullName: '顧客結帳通知', desc: '1對1傳送採購清單' },
-      { id: 'stats',   icon: '📊', name: '統計', fullName: '瀏覽統計排行', desc: '熱門商品點擊榜' },
-      { id: 'create',  icon: '💻', name: '建檔', fullName: '電腦快速建檔', desc: '新增商品至資料庫' }
+      { id: 'stats',   icon: '📊', name: '統計', fullName: '瀏覽統計排行', desc: '熱門商品點擊榜' }
     ];
 
-    let currentStyle = 'A1';
+    let currentStyle = 'A2'; // 預設直接套用風格 A2 (白底綠高亮懸浮膠囊島)
     let currentModuleId = 'publish';
 
     // 1. 切換外層設計風格
@@ -612,10 +618,11 @@
         `;
       }
       else if (currentStyle === 'A2') {
-        // ========== 🌟 風格 A2：懸浮膠囊島 (Floating Dock) ==========
+        // ========== 🌟 風格 A2：懸浮膠囊島 (風格 B 配色版) ==========
         introBadge.innerHTML = `
-          <b>✨ 風格 A2：懸浮膠囊島 (Floating Dock - 100% 徹底避開瀏覽器列)</b><br>
-          按鈕列不貼死螢幕底端，而是像 iOS 懸浮工具列一樣懸浮在半空中（距底 14px），徹底避開 Safari 底部原生按鈕，絕不遮擋、絕不誤觸！
+          <b>✨ 風格 A2：懸浮膠囊島（已套用風格 B 白底綠高亮配色）</b><br>
+          按鈕順序：<b>[📱推播] [💻建檔] [🛠️維護] [📢結帳] [📊統計]</b><br>
+          特點：一打開就常駐吸底、0 滑動隨時可點，且懸浮於半空中徹底避開 Safari 底部原生工具列！
         `;
         scrollBody.style.paddingBottom = '85px';
 
