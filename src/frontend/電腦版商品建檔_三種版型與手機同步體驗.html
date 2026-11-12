@@ -127,7 +127,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      overflow: hidden;
+      overflow: clip; /* 使用 clip 裁切圓角而不破壞內部 position: sticky 捲動跟隨效果 */
       transition: max-width 0.25s ease, border-radius 0.25s ease;
     }
 
@@ -154,6 +154,7 @@
       border: 10px solid #1e293b !important;
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45) !important;
       height: 820px !important;
+      overflow: hidden !important;
     }
 
     /* ============================================================ */
@@ -338,10 +339,17 @@
     }
     .split-sticky-box {
       position: sticky;
-      top: 76px;
+      top: 66px;
+      max-height: calc(100vh - 84px);
+      overflow-y: auto;
+      scrollbar-width: none;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      padding-bottom: 6px;
+    }
+    .split-sticky-box::-webkit-scrollbar {
+      display: none;
     }
 
     /* SaaS 專屬：底部吸底操作列 */
@@ -1859,3 +1867,4 @@
   </script>
 </body>
 </html>
+
