@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>商品建檔「電腦版 3 種網頁版型＋手機版」綜合體驗畫面</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #06c755;
+      --primary-dark: #059b43;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #ef4444;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #cbd5e1;
+      color: var(--text);
+      overflow-x: clip;
+      min-height: 100vh;
+    }
+
+    /* ============================================================ */
+    /* 🎛️ 頂部「3種電腦版型 + 手機預覽」切換控制台 (手機打開自動隱藏) */
+    /* ============================================================ */
+    .showcase-banner {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 1px solid #334155;
+      position: sticky;
+      top: 0;
+      z-index: 10000;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .showcase-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .view-toggle-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toggle-btn {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .toggle-btn:hover {
+      border-color: #64748b;
+      color: #ffffff;
+    }
+    .toggle-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 10px rgba(6, 199, 85, 0.35);
+    }
+    .toggle-btn.mobile-btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+    }
+
+    /* 版型簡介提示條 */
+    .layout-desc-banner {
+      background: #eff6ff;
+      border-bottom: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 8px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    /* 外層畫布容器 */
+    .viewport-outer {
+      display: flex;
+      justify-content: center;
+      padding: 18px 16px 40px;
+    }
+
+    /* ============================================================ */
+    /* 🌟 主應用程式外殼 (動態切換 3 種電腦版型與手機框架) */
+    /* ============================================================ */
+    .app-shell {
+      width: 100%;
+      max-width: 1120px;
+      background: var(--bg);
+      border-radius: 18px;
+      border: 1px solid #94a3b8;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: max-width 0.25s ease, border-radius 0.25s ease;
+    }
+
+    /* 版型 1：經典一頁式 (聚焦寬度 860px 畫框，內部維持 740px 單欄閱讀流) */
+    .app-shell.layout-classic {
+      max-width: 920px;
+    }
+
+    /* 版型 2：SaaS 側邊欄 (寬螢幕舒適體驗 1140px) */
+    .app-shell.layout-saas {
+      max-width: 1140px;
+      min-height: 820px;
+    }
+
+    /* 版型 3：左表單 + 右即時買家預覽 (1140px) */
+    .app-shell.layout-split {
+      max-width: 1140px;
+    }
+
+    /* 手機預覽框架 */
+    .app-shell.is-mobile-preview {
+      max-width: 390px !important;
+      border-radius: 40px !important;
+      border: 10px solid #1e293b !important;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45) !important;
+      height: 820px !important;
+    }
+
+    /* ============================================================ */
+    /* 💻 頂部橫向導航列 (用於版型 1 & 版型 3) */
+    /* ============================================================ */
+    .desktop-top-nav {
+      background: #ffffff;
+      border-bottom: 1.5px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .app-shell.layout-saas .desktop-top-nav,
+    .app-shell.is-mobile-preview .desktop-top-nav {
+      display: none;
+    }
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo-pill {
+      background: linear-gradient(135deg, #06c755, #059b43);
+      color: #fff;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.25);
+    }
+    .desktop-nav-tabs {
+      display: flex;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 4px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border);
+    }
+    .desktop-tab-btn {
+      background: transparent;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .desktop-tab-btn:hover { color: #0f172a; background: #e2e8f0; }
+    .desktop-tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(6, 199, 85, 0.3);
+    }
+
+    /* ============================================================ */
+    /* 🗂️ 工作區三區結構：左 Sidebar (SaaS) / 中央表單流 / 右預覽側欄 */
+    /* ============================================================ */
+    .workspace-wrapper {
+      display: flex;
+      flex: 1;
+      align-items: stretch;
+      position: relative;
+    }
+    .app-shell.is-mobile-preview .workspace-wrapper {
+      display: block;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 100px;
+    }
+
+    /* --- 1. 左側 SaaS 側邊導航欄 (僅 layout-saas 顯示) --- */
+    .saas-sidebar {
+      display: none;
+      width: 240px;
+      flex-shrink: 0;
+      background: #ffffff;
+      border-right: 1.5px solid var(--border);
+      padding: 18px 14px;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .app-shell.layout-saas:not(.is-mobile-preview) .saas-sidebar {
+      display: flex;
+    }
+    .saas-nav-item {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      transition: all 0.15s;
+    }
+    .saas-nav-item:hover { background: #f1f5f9; color: #0f172a; }
+    .saas-nav-item.active {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .saas-anchor-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #94a3b8;
+      padding: 8px 12px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .saas-anchor-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .saas-anchor-link:hover { background: #f8fafc; color: var(--primary-dark); }
+    .saas-profit-widget {
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 12px;
+    }
+
+    /* --- 2. 中央主要表單編修欄 (3 種版型共用單一 DOM！) --- */
+    .main-editor-column {
+      flex: 1;
+      min-width: 0;
+      padding: 22px 24px;
+    }
+    .app-shell.layout-classic:not(.is-mobile-preview) .main-editor-column {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 20px 36px;
+    }
+    .app-shell.layout-saas:not(.is-mobile-preview) .main-editor-column {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 24px 28px 90px;
+    }
+    .app-shell.layout-split:not(.is-mobile-preview) .main-editor-column {
+      padding: 20px 16px 32px 24px;
+    }
+    .app-shell.is-mobile-preview .main-editor-column {
+      padding: 14px 12px 20px;
+    }
+
+    /* --- 3. 右側即時買家預覽控制台 (僅 layout-split 顯示) --- */
+    .split-preview-aside {
+      display: none;
+      width: 360px;
+      flex-shrink: 0;
+      padding: 20px 24px 24px 8px;
+    }
+    .app-shell.layout-split:not(.is-mobile-preview) .split-preview-aside {
+      display: block;
+    }
+    .split-sticky-box {
+      position: sticky;
+      top: 76px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* SaaS 專屬：底部吸底操作列 */
+    .saas-sticky-footer {
+      display: none;
+      position: sticky;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1.5px solid var(--border);
+      padding: 12px 28px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+      margin: 16px -28px -90px -28px;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+    }
+    .app-shell.layout-saas:not(.is-mobile-preview) .saas-sticky-footer {
+      display: flex;
+    }
+
+    /* 在 Classic / Mobile 模式顯示原本大按鈕，在 SaaS / Split 隱藏或挪位 */
+    .app-shell.layout-saas:not(.is-mobile-preview) .classic-save-block,
+    .app-shell.layout-split:not(.is-mobile-preview) .classic-save-block {
+      display: none;
+    }
+
+    /* ============================================================ */
+    /* 📝 表單內部區塊與卡片樣式 */
+    /* ============================================================ */
+    .create-page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid var(--border);
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .create-page-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .app-shell.is-mobile-preview .create-page-title { font-size: 16px; }
+    .create-draft-badge {
+      font-size: 11.5px;
+      background: #eff6ff;
+      color: #2563eb;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 800;
+      border: 1px solid #bfdbfe;
+    }
+
+    .form-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1.5px solid var(--border);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      min-width: 0;
+    }
+    .app-shell.is-mobile-preview .form-card {
+      padding: 13px;
+      margin-bottom: 12px;
+    }
+    .form-card-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .input-field {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #0f172a;
+      background: #ffffff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-width: 0;
+    }
+    .app-shell.is-mobile-preview .input-field { font-size: 16px; }
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.12);
+    }
+    .field-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+
+    .sub-grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    .app-shell.is-mobile-preview .sub-grid-2.mobile-stack {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    /* 分類膠囊 */
+    .category-pills-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .category-pills-row::-webkit-scrollbar { display: none; }
+    .cat-pill-btn {
+      flex: 1 0 auto;
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      color: #475569;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cat-pill-btn.active {
+      background: #f0fdf4;
+      border-color: var(--primary);
+      color: #15803d;
+      box-shadow: 0 2px 6px rgba(6, 199, 85, 0.15);
+    }
+
+    .price-grid-row {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .price-main-input {
+      font-size: 18px !important;
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      color: var(--accent) !important;
+    }
+
+    /* 🧮 成本計算機 */
+    .cost-calc-wrapper {
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .cost-calc-header {
+      padding: 11px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      background: #e2e8f0;
+    }
+    .cost-calc-header:hover { background: #cbd5e1; }
+    .cost-calc-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cost-calc-toggle-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #4338ca;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cost-calc-body {
+      padding: 14px;
+      background: #f8fafc;
+      display: block;
+    }
+    .cost-calc-body.collapsed { display: none; }
+    .calc-fields-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .app-shell.layout-split:not(.is-mobile-preview) .calc-fields-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .app-shell.is-mobile-preview .calc-fields-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .calc-summary-pill {
+      background: #ffffff;
+      border: 1px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* 🏷️ 規格款式 */
+    .spec-mode-switch-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    .batch-spec-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      background: #f8fafc;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px dashed #cbd5e1;
+      align-items: center;
+    }
+    .spec-card-item {
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 0.9fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .app-shell.is-mobile-preview .spec-card-item {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+    .spec-mobile-nums-wrap { display: contents; }
+    .app-shell.is-mobile-preview .spec-mobile-nums-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .spec-name-wrap { display: flex; gap: 6px; align-items: center; }
+    .spec-del-btn {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+    .spec-del-btn-mobile { display: none; }
+    .app-shell.is-mobile-preview .spec-del-btn-desktop { display: none; }
+    .app-shell.is-mobile-preview .spec-del-btn-mobile { display: flex; }
+    .btn-add-spec-mobile {
+      width: 100%;
+      background: #f1f5f9;
+      border: 1.5px dashed #94a3b8;
+      color: #334155;
+      padding: 9px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* 📷 商品照片 */
+    .photo-upload-zone {
+      border: 2px dashed #3b82f6;
+      background: #eff6ff;
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background 0.15s;
+    }
+    .photo-upload-zone:hover { background: #dbeafe; }
+    .photo-thumbs-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .app-shell.is-mobile-preview .photo-thumbs-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .thumb-item-box {
+      position: relative;
+      width: 100%;
+      padding-top: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      background: #e2e8f0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: pan-y;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .thumb-item-box:active { cursor: grabbing; }
+    .thumb-item-box.touch-dragging {
+      opacity: 0.92;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+      border-color: var(--primary) !important;
+      cursor: grabbing;
+      transition: none !important;
+    }
+    .thumb-item-box.drop-hover-target {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.45) !important;
+      transform: scale(0.94);
+      opacity: 0.65;
+    }
+    .thumb-item-box.dragging { opacity: 0.4; transform: scale(0.9); border-color: #2563eb; }
+    .thumb-item-box.drag-over { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.35); }
+    .thumb-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    .thumb-idx-badge {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .thumb-cover-tag {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 9.5px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: 800;
+      box-shadow: 0 1px 4px rgba(6, 199, 85, 0.4);
+      z-index: 6;
+      pointer-events: none;
+    }
+    .thumb-del-icon {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(239, 68, 68, 0.92);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 7;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+
+    /* 大儲存按鈕 */
+    .btn-submit-main {
+      width: 100%;
+      background: linear-gradient(135deg, #06c755 0%, #059b43 100%);
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 15.5px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 199, 85, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-submit-main:active { transform: scale(0.98); }
+
+    /* ============================================================ */
+    /* 🎨 版型 3 右側：LINE 買家視角即時預覽卡片樣式 */
+    /* ============================================================ */
+    .line-flex-card-preview {
+      background: #ffffff;
+      border-radius: 18px;
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    }
+    .line-flex-hero {
+      width: 100%;
+      height: 210px;
+      background: #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+    .line-flex-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .line-flex-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(6, 199, 85, 0.92);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .line-flex-deadline-pill {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      color: #fde047;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+    }
+    .line-flex-body { padding: 14px 16px; }
+    .line-flex-cta {
+      background: #06c755;
+      color: #fff;
+      text-align: center;
+      padding: 9px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 12px;
+    }
+
+    /* ============================================================ */
+    /* 📱 手機端底部風格 A2 懸浮膠囊島 */
+    /* ============================================================ */
+    .style-a2-floating-bar { display: none; }
+    .app-shell.is-mobile-preview .style-a2-floating-bar {
+      position: absolute;
+      bottom: 14px;
+      left: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 22px;
+      border: 1.5px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+      padding: 5px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05);
+      z-index: 9999;
+    }
+    .style-a2-tab {
+      background: none;
+      border: none;
+      padding: 6px 2px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+      gap: 2px;
+    }
+    .style-a2-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.35);
+    }
+    .style-a2-tab .tab-icon { font-size: 16px; }
+    .style-a2-tab .tab-text { font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+
+    /* 手機實體打開時：自動滿屏與 fixed 懸浮膠囊島 */
+    @media (max-width: 760px) {
+      .showcase-banner, .layout-desc-banner { display: none !important; }
+      .viewport-outer { padding: 0; }
+      .app-shell {
+        max-width: 100% !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        height: auto !important;
+        min-height: 100vh !important;
+      }
+      .desktop-top-nav, .saas-sidebar, .split-preview-aside, .saas-sticky-footer { display: none !important; }
+      .classic-save-block { display: block !important; }
+      .workspace-wrapper { display: block !important; height: auto !important; padding-bottom: 100px !important; }
+      .main-editor-column { padding: 14px 12px 20px !important; max-width: 100% !important; }
+      .spec-card-item { grid-template-columns: minmax(0, 1fr) !important; gap: 6px !important; }
+      .spec-mobile-nums-wrap { display: flex !important; gap: 8px; align-items: center; }
+      .spec-del-btn-desktop { display: none !important; }
+      .spec-del-btn-mobile { display: flex !important; }
+      .photo-thumbs-grid { grid-template-columns: repeat(3, 1fr) !important; }
+      .calc-fields-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .sub-grid-2.mobile-stack { grid-template-columns: minmax(0, 1fr) !important; }
+      .style-a2-floating-bar {
+        display: grid !important;
+        position: fixed !important;
+        bottom: calc(12px + env(safe-area-inset-bottom, 12px)) !important;
+        left: 10px !important;
+        right: 10px !important;
+        max-width: 420px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-radius: 22px;
+        border: 1.5px solid var(--border);
+        grid-template-columns: repeat(5, 1fr);
+        gap: 3px;
+        padding: 5px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05);
+        z-index: 9999;
+      }
+    }
+
+    /* 測試驗收彈窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 20000;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal-card {
+      background: #fff;
+      border-radius: 18px;
+      max-width: 540px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .json-preview-box {
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🎛️ 頂部「3種電腦版型 + 手機預覽」切換列 -->
+  <div class="showcase-banner">
+    <div class="showcase-title">
+      <span>🖥️ 電腦版 3 種網頁版型對比體驗 ＋ 📱 手機版同步測試</span>
+    </div>
+    <div class="view-toggle-btns">
+      <button type="button" class="toggle-btn active" id="btnLayout1" onclick="switchShowcaseMode('classic')">📄 版型 1：經典一頁式進化版</button>
+      <button type="button" class="toggle-btn" id="btnLayout2" onclick="switchShowcaseMode('saas')">🗂️ 版型 2：SaaS 側邊欄後台</button>
+      <button type="button" class="toggle-btn" id="btnLayout3" onclick="switchShowcaseMode('split')">🎨 版型 3：左編輯＋右買家即時預覽</button>
+      <button type="button" class="toggle-btn mobile-btn" id="btnLayoutMobile" onclick="switchShowcaseMode('mobile')">📱 手機版實機預覽</button>
+    </div>
+  </div>
+
+  <!-- 當前版型介紹提示列 -->
+  <div class="layout-desc-banner" id="layoutDescBanner">
+    📄 【版型 1：經典一頁式進化版】保留您最習慣的單欄垂直順流排版，僅針對輸入體驗、拖曳排序與整合日曆進行全面升級，零重新適應成本！
+  </div>
+
+  <div class="viewport-outer">
+    <div class="app-shell layout-classic" id="appShell">
+
+      <!-- 💻 頂部導航列 (版型 1 & 版型 3 使用) -->
+      <div class="desktop-top-nav">
+        <div class="brand-block">
+          <div class="brand-logo-pill">🛍️</div>
+          <div>
+            <div style="font-size: 15px; font-weight: 900; color: #0f172a;">日韓代購連線管理中心</div>
+            <div style="font-size: 11px; color: #64748b;">白底綠高亮導航與全新建檔體驗</div>
+          </div>
+        </div>
+        <div class="desktop-nav-tabs">
+          <button type="button" class="desktop-tab-btn" onclick="alert('切換到【📱推播】')">📱 推播</button>
+          <button type="button" class="desktop-tab-btn active">💻 建檔</button>
+          <button type="button" class="desktop-tab-btn" onclick="alert('切換到【🛠️維護】')">🛠️ 維護</button>
+          <button type="button" class="desktop-tab-btn" onclick="alert('切換到【📢結帳】')">📢 結帳</button>
+          <button type="button" class="desktop-tab-btn" onclick="alert('切換到【📊統計】')">📊 統計</button>
+        </div>
+      </div>
+
+      <div class="workspace-wrapper">
+
+        <!-- 🗂️ 版型 2 專屬：左側 SaaS 固定側邊欄 -->
+        <aside class="saas-sidebar">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; border-bottom: 1px solid var(--border); margin-bottom: 10px;">
+              <div class="brand-logo-pill" style="width: 30px; height: 30px; font-size: 15px;">🛍️</div>
+              <div style="font-size: 14px; font-weight: 900; color: #0f172a;">連線管理後台</div>
+            </div>
+
+            <button type="button" class="saas-nav-item" onclick="alert('切換到【📱推播】')"><span>📱</span> 商品推播</button>
+            <button type="button" class="saas-nav-item active"><span>💻</span> 商品建檔</button>
+            <button type="button" class="saas-nav-item" onclick="alert('切換到【🛠️維護】')"><span>🛠️</span> 資料維護</button>
+            <button type="button" class="saas-nav-item" onclick="alert('切換到【📢結帳】')"><span>📢</span> 顧客結帳</button>
+            <button type="button" class="saas-nav-item" onclick="alert('切換到【📊統計】')"><span>📊</span> 瀏覽統計</button>
+
+            <div class="saas-anchor-title">快速定位表單區塊</div>
+            <a class="saas-anchor-link" onclick="scrollToCard('secBasic')">• 📦 商品名稱與定價</a>
+            <a class="saas-anchor-link" onclick="scrollToCard('secCost')">• 🧮 成本與毛利試算</a>
+            <a class="saas-anchor-link" onclick="scrollToCard('secSpecs')">• 🏷️ 規格款式與庫存</a>
+            <a class="saas-anchor-link" onclick="scrollToCard('secDeadline')">• ⏰ 收單截止時間</a>
+            <a class="saas-anchor-link" onclick="scrollToCard('secPhotos')">• 📷 照片上傳與拖曳</a>
+            <a class="saas-anchor-link" onclick="scrollToCard('secDesc')">• 📝 商品詳細描述</a>
+          </div>
+
+          <div class="saas-profit-widget">
+            <div style="font-weight: 800; color: #334155; margin-bottom: 6px;">💰 即時毛利試算摘要</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span style="color: #64748b;">總成本價：</span>
+              <b id="saasCostVal">NT$ 810</b>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748b;">預估淨毛利：</span>
+              <b id="saasProfitVal" style="color: #059669;">NT$ 170 (17%)</b>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 📝 中央表單主體 (3種版型與手機共用同一個功能完整 DOM，資料無縫切換) -->
+        <main class="main-editor-column">
+          <div class="create-page-header">
+            <div class="create-page-title">
+              <span>📝 新增商品至 Google 試算表商品庫</span>
+            </div>
+            <span class="create-draft-badge">✨ 所有操作皆可實際測試計算</span>
+          </div>
+
+          <!-- 1. 分類標籤 & 編號 & 基本定價 -->
+          <div class="form-card" id="secBasic">
+            <div class="form-card-title">
+              <span>📦 基本資訊與價格</span>
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">* 為必填</span>
+            </div>
+
+            <div class="sub-grid-2 mobile-stack" style="margin-bottom: 12px;">
+              <div>
+                <label class="field-label">自訂商品編號 (選填，留空自動跳號)</label>
+                <input type="text" id="prodIdInput" class="input-field" placeholder="留空自動產生 (日幣 J... / 韓元 K...)">
+              </div>
+              <div>
+                <label class="field-label">活動分類標籤 *</label>
+                <div class="category-pills-row">
+                  <button type="button" class="cat-pill-btn active" onclick="selectCategory(this, '親飛連線')">✈️ 親飛連線</button>
+                  <button type="button" class="cat-pill-btn" onclick="selectCategory(this, '現貨')">⚡ 現貨</button>
+                  <button type="button" class="cat-pill-btn" onclick="selectCategory(this, '預購')">📦 預購</button>
+                  <button type="button" class="cat-pill-btn" onclick="selectCategory(this, '每週採購')">🗓️ 每週採購</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label class="field-label">商品名稱 *</label>
+              <input type="text" id="prodNameInput" class="input-field" placeholder="例：日本專櫃限量 帆布手提托特包" value="日本專櫃限量 帆布手提托特包" oninput="updateLivePreview()">
+            </div>
+
+            <div class="price-grid-row">
+              <div>
+                <label class="field-label" style="color: var(--accent);">連線代購價 (NT$) *</label>
+                <input type="number" id="prodPriceInput" class="input-field price-main-input" placeholder="例：980" value="980" oninput="calculateCostLive(); updateLivePreview();">
+              </div>
+              <div>
+                <label class="field-label">專櫃原價/參考市價 (NT$)</label>
+                <input type="number" id="prodOrigPriceInput" class="input-field" placeholder="例：1280" value="1280" oninput="updateLivePreview()">
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 🧮 連線代購成本計算機 -->
+          <div class="cost-calc-wrapper" id="secCost">
+            <div class="cost-calc-header" onclick="toggleCostCalculator()">
+              <div class="cost-calc-title">
+                <span>🧮 連線代購成本計算機</span>
+                <span style="font-size: 10.5px; background: #cbd5e1; color: #334155; padding: 2px 6px; border-radius: 5px;">僅管理者紀錄用</span>
+              </div>
+              <div class="cost-calc-toggle-text">
+                <span id="calcToggleHint">點此收合</span>
+                <span id="calcToggleArrow">▲</span>
+              </div>
+            </div>
+
+            <div class="cost-calc-body" id="costCalcBody">
+              <div class="calc-fields-grid">
+                <div>
+                  <label class="field-label" style="font-size: 11.5px;">採購幣別</label>
+                  <select id="calcCurrency" class="input-field" style="padding: 7px 8px; font-size: 13.5px;" onchange="changeCurrencyPreset()">
+                    <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
+                    <option value="KRW">🇰🇷 韓元 (KRW)</option>
+                    <option value="USD">🇺🇸 美金 (USD)</option>
+                    <option value="TWD">🇹🇼 台幣 (TWD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label" style="font-size: 11.5px;">原幣稅前金額</label>
+                  <input type="number" id="calcPreTax" class="input-field" style="padding: 7px 8px; font-size: 14px;" value="3000" oninput="calculateCostLive()">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size: 11.5px;">稅金 (原幣)</label>
+                  <input type="number" id="calcTax" class="input-field" style="padding: 7px 8px; font-size: 14px;" value="300" oninput="calculateCostLive()">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size: 11.5px;">採購匯率</label>
+                  <input type="number" id="calcRate" step="0.0001" class="input-field" style="padding: 7px 8px; font-size: 14px;" value="0.2200" oninput="calculateCostLive()">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size: 11.5px;">重量 (g) 240/kg</label>
+                  <input type="number" id="calcWeight" class="input-field" style="padding: 7px 8px; font-size: 14px;" value="350" oninput="calculateCostLive()">
+                </div>
+              </div>
+
+              <div class="calc-summary-pill">
+                <div>
+                  <div>採購金額：<b id="resForeignText">3,300 JPY</b> (約 NT$ <b id="resItemTwdText">726</b>)</div>
+                  <div>國際空運：<b id="resShippingText">NT$ 84</b> (<span id="resWeightText">350</span>g)</div>
+                </div>
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                  <div style="color: #047857; font-weight: 900; font-size: 14.5px;">👉 總成本：NT$ <span id="resTotalCostText">810</span></div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="resProfitText" style="color: #2563eb; font-weight: 800; font-size: 12.5px;">預估毛利：NT$ 170 (17%)</span>
+                    <button type="button" onclick="resetCostCalc()" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer;">↺ 重置</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 🏷️ 規格款式與庫存設定 -->
+          <div class="form-card" id="secSpecs">
+            <div class="form-card-title">
+              <span>🏷️ 規格款式、個別售價與庫存</span>
+              <span id="specSummaryBadge" style="font-size: 11.5px; color: #059669; font-weight: 800; background: #ecfdf5; padding: 2px 8px; border-radius: 12px;">合計 2 種 ｜ 庫存 8 件</span>
+            </div>
+
+            <div class="spec-mode-switch-bar">
+              <span style="font-size: 12.5px; font-weight: 800; color: #334155;">啟用各規格「獨立價格」與「個別庫存」</span>
+              <input type="checkbox" id="specModeCheck" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" onchange="toggleSpecMode(this.checked)" checked>
+            </div>
+
+            <!-- 簡易模式 -->
+            <div id="simpleSpecBlock" style="display: none;">
+              <div style="margin-bottom: 10px;">
+                <label class="field-label">規格款式 (以逗號隔開)</label>
+                <input type="text" id="simpleSpecInput" class="input-field" placeholder="例：黑色, 白色, 駝色" oninput="updateLivePreview()">
+              </div>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                <input type="checkbox" id="simpleUnlimitedCheck" checked style="width: 16px; height: 16px; accent-color: var(--primary);" onchange="document.getElementById('simpleStockInput').style.display = this.checked ? 'none' : 'block'">
+                <span>連線時間不限名額跟庫存（無限接單）</span>
+              </label>
+              <input type="number" id="simpleStockInput" class="input-field" style="margin-top: 8px; display: none;" value="10" placeholder="輸入總現貨數量">
+            </div>
+
+            <!-- 進階模式 -->
+            <div id="advancedSpecBlock">
+              <div class="batch-spec-bar">
+                <span style="font-size: 11.5px; font-weight: 800; color: #475569; white-space: nowrap;">⚡ 批次產生：</span>
+                <input type="text" id="batchSpecInput" class="input-field" style="padding: 6px 10px; font-size: 13px;" placeholder="例：黑色 S, 黑色 M, 白色 S">
+                <button type="button" onclick="batchAddSpecs()" style="background: #0f172a; color: #fff; border: none; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;">套用</button>
+              </div>
+
+              <div id="specCardsContainer"></div>
+
+              <button type="button" class="btn-add-spec-mobile" onclick="addSpecRowItem('', '', 1, false)">
+                <span>➕ 新增規格款式</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. ⏰ 指定收單截止時間 (單一整合選單) -->
+          <div class="form-card" id="secDeadline" style="background: #fffbeb; border-color: #fde68a; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-size: 13px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
+                <span>⏰ 指定收單截止時間</span>
+                <span style="font-size: 11px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
+              </div>
+              <button type="button" onclick="clearDeadlineCombined()" style="background: none; border: none; color: #b91c1c; font-size: 11.5px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕ 清空</button>
+            </div>
+
+            <div style="position: relative; display: flex; align-items: center;">
+              <input type="text" id="deadlineCombined" class="input-field" style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b;" placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" value="2026/11/30 15:30" oninput="handleManualCombinedInput(this.value)">
+              <div style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;" title="點擊打開單一日曆+時間選單">
+                <span style="font-size: 17px; pointer-events: none;">📅</span>
+                <input type="datetime-local" id="nativeDateTime" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" value="2026-11-30T15:30" onchange="handleNativeCombinedChange(this.value)">
+              </div>
+            </div>
+            <div id="deadlineParseStatus" style="font-size: 11px; color: #15803d; margin-top: 5px; font-weight: 700;">
+              ✅ 系統解析正確：將於 2026/11/30 15:30 準時截單
+            </div>
+          </div>
+
+          <!-- 5. 📷 商品照片 -->
+          <div class="form-card" id="secPhotos">
+            <div class="form-card-title">
+              <span>📷 商品照片 (多張上傳 & 拖曳排序) *</span>
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張為 LINE 卡片封面主圖</span>
+            </div>
+
+            <label for="realPhotoFileInput" class="photo-upload-zone" style="display: block;">
+              <div style="font-size: 24px; margin-bottom: 2px;">📸</div>
+              <div style="font-size: 13px; font-weight: 800; color: #1d4ed8;">點此選擇電腦照片 / 手機拍照相簿 (可多選)</div>
+              <input type="file" id="realPhotoFileInput" multiple accept="image/*" style="display: none;" onchange="handleRealFilesUpload(this.files)">
+            </label>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #0284c7; background: #f0f9ff; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd; margin-bottom: 10px;">
+              <span>✋ <b>滑鼠拖曳 或 手指長按滑動</b> 即可調整順序（無底部按鈕）</span>
+              <span style="font-weight: 800;">共 <span id="photoCountNum">3</span> 張</span>
+            </div>
+
+            <div class="photo-thumbs-grid" id="photoThumbsGrid"></div>
+
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border);">
+              <label class="field-label" style="font-size: 12px;">🔗 或直接貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
+              <textarea id="photoUrlTextarea" class="input-field" rows="3" style="font-size: 12.5px; padding: 8px 10px; line-height: 1.45; font-family: monospace;" oninput="syncTextareaToThumbs()"></textarea>
+            </div>
+          </div>
+
+          <!-- 6. 📝 商品詳細描述 -->
+          <div class="form-card" id="secDesc">
+            <div class="form-card-title">
+              <span>📝 商品詳細描述 / 規格說明（支援換行與條列排版）</span>
+            </div>
+            <textarea id="prodDescInput" class="input-field" rows="4" style="font-size: 14px; padding: 10px; line-height: 1.5;" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍" oninput="updateLivePreview()">日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍</textarea>
+          </div>
+
+          <!-- 經典模式 / 手機模式的大儲存按鈕 -->
+          <div class="classic-save-block">
+            <button type="button" class="btn-submit-main" onclick="runFullValidationAndSubmit()">
+              <span>💾 儲存並同步至 Google 試算表 (功能驗收測試)</span>
+            </button>
+          </div>
+
+          <!-- 🗂️ 版型 2 (SaaS) 專屬：底部懸浮操作條 -->
+          <div class="saas-sticky-footer">
+            <div style="font-size: 12.5px; color: #475569; font-weight: 700;">
+              目前狀態：<span style="color: #059669;">草稿就緒</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer;">↑ 回到頂部</button>
+              <button type="button" class="btn-submit-main" style="width: auto; padding: 9px 22px; font-size: 14px;" onclick="runFullValidationAndSubmit()">💾 儲存並同步試算表</button>
+            </div>
+          </div>
+
+        </main>
+
+        <!-- 🎨 版型 3 專屬：右側即時買家卡片預覽與控制欄 -->
+        <aside class="split-preview-aside">
+          <div class="split-sticky-box">
+            <div style="font-size: 13.5px; font-weight: 900; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+              <span>📱 買家視角即時預覽</span>
+              <span style="font-size: 11px; color: #059669; background: #dcfce7; padding: 2px 8px; border-radius: 10px;">同步第 1 張封面</span>
+            </div>
+
+            <!-- 即時 LINE / 賣場卡片 -->
+            <div class="line-flex-card-preview">
+              <div class="line-flex-hero">
+                <img id="previewHeroImg" src="" alt="封面預覽">
+                <span class="line-flex-badge" id="previewCatBadge">✈️ 親飛連線</span>
+                <span class="line-flex-deadline-pill" id="previewDeadlineBadge">⏰ 2026/11/30 15:30 結單</span>
+              </div>
+              <div class="line-flex-body">
+                <div id="previewTitle" style="font-size: 15.5px; font-weight: 900; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">日本專櫃限量 帆布手提托特包</div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+                  <span style="font-size: 20px; font-weight: 900; color: #ef4444; font-family: 'Outfit', sans-serif;" id="previewPrice">NT$ 980</span>
+                  <span style="font-size: 12px; color: #94a3b8; text-decoration: line-through;" id="previewOrigPrice">原價 NT$ 1,280</span>
+                </div>
+                <div id="previewSpecsText" style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px;">
+                  規格：經典黑 S、米白色 M
+                </div>
+                <div id="previewDescText" style="font-size: 11.5px; color: #64748b; line-height: 1.45; white-space: pre-line; max-height: 55px; overflow: hidden;"></div>
+                <div class="line-flex-cta">🛒 立即選擇規格下單</div>
+              </div>
+            </div>
+
+            <!-- 即時毛利摘要卡 -->
+            <div style="background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 12px; font-size: 12.5px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;">成本試算總計：</span>
+                <b id="splitCostText">NT$ 810</b>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #64748b;">預估單件毛利：</span>
+                <b id="splitProfitText" style="color: #059669;">NT$ 170 (17%)</b>
+              </div>
+            </div>
+
+            <!-- 常駐儲存大按鈕 -->
+            <button type="button" class="btn-submit-main" onclick="runFullValidationAndSubmit()">
+              <span>💾 儲存並同步試算表</span>
+            </button>
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- 📱 手機模式底部懸浮膠囊島 (風格 A2：白底綠高亮) -->
+      <div class="style-a2-floating-bar">
+        <button type="button" class="style-a2-tab" onclick="alert('切換到【📱推播】')"><span class="tab-icon">📱</span><span class="tab-text">推播</span></button>
+        <button type="button" class="style-a2-tab active"><span class="tab-icon">💻</span><span class="tab-text">建檔</span></button>
+        <button type="button" class="style-a2-tab" onclick="alert('切換到【🛠️維護】')"><span class="tab-icon">🛠️</span><span class="tab-text">維護</span></button>
+        <button type="button" class="style-a2-tab" onclick="alert('切換到【📢結帳】')"><span class="tab-icon">📢</span><span class="tab-text">結帳</span></button>
+        <button type="button" class="style-a2-tab" onclick="alert('切換到【📊統計】')"><span class="tab-icon">📊</span><span class="tab-text">統計</span></button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 驗收測試結果彈窗 -->
+  <div class="modal-backdrop" id="testResultModal" onclick="if(event.target === this) this.classList.remove('show')">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div style="font-size: 16px; font-weight: 900; color: #059669;">✅ 全功能與表單資料檢查通過！</div>
+        <button type="button" onclick="document.getElementById('testResultModal').classList.remove('show')" style="background: #f1f5f9; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-weight: 800;">✕</button>
+      </div>
+      <div style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+        以下為系統實際擷取準備寫入 Google 試算表的完整資料（無論您在哪一種版型填寫，資料完全一致且精準）：
+      </div>
+      <div class="json-preview-box" id="testJsonOutput"></div>
+      <button type="button" onclick="document.getElementById('testResultModal').classList.remove('show')" style="width: 100%; background: var(--primary); color: #fff; border: none; padding: 11px; border-radius: 10px; font-weight: 800; cursor: pointer;">確認無誤，關閉檢查視窗</button>
+    </div>
+  </div>
+
+  <script>
+    let currentCategory = '親飛連線';
+
+    // =========================================================================
+    // 1. 🎛️ 切換 3 種電腦版型 & 手機預覽
+    // =========================================================================
+    const modeDescriptions = {
+      classic: '📄 【版型 1：經典一頁式進化版】保留您最習慣的單欄垂直順流排版，針對輸入體驗、拖曳排序與整合日曆進行全面升級，零重新適應成本！',
+      saas: '🗂️ 【版型 2：SaaS 側邊欄後台】專業電商後台風格：左側附設「主選單＋表單快速跳轉錨點＋即時毛利小卡」，底部則有懸浮置底儲存條！',
+      split: '🎨 【版型 3：左表單＋右買家即時預覽】左側維持熟悉順流填寫，右側常駐「買家卡片即時預覽」，拖曳調換封面圖片或改價都會同步變動！',
+      mobile: '📱 【手機版實機體驗】已切換為 390px 手機畫面：成本計算機自動收合、規格轉雙行卡片、底部常駐「風格 A2 白底綠高亮懸浮膠囊島」！'
+    };
+
+    function switchShowcaseMode(mode) {
+      const shell = document.getElementById('appShell');
+      const banner = document.getElementById('layoutDescBanner');
+      const body = document.getElementById('costCalcBody');
+      const hint = document.getElementById('calcToggleHint');
+      const arrow = document.getElementById('calcToggleArrow');
+
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      shell.classList.remove('layout-classic', 'layout-saas', 'layout-split', 'is-mobile-preview');
+
+      if (mode === 'mobile') {
+        shell.classList.add('layout-classic', 'is-mobile-preview');
+        document.getElementById('btnLayoutMobile').classList.add('active');
+        body.classList.add('collapsed');
+        hint.textContent = '點此展開填寫';
+        arrow.textContent = '▼';
+      } else {
+        shell.classList.add('layout-' + mode);
+        if (mode === 'classic') document.getElementById('btnLayout1').classList.add('active');
+        if (mode === 'saas') document.getElementById('btnLayout2').classList.add('active');
+        if (mode === 'split') document.getElementById('btnLayout3').classList.add('active');
+        body.classList.remove('collapsed');
+        hint.textContent = '點此收合';
+        arrow.textContent = '▲';
+      }
+      banner.textContent = modeDescriptions[mode];
+      updateLivePreview();
+    }
+
+    function scrollToCard(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function selectCategory(btn, val) {
+      document.querySelectorAll('.cat-pill-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = val;
+      updateLivePreview();
+    }
+
+    function toggleCostCalculator() {
+      const body = document.getElementById('costCalcBody');
+      const hint = document.getElementById('calcToggleHint');
+      const arrow = document.getElementById('calcToggleArrow');
+      if (body.classList.contains('collapsed')) {
+        body.classList.remove('collapsed');
+        hint.textContent = '點此收合';
+        arrow.textContent = '▲';
+      } else {
+        body.classList.add('collapsed');
+        hint.textContent = '點此展開填寫';
+        arrow.textContent = '▼';
+      }
+    }
+
+    // =========================================================================
+    // 2. 🧮 成本試算即時運算
+    // =========================================================================
+    function changeCurrencyPreset() {
+      const cur = document.getElementById('calcCurrency').value;
+      const rateEl = document.getElementById('calcRate');
+      if (cur === 'JPY') rateEl.value = '0.2200';
+      else if (cur === 'USD') rateEl.value = '32.5000';
+      else if (cur === 'KRW') rateEl.value = '0.0240';
+      else if (cur === 'TWD') rateEl.value = '1.0000';
+      calculateCostLive();
+    }
+
+    function calculateCostLive() {
+      const cur = document.getElementById('calcCurrency').value;
+      const preTax = Number(document.getElementById('calcPreTax').value) || 0;
+      const tax = Number(document.getElementById('calcTax').value) || 0;
+      const rate = Number(document.getElementById('calcRate').value) || 0;
+      const weight = Number(document.getElementById('calcWeight').value) || 0;
+
+      const totalForeign = preTax + tax;
+      const itemTwd = Math.round(totalForeign * rate);
+      const shippingTwd = Math.round((weight / 1000) * 240);
+      const totalCost = itemTwd + shippingTwd;
+
+      document.getElementById('resForeignText').textContent = `${totalForeign.toLocaleString()} ${cur}`;
+      document.getElementById('resItemTwdText').textContent = itemTwd.toLocaleString();
+      document.getElementById('resShippingText').textContent = `NT$ ${shippingTwd.toLocaleString()}`;
+      document.getElementById('resWeightText').textContent = weight;
+      document.getElementById('resTotalCostText').textContent = totalCost.toLocaleString();
+
+      const sellPrice = Number(document.getElementById('prodPriceInput').value) || 0;
+      const profitEl = document.getElementById('resProfitText');
+      let profitStr = 'NT$ 0 (0%)';
+      let profitColor = '#64748b';
+      if (sellPrice > 0 && totalCost > 0) {
+        const profit = sellPrice - totalCost;
+        const margin = Math.round((profit / sellPrice) * 100);
+        profitColor = profit >= 0 ? '#059669' : '#ef4444';
+        profitStr = `NT$ ${profit.toLocaleString()} (${margin}%)`;
+        profitEl.style.color = profit >= 0 ? '#2563eb' : '#ef4444';
+        profitEl.textContent = `預估毛利：${profitStr}`;
+      } else {
+        profitEl.style.color = '#64748b';
+        profitEl.textContent = `預估毛利：${profitStr}`;
+      }
+
+      // 同步右側與左側邊欄小摘要
+      document.getElementById('saasCostVal').textContent = `NT$ ${totalCost.toLocaleString()}`;
+      document.getElementById('saasProfitVal').textContent = profitStr;
+      document.getElementById('saasProfitVal').style.color = profitColor;
+      document.getElementById('splitCostText').textContent = `NT$ ${totalCost.toLocaleString()}`;
+      document.getElementById('splitProfitText').textContent = profitStr;
+      document.getElementById('splitProfitText').style.color = profitColor;
+
+      return { cur, preTax, tax, rate, weight, totalForeign, itemTwd, shippingTwd, totalCost };
+    }
+
+    function resetCostCalc() {
+      document.getElementById('calcPreTax').value = '';
+      document.getElementById('calcTax').value = '';
+      document.getElementById('calcWeight').value = '';
+      calculateCostLive();
+    }
+
+    // =========================================================================
+    // 3. 🏷️ 規格款式管理
+    // =========================================================================
+    function toggleSpecMode(isAdvanced) {
+      document.getElementById('simpleSpecBlock').style.display = isAdvanced ? 'none' : 'block';
+      document.getElementById('advancedSpecBlock').style.display = isAdvanced ? 'block' : 'none';
+      updateSpecSummary();
+    }
+
+    function addSpecRowItem(name = '', price = '', stock = 1, isUnlimited = false) {
+      const container = document.getElementById('specCardsContainer');
+      const defaultPrice = price !== '' ? price : (document.getElementById('prodPriceInput').value || 980);
+      const item = document.createElement('div');
+      item.className = 'spec-card-item';
+      item.innerHTML = `
+        <div class="spec-name-wrap">
+          <input type="text" class="input-field spec-name-in" style="padding: 7px 9px; font-size: 13.5px;" placeholder="規格名稱 (例：黑色 M)" value="${name}" oninput="updateSpecSummary()">
+          <button type="button" class="spec-del-btn spec-del-btn-mobile" onclick="this.closest('.spec-card-item').remove(); updateSpecSummary();">🗑️</button>
+        </div>
+        <div class="spec-mobile-nums-wrap">
+          <div style="flex: 1; min-width: 0;">
+            <span style="font-size: 10.5px; color: #64748b; display: block; margin-bottom: 2px;">售價 NT$</span>
+            <input type="number" class="input-field spec-price-in" style="padding: 6px 8px; font-size: 13.5px; font-weight: 700;" value="${defaultPrice}" oninput="updateSpecSummary()">
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <span style="font-size: 10.5px; color: #64748b; display: block; margin-bottom: 2px;">現貨數量</span>
+            <input type="number" class="input-field spec-stock-in" style="padding: 6px 8px; font-size: 13.5px;" value="${isUnlimited ? 9999 : stock}" ${isUnlimited ? 'disabled' : ''} oninput="updateSpecSummary()">
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+            <span style="font-size: 10px; color: #64748b; margin-bottom: 4px; white-space: nowrap;">無限量</span>
+            <input type="checkbox" class="spec-unlimited-in" ${isUnlimited ? 'checked' : ''} style="width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer;" onchange="toggleRowUnlimited(this)">
+          </div>
+        </div>
+        <button type="button" class="spec-del-btn spec-del-btn-desktop" onclick="this.closest('.spec-card-item').remove(); updateSpecSummary();" title="刪除此規格">🗑️</button>
+      `;
+      container.appendChild(item);
+      updateSpecSummary();
+    }
+
+    function toggleRowUnlimited(chk) {
+      const row = chk.closest('.spec-card-item');
+      const stockIn = row.querySelector('.spec-stock-in');
+      if (chk.checked) {
+        stockIn.value = 9999;
+        stockIn.disabled = true;
+      } else {
+        stockIn.value = 5;
+        stockIn.disabled = false;
+      }
+      updateSpecSummary();
+    }
+
+    function batchAddSpecs() {
+      const raw = document.getElementById('batchSpecInput').value.trim();
+      if (!raw) return;
+      const list = raw.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      const basePrice = document.getElementById('prodPriceInput').value || 980;
+      list.forEach(name => addSpecRowItem(name, basePrice, 5, false));
+      document.getElementById('batchSpecInput').value = '';
+    }
+
+    function updateSpecSummary() {
+      const isAdv = document.getElementById('specModeCheck').checked;
+      const badge = document.getElementById('specSummaryBadge');
+      if (!isAdv) {
+        badge.textContent = '簡易共用規格模式';
+      } else {
+        const rows = document.querySelectorAll('#specCardsContainer .spec-card-item');
+        let totalStock = 0;
+        let hasUnlimited = false;
+        rows.forEach(r => {
+          const unlim = r.querySelector('.spec-unlimited-in').checked;
+          if (unlim) hasUnlimited = true;
+          else totalStock += (Number(r.querySelector('.spec-stock-in').value) || 0);
+        });
+        badge.textContent = `合計 ${rows.length} 種 ｜ ${hasUnlimited ? '含無限接單' : '庫存 ' + totalStock + ' 件'}`;
+      }
+      updateLivePreview();
+    }
+
+    // =========================================================================
+    // 4. ⏰ 單一整合日曆+時間選單
+    // =========================================================================
+    function parseFlexibleDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      let s = String(str).trim().replace(/年|月/g, '-').replace(/日/g, ' ').replace(/\//g, '-').replace(/\s+/g, ' ');
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      const d = new Date(s.replace(/-/g, '/'));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function updateDeadlineParseStatus(val) {
+      const statusEl = document.getElementById('deadlineParseStatus');
+      if (!val || !val.trim()) {
+        statusEl.style.color = '#92400e';
+        statusEl.textContent = '💡 留空將自動採用「全站統一結單時間」';
+      } else {
+        const parsed = parseFlexibleDeadline(val);
+        if (parsed) {
+          const pad = n => String(n).padStart(2, '0');
+          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth()+1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+          statusEl.style.color = '#15803d';
+          statusEl.textContent = `✅ 系統解析正確：將於 ${fmt} 準時截單`;
+        } else {
+          statusEl.style.color = '#dc2626';
+          statusEl.textContent = '⚠️ 格式尚不完整，建議格式如：2026/11/30 15:30';
+        }
+      }
+      updateLivePreview();
+    }
+
+    function handleNativeCombinedChange(val) {
+      if (!val) return;
+      const formatted = val.replace('T', ' ').replace(/-/g, '/');
+      document.getElementById('deadlineCombined').value = formatted;
+      updateDeadlineParseStatus(formatted);
+    }
+
+    function handleManualCombinedInput(val) {
+      updateDeadlineParseStatus(val);
+      const parsed = parseFlexibleDeadline(val);
+      if (parsed) {
+        const pad = n => String(n).padStart(2, '0');
+        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+        try { document.getElementById('nativeDateTime').value = isoVal; } catch(e) {}
+      }
+    }
+
+    function clearDeadlineCombined() {
+      document.getElementById('deadlineCombined').value = '';
+      document.getElementById('nativeDateTime').value = '';
+      updateDeadlineParseStatus('');
+    }
+
+    // =========================================================================
+    // 5. 📷 商品照片拖曳排序 (桌機滑鼠 + 手機觸控)
+    // =========================================================================
+    let photosList = [
+      'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&auto=format&fit=crop'
+    ];
+
+    let dragSrcIndex = null, activeTouchItem = null, touchSrcIdx = null, currentHoverTarget = null;
+    let touchStartX = 0, touchStartY = 0, isDragMode = false;
+
+    function renderPhotosGrid() {
+      const container = document.getElementById('photoThumbsGrid');
+      const countEl = document.getElementById('photoCountNum');
+      const textarea = document.getElementById('photoUrlTextarea');
+
+      container.innerHTML = '';
+      if (countEl) countEl.textContent = photosList.length;
+
+      if (textarea && document.activeElement !== textarea) {
+        textarea.value = photosList.map(u => u.startsWith('data:') ? '[本地上傳圖片檔案]' : u).join('\n');
+      }
+
+      photosList.forEach((url, idx) => {
+        const item = document.createElement('div');
+        item.className = 'thumb-item-box';
+        item.draggable = true;
+        item.dataset.index = idx;
+
+        item.innerHTML = `
+          <img src="${url}" class="thumb-img" alt="商品圖 ${idx + 1}">
+          <span class="thumb-idx-badge">#${idx + 1}</span>
+          ${idx === 0 ? '<span class="thumb-cover-tag">🌟 封面</span>' : ''}
+          <span class="thumb-del-icon" onclick="event.stopPropagation(); removePhoto(${idx});" title="刪除照片">✕</span>
+        `;
+
+        // 📱 手機觸控長按/滑動拖曳
+        item.addEventListener('touchstart', (e) => {
+          if (e.target.closest('.thumb-del-icon')) return;
+          const touch = e.touches[0];
+          touchStartX = touch.clientX; touchStartY = touch.clientY;
+          activeTouchItem = item; touchSrcIdx = idx; currentHoverTarget = null; isDragMode = false;
+        }, { passive: false });
+
+        item.addEventListener('touchmove', (e) => {
+          if (!activeTouchItem || activeTouchItem !== item) return;
+          const touch = e.touches[0];
+          const dx = touch.clientX - touchStartX, dy = touch.clientY - touchStartY;
+          if (!isDragMode && Math.hypot(dx, dy) > 8) {
+            isDragMode = true;
+            activeTouchItem.classList.add('touch-dragging');
+            if (navigator.vibrate) navigator.vibrate(30);
+          }
+          if (isDragMode) {
+            if (e.cancelable) e.preventDefault();
+            activeTouchItem.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.08)`;
+            activeTouchItem.style.zIndex = '100';
+            activeTouchItem.style.pointerEvents = 'none';
+            const under = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeTouchItem.style.pointerEvents = '';
+            const targetCard = under ? under.closest('.thumb-item-box') : null;
+            document.querySelectorAll('.thumb-item-box').forEach(b => {
+              if (b !== activeTouchItem) b.classList.remove('drop-hover-target');
+            });
+            if (targetCard && targetCard !== activeTouchItem) {
+              targetCard.classList.add('drop-hover-target');
+              currentHoverTarget = targetCard;
+            } else { currentHoverTarget = null; }
+          }
+        }, { passive: false });
+
+        const finishTouch = () => {
+          if (!activeTouchItem || activeTouchItem !== item) return;
+          if (isDragMode && currentHoverTarget) {
+            const toIdx = parseInt(currentHoverTarget.dataset.index);
+            if (!isNaN(touchSrcIdx) && !isNaN(toIdx) && touchSrcIdx !== toIdx) {
+              const moved = photosList.splice(touchSrcIdx, 1)[0];
+              photosList.splice(toIdx, 0, moved);
+            }
+          }
+          if (activeTouchItem) {
+            activeTouchItem.classList.remove('touch-dragging');
+            activeTouchItem.style.transform = '';
+            activeTouchItem.style.zIndex = '';
+          }
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drop-hover-target'));
+          activeTouchItem = null; touchSrcIdx = null; currentHoverTarget = null; isDragMode = false;
+          renderPhotosGrid();
+        };
+        item.addEventListener('touchend', finishTouch);
+        item.addEventListener('touchcancel', finishTouch);
+
+        // 💻 電腦滑鼠 HTML5 Drag & Drop
+        item.addEventListener('dragstart', (e) => {
+          dragSrcIndex = idx; item.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+        });
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault(); e.dataTransfer.dropEffect = 'move'; item.classList.add('drag-over');
+        });
+        item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+        item.addEventListener('drop', (e) => {
+          e.preventDefault(); item.classList.remove('drag-over');
+          if (dragSrcIndex !== null && dragSrcIndex !== idx) {
+            const movedItem = photosList.splice(dragSrcIndex, 1)[0];
+            photosList.splice(idx, 0, movedItem);
+            renderPhotosGrid();
+          }
+        });
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drag-over'));
+        });
+
+        container.appendChild(item);
+      });
+
+      updateLivePreview();
+    }
+
+    function handleRealFilesUpload(files) {
+      if (!files || !files.length) return;
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          photosList.push(ev.target.result);
+          renderPhotosGrid();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removePhoto(idx) {
+      photosList.splice(idx, 1);
+      renderPhotosGrid();
+    }
+
+    function syncTextareaToThumbs() {
+      const text = document.getElementById('photoUrlTextarea').value;
+      const lines = text.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 5 && s !== '[本地上傳圖片檔案]');
+      const dataUrls = photosList.filter(u => u.startsWith('data:'));
+      photosList = [...dataUrls, ...lines];
+      renderPhotosGrid();
+    }
+
+    // =========================================================================
+    // 6. 🎨 即時同步右側買家預覽卡片 (版型 3 專用)
+    // =========================================================================
+    function updateLivePreview() {
+      const imgEl = document.getElementById('previewHeroImg');
+      if (photosList.length > 0) imgEl.src = photosList[0];
+      else imgEl.src = 'https://via.placeholder.com/400x240?text=尚未上傳照片';
+
+      document.getElementById('previewCatBadge').textContent = currentCategory;
+      document.getElementById('previewTitle').textContent = document.getElementById('prodNameInput').value.trim() || '商品名稱預覽';
+
+      const price = Number(document.getElementById('prodPriceInput').value) || 0;
+      const origPrice = Number(document.getElementById('prodOrigPriceInput').value) || 0;
+      document.getElementById('previewPrice').textContent = `NT$ ${price.toLocaleString()}`;
+      const origEl = document.getElementById('previewOrigPrice');
+      if (origPrice > price) {
+        origEl.style.display = 'inline';
+        origEl.textContent = `原價 NT$ ${origPrice.toLocaleString()}`;
+      } else {
+        origEl.style.display = 'none';
+      }
+
+      const dlVal = document.getElementById('deadlineCombined').value.trim();
+      const dlBadge = document.getElementById('previewDeadlineBadge');
+      if (dlVal) {
+        dlBadge.style.display = 'block';
+        dlBadge.textContent = `⏰ ${dlVal} 結單`;
+      } else {
+        dlBadge.style.display = 'none';
+      }
+
+      const isAdv = document.getElementById('specModeCheck').checked;
+      let specNames = [];
+      if (isAdv) {
+        document.querySelectorAll('#specCardsContainer .spec-name-in').forEach(inp => {
+          if (inp.value.trim()) specNames.push(inp.value.trim());
+        });
+      } else {
+        specNames = document.getElementById('simpleSpecInput').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      }
+      document.getElementById('previewSpecsText').textContent = '規格：' + (specNames.length ? specNames.join('、') : '單一規格');
+      document.getElementById('previewDescText').textContent = document.getElementById('prodDescInput').value.trim();
+    }
+
+    // =========================================================================
+    // 7. ✅ 全欄位檢查與 JSON 輸出驗證
+    // =========================================================================
+    function runFullValidationAndSubmit() {
+      const name = document.getElementById('prodNameInput').value.trim();
+      const price = Number(document.getElementById('prodPriceInput').value) || 0;
+      if (!name || price <= 0) { alert('❌ 請填寫「商品名稱」與正確的「連線代購價」！'); return; }
+      if (photosList.length === 0) { alert('❌ 請至少上傳或輸入 1 張商品照片！'); return; }
+
+      const costData = calculateCostLive();
+      const isAdvSpec = document.getElementById('specModeCheck').checked;
+      let specsResult = [];
+      if (isAdvSpec) {
+        document.querySelectorAll('#specCardsContainer .spec-card-item').forEach(r => {
+          const sName = r.querySelector('.spec-name-in').value.trim();
+          const sPrice = Number(r.querySelector('.spec-price-in').value) || price;
+          const sUnlim = r.querySelector('.spec-unlimited-in').checked;
+          const sStock = sUnlim ? 9999 : (Number(r.querySelector('.spec-stock-in').value) || 0);
+          if (sName) specsResult.push({ name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlim });
+        });
+      } else {
+        specsResult = document.getElementById('simpleSpecInput').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      }
+
+      const rawDeadline = document.getElementById('deadlineCombined').value.trim();
+      const parsedDl = parseFlexibleDeadline(rawDeadline);
+      if (rawDeadline && !parsedDl) { alert('❌ 截止時間格式有誤，請檢查後重試！'); return; }
+
+      const payload = {
+        status: "✅ 檢查全數通過，格式符合 Google 試算表要求",
+        id: document.getElementById('prodIdInput').value.trim() || "(留空自動產生)",
+        category: currentCategory,
+        name: name,
+        price: price,
+        originalPrice: Number(document.getElementById('prodOrigPriceInput').value) || 0,
+        deadlineRawInput: rawDeadline || "(依全站預設)",
+        deadlineNormalized: parsedDl ? `${parsedDl.getFullYear()}-${String(parsedDl.getMonth()+1).padStart(2,'0')}-${String(parsedDl.getDate()).padStart(2,'0')} ${String(parsedDl.getHours()).padStart(2,'0')}:${String(parsedDl.getMinutes()).padStart(2,'0')}` : "",
+        costCalc: costData,
+        specsCount: specsResult.length,
+        specs: specsResult,
+        coverImage: photosList[0].startsWith('data:') ? '[本地上傳圖片 #1]' : photosList[0],
+        totalImagesCount: photosList.length,
+        descriptionLength: document.getElementById('prodDescInput').value.trim().length + " 字"
+      };
+
+      document.getElementById('testJsonOutput').textContent = JSON.stringify(payload, null, 2);
+      document.getElementById('testResultModal').classList.add('show');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      addSpecRowItem('經典黑 S', 980, 5, false);
+      addSpecRowItem('米白色 M', 1050, 3, false);
+      renderPhotosGrid();
+      calculateCostLive();
+      updateLivePreview();
+    });
+  </script>
+</body>
+</html>
