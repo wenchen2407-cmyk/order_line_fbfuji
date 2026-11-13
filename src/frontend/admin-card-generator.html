@@ -1470,30 +1470,26 @@
               </div>
             </div>
 
-            <!-- 4. ⏰ 本次連線三大時段快捷指定結單時間 -->
-            <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+            <!-- 4. ⏰ 指定收單截止時間 (單一整合選單) -->
+            <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
-                  <span>⏰ 指定收單截止時間 (選填)</span>
-                </label>
-                <span style="font-size: 11.5px; color: #b45309;">預設空白（未指定則自動採用全站統一收單時間）</span>
-              </div>
-              
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島 (23:59止)</button>
-                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾 (23:59止)</button>
-                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本 (23:59止)</button>
-                <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 預設空白 (依全站)</button>
+                <div style="font-size: 13.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
+                  <span>⏰ 指定收單截止時間</span>
+                  <span style="font-size: 11.5px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
+                </div>
+                <button type="button" onclick="clearDeadlineCombined()" style="background: none; border: none; color: #b91c1c; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕ 清空</button>
               </div>
 
               <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="newProdDeadline" class="input-text" value="" placeholder="預設空白（例如：2026-10-06 13:30）" style="background: #fff; padding-right: 44px;" oninput="updateCreateLivePreview()">
+                <input type="text" id="newProdDeadline" class="input-text" style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b; width: 100%; border: 1.5px solid #cbd5e1;" placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" value="" oninput="handleManualCombinedInput(this.value)">
                 <div style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;" title="點擊打開單一日曆+時間選單">
                   <span style="font-size: 17px; pointer-events: none;">📅</span>
-                  <input type="datetime-local" id="nativeDateTimeInput" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="handleNativeDeadlinePicker(this.value)">
+                  <input type="datetime-local" id="nativeDateTimeInput" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="handleNativeCombinedChange(this.value)">
                 </div>
               </div>
-              <div id="deadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
+              <div id="deadlineHintText" style="font-size: 11.5px; color: #92400e; margin-top: 6px; font-weight: 700;">
+                💡 留空將自動採用「全站統一結單時間」
+              </div>
             </div>
 
             <!-- 5. 📷 商品圖片上傳區塊 (支援拖曳排序、封面標籤、多選附件、網址) -->
@@ -3587,15 +3583,79 @@
       }
     }
 
-    // ⏰ 原生日曆+時間挑選器處理
-    function handleNativeDeadlinePicker(val) {
+    // =========================================================================
+    // ⏰ 指定收單截止時間解析與雙向連動 (單一整合選單)
+    // =========================================================================
+    function parseFlexibleDeadline(str) {
+      if (!str || !String(str).trim()) return null;
+      let s = String(str).trim().replace(/年|月/g, '-').replace(/日/g, ' ').replace(/\//g, '-').replace(/\s+/g, ' ');
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      const d = new Date(s.replace(/-/g, '/'));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function updateDeadlineParseStatus(val) {
+      const statusEl = document.getElementById('deadlineHintText');
+      if (!statusEl) return;
+      if (!val || !val.trim()) {
+        statusEl.style.color = '#92400e';
+        statusEl.textContent = '💡 留空將自動採用「全站統一結單時間」';
+      } else {
+        const parsed = parseFlexibleDeadline(val);
+        if (parsed) {
+          const pad = n => String(n).padStart(2, '0');
+          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth()+1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+          statusEl.style.color = '#15803d';
+          statusEl.textContent = `✅ 系統解析正確：將於 ${fmt} 準時截單`;
+        } else {
+          statusEl.style.color = '#dc2626';
+          statusEl.textContent = '⚠️ 格式尚不完整，建議格式如：2026/11/30 15:30';
+        }
+      }
+      if (typeof updateCreateLivePreview === 'function') {
+        updateCreateLivePreview();
+      }
+    }
+
+    function handleNativeCombinedChange(val) {
       if (!val) return;
-      const formatted = val.replace('T', ' ');
+      const formatted = val.replace('T', ' ').replace(/-/g, '/');
       const input = document.getElementById('newProdDeadline');
-      const hint = document.getElementById('deadlineHintText');
       if (input) input.value = formatted;
-      if (hint) hint.textContent = `✅ 已選取時間：${formatted}`;
-      updateCreateLivePreview();
+      updateDeadlineParseStatus(formatted);
+    }
+
+    function handleManualCombinedInput(val) {
+      updateDeadlineParseStatus(val);
+      const parsed = parseFlexibleDeadline(val);
+      if (parsed) {
+        const pad = n => String(n).padStart(2, '0');
+        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+        try {
+          const picker = document.getElementById('nativeDateTimeInput');
+          if (picker) picker.value = isoVal;
+        } catch(e) {}
+      }
+    }
+
+    function clearDeadlineCombined() {
+      const input = document.getElementById('newProdDeadline');
+      const picker = document.getElementById('nativeDateTimeInput');
+      if (input) input.value = '';
+      if (picker) picker.value = '';
+      updateDeadlineParseStatus('');
+    }
+
+    // 向下相容舊版呼叫
+    function handleNativeDeadlinePicker(val) {
+      handleNativeCombinedChange(val);
+    }
+
+    function setPresetDeadline(val, label) {
+      const input = document.getElementById('newProdDeadline');
+      if (input) input.value = val;
+      updateDeadlineParseStatus(val);
     }
 
     // 🎨 即時同步右側買家視角預覽卡片
@@ -4086,7 +4146,8 @@
           document.getElementById('newProdDesc').value = '';
           document.getElementById('newProdCategory').value = '預購';
           if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
-          if (document.getElementById('deadlineHintText')) document.getElementById('deadlineHintText').textContent = '';
+          if (document.getElementById('nativeDateTimeInput')) document.getElementById('nativeDateTimeInput').value = '';
+          updateDeadlineParseStatus('');
           
           // 重設規格獨立表格
           document.getElementById('advancedSpecModeCheck').checked = false;
