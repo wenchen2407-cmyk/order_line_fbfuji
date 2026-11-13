@@ -54,7 +54,7 @@
 
     .container {
       width: 100%;
-      max-width: 1040px;
+      max-width: 1140px;
       margin: 0 auto;
       box-sizing: border-box;
       overflow-x: clip;
@@ -78,17 +78,19 @@
       margin-bottom: 6px;
     }
 
-    /* Tab 分頁標籤 */
+    /* Tab 分頁標籤 (桌機版頂部橫向導航) */
     .tabs-nav {
       display: flex;
-      background: #e2e8f0;
-      padding: 4px;
+      background: #f8fafc;
+      padding: 5px;
       border-radius: 14px;
       margin-bottom: 20px;
-      max-width: 920px;
+      max-width: 1140px;
       margin-left: auto;
       margin-right: auto;
       overflow-x: auto;
+      border: 1.5px solid var(--border);
+      gap: 6px;
     }
 
     /* ===== 🛠️ 商品資料維護專用樣式 ===== */
@@ -289,19 +291,249 @@
       padding: 10px 16px;
       border-radius: 10px;
       font-size: 14px;
-      font-weight: 700;
-      color: var(--text-muted);
+      font-weight: 800;
+      color: #64748b;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      text-align: center;
     }
-
+    .tab-btn:hover {
+      color: #1e293b;
+      background: rgba(255, 255, 255, 0.7);
+    }
     .tab-btn.active {
       background: #ffffff;
-      color: var(--text);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      color: var(--primary-dark);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
     .tab-content {
+      display: none;
+    }
+
+    
+    /* ============================================================ */
+    /* 🎨 版型 3：左編輯 ＋ 右買家即時預覽 (Layout 3) */
+    /* ============================================================ */
+    .tab-create-split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 360px);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .create-editor-column {
+      min-width: 0;
+    }
+
+    .create-preview-aside {
+      min-width: 0;
+    }
+
+    .split-sticky-box {
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding-bottom: 20px;
+      scrollbar-width: thin;
+    }
+    .split-sticky-box::-webkit-scrollbar {
+      width: 4px;
+    }
+    .split-sticky-box::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    /* 買家視角即時卡片 */
+    .line-flex-card-preview {
+      background: #ffffff;
+      border-radius: 18px;
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    }
+    .line-flex-hero {
+      width: 100%;
+      height: 210px;
+      background: #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+    .line-flex-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .line-flex-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(6, 199, 85, 0.92);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+    .line-flex-deadline-pill {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #fde047;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+    }
+    .line-flex-body {
+      padding: 14px 16px;
+    }
+    .line-flex-cta {
+      background: #06c755;
+      color: #fff;
+      text-align: center;
+      padding: 9px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 12px;
+      box-shadow: 0 3px 10px rgba(6, 199, 85, 0.25);
+    }
+
+    /* 活動分類標籤按鈕 (依據文字長度自適應，非等寬) */
+    .category-pills-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .cat-pill-btn {
+      flex: 0 0 auto;
+      width: auto;
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      color: #475569;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cat-pill-btn:hover {
+      border-color: #94a3b8;
+      background: #f1f5f9;
+    }
+    .cat-pill-btn.active {
+      background: #ecfdf5;
+      border-color: var(--primary);
+      color: #065f46;
+      box-shadow: 0 2px 8px rgba(6, 199, 85, 0.15);
+    }
+
+    /* 縮圖拖曳排序樣式 */
+    .photo-thumbs-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      min-height: 72px;
+    }
+    .thumb-item-box {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: #e2e8f0;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .thumb-item-box:active { cursor: grabbing; }
+    .thumb-item-box.dragging { opacity: 0.35; transform: scale(0.92); }
+    .thumb-item-box.drag-over, .thumb-item-box.drop-hover-target {
+      border: 2px dashed #0284c7 !important;
+      transform: scale(1.06);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+    }
+    .thumb-item-box.touch-dragging {
+      opacity: 0.88;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      border-color: #0284c7;
+    }
+    .thumb-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+    .thumb-idx-badge {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .thumb-cover-tag {
+      position: absolute;
+      bottom: 3px;
+      left: 3px;
+      right: 3px;
+      background: rgba(6, 199, 85, 0.95);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 1px 0;
+      text-align: center;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .thumb-del-icon {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 18px;
+      height: 18px;
+      background: rgba(239, 68, 68, 0.9);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      line-height: 1;
+      transition: background 0.15s ease;
+      z-index: 5;
+    }
+    .thumb-del-icon:hover { background: #dc2626; }
+
+    /* ============================================================ */
+    /* 📱 手機端底部風格 A2 懸浮膠囊島 (白底綠高亮) */
+    /* ============================================================ */
+    .style-a2-floating-bar {
       display: none;
     }
 
@@ -706,30 +938,71 @@
         word-break: break-word !important;
       }
 
-      /* Tab 列支援平滑橫向滑動，不被壓縮撐爆螢幕 */
+      /* 📱 手機端隱藏頂部橫向導航 Tab 列 */
       .tabs-nav {
+        display: none !important;
+      }
+
+      /* 📱 手機端底部固定風格 A2 懸浮膠囊島 (符合 iPhone 14 Pro 及現代手機) */
+      .style-a2-floating-bar {
+        position: fixed !important;
+        bottom: calc(12px + env(safe-area-inset-bottom, 12px)) !important;
+        left: 12px !important;
+        right: 12px !important;
+        background: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-radius: 22px !important;
+        border: 1.5px solid var(--border) !important;
+        display: grid !important;
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 3px !important;
+        padding: 5px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+        z-index: 9999 !important;
+      }
+      .style-a2-tab {
+        background: none;
+        border: none;
+        padding: 6px 2px;
+        border-radius: 14px;
         display: flex;
-        overflow-x: auto;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        padding: 4px;
-        gap: 6px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        scrollbar-width: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #64748b;
+        gap: 2px;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
       }
-      .tabs-nav::-webkit-scrollbar {
-        display: none;
+      .style-a2-tab .tab-icon {
+        font-size: 16px;
+        line-height: 1.1;
       }
-      .tab-btn {
-        flex: 0 0 auto;
-        padding: 8px 12px;
-        font-size: 12.5px;
-        border-radius: 9px;
+      .style-a2-tab .tab-text {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+      }
+      .style-a2-tab.active {
+        background: var(--primary) !important;
+        color: #ffffff !important;
+        box-shadow: 0 3px 10px rgba(6, 199, 85, 0.35) !important;
+      }
+
+      /* 容器增加底部邊距避免內容被懸浮膠囊島遮擋 */
+      .container {
+        padding-bottom: calc(85px + env(safe-area-inset-bottom, 20px)) !important;
+      }
+
+      /* 🎨 版型 3：手機版收攏為單欄，隱藏右側重複預覽 */
+      .tab-create-split-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px !important;
+      }
+      .create-preview-aside {
+        display: none !important;
       }
 
       /* 面板容器完全貼合手機寬度，阻斷子元素撐爆 */
@@ -950,13 +1223,13 @@
     <!-- 🔒 受保護的後台管理主畫面 (通過白名單驗證後才解鎖顯示) -->
     <div id="adminProtectedContent" style="display: none;">
 
-    <!-- 功能切換 Tab -->
+    <!-- 功能切換 Tab (桌機版導覽) -->
     <div class="tabs-nav">
-      <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 勾選商品發群組 (多選輪播)</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 電腦快速建檔</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabManageProducts', this)">🛠️ 商品資料維護 (批次管理)</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabNotifyCustomer', this)">📢 顧客結帳通知 (1對1免額度)</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 瀏覽統計與熱門排行</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 推播</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 建檔</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabManageProducts', this)">🛠️ 維護</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabNotifyCustomer', this)">📢 結帳</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 統計</button>
     </div>
 
     <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
@@ -1008,235 +1281,300 @@
       </div>
     </div>
 
-    <!-- ================= 分頁 2：電腦快速建檔 (寫入 Google 試算表) ================= -->
+    <!-- ================= 分頁 2：商品快速建檔 (Layout 3：左編輯 ＋ 右買家即時預覽) ================= -->
     <div id="tabCreate" class="tab-content">
-      <div class="panel" style="max-width: 720px; margin: 0 auto;">
-        <div class="panel-title">📝 新增商品至 Google 試算表商品庫</div>
-        
-        <div class="row-2">
-          <div class="form-group">
-            <label class="form-label">自訂商品編號 (選填，留空依幣別自動跳號)</label>
-            <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">活動分類標籤 *</label>
-            <select id="newProdCategory" class="input-text" style="cursor: pointer;">
-              <option value="預購">預購</option>
-              <option value="現貨">現貨</option>
-              <option value="親飛連線">親飛連線</option>
-              <option value="每週採購">每週採購</option>
-            </select>
-          </div>
-        </div>
+      <div class="tab-create-split-grid">
+        <!-- 左側編輯主區塊 -->
+        <div class="create-editor-column">
+          <div class="panel">
+            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <span>📝 新增商品至 Google 試算表商品庫</span>
+              <span style="font-size: 11px; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; font-weight: 700;">✨ 支援雙模式即時連動</span>
+            </div>
 
-        <div class="form-group">
-          <label class="form-label">商品名稱 *</label>
-          <input type="text" id="newProdName" class="input-text" placeholder="例：日本專櫃限量 帆布手提托特包">
-        </div>
-
-        <div class="row-2">
-          <div class="form-group">
-            <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
-            <input type="number" id="newProdPrice" class="input-text" placeholder="例：980" oninput="calculateCost()">
-          </div>
-          <div class="form-group">
-            <label class="form-label">專櫃原價/參考市價 (NT$)</label>
-            <input type="number" id="newProdOriginalPrice" class="input-text" placeholder="例：1280">
-          </div>
-        </div>
-
-        <!-- 🧮 連線代購成本計算機 (管理者專用內部紀錄) -->
-        <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 16px; margin: 16px 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div style="font-weight: 800; font-size: 14px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-              <span>🧮 連線代購成本計算機</span>
-              <span style="font-size: 11px; font-weight: 500; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
-            </div>
-            <button type="button" style="font-size: 12px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;" onclick="resetCostCalculator()">重置計算</button>
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px;">
-            <div>
-              <label class="form-label" style="font-size: 12px;">採購幣別</label>
-              <select id="calcCurrency" class="input-text" style="padding: 8px;" onchange="changeCurrencyPreset()">
-                <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
-                <option value="USD">🇺🇸 美金 (USD)</option>
-                <option value="KRW">🇰🇷 韓元 (KRW)</option>
-                <option value="TWD">🇹🇼 台幣 (TWD)</option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 12px;">原幣稅前金額</label>
-              <input type="number" id="calcPricePreTax" class="input-text" style="padding: 8px;" placeholder="例：3000" oninput="calculateCost()">
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 12px;">稅金 (原幣)</label>
-              <input type="number" id="calcTaxAmount" class="input-text" style="padding: 8px;" placeholder="例：300" oninput="calculateCost()">
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 12px;">採購匯率</label>
-              <input type="number" step="0.0001" id="calcExchangeRate" class="input-text" style="padding: 8px;" value="0.2200" oninput="calculateCost()">
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 12px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240元/kg</span></label>
-              <input type="number" id="calcWeight" class="input-text" style="padding: 8px;" placeholder="例：350" oninput="calculateCost()">
-            </div>
-          </div>
-
-          <!-- 計算結果看板 -->
-          <div style="background: #ffffff; border-radius: 10px; padding: 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
-            <div style="font-size: 13px; line-height: 1.6;">
-              <div>採購金額：<span id="resTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span id="resItemTwd">0</span>)</div>
-              <div>國際空運：<span id="resShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span id="resWeightG">0</span>g)</div>
-              <div style="color: #047857; font-weight: 800; font-size: 14px; margin-top: 2px;">
-                👉 總成本價：NT$ <span id="resTotalCost" style="font-size: 16px;">0</span>
+            <!-- 1. 基本資訊與價格 -->
+            <!-- 自訂商品編號 (268px寬與標籤對齊) 與 活動分類標籤 (往左移緊鄰) -->
+            <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px;">
+              <div style="flex: 0 0 auto; width: 268px; max-width: 100%;">
+                <label class="form-label" style="white-space: nowrap;">自訂商品編號 (選填，留空自動跳號)</label>
+                <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)" style="width: 100%;">
               </div>
-            </div>
-            <div style="text-align: right;">
-              <div id="resProfitBox" style="font-size: 13px; color: #4338ca; font-weight: 700; margin-bottom: 6px;">預估毛利：NT$ 0 (0%)</div>
-              <input type="hidden" id="finalCostPrice" value="0">
-              <input type="hidden" id="finalCostNote" value="">
-              <input type="hidden" id="finalCostPreTax" value="0">
-              <input type="hidden" id="finalTaxAmount" value="0">
-              <input type="hidden" id="finalCostForeign" value="0">
-              <input type="hidden" id="finalExchangeRate" value="0">
-              <input type="hidden" id="finalWeightG" value="0">
-              <input type="hidden" id="finalShippingRate" value="240">
-              <button type="button" style="background: #0f172a; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="applyCostToRecord()">📥 套用成本紀錄</button>
-            </div>
-            <div style="width: 100%; font-size: 11.5px; color: #0284c7; background: #f0f9ff; padding: 6px 10px; border-radius: 6px; border: 1px solid #bae6fd; display: flex; align-items: center; gap: 4px;">
-              <span>⚡ 試算表公式自動連動：原幣稅前金額 (Q欄) 與 稅金 (R欄) 獨立登記，並以 =ROUND((Q+R)*S + T/1000*U) 公式儲存！未來在試算表修改進貨價、稅金或重量，成本價將自動重算！</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 🏷️ 規格款式與庫存數量設定 (支援簡易逗號模式 vs 獨立規格價格與數量模式) -->
-        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
-              <span>🏷️ 規格款式、個別售價與庫存數量</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
-              <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleSpecMode()">
-              <span>啟用各規格「獨立價格」與「個別庫存」</span>
-            </label>
-          </div>
-
-          <!-- 模式 A：簡易規格模式 (共用價格與庫存) -->
-          <div id="simpleSpecBox">
-            <div class="row-2">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
-                <div style="padding: 6px 0;">
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                    <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleStockInput()">
-                    <span>連線時間不限名額跟庫存（無限接單）</span>
-                  </label>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <label class="form-label">活動分類標籤 *</label>
+                <div class="category-pills-row">
+                  <button type="button" class="cat-pill-btn active" data-cat="預購" onclick="selectCreateCategory(this, '預購')">📦 預購</button>
+                  <button type="button" class="cat-pill-btn" data-cat="現貨" onclick="selectCreateCategory(this, '現貨')">⚡ 現貨</button>
+                  <button type="button" class="cat-pill-btn" data-cat="親飛連線" onclick="selectCreateCategory(this, '親飛連線')">✈️ 親飛連線</button>
+                  <button type="button" class="cat-pill-btn" data-cat="每週採購" onclick="selectCreateCategory(this, '每週採購')">🗓️ 每週採購</button>
                 </div>
-                <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
-                <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色">
+                <input type="hidden" id="newProdCategory" value="預購">
               </div>
             </div>
-          </div>
 
-          <!-- 模式 B：進階規格表格模式 (各規格獨立定價與獨立現貨庫存) -->
-          <div id="advancedSpecBox" style="display: none;">
-            <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
-              💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
+            <div class="form-group">
+              <label class="form-label">商品名稱 *</label>
+              <input type="text" id="newProdName" class="input-text" placeholder="例：日本專櫃限量 帆布手提托特包" oninput="updateCreateLivePreview()">
             </div>
 
-            <!-- 快速批次轉換小工具 -->
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
-              <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
-              <input type="text" id="batchSpecInput" class="input-text" style="font-size: 12px; padding: 6px 10px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
-              <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddSpecs()">批次套用</button>
-            </div>
-
-            <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
-              <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="specTable">
-                <thead>
-                  <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
-                    <th style="padding: 8px 12px; font-weight: 700;">規格款式名稱 *</th>
-                    <th style="padding: 8px 12px; font-weight: 700; width: 140px;">規格售價 (NT$)</th>
-                    <th style="padding: 8px 12px; font-weight: 700; width: 140px;">現貨數量</th>
-                    <th style="padding: 8px 12px; font-weight: 700; width: 100px; text-align: center;">不限名額</th>
-                    <th style="padding: 8px 12px; font-weight: 700; width: 60px; text-align: center;">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="specTableBody">
-                  <!-- 動態列由 JavaScript 渲染 -->
-                </tbody>
-              </table>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-              <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="addSpecRow()">
-                <span>➕ 新增規格款式</span>
-              </button>
-              <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
-                📊 規格合計：0 種 ｜ 現貨庫存：0 件
+            <div class="row-2">
+              <div class="form-group">
+                <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
+                <input type="number" id="newProdPrice" class="input-text" placeholder="例：980" oninput="calculateCost(); updateCreateLivePreview();">
+              </div>
+              <div class="form-group">
+                <label class="form-label">專櫃原價/參考市價 (NT$)</label>
+                <input type="number" id="newProdOriginalPrice" class="input-text" placeholder="例：1280" oninput="updateCreateLivePreview()">
               </div>
             </div>
+
+            <!-- 2. 🧮 連線代購成本計算機 (收合展開折疊抽屜) -->
+            <div class="cost-calc-card" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px 16px; margin: 16px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="toggleCostCalcDrawer()">
+                <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                  <span>🧮 連線代購成本計算機</span>
+                  <span style="font-size: 11px; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button type="button" style="font-size: 11.5px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;" onclick="event.stopPropagation(); resetCostCalculator();">重置計算</button>
+                  <span id="costCalcArrow" style="font-size: 12px; color: #64748b; transition: transform 0.2s;">▲</span>
+                </div>
+              </div>
+
+              <div id="costCalcBody" style="margin-top: 12px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                  <div>
+                    <label class="form-label" style="font-size: 11.5px;">採購幣別</label>
+                    <select id="calcCurrency" class="input-text" style="padding: 7px 8px; font-size: 13px;" onchange="changeCurrencyPreset()">
+                      <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
+                      <option value="USD">🇺🇸 美金 (USD)</option>
+                      <option value="KRW">🇰🇷 韓元 (KRW)</option>
+                      <option value="TWD">🇹🇼 台幣 (TWD)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size: 11.5px;">原幣稅前金額</label>
+                    <input type="number" id="calcPricePreTax" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：3000" oninput="calculateCost()">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size: 11.5px;">稅金 (原幣)</label>
+                    <input type="number" id="calcTaxAmount" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：300" oninput="calculateCost()">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size: 11.5px;">採購匯率</label>
+                    <input type="number" step="0.0001" id="calcExchangeRate" class="input-text" style="padding: 7px 8px; font-size: 13px;" value="0.2200" oninput="calculateCost()">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size: 11.5px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240/kg</span></label>
+                    <input type="number" id="calcWeight" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：350" oninput="calculateCost()">
+                  </div>
+                </div>
+
+                <!-- 計算結果看板 -->
+                <div style="background: #ffffff; border-radius: 10px; padding: 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
+                  <div style="font-size: 12.5px; line-height: 1.6;">
+                    <div>採購金額：<span id="resTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span id="resItemTwd">0</span>)</div>
+                    <div>國際空運：<span id="resShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span id="resWeightG">0</span>g)</div>
+                    <div style="color: #047857; font-weight: 800; font-size: 13.5px; margin-top: 2px;">
+                      👉 總成本價：NT$ <span id="resTotalCost" style="font-size: 15px;">0</span>
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div id="resProfitBox" style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 6px;">預估毛利：NT$ 0 (0%)</div>
+                    <input type="hidden" id="finalCostPrice" value="0">
+                    <input type="hidden" id="finalCostNote" value="">
+                    <input type="hidden" id="finalCostPreTax" value="0">
+                    <input type="hidden" id="finalTaxAmount" value="0">
+                    <input type="hidden" id="finalCostForeign" value="0">
+                    <input type="hidden" id="finalExchangeRate" value="0">
+                    <input type="hidden" id="finalWeightG" value="0">
+                    <input type="hidden" id="finalShippingRate" value="240">
+                    <button type="button" style="background: #0f172a; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;" onclick="applyCostToRecord()">📥 套用成本紀錄</button>
+                  </div>
+                  <div style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 6px 8px; border-radius: 6px; border: 1px solid #bae6fd; display: flex; align-items: center; gap: 4px;">
+                    <span>⚡ 試算表公式自動連動：原幣稅前金額 (Q欄) 與 稅金 (R欄) 獨立登記，並以 =ROUND((Q+R)*S + T/1000*U) 公式儲存！未來在試算表修改進貨價、稅金或重量，成本價將自動重算！</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. 🏷️ 規格款式與庫存數量設定 -->
+            <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                  <span>🏷️ 規格款式、個別售價與庫存數量</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
+                  <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleSpecMode()">
+                  <span>啟用各規格「獨立價格」與「個別庫存」</span>
+                </label>
+              </div>
+
+              <!-- 模式 A：簡易規格模式 -->
+              <div id="simpleSpecBox">
+                <div class="row-2">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
+                    <div style="padding: 6px 0;">
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleStockInput()">
+                        <span>連線時間不限名額跟庫存（無限接單）</span>
+                      </label>
+                    </div>
+                    <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
+                    <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色" oninput="updateCreateLivePreview()">
+                  </div>
+                </div>
+              </div>
+
+              <!-- 模式 B：進階規格表格模式 -->
+              <div id="advancedSpecBox" style="display: none;">
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
+                  💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
+                </div>
+
+                <!-- 快速批次轉換小工具 -->
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
+                  <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
+                  <input type="text" id="batchSpecInput" class="input-text" style="font-size: 12px; padding: 6px 10px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
+                  <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddSpecs()">批次套用</button>
+                </div>
+
+                <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="specTable">
+                    <thead>
+                      <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
+                        <th style="padding: 8px 12px; font-weight: 700;">規格款式名稱 *</th>
+                        <th style="padding: 8px 12px; font-weight: 700; width: 140px;">規格售價 (NT$)</th>
+                        <th style="padding: 8px 12px; font-weight: 700; width: 140px;">現貨數量</th>
+                        <th style="padding: 8px 12px; font-weight: 700; width: 100px; text-align: center;">不限名額</th>
+                        <th style="padding: 8px 12px; font-weight: 700; width: 60px; text-align: center;">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="specTableBody">
+                      <!-- 動態列由 JavaScript 渲染 -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                  <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="addSpecRow()">
+                    <span>➕ 新增規格款式</span>
+                  </button>
+                  <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
+                    📊 規格合計：0 種 ｜ 現貨庫存：0 件
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. ⏰ 本次連線三大時段快捷指定結單時間 -->
+            <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                  <span>⏰ 指定收單截止時間 (選填)</span>
+                </label>
+                <span style="font-size: 11.5px; color: #b45309;">預設空白（未指定則自動採用全站統一收單時間）</span>
+              </div>
+              
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島 (23:59止)</button>
+                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾 (23:59止)</button>
+                <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本 (23:59止)</button>
+                <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 預設空白 (依全站)</button>
+              </div>
+
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="text" id="newProdDeadline" class="input-text" value="" placeholder="預設空白（例如：2026-10-06 13:30）" style="background: #fff; padding-right: 44px;" oninput="updateCreateLivePreview()">
+                <div style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;" title="點擊打開單一日曆+時間選單">
+                  <span style="font-size: 17px; pointer-events: none;">📅</span>
+                  <input type="datetime-local" id="nativeDateTimeInput" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="handleNativeDeadlinePicker(this.value)">
+                </div>
+              </div>
+              <div id="deadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
+            </div>
+
+            <!-- 5. 📷 商品圖片上傳區塊 (支援拖曳排序、封面標籤、多選附件、網址) -->
+            <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;">
+              <label class="form-label" style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
+                <span>📷 商品圖片 (附件上傳 & 網址，皆支援多張) *</span>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張將作為 LINE 卡片封面主圖</span>
+              </label>
+
+              <!-- 方式一：附件直接上傳 (多選) -->
+              <div style="margin-bottom: 10px;">
+                <label for="fileUploadInput" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                  <span>📁 點此選擇照片上傳 (可多選檔案)</span>
+                </label>
+                <input type="file" id="fileUploadInput" multiple accept="image/*" style="display: none;" onchange="handleLocalFilesSelected()">
+                <span id="uploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
+              </div>
+
+              <!-- 拖曳提示條 -->
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #0284c7; background: #f0f9ff; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd; margin-bottom: 10px;">
+                <span>✋ <b>滑鼠拖曳 或 手指長按滑動</b> 即可調整照片順序（第一張自動為封面）</span>
+                <span style="font-weight: 800;" id="photoCountDisplay">共 0 張</span>
+              </div>
+
+              <!-- 縮圖預覽清單 (支援拖曳排序) -->
+              <div id="imageThumbsContainer" class="photo-thumbs-grid"></div>
+
+              <!-- 方式二：圖片網址輸入框 (多行) -->
+              <div>
+                <label class="form-label" style="font-size: 12px;">或直接貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
+                <textarea id="newProdImageUrls" class="input-textarea" rows="2" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" oninput="handleUrlInput()"></textarea>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">商品詳細描述 / 規格說明（支援換行與條列排版）</label>
+              <textarea id="newProdDesc" class="input-textarea" rows="4" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍" oninput="updateCreateLivePreview()"></textarea>
+            </div>
+
+            <!-- 表單底部的儲存按鈕 (在手機版顯示，電腦版亦可直接點擊) -->
+            <button type="button" class="btn-action btn-secondary" id="btnSaveProduct" onclick="saveNewProduct()">
+              <span>💾 儲存並同步至 Google 試算表</span>
+            </button>
           </div>
         </div>
 
-        <!-- ⏰ 本次連線三大時段快捷指定結單時間 -->
-        <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <label class="form-label" style="font-weight: 800; color: #92400e; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
-              <span>⏰ 指定收單截止時間 (選填)</span>
-            </label>
-            <span style="font-size: 11.5px; color: #b45309;">預設空白（未指定則自動採用全站統一收單時間）</span>
+        <!-- 右側：買家視角即時預覽控制台 (版型 3 專用，桌機常駐隨畫面滾動) -->
+        <aside class="create-preview-aside">
+          <div class="split-sticky-box">
+            <div style="font-size: 13.5px; font-weight: 900; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+              <span>📱 買家視角即時預覽</span>
+              <span style="font-size: 11px; color: #059669; background: #dcfce7; padding: 2px 8px; border-radius: 10px;">即時連動第 1 張封面</span>
+            </div>
+
+            <!-- 即時 LINE / 賣場卡片 -->
+            <div class="line-flex-card-preview">
+              <div class="line-flex-hero">
+                <img id="previewHeroImg" src="" alt="封面預覽">
+                <span class="line-flex-badge" id="previewCatBadge">📦 預購</span>
+                <span class="line-flex-deadline-pill" id="previewDeadlineBadge" style="display: none;">⏰ 結單</span>
+              </div>
+              <div class="line-flex-body">
+                <div id="previewTitle" style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">商品名稱預覽</div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+                  <span style="font-size: 20px; font-weight: 900; color: #ef4444; font-family: 'Outfit', sans-serif;" id="previewPrice">NT$ 0</span>
+                  <span style="font-size: 12px; color: #94a3b8; text-decoration: line-through; display: none;" id="previewOrigPrice">原價 NT$ 0</span>
+                </div>
+                <div id="previewSpecsText" style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px;">
+                  規格：單一規格
+                </div>
+                <div id="previewDescText" style="font-size: 11.5px; color: #64748b; line-height: 1.45; white-space: pre-line; max-height: 55px; overflow: hidden;"></div>
+                <div class="line-flex-cta">🛒 立即選擇規格下單</div>
+              </div>
+            </div>
+
+            <!-- 右側即時常駐儲存按鈕 -->
+            <button type="button" class="btn-action btn-secondary" onclick="saveNewProduct()" style="margin-top: 4px; box-shadow: 0 4px 14px rgba(6, 199, 85, 0.28);">
+              <span>💾 儲存並同步至 Google 試算表</span>
+            </button>
           </div>
-          
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-02 23:59', '10/2 濟州島連線')">🍊 10/2 濟州島 (23:59止)</button>
-            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-06 23:59', '10/3-10/6 首爾連線')">🇰🇷 10/6 首爾 (23:59止)</button>
-            <button type="button" class="btn-time-preset" onclick="setPresetDeadline('2026-10-10 23:59', '10/7-10/10 日本連線')">🇯🇵 10/10 日本 (23:59止)</button>
-            <button type="button" class="btn-time-preset" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1;" onclick="setPresetDeadline('', '')">✕ 預設空白 (依全站)</button>
-          </div>
-
-          <input type="text" id="newProdDeadline" class="input-text" value="" placeholder="預設空白（例如：2026-10-06 13:30）" style="background: #fff;">
-          <div id="deadlineHintText" style="font-size: 11.5px; color: #78350f; margin-top: 4px; font-weight: 600;"></div>
-        </div>
-
-        <!-- 📷 商品圖片上傳區塊 (支援附件上傳 + 網址輸入，皆可多張) -->
-        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;">
-          <label class="form-label" style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
-            <span>📷 商品圖片 (附件上傳 & 網址，皆支援多張) *</span>
-            <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張將作為 LINE 卡片封面主圖</span>
-          </label>
-
-          <!-- 方式一：附件直接上傳 (多選) -->
-          <div style="margin-bottom: 12px;">
-            <label for="fileUploadInput" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
-              <span>📁 點此選擇照片上傳 (可多選檔案)</span>
-            </label>
-            <input type="file" id="fileUploadInput" multiple accept="image/*" style="display: none;" onchange="handleLocalFilesSelected()">
-            <span id="uploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
-          </div>
-
-          <!-- 縮圖預覽清單 -->
-          <div id="imageThumbsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;"></div>
-
-          <!-- 方式二：圖片網址輸入框 (多行) -->
-          <div>
-            <label class="form-label" style="font-size: 12px;">或直接貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
-            <textarea id="newProdImageUrls" class="input-textarea" rows="2" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" oninput="renderUrlThumbs()"></textarea>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">商品詳細描述 / 規格說明（支援換行與條列排版）</label>
-          <textarea id="newProdDesc" class="input-textarea" rows="4" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍"></textarea>
-        </div>
-
-        <button type="button" class="btn-action btn-secondary" id="btnSaveProduct" onclick="saveNewProduct()">
-          <span>💾 儲存並同步至 Google 試算表</span>
-        </button>
+        </aside>
       </div>
     </div>
 
@@ -1431,6 +1769,26 @@
         </div>
 
       </div>
+    </div>
+
+    
+    <!-- 📱 手機端底部風格 A2 懸浮膠囊島 (白底綠高亮) -->
+    <div id="mobileFloatingNav" class="style-a2-floating-bar">
+      <button type="button" class="style-a2-tab active" onclick="switchTab('tabPublish')">
+        <span class="tab-icon">📱</span><span class="tab-text">推播</span>
+      </button>
+      <button type="button" class="style-a2-tab" onclick="switchTab('tabCreate')">
+        <span class="tab-icon">💻</span><span class="tab-text">建檔</span>
+      </button>
+      <button type="button" class="style-a2-tab" onclick="switchTab('tabManageProducts')">
+        <span class="tab-icon">🛠️</span><span class="tab-text">維護</span>
+      </button>
+      <button type="button" class="style-a2-tab" onclick="switchTab('tabNotifyCustomer')">
+        <span class="tab-icon">📢</span><span class="tab-text">結帳</span>
+      </button>
+      <button type="button" class="style-a2-tab" onclick="switchTab('tabAnalytics')">
+        <span class="tab-icon">📊</span><span class="tab-text">統計</span>
+      </button>
     </div>
 
     </div><!-- /#adminProtectedContent -->
@@ -1958,11 +2316,9 @@
       }
     }
 
-    // 1. Tab 切換 (防呆強化：安全支援手動點選與程式非同步切換)
+    // 1. Tab 切換 (雙向同步桌機頂部 Tab 與手機底部膠囊島)
     function switchTab(tabId, btnElement) {
       if (!isVerifiedAdmin) return;
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
       const tabMap = { 
         'tabPublish': 0, 
@@ -1972,24 +2328,43 @@
         'tabAnalytics': 4 
       };
       const tabIdx = tabMap[tabId] !== undefined ? tabMap[tabId] : 0;
-      const allBtns = document.querySelectorAll('.tab-btn');
 
-      const activeBtn = btnElement || allBtns[tabIdx];
-      if (activeBtn) {
-        activeBtn.classList.add('active');
-        try {
-          if (typeof activeBtn.scrollIntoView === 'function') {
-            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-          }
-        } catch(e) {}
-      }
+      // 1. 桌機頂部按鈕狀態同步
+      const allDesktopBtns = document.querySelectorAll('.tabs-nav .tab-btn');
+      allDesktopBtns.forEach((btn, idx) => {
+        if (idx === tabIdx) {
+          btn.classList.add('active');
+          try {
+            if (typeof btn.scrollIntoView === 'function') {
+              btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+          } catch(e) {}
+        } else {
+          btn.classList.remove('active');
+        }
+      });
 
+      // 2. 手機底部膠囊島狀態同步
+      const allMobileTabs = document.querySelectorAll('.style-a2-floating-bar .style-a2-tab');
+      allMobileTabs.forEach((tab, idx) => {
+        if (idx === tabIdx) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      // 3. 切換主分頁內容顯示
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       const targetContent = document.getElementById(tabId);
       if (targetContent) {
         targetContent.classList.add('active');
       }
 
-      if (tabId === 'tabManageProducts') {
+      // 4. 分頁特定連動邏輯
+      if (tabId === 'tabCreate') {
+        updateCreateLivePreview();
+      } else if (tabId === 'tabManageProducts') {
         loadManageProducts();
       } else if (tabId === 'tabNotifyCustomer') {
         loadCustomerNotifyList();
@@ -3183,76 +3558,300 @@
       if (summaryElem) {
         summaryElem.textContent = `📊 規格合計：${count} 種 ｜ 現貨庫存：${hasUnlimited ? (totalStock + ' 件 (部分不限)') : (totalStock + ' 件')}`;
       }
+      if (typeof updateCreateLivePreview === 'function') {
+        updateCreateLivePreview();
+      }
     }
 
-    // ===== 9. 圖片處理 (本地附件多圖 + 網址多圖) =====
-    let localSelectedFiles = []; // 存放本地選取的 File 物件
+    
+    // 🎨 分類標籤切換
+    function selectCreateCategory(btn, val) {
+      document.querySelectorAll('.cat-pill-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const hiddenInput = document.getElementById('newProdCategory');
+      if (hiddenInput) hiddenInput.value = val;
+      updateCreateLivePreview();
+    }
+
+    // 🧮 成本計算機抽屜折疊切換
+    function toggleCostCalcDrawer() {
+      const body = document.getElementById('costCalcBody');
+      const arrow = document.getElementById('costCalcArrow');
+      if (!body) return;
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        if (arrow) arrow.textContent = '▲';
+      } else {
+        body.style.display = 'none';
+        if (arrow) arrow.textContent = '▼';
+      }
+    }
+
+    // ⏰ 原生日曆+時間挑選器處理
+    function handleNativeDeadlinePicker(val) {
+      if (!val) return;
+      const formatted = val.replace('T', ' ');
+      const input = document.getElementById('newProdDeadline');
+      const hint = document.getElementById('deadlineHintText');
+      if (input) input.value = formatted;
+      if (hint) hint.textContent = `✅ 已選取時間：${formatted}`;
+      updateCreateLivePreview();
+    }
+
+    // 🎨 即時同步右側買家視角預覽卡片
+    function updateCreateLivePreview() {
+      const imgEl = document.getElementById('previewHeroImg');
+      if (imgEl) {
+        if (typeof photosList !== 'undefined' && photosList && photosList.length > 0) {
+          imgEl.src = photosList[0].previewUrl || photosList[0].url || '';
+        } else {
+          imgEl.src = 'https://via.placeholder.com/400x240?text=尚未上傳照片';
+        }
+      }
+
+      const catVal = document.getElementById('newProdCategory')?.value || '預購';
+      const catBadge = document.getElementById('previewCatBadge');
+      if (catBadge) {
+        const iconMap = { '親飛連線': '✈️', '現貨': '⚡', '預購': '📦', '每週採購': '🗓️' };
+        catBadge.textContent = `${iconMap[catVal] || '🏷️'} ${catVal}`;
+      }
+
+      const nameVal = document.getElementById('newProdName')?.value.trim();
+      const titleEl = document.getElementById('previewTitle');
+      if (titleEl) {
+        titleEl.textContent = nameVal || '商品名稱預覽';
+      }
+
+      const priceVal = Number(document.getElementById('newProdPrice')?.value) || 0;
+      const origPriceVal = Number(document.getElementById('newProdOriginalPrice')?.value) || 0;
+      const priceEl = document.getElementById('previewPrice');
+      if (priceEl) {
+        priceEl.textContent = `NT$ ${priceVal.toLocaleString()}`;
+      }
+      const origEl = document.getElementById('previewOrigPrice');
+      if (origEl) {
+        if (origPriceVal > priceVal) {
+          origEl.style.display = 'inline';
+          origEl.textContent = `原價 NT$ ${origPriceVal.toLocaleString()}`;
+        } else {
+          origEl.style.display = 'none';
+        }
+      }
+
+      const dlVal = document.getElementById('newProdDeadline')?.value.trim();
+      const dlBadge = document.getElementById('previewDeadlineBadge');
+      if (dlBadge) {
+        if (dlVal) {
+          dlBadge.style.display = 'block';
+          dlBadge.textContent = `⏰ ${dlVal} 結單`;
+        } else {
+          dlBadge.style.display = 'none';
+        }
+      }
+
+      const isAdv = document.getElementById('advancedSpecModeCheck')?.checked;
+      let specNames = [];
+      if (isAdv) {
+        document.querySelectorAll('#specTableBody .spec-name-input').forEach(inp => {
+          if (inp.value.trim()) specNames.push(inp.value.trim());
+        });
+      } else {
+        const sInput = document.getElementById('newProdSpecs')?.value.trim();
+        if (sInput) {
+          specNames = sInput.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+        }
+      }
+      const specEl = document.getElementById('previewSpecsText');
+      if (specEl) {
+        specEl.textContent = '規格：' + (specNames.length ? specNames.join('、') : '單一規格');
+      }
+
+      const descVal = document.getElementById('newProdDesc')?.value.trim();
+      const descEl = document.getElementById('previewDescText');
+      if (descEl) {
+        descEl.textContent = descVal || '';
+      }
+    }
+
+    // ===== 9. 圖片處理 (本地附件多圖 + 網址多圖 + 拖曳排序 + 即時預覽) =====
+    let photosList = []; // 存放照片物件：{ id, type: 'file'|'url', file, url, previewUrl }
+    let dragSrcIndex = null, activeTouchItem = null, touchSrcIdx = null, currentHoverTarget = null;
+    let touchStartX = 0, touchStartY = 0, isDragMode = false;
 
     function handleLocalFilesSelected() {
       const input = document.getElementById('fileUploadInput');
       const files = (input && input.files) ? Array.from(input.files) : [];
       if (!files.length) return;
 
-      localSelectedFiles = localSelectedFiles.concat(files);
+      files.forEach(f => {
+        photosList.push({
+          id: 'f_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+          type: 'file',
+          file: f,
+          url: '',
+          previewUrl: URL.createObjectURL(f)
+        });
+      });
+
       renderAllImageThumbs();
-      document.getElementById('uploadStatusText').textContent = `已選取 ${localSelectedFiles.length} 張本機照片`;
-      // 重設 input.value，確保連續選取相同檔案或同檔名照片時均能正常觸發 onchange
       input.value = '';
     }
 
-    function removeLocalFile(idx) {
-      localSelectedFiles.splice(idx, 1);
+    function handleUrlInput() {
+      const text = document.getElementById('newProdImageUrls').value;
+      const lines = text.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 5 && !s.startsWith('[本地'));
+      
+      const fileItems = photosList.filter(p => p.type === 'file');
+      const existingUrlMap = new Map();
+      photosList.filter(p => p.type === 'url').forEach(p => existingUrlMap.set(p.url, p));
+
+      const urlItems = lines.map(u => {
+        if (existingUrlMap.has(u)) return existingUrlMap.get(u);
+        return {
+          id: 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+          type: 'url',
+          file: null,
+          url: u,
+          previewUrl: u
+        };
+      });
+
+      photosList = [...fileItems, ...urlItems];
       renderAllImageThumbs();
-      document.getElementById('uploadStatusText').textContent = localSelectedFiles.length ? `已選取 ${localSelectedFiles.length} 張本機照片` : '';
-      const input = document.getElementById('fileUploadInput');
-      if (input) input.value = '';
     }
 
     function renderUrlThumbs() {
+      handleUrlInput();
+    }
+
+    function removePhotoItem(idx) {
+      const item = photosList[idx];
+      if (item && item.type === 'file' && item.previewUrl) {
+        try { URL.revokeObjectURL(item.previewUrl); } catch(e) {}
+      }
+      photosList.splice(idx, 1);
+      syncUrlTextarea();
       renderAllImageThumbs();
     }
 
-    function getEnteredUrlList() {
-      const raw = document.getElementById('newProdImageUrls').value;
-      return raw.split(/[\n,]/).map(u => u.trim()).filter(u => u.startsWith('http'));
+    function syncUrlTextarea() {
+      const textarea = document.getElementById('newProdImageUrls');
+      if (textarea && document.activeElement !== textarea) {
+        const urlsOnly = photosList.filter(p => p.type === 'url').map(p => p.url);
+        textarea.value = urlsOnly.join('\n');
+      }
     }
 
     function renderAllImageThumbs() {
       const container = document.getElementById('imageThumbsContainer');
+      const statusText = document.getElementById('uploadStatusText');
+      const countDisplay = document.getElementById('photoCountDisplay');
+      if (!container) return;
+
       container.innerHTML = '';
+      const fileCount = photosList.filter(p => p.type === 'file').length;
+      if (statusText) {
+        statusText.textContent = fileCount > 0 ? `已選取 ${fileCount} 張本機照片` : '';
+      }
+      if (countDisplay) {
+        countDisplay.textContent = `共 ${photosList.length} 張`;
+      }
 
-      // 1. 本地照片預覽
-      localSelectedFiles.forEach((file, idx) => {
-        const thumbBox = document.createElement('div');
-        thumbBox.style.cssText = 'position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1.5px solid #0284c7; background:#e0f2fe;';
-        
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;';
-        closeBtn.onclick = () => removeLocalFile(idx);
+      photosList.forEach((item, idx) => {
+        const box = document.createElement('div');
+        box.className = 'thumb-item-box';
+        box.draggable = true;
+        box.dataset.index = idx;
 
-        thumbBox.appendChild(img);
-        thumbBox.appendChild(closeBtn);
-        container.appendChild(thumbBox);
+        box.innerHTML = `
+          <img src="${item.previewUrl || item.url}" class="thumb-img" alt="商品圖 ${idx + 1}" onerror="this.src='https://via.placeholder.com/72?text=Error'">
+          <span class="thumb-idx-badge">#${idx + 1}</span>
+          ${idx === 0 ? '<span class="thumb-cover-tag">🌟 封面</span>' : ''}
+          <span class="thumb-del-icon" onclick="event.stopPropagation(); removePhotoItem(${idx});" title="刪除照片">✕</span>
+        `;
+
+        // 手機觸控拖曳
+        box.addEventListener('touchstart', (e) => {
+          if (e.target.closest('.thumb-del-icon')) return;
+          const touch = e.touches[0];
+          touchStartX = touch.clientX; touchStartY = touch.clientY;
+          activeTouchItem = box; touchSrcIdx = idx; currentHoverTarget = null; isDragMode = false;
+        }, { passive: false });
+
+        box.addEventListener('touchmove', (e) => {
+          if (!activeTouchItem || activeTouchItem !== box) return;
+          const touch = e.touches[0];
+          const dx = touch.clientX - touchStartX, dy = touch.clientY - touchStartY;
+          if (!isDragMode && Math.hypot(dx, dy) > 8) {
+            isDragMode = true;
+            activeTouchItem.classList.add('touch-dragging');
+            if (navigator.vibrate) navigator.vibrate(30);
+          }
+          if (isDragMode) {
+            if (e.cancelable) e.preventDefault();
+            activeTouchItem.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.08)`;
+            activeTouchItem.style.zIndex = '100';
+            activeTouchItem.style.pointerEvents = 'none';
+            const under = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeTouchItem.style.pointerEvents = '';
+            const targetCard = under ? under.closest('.thumb-item-box') : null;
+            document.querySelectorAll('.thumb-item-box').forEach(b => {
+              if (b !== activeTouchItem) b.classList.remove('drop-hover-target');
+            });
+            if (targetCard && targetCard !== activeTouchItem) {
+              targetCard.classList.add('drop-hover-target');
+              currentHoverTarget = targetCard;
+            } else { currentHoverTarget = null; }
+          }
+        }, { passive: false });
+
+        const finishTouch = () => {
+          if (!activeTouchItem || activeTouchItem !== box) return;
+          if (isDragMode && currentHoverTarget) {
+            const toIdx = parseInt(currentHoverTarget.dataset.index);
+            if (!isNaN(touchSrcIdx) && !isNaN(toIdx) && touchSrcIdx !== toIdx) {
+              const moved = photosList.splice(touchSrcIdx, 1)[0];
+              photosList.splice(toIdx, 0, moved);
+            }
+          }
+          if (activeTouchItem) {
+            activeTouchItem.classList.remove('touch-dragging');
+            activeTouchItem.style.transform = '';
+            activeTouchItem.style.zIndex = '';
+          }
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drop-hover-target'));
+          activeTouchItem = null; touchSrcIdx = null; currentHoverTarget = null; isDragMode = false;
+          renderAllImageThumbs();
+        };
+        box.addEventListener('touchend', finishTouch);
+        box.addEventListener('touchcancel', finishTouch);
+
+        // 電腦滑鼠 HTML5 Drag & Drop
+        box.addEventListener('dragstart', (e) => {
+          dragSrcIndex = idx; box.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+        });
+        box.addEventListener('dragover', (e) => {
+          e.preventDefault(); e.dataTransfer.dropEffect = 'move'; box.classList.add('drag-over');
+        });
+        box.addEventListener('dragleave', () => box.classList.remove('drag-over'));
+        box.addEventListener('drop', (e) => {
+          e.preventDefault(); box.classList.remove('drag-over');
+          if (dragSrcIndex !== null && dragSrcIndex !== idx) {
+            const movedItem = photosList.splice(dragSrcIndex, 1)[0];
+            photosList.splice(idx, 0, movedItem);
+            renderAllImageThumbs();
+          }
+        });
+        box.addEventListener('dragend', () => {
+          box.classList.remove('dragging');
+          document.querySelectorAll('.thumb-item-box').forEach(b => b.classList.remove('drag-over'));
+        });
+
+        container.appendChild(box);
       });
 
-      // 2. 網址照片預覽
-      const urls = getEnteredUrlList();
-      urls.forEach(url => {
-        const thumbBox = document.createElement('div');
-        thumbBox.style.cssText = 'position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1.5px solid #059b43; background:#eefbf3;';
-        
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
-        
-        thumbBox.appendChild(img);
-        container.appendChild(thumbBox);
-      });
+      syncUrlTextarea();
+      updateCreateLivePreview();
     }
 
     // 智慧 Canvas 圖片壓縮 (將幾 MB 大圖壓縮成 100~200KB 高清 JPEG，杜絕網路連線逾時中斷)
@@ -3325,8 +3924,7 @@
       }
 
       // 檢查圖片來源
-      const urlImages = getEnteredUrlList();
-      if (localSelectedFiles.length === 0 && urlImages.length === 0) {
+      if (photosList.length === 0) {
         alert('請至少上傳 1 張照片，或輸入 1 個圖片網址！');
         return;
       }
@@ -3335,15 +3933,14 @@
       saveBtn.disabled = true;
 
       try {
-        let finalImageUrls = [...urlImages];
-
         // 若有本地上傳的檔案，先經 Canvas 高效壓縮後透過 GAS 上傳至 Google Drive
-        if (localSelectedFiles.length > 0) {
-          saveBtn.textContent = `⚡ 正在自動壓縮 ${localSelectedFiles.length} 張圖片...`;
+        const fileItems = photosList.filter(p => p.type === 'file');
+        if (fileItems.length > 0) {
+          saveBtn.textContent = `⚡ 正在自動壓縮 ${fileItems.length} 張圖片...`;
           const base64Files = [];
-          for (let i = 0; i < localSelectedFiles.length; i++) {
-            saveBtn.textContent = `⚡ 正在壓縮圖片 (${i + 1}/${localSelectedFiles.length})...`;
-            const comp = await compressImage(localSelectedFiles[i]);
+          for (let i = 0; i < fileItems.length; i++) {
+            saveBtn.textContent = `⚡ 正在壓縮圖片 (${i + 1}/${fileItems.length})...`;
+            const comp = await compressImage(fileItems[i].file);
             base64Files.push(comp);
           }
 
@@ -3370,13 +3967,27 @@
           }
 
           if (uploadResult.success && uploadResult.urls && uploadResult.urls.length > 0) {
-            finalImageUrls = uploadResult.urls.concat(finalImageUrls);
+            let uIdx = 0;
+            photosList.forEach(p => {
+              if (p.type === 'file' && uIdx < uploadResult.urls.length) {
+                p.url = uploadResult.urls[uIdx++];
+              }
+            });
           } else {
             alert('⚠️ 圖片上傳至 Google Drive 失敗：' + (uploadResult.message || '未知錯誤') + '\n\n💡 請確認您是否已將最新版的 Code.gs 複製至 Google Apps Script 並重新發布為「新版本」！');
             saveBtn.disabled = false;
             saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
             return;
           }
+        }
+
+        // 依使用者調整後的排列順序產生 finalImageUrls
+        const finalImageUrls = photosList.map(p => p.url).filter(Boolean);
+        if (finalImageUrls.length === 0) {
+          alert('圖片網址處理異常，請重新選取圖片！');
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
+          return;
         }
 
         saveBtn.textContent = '正在寫入商品資料庫...';
@@ -3485,12 +4096,18 @@
           updateSpecSummary();
 
           // 徹底重設本地照片佇列、上傳 input 檔案與狀態文字
-          localSelectedFiles = [];
+          photosList = [];
           const fileInput = document.getElementById('fileUploadInput');
           if (fileInput) fileInput.value = '';
+          const urlsInput = document.getElementById('newProdImageUrls');
+          if (urlsInput) urlsInput.value = '';
           const statusText = document.getElementById('uploadStatusText');
           if (statusText) statusText.textContent = '';
           renderAllImageThumbs();
+          document.querySelectorAll('.cat-pill-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-cat') === '預購');
+          });
+          updateCreateLivePreview();
           resetCostCalculator();
           
           // ⚡ 樂觀秒加（Optimistic UI）：結合前端完整欄位與後端回傳的 ID，確保即便 GAS 部署舊版也能完美呈現！
@@ -3549,9 +4166,16 @@
     function setPresetDeadline(val, label) {
       const input = document.getElementById('newProdDeadline');
       const hint = document.getElementById('deadlineHintText');
+      const nativePicker = document.getElementById('nativeDateTimeInput');
       if (input) input.value = val;
       if (hint) {
         hint.textContent = val ? `✅ 已套用：【${label}】指定收單截止時間 ${val}` : '已設為預設空白（自動依照全站系統統一收單時間）';
+      }
+      if (nativePicker && val) {
+        nativePicker.value = val.replace(' ', 'T');
+      }
+      if (typeof updateCreateLivePreview === 'function') {
+        updateCreateLivePreview();
       }
     }
 
