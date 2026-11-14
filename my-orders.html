@@ -1232,6 +1232,7 @@
 
         const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
         const uname = (currentUserName && currentUserName !== '訪客') ? currentUserName : (urlParams.get('name') || '');
+        const deviceType = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置';
 
         const payload = {
           action: 'recordPageView',
@@ -1240,7 +1241,8 @@
             title: pageTitle || '📦 買家查單連結入口 (?action=orders)',
             productId: productId || '-',
             userId: uid,
-            userName: uname
+            userName: uname,
+            device: deviceType
           }
         };
 
@@ -2414,7 +2416,9 @@
             action: 'confirmReceived',
             data: { 
               userId: currentUserId,
-              checkoutId: targetCheckoutId
+              userName: (currentUserName && currentUserName !== '訪客') ? currentUserName : (currentUserProfile && currentUserProfile.userName) || '',
+              checkoutId: targetCheckoutId,
+              device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
             }
           })
         });
@@ -2721,7 +2725,8 @@
           recipientName: name,
           recipientPhone: phone.replace(/[-\s]/g, ''),
           recipientAddress: address,
-          note: note
+          note: note,
+          device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
         }
       };
 
@@ -2859,10 +2864,12 @@
         action: 'reportPayment',
         data: {
           userId: currentUserId,
+          userName: (currentUserName && currentUserName !== '訪客') ? currentUserName : (currentUserProfile && currentUserProfile.userName) || '',
           payMethod: payMethod,
           transferTime: payTime,
           lastFiveDigits: lastFive,
-          note: note
+          note: note,
+          device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
         }
       };
 

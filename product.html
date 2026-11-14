@@ -1350,6 +1350,7 @@
 
         const uid = (currentUser && currentUser.userId && currentUser.userId !== 'TEST_USER_999') ? currentUser.userId : (urlParams.get('uid') || '');
         const uname = (currentUser && currentUser.displayName && currentUser.displayName !== '訪客預覽') ? currentUser.displayName : (urlParams.get('name') || '');
+        const deviceType = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置';
 
         const payload = {
           action: 'recordPageView',
@@ -1358,7 +1359,8 @@
             title: pageTitle || (document.title || '商品內頁'),
             productId: productId || '-',
             userId: uid,
-            userName: uname
+            userName: uname,
+            device: deviceType
           }
         };
 
@@ -1869,7 +1871,9 @@
                 userName: lineName,
                 realName: realName,
                 phone: cleanPhone,
-                source: source
+                source: source,
+                page: 'product.html (VIP守門牆)',
+                device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
               }
             })
           });
@@ -1966,7 +1970,9 @@
                 userName: lineName,
                 realName: realName,
                 phone: cleanPhone,
-                source: source
+                source: source,
+                page: 'product.html (VIP守門牆)',
+                device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
               }
             })
           });
@@ -2023,7 +2029,8 @@
           realName: profile.realName,
           phone: profile.phone,
           source: profile.source || '',
-          note: note
+          note: note,
+          device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
         }
       };
 

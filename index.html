@@ -973,7 +973,9 @@
                 userName: lineName,
                 realName: realName,
                 phone: cleanPhone,
-                source: source
+                source: source,
+                page: 'index.html (VIP守門牆)',
+                device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
               }
             })
           });
@@ -1055,6 +1057,7 @@
 
         const uname = (document.getElementById('userNameText') ? document.getElementById('userNameText').textContent : '') || (urlParams.get('name') || '');
         const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
+        const deviceType = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置';
 
         const payload = {
           action: 'recordPageView',
@@ -1063,7 +1066,8 @@
             title: pageTitle || '🇯🇵🇰🇷 連線商品大廳首頁',
             productId: productId || '-',
             userId: uid,
-            userName: (uname !== '訪客' && uname !== '載入中...') ? uname : ''
+            userName: (uname !== '訪客' && uname !== '載入中...') ? uname : '',
+            device: deviceType
           }
         };
 
