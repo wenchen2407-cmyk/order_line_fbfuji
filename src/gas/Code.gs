@@ -161,10 +161,10 @@ function setupSpreadsheet() {
     console.warn('建立下拉選單略過:', e);
   }
 
-  // 3. 顧客歸戶表 (升級為 16 欄規格：完整記錄會員動態、加入時間、最後進站、消費與偏好)
+  // 3. 顧客歸戶表 (升級為 17 欄規格：完整記錄會員動態、進站天數、商品頁面瀏覽次數、消費、選單設定)
   const custHeaders = [
     'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-    '最後進站時間', '最後瀏覽商品/頁面', '進站累計次數', '歷史訂單數', '總消費金額', 
+    '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
     '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
   ];
   let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
@@ -182,9 +182,43 @@ function setupSpreadsheet() {
   custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式防止開頭 0 丟失
   custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
   custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
-  custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計次數
-  custSheet.getRange("I:I").setNumberFormat('#,##0'); // 歷史訂單數
-  custSheet.getRange("J:J").setNumberFormat('NT$ #,##0'); // 總消費金額
+  custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數 (以日計)
+  custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數 (累計PV)
+  custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
+  custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
+
+  // 3.1 為【顧客歸戶】建立下拉選單 (會員等級、顧客生命狀態、顧客來源、黑名單標記)
+  try {
+    // L 欄 (第12欄): 會員等級
+    const tierRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
+      .setAllowInvalid(true)
+      .build();
+    custSheet.getRange("L2:L2000").setDataValidation(tierRule);
+
+    // M 欄 (第13欄): 顧客生命狀態
+    const lifeRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
+      .setAllowInvalid(true)
+      .build();
+    custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
+
+    // N 欄 (第14欄): 顧客來源
+    const sourceRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
+      .setAllowInvalid(true)
+      .build();
+    custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
+
+    // P 欄 (第16欄): 黑名單標記
+    const blacklistRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
+      .setAllowInvalid(true)
+      .build();
+    custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
+  } catch (valErr) {
+    console.warn('建立顧客表下拉選單略過:', valErr);
+  }
 
   // 3.1 會員動態歷程 Log (安全稽核流水帳：不可竄改之全生命週期動態軌跡)
   const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
@@ -541,12 +575,14 @@ function ensureOrderAndCustomerSchema(ss, orderSheet, custSheet) {
     }
     if (cSheet && !needsUpgrade) {
       const cCols = cSheet.getLastColumn();
-      if (cCols < 16) {
+      if (cCols < 17) {
         needsUpgrade = true;
       } else {
         const eHeader = String(cSheet.getRange(1, 5).getValue() || '').trim();
         const fHeader = String(cSheet.getRange(1, 6).getValue() || '').trim();
-        if (eHeader !== '加入會員時間' || fHeader !== '最後進站時間') {
+        const hHeader = String(cSheet.getRange(1, 8).getValue() || '').trim();
+        const iHeader = String(cSheet.getRange(1, 9).getValue() || '').trim();
+        if (eHeader !== '加入會員時間' || fHeader !== '最後進站時間' || !hHeader.includes('天數') || iHeader !== '商品與頁面瀏覽次數') {
           needsUpgrade = true;
         }
       }
@@ -580,12 +616,6 @@ function upgradeOrderAndCustomerSheets(targetSs) {
     '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
   ];
 
-  const custHeaders = [
-    'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-    '最後進站時間', '最後瀏覽商品/頁面', '進站累計次數', '歷史訂單數', '總消費金額', 
-    '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-  ];
-
   const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
 
   // 1. 確保【會員動態Log】安全稽核軌跡表存在
@@ -613,71 +643,101 @@ function upgradeOrderAndCustomerSheets(targetSs) {
     orderSheet.getRange("X:X").setNumberFormat('@');
   }
 
-  // 3. 升級【顧客歸戶】為 16 欄 (無損平滑資料遷移)
+  // 3. 升級【顧客歸戶】為 17 欄 (無損平滑資料遷移：進站天數、商品瀏覽次數、下拉選單)
+  const custHeaders = [
+    'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+    '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+    '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+  ];
+
   if (custSheet) {
     const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
     const custLastRow = custSheet.getLastRow();
     const custLastCol = custSheet.getLastColumn();
 
-    // 讀取既有表頭判斷是否需遷移舊格式
     let rawHeaders = [];
     if (custLastCol > 0) {
       rawHeaders = custSheet.getRange(1, 1, 1, custLastCol).getValues()[0].map(h => String(h || '').trim());
     }
 
-    const isAlready16 = custLastCol >= 16 && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間';
+    const isAlready17 = custLastCol >= 17 && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間' && rawHeaders[8] === '商品與頁面瀏覽次數';
 
-    if (!isAlready16 && custLastRow > 1) {
-      // 舊格式無損遷移至 16 欄全新架構
+    if (!isAlready17 && custLastRow > 1) {
+      const is16Col = (custLastCol === 16 || rawHeaders.length === 16) && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間';
       const oldValues = custSheet.getRange(2, 1, custLastRow - 1, custLastCol).getValues();
-      const idxUid = rawHeaders.indexOf('LINE_User_ID');
-      const idxNick = rawHeaders.indexOf('最新暱稱');
-      const idxRealName = rawHeaders.indexOf('真實姓名');
-      const idxPhone = rawHeaders.indexOf('電話');
-      const idxOldAddr = rawHeaders.indexOf('常用寄送地址');
-      const idxOrderCount = rawHeaders.indexOf('歷史訂單數');
-      const idxSpend = rawHeaders.indexOf('總消費金額');
-      const idxFirstBuy = rawHeaders.indexOf('首購日期');
-      const idxLastOrder = rawHeaders.indexOf('最後下單日期');
-      const idxBlacklist = rawHeaders.indexOf('黑名單標記');
-      const idxSource = rawHeaders.indexOf('顧客來源');
-      const idxRecipName = rawHeaders.indexOf('最近收件人姓名');
-      const idxRecipPhone = rawHeaders.indexOf('最近收件人電話');
-
       const migratedRows = [];
-      for (let r = 0; r < oldValues.length; r++) {
-        const row = oldValues[r];
-        const uid = idxUid !== -1 ? String(row[idxUid] || '').trim() : String(row[0] || '').trim();
-        if (!uid) continue;
 
-        const nick = idxNick !== -1 ? String(row[idxNick] || '').trim() : String(row[1] || '').trim();
-        const realName = idxRealName !== -1 ? String(row[idxRealName] || '').trim() : String(row[2] || '').trim();
-        const phone = idxPhone !== -1 ? formatPhoneAsText(row[idxPhone]) : formatPhoneAsText(row[3]);
-        const firstBuy = idxFirstBuy !== -1 ? row[idxFirstBuy] : '';
-        const lastOrder = idxLastOrder !== -1 ? row[idxLastOrder] : '';
-        const joinedAt = firstBuy || lastOrder || nowStr;
-        const lastVisitAt = lastOrder || firstBuy || nowStr;
-        const lastViewed = '';
-        const orderCount = idxOrderCount !== -1 ? (Number(row[idxOrderCount]) || 0) : (Number(row[5]) || 0);
-        const spend = idxSpend !== -1 ? (Number(row[idxSpend]) || 0) : (Number(row[6]) || 0);
-        const visitCount = Math.max(1, orderCount > 0 ? orderCount * 2 : 1);
-        const tier = spend >= 10000 ? 'VVIP' : (spend >= 3000 ? 'VIP' : '一般會員');
-        const lifeStatus = '🟢 活躍';
-        const source = idxSource !== -1 ? String(row[idxSource] || '') : (String(row[10] || ''));
-        const oldAddr = idxOldAddr !== -1 ? String(row[idxOldAddr] || '') : (String(row[4] || ''));
-        const recipName = idxRecipName !== -1 ? String(row[idxRecipName] || '') : (String(row[11] || ''));
-        const recipPhone = idxRecipPhone !== -1 ? String(row[idxRecipPhone] || '') : (String(row[12] || ''));
-        const defaultStore = oldAddr || (recipName ? `${recipName} ${recipPhone}`.trim() : '');
-        const blacklist = idxBlacklist !== -1 ? (String(row[idxBlacklist] || '正常')) : '正常';
-        const notes = '';
+      if (is16Col) {
+        // 從 16 欄升級至 17 欄：在第 8 欄 (進站累計次數) 後方插入「商品與頁面瀏覽次數」
+        for (let r = 0; r < oldValues.length; r++) {
+          const row = oldValues[r];
+          const uid = String(row[0] || '').trim();
+          if (!uid) continue;
+          const visitDays = Number(row[7]) || 1;
+          const pageViews = Math.max(visitDays, Number(row[8]) > 0 ? Number(row[8]) : visitDays);
+          migratedRows.push([
+            row[0], row[1], row[2], formatPhoneAsText(row[3]), row[4],
+            row[5], row[6], visitDays, pageViews,
+            Number(row[8]) || 0,   // 歷史訂單數
+            Number(row[9]) || 0,   // 總消費金額
+            row[10] || '一般會員', // 會員等級
+            row[11] || '🟢 活躍',  // 顧客生命狀態
+            row[12] || '',         // 顧客來源
+            row[13] || '',         // 常用超商取件門市
+            row[14] || '正常',     // 黑名單標記
+            row[15] || ''          // 賣家管理備註/標籤
+          ]);
+        }
+      } else {
+        // 從舊版 13 欄無損遷移至 17 欄全新架構
+        const idxUid = rawHeaders.indexOf('LINE_User_ID');
+        const idxNick = rawHeaders.indexOf('最新暱稱');
+        const idxRealName = rawHeaders.indexOf('真實姓名');
+        const idxPhone = rawHeaders.indexOf('電話');
+        const idxOldAddr = rawHeaders.indexOf('常用寄送地址');
+        const idxOrderCount = rawHeaders.indexOf('歷史訂單數');
+        const idxSpend = rawHeaders.indexOf('總消費金額');
+        const idxFirstBuy = rawHeaders.indexOf('首購日期');
+        const idxLastOrder = rawHeaders.indexOf('最後下單日期');
+        const idxBlacklist = rawHeaders.indexOf('黑名單標記');
+        const idxSource = rawHeaders.indexOf('顧客來源');
+        const idxRecipName = rawHeaders.indexOf('最近收件人姓名');
+        const idxRecipPhone = rawHeaders.indexOf('最近收件人電話');
 
-        migratedRows.push([
-          uid, nick, realName, phone, joinedAt, lastVisitAt, lastViewed, visitCount,
-          orderCount, spend, tier, lifeStatus, source, defaultStore, blacklist, notes
-        ]);
+        for (let r = 0; r < oldValues.length; r++) {
+          const row = oldValues[r];
+          const uid = idxUid !== -1 ? String(row[idxUid] || '').trim() : String(row[0] || '').trim();
+          if (!uid) continue;
+
+          const nick = idxNick !== -1 ? String(row[idxNick] || '').trim() : String(row[1] || '').trim();
+          const realName = idxRealName !== -1 ? String(row[idxRealName] || '').trim() : String(row[2] || '').trim();
+          const phone = idxPhone !== -1 ? formatPhoneAsText(row[idxPhone]) : formatPhoneAsText(row[3]);
+          const firstBuy = idxFirstBuy !== -1 ? row[idxFirstBuy] : '';
+          const lastOrder = idxLastOrder !== -1 ? row[idxLastOrder] : '';
+          const joinedAt = firstBuy || lastOrder || nowStr;
+          const lastVisitAt = lastOrder || firstBuy || nowStr;
+          const lastViewed = '';
+          const orderCount = idxOrderCount !== -1 ? (Number(row[idxOrderCount]) || 0) : (Number(row[5]) || 0);
+          const spend = idxSpend !== -1 ? (Number(row[idxSpend]) || 0) : (Number(row[6]) || 0);
+          const visitDays = Math.max(1, orderCount > 0 ? orderCount : 1);
+          const pageViews = Math.max(visitDays, orderCount > 0 ? orderCount * 3 : 1);
+          const tier = spend >= 10000 ? 'VVIP' : (spend >= 3000 ? 'VIP' : '一般會員');
+          const lifeStatus = '🟢 活躍';
+          const source = idxSource !== -1 ? String(row[idxSource] || '') : (String(row[10] || ''));
+          const oldAddr = idxOldAddr !== -1 ? String(row[idxOldAddr] || '') : (String(row[4] || ''));
+          const recipName = idxRecipName !== -1 ? String(row[idxRecipName] || '') : (String(row[11] || ''));
+          const recipPhone = idxRecipPhone !== -1 ? String(row[idxRecipPhone] || '') : (String(row[12] || ''));
+          const defaultStore = oldAddr || (recipName ? `${recipName} ${recipPhone}`.trim() : '');
+          const blacklist = idxBlacklist !== -1 ? (String(row[idxBlacklist] || '正常')) : '正常';
+          const notes = '';
+
+          migratedRows.push([
+            uid, nick, realName, phone, joinedAt, lastVisitAt, lastViewed, visitDays, pageViews,
+            orderCount, spend, tier, lifeStatus, source, defaultStore, blacklist, notes
+          ]);
+        }
       }
 
-      // 清空舊內容並套用 16 欄新規格
       custSheet.clearContents();
       const curCols = custSheet.getMaxColumns();
       if (curCols < custHeaders.length) {
@@ -688,7 +748,6 @@ function upgradeOrderAndCustomerSheets(targetSs) {
         custSheet.getRange(2, 1, migratedRows.length, custHeaders.length).setValues(migratedRows);
       }
     } else {
-      // 確保欄位數達到 16 欄並重設表頭
       const curCols = custSheet.getMaxColumns();
       if (curCols < custHeaders.length) {
         custSheet.insertColumnsAfter(curCols, custHeaders.length - curCols);
@@ -700,9 +759,35 @@ function upgradeOrderAndCustomerSheets(targetSs) {
     custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式
     custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
     custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
-    custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計次數
-    custSheet.getRange("I:I").setNumberFormat('#,##0'); // 歷史訂單數
-    custSheet.getRange("J:J").setNumberFormat('NT$ #,##0'); // 總消費金額
+    custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數
+    custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數
+    custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
+    custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
+
+    // 建立下拉選單驗證
+    try {
+      const tierRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
+        .setAllowInvalid(true).build();
+      custSheet.getRange("L2:L2000").setDataValidation(tierRule);
+
+      const lifeRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
+        .setAllowInvalid(true).build();
+      custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
+
+      const sourceRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
+        .setAllowInvalid(true).build();
+      custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
+
+      const blacklistRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
+        .setAllowInvalid(true).build();
+      custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
+    } catch (valErr) {
+      console.warn('建立下拉選單略過:', valErr);
+    }
   }
 
   if (!orderSheet || !custSheet) {
@@ -716,7 +801,7 @@ function upgradeOrderAndCustomerSheets(targetSs) {
   const custMap = {};
   let custValues = [];
   if (custLastRow > 1) {
-    custValues = custSheet.getRange(2, 1, custLastRow - 1, 16).getValues();
+    custValues = custSheet.getRange(2, 1, custLastRow - 1, 17).getValues();
     for (let c = 0; c < custValues.length; c++) {
       const uid = String(custValues[c][0] || '').trim();
       if (uid) {
@@ -724,7 +809,7 @@ function upgradeOrderAndCustomerSheets(targetSs) {
           rowIdx: c,
           realName: String(custValues[c][2] || '').trim(),
           phone: String(custValues[c][3] || '').trim(),
-          defaultStore: String(custValues[c][13] || '').trim()
+          defaultStore: String(custValues[c][14] || '').trim()
         };
       }
     }
@@ -825,7 +910,7 @@ function upgradeOrderAndCustomerSheets(targetSs) {
     }
   }
 
-  // 4. 將已結帳包裹之門市/地址回填至【顧客歸戶】常用超商取件門市 (第 14 欄 N)
+  // 4. 將已結帳包裹之門市/地址回填至【顧客歸戶】常用超商取件門市 (第 15 欄 O)
   if (custLastRow > 1 && custValues.length > 0) {
     let custModified = false;
     for (let c = 0; c < custValues.length; c++) {
@@ -834,8 +919,8 @@ function upgradeOrderAndCustomerSheets(targetSs) {
 
       const latestRecip = latestCheckoutRecipByUid[uid];
       if (latestRecip && latestRecip.deliveryAddress) {
-        if (!String(custValues[c][13] || '').trim()) {
-          custValues[c][13] = latestRecip.deliveryAddress; // 第 14 欄 (N): 常用超商取件門市
+        if (!String(custValues[c][14] || '').trim()) {
+          custValues[c][14] = latestRecip.deliveryAddress; // 第 15 欄 (O): 常用超商取件門市
           custModified = true;
         }
       }
@@ -859,16 +944,16 @@ function upgradeOrderAndCustomerSheets(targetSs) {
     }
 
     if (custModified) {
-      custSheet.getRange(2, 1, custValues.length, 16).setValues(custValues);
+      custSheet.getRange(2, 1, custValues.length, 17).setValues(custValues);
       custSheet.getRange("D:D").setNumberFormat('@');
     }
   }
 
   // 5. 寫入升級成功安全 Log
-  logCustomerActivity('SYSTEM', '系統維護', '🔄 結構升級', '成功升級【顧客歸戶】為 16 欄全新架構，並建立【會員動態Log】安全稽核軌跡表', 'upgradeOrderAndCustomerSheets', 'GAS Server');
+  logCustomerActivity('SYSTEM', '系統維護', '🔄 結構升級', '成功升級【顧客歸戶】為 17 欄全新架構 (含進站累計天數、商品瀏覽次數與下拉選單)，並建立【會員動態Log】安全稽核軌跡表', 'upgradeOrderAndCustomerSheets', 'GAS Server');
 
   SpreadsheetApp.flush();
-  return '✅ 已完成【訂單明細】(24欄)、【顧客歸戶】(16欄升級) 與【會員動態Log】安全歷程表建立！';
+  return '✅ 已完成【訂單明細】(24欄)、【顧客歸戶】(17欄升級) 與【會員動態Log】安全歷程表建立！';
 }
 
 
@@ -1364,15 +1449,17 @@ function checkCustomerExists(userId) {
           joinedAt: data[i][4] instanceof Date ? Utilities.formatDate(data[i][4], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][4] || ''),
           lastVisitAt: data[i][5] instanceof Date ? Utilities.formatDate(data[i][5], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][5] || ''),
           lastViewed: data[i][6] || '',
-          visitCount: Number(data[i][7]) || 1,
-          orderCount: Number(data[i][8]) || 0,
-          totalSpend: Number(data[i][9]) || 0,
-          memberTier: data[i][10] || '一般會員',
-          lifeStatus: data[i][11] || '🟢 活躍',
-          source: data[i][12] || '',
-          defaultAddress: data[i][13] || '',
-          isBlacklisted: data[i][14] || '正常',
-          notes: data[i][15] || '',
+          visitDays: Number(data[i][7]) || 1,
+          visitCount: Number(data[i][7]) || 1, // 相容舊版名稱
+          pageViews: Number(data[i][8]) || 1,
+          orderCount: Number(data[i][9]) || 0,
+          totalSpend: Number(data[i][10]) || 0,
+          memberTier: data[i][11] || '一般會員',
+          lifeStatus: data[i][12] || '🟢 活躍',
+          source: data[i][13] || '',
+          defaultAddress: data[i][14] || '',
+          isBlacklisted: data[i][15] || '正常',
+          notes: data[i][16] || '',
           lastRecipientName: data[i][2] || '',
           lastRecipientPhone: data[i][3] || ''
         }
@@ -1930,10 +2017,10 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
         custSheet.appendRow([
           'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-          '最後進站時間', '最後瀏覽商品/頁面', '進站累計次數', '歷史訂單數', '總消費金額', 
+          '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
           '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
         ]);
-        custSheet.getRange(1, 1, 1, 16).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+        custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
         custSheet.getRange("D:D").setNumberFormat('@');
       }
     }
@@ -1969,28 +2056,35 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
           custSheet.getRange(row, 7).setValue(prodName);
         }
         
-        const currentOrders = Number(data[i][8]) || 0;
-        const currentSpend = Number(data[i][9]) || 0;
+        const currentOrders = Number(data[i][9]) || 0;
+        const currentSpend = Number(data[i][10]) || 0;
         const newOrders = currentOrders + 1;
         const newSpend = currentSpend + (Number(totalAmount) || 0);
 
-        // Col 9: 歷史訂單數, Col 10: 總消費金額
-        custSheet.getRange(row, 9).setValue(newOrders);
-        custSheet.getRange(row, 10).setValue(newSpend);
+        // Col 10: 歷史訂單數, Col 11: 總消費金額
+        custSheet.getRange(row, 10).setValue(newOrders);
+        custSheet.getRange(row, 11).setValue(newSpend);
 
-        // Col 11: 會員等級自動進階 (累積10000=VVIP, 3000=VIP)
-        const currentTier = String(data[i][10] || '一般會員').trim();
-        const autoTier = newSpend >= 10000 ? 'VVIP' : (newSpend >= 3000 ? 'VIP' : currentTier);
+        // Col 12: 會員等級自動試算 (尊重手動指定之「批發夥伴」；累積3000=VIP, 10000=VVIP)
+        const currentTier = String(data[i][11] || '一般會員').trim();
+        let autoTier = currentTier;
+        if (currentTier !== '批發夥伴') {
+          if (newSpend >= 10000) {
+            autoTier = 'VVIP';
+          } else if (newSpend >= 3000) {
+            autoTier = (currentTier === 'VVIP' ? 'VVIP' : 'VIP');
+          }
+        }
         if (autoTier !== currentTier) {
-          custSheet.getRange(row, 11).setValue(autoTier);
+          custSheet.getRange(row, 12).setValue(autoTier);
         }
 
-        // Col 12: 顧客生命狀態 (活躍)
-        custSheet.getRange(row, 12).setValue('🟢 活躍');
+        // Col 13: 顧客生命狀態 (活躍)
+        custSheet.getRange(row, 13).setValue('🟢 活躍');
 
-        // Col 13: 顧客來源
-        if (source && (!data[i][12] || data[i][12] === '')) {
-          custSheet.getRange(row, 13).setValue(source);
+        // Col 14: 顧客來源
+        if (source && (!data[i][13] || data[i][13] === '')) {
+          custSheet.getRange(row, 14).setValue(source);
         }
         break;
       }
@@ -2005,7 +2099,8 @@ function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
         nowStr,       // 加入會員時間
         nowStr,       // 最後進站時間
         prodName,     // 最後瀏覽商品
-        1,            // 進站累計次數
+        1,            // 進站累計天數
+        1,            // 商品與頁面瀏覽次數
         1,            // 歷史訂單數
         Number(totalAmount) || 0, // 總消費金額
         '一般會員',    // 會員等級
@@ -2045,8 +2140,8 @@ function updateCustomerRecipientInfo(custSheet, userId, recipientName, recipient
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === userId) {
         const row = i + 1;
-        // 第 14 欄 (N): 常用超商取件門市
-        if (deliveryInfo) custSheet.getRange(row, 14).setValue(deliveryInfo);
+        // 第 15 欄 (O): 常用超商取件門市
+        if (deliveryInfo) custSheet.getRange(row, 15).setValue(deliveryInfo);
         // 第 6 欄 (F): 最後進站時間
         custSheet.getRange(row, 6).setValue(nowStr);
 
@@ -2162,20 +2257,26 @@ function recalculateCustomerStats() {
     }
   }
 
-  // 3. 寫回【顧客歸戶】工作表 (16 欄規格)
+  // 3. 寫回【顧客歸戶】工作表 (17 欄規格)
   let updatedCount = 0;
   for (let c = 1; c < custData.length; c++) {
     const uid = String(custData[c][0] || '').trim();
     const stat = statsMap[uid];
     if (stat) {
       const row = c + 1;
-      // Col 9: 歷史訂單數, Col 10: 總消費金額
-      custSheet.getRange(row, 9).setValue(stat.orderCount);
-      custSheet.getRange(row, 10).setValue(stat.totalSpend);
+      // Col 10: 歷史訂單數, Col 11: 總消費金額
+      custSheet.getRange(row, 10).setValue(stat.orderCount);
+      custSheet.getRange(row, 11).setValue(stat.totalSpend);
 
-      // Col 11: 會員等級自動試算
-      const tier = stat.totalSpend >= 10000 ? 'VVIP' : (stat.totalSpend >= 3000 ? 'VIP' : (custData[c][10] || '一般會員'));
-      custSheet.getRange(row, 11).setValue(tier);
+      // Col 12: 會員等級自動試算 (尊重批發夥伴；>=10000=VVIP, >=3000=VIP)
+      const curTier = String(custData[c][11] || '一般會員').trim();
+      let tier = curTier;
+      if (curTier !== '批發夥伴') {
+        if (stat.totalSpend >= 10000) tier = 'VVIP';
+        else if (stat.totalSpend >= 3000) tier = (curTier === 'VVIP' ? 'VVIP' : 'VIP');
+        else tier = '一般會員';
+      }
+      custSheet.getRange(row, 12).setValue(tier);
 
       // Col 5: 加入會員時間 (若原本空白且有首購紀錄則回補)
       if (stat.firstDate && !custData[c][4]) custSheet.getRange(row, 5).setValue(stat.firstDate);
@@ -2355,8 +2456,8 @@ function getOrdersForUser(userId) {
         customerProfile.phone = custData[c][3];
         customerProfile.joinedAt = custData[c][4] || '';
         customerProfile.lastVisitAt = custData[c][5] || '';
-        customerProfile.memberTier = custData[c][10] || '一般會員';
-        customerProfile.defaultAddress = custData[c][13] || '';
+        customerProfile.memberTier = custData[c][11] || '一般會員';
+        customerProfile.defaultAddress = custData[c][14] || '';
         customerProfile.lastRecipientName = custData[c][2] || '';
         customerProfile.lastRecipientPhone = custData[c][3] || '';
         memberRealName = String(custData[c][2] || '').trim();
@@ -2499,10 +2600,10 @@ function handleRegisterCustomer(data) {
     custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
     custSheet.appendRow([
       'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-      '最後進站時間', '最後瀏覽商品/頁面', '進站累計次數', '歷史訂單數', '總消費金額', 
+      '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
       '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
     ]);
-    custSheet.getRange(1, 1, 1, 16).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
     custSheet.getRange("D:D").setNumberFormat('@');
   }
 
@@ -2531,8 +2632,8 @@ function handleRegisterCustomer(data) {
       custSheet.getRange(row, 4).setValue(phone);
       // Col 6: 最後進站時間
       custSheet.getRange(row, 6).setValue(now);
-      // Col 13: 顧客來源
-      if (source) custSheet.getRange(row, 13).setValue(source);
+      // Col 14: 顧客來源
+      if (source) custSheet.getRange(row, 14).setValue(source);
 
       // 寫入更新資料安全 Log
       logCustomerActivity(
@@ -2558,7 +2659,7 @@ function handleRegisterCustomer(data) {
         if (userName) custSheet.getRange(row, 2).setValue(userName);
         custSheet.getRange(row, 3).setValue(realName);
         custSheet.getRange(row, 6).setValue(now);
-        if (source) custSheet.getRange(row, 13).setValue(source);
+        if (source) custSheet.getRange(row, 14).setValue(source);
 
         logCustomerActivity(
           userId,
@@ -2579,18 +2680,19 @@ function handleRegisterCustomer(data) {
       userName,
       realName,
       phone,
-      now,            // Col 5: 加入會員時間
-      now,            // Col 6: 最後進站時間
+      now,                    // Col 5: 加入會員時間
+      now,                    // Col 6: 最後進站時間
       data.page || 'VIP守門牆', // Col 7: 最後瀏覽頁面
-      1,              // Col 8: 進站累計次數
-      0,              // Col 9: 歷史訂單數
-      0,              // Col 10: 總消費金額
-      '一般會員',     // Col 11: 會員等級
-      '🟢 活躍',      // Col 12: 顧客生命狀態
-      source || 'LINE 好友', // Col 13: 顧客來源
-      '',             // Col 14: 常用超商取件門市
-      '正常',         // Col 15: 黑名單標記
-      ''              // Col 16: 賣家管理備註/標籤
+      1,                      // Col 8: 進站累計天數
+      1,                      // Col 9: 商品與頁面瀏覽次數
+      0,                      // Col 10: 歷史訂單數
+      0,                      // Col 11: 總消費金額
+      '一般會員',              // Col 12: 會員等級
+      '🟢 活躍',               // Col 13: 顧客生命狀態
+      source || 'LINE 好友',   // Col 14: 顧客來源
+      '',                     // Col 15: 常用超商取件門市
+      '正常',                 // Col 16: 黑名單標記
+      ''                      // Col 17: 賣家管理備註/標籤
     ]);
 
     // 寫入加入會員安全 Log
@@ -3519,10 +3621,10 @@ function sendPageViewAlertEmail(info) {
           custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
           custSheet.appendRow([
             'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-            '最後進站時間', '最後瀏覽商品/頁面', '進站累計次數', '歷史訂單數', '總消費金額', 
+            '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
             '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
           ]);
-          custSheet.getRange(1, 1, 1, 16).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+          custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
           custSheet.getRange("D:D").setNumberFormat('@');
         }
 
@@ -3542,15 +3644,33 @@ function sendPageViewAlertEmail(info) {
               custSheet.getRange(c + 1, 2).setValue(userName);
               customerLineNick = userName;
             }
-            // Col 6: 最後進站時間
+
+            // 🌟 1. 最後進站時間 (Col 6)
+            const prevVisitRaw = custData[c][5];
             custSheet.getRange(c + 1, 6).setValue(nowStr);
-            // Col 7: 最後瀏覽商品/頁面
+
+            // 🌟 2. 最後瀏覽商品/頁面 (Col 7)
             custSheet.getRange(c + 1, 7).setValue(pageTitle);
-            // Col 8: 進站累計次數
-            const curVisits = Number(custData[c][7]) || 0;
-            custSheet.getRange(c + 1, 8).setValue(curVisits + 1);
-            // Col 12: 顧客生命狀態
-            custSheet.getRange(c + 1, 12).setValue('🟢 活躍');
+
+            // 🌟 3. 進站累計天數 (Col 8: 以日計算，當天重複造訪不累加)
+            let prevVisitDateStr = '';
+            if (prevVisitRaw instanceof Date) {
+              prevVisitDateStr = Utilities.formatDate(prevVisitRaw, 'Asia/Taipei', 'yyyy/MM/dd');
+            } else if (prevVisitRaw) {
+              prevVisitDateStr = String(prevVisitRaw).trim().substring(0, 10).replace(/-/g, '/');
+            }
+            const todayDateStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd');
+            if (prevVisitDateStr !== todayDateStr) {
+              const curVisitDays = Number(custData[c][7]) || 0;
+              custSheet.getRange(c + 1, 8).setValue(curVisitDays + 1);
+            }
+
+            // 🌟 4. 商品與頁面瀏覽次數 (Col 9: 每次點閱造訪皆累加 +1)
+            const curPageViews = Number(custData[c][8]) || 0;
+            custSheet.getRange(c + 1, 9).setValue(curPageViews + 1);
+
+            // 🌟 5. 顧客生命狀態 (Col 13: 活躍)
+            custSheet.getRange(c + 1, 13).setValue('🟢 活躍');
             break;
           }
         }
@@ -3558,7 +3678,7 @@ function sendPageViewAlertEmail(info) {
         // 🌟 核心功能：進站即自動建立初階顧客歸戶卡
         // 若該真實 LINE 好友在試算表中完全無資料，第一時間自動建立初階檔案
         if (!userFound && (userName || userId)) {
-          const defaultSource = 'LINE 好友進站';
+          const defaultSource = 'LINE 好友/群組';
           custSheet.appendRow([
             userId,                 // Col 1: LINE_User_ID
             userName || 'LINE 會員', // Col 2: 最新暱稱
@@ -3567,15 +3687,16 @@ function sendPageViewAlertEmail(info) {
             nowStr,                 // Col 5: 加入會員時間
             nowStr,                 // Col 6: 最後進站時間
             pageTitle,              // Col 7: 最後瀏覽商品/頁面
-            1,                      // Col 8: 進站累計次數
-            0,                      // Col 9: 歷史訂單數
-            0,                      // Col 10: 總消費金額
-            '一般會員',             // Col 11: 會員等級
-            '🟢 活躍',              // Col 12: 顧客生命狀態
-            defaultSource,          // Col 13: 顧客來源
-            '',                     // Col 14: 常用超商取件門市
-            '正常',                 // Col 15: 黑名單標記
-            ''                      // Col 16: 賣家管理備註/標籤
+            1,                      // Col 8: 進站累計天數 (以日計)
+            1,                      // Col 9: 商品與頁面瀏覽次數 (累計PV)
+            0,                      // Col 10: 歷史訂單數
+            0,                      // Col 11: 總消費金額
+            '一般會員',             // Col 12: 會員等級
+            '🟢 活躍',              // Col 13: 顧客生命狀態
+            defaultSource,          // Col 14: 顧客來源
+            '',                     // Col 15: 常用超商取件門市
+            '正常',                 // Col 16: 黑名單標記
+            ''                      // Col 17: 賣家管理備註/標籤
           ]);
           customerLineNick = userName || 'LINE 會員';
         }
