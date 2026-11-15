@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>賣家商品建檔 & 多商品輪播推播中心</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -25,15 +29,19 @@
       --text-muted: #64748b;
     }
 
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
-      overflow-x: clip; /* 現代防溢出標準，阻斷 WebKit 橫向滾動畫布擴張 */
+    html,
+    body {
+      overflow-x: clip;
+      /* 現代防溢出標準，阻斷 WebKit 橫向滾動畫布擴張 */
       position: relative;
       width: 100%;
       max-width: 100%;
@@ -55,16 +63,21 @@
 
     .container {
       width: 100%;
-      max-width: 1140px;
+      max-width: 1560px;
       margin: 0 auto;
       box-sizing: border-box;
       overflow-x: clip;
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
     }
 
-    /* 頂部標題 */
+    /* 頂部標題 (置中並維持舒適閱讀寬度) */
     .header {
       margin-bottom: 20px;
       text-align: center;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .badge-pro {
@@ -79,19 +92,35 @@
       margin-bottom: 6px;
     }
 
-    /* Tab 分頁標籤 (桌機版頂部橫向導航) */
+    /* Tab 分頁標籤 (桌機版頂部橫向導航：獨立精緻置中膠囊列，不強迫拉長對齊全寬) */
     .tabs-nav {
       display: flex;
       background: #f8fafc;
       padding: 5px;
       border-radius: 14px;
       margin-bottom: 20px;
-      max-width: 1140px;
+      max-width: 780px;
       margin-left: auto;
       margin-right: auto;
       overflow-x: auto;
       border: 1.5px solid var(--border);
       gap: 6px;
+      justify-content: center;
+    }
+
+    /* 標準單欄/雙欄作業頁面維持精緻居中寬度 */
+    #tabPublish,
+    #tabCreate,
+    #tabManageProducts,
+    #tabAnalytics {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    /* 📦 連線管理中心：擁有 1560px 全寬工作畫布，徹底舒展雙軸側欄與各站數據 */
+    #tabManageOrders {
+      max-width: 100%;
+      width: 100%;
     }
 
     /* ===== 🛠️ 商品資料維護專用樣式 ===== */
@@ -101,6 +130,7 @@
       gap: 10px;
       margin-bottom: 14px;
     }
+
     .manage-stat-box {
       background: #ffffff;
       border: 1.5px solid var(--border);
@@ -112,33 +142,40 @@
       user-select: none;
       position: relative;
     }
+
     .manage-stat-box:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
+
     .manage-stat-box.active {
       border-width: 2px;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
+
     .manage-stat-box.active[data-status="all"] {
       border-color: #2563eb;
       background: #eff6ff;
     }
+
     .manage-stat-box.active[data-status="active"] {
       border-color: #16a34a;
       background: #f0fdf4;
       box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
     }
+
     .manage-stat-box.active[data-status="inactive"] {
       border-color: #64748b;
       background: #f1f5f9;
       box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
     }
+
     .manage-stat-label {
       font-size: 11.5px;
       color: #64748b;
       font-weight: 600;
     }
+
     .manage-stat-num {
       font-size: 20px;
       font-weight: 900;
@@ -156,7 +193,7 @@
       color: #ffffff;
       padding: 12px 16px;
       border-radius: 14px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
@@ -165,12 +202,14 @@
       margin-bottom: 14px;
       animation: fadeIn 0.2s ease;
     }
+
     .batch-toolbar-actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
     }
+
     .btn-batch {
       border: none;
       padding: 7px 13px;
@@ -183,21 +222,33 @@
       gap: 5px;
       transition: all 0.15s;
     }
+
     .btn-batch-green {
       background: #10b981;
       color: #fff;
     }
-    .btn-batch-green:hover { background: #059669; }
+
+    .btn-batch-green:hover {
+      background: #059669;
+    }
+
     .btn-batch-gray {
       background: #475569;
       color: #fff;
     }
-    .btn-batch-gray:hover { background: #334155; }
+
+    .btn-batch-gray:hover {
+      background: #334155;
+    }
+
     .btn-batch-blue {
       background: #3b82f6;
       color: #fff;
     }
-    .btn-batch-blue:hover { background: #2563eb; }
+
+    .btn-batch-blue:hover {
+      background: #2563eb;
+    }
 
     /* 商品管理卡片 */
     .manage-card {
@@ -210,20 +261,24 @@
       align-items: flex-start;
       margin-bottom: 10px;
       transition: all 0.18s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
+
     .manage-card:hover {
       border-color: #cbd5e1;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
+
     .manage-card.status-off {
       background: #f8fafc;
       opacity: 0.78;
     }
+
     .manage-card.selected {
       border-color: var(--primary);
       background: #f0fdf4;
     }
+
     .manage-card-thumb {
       width: 76px;
       height: 76px;
@@ -247,10 +302,12 @@
       justify-content: center;
       padding: 14px;
     }
+
     .edit-modal-overlay.active {
       display: flex;
       animation: fadeIn 0.2s ease;
     }
+
     .edit-modal-container {
       background: #ffffff;
       border-radius: 18px;
@@ -259,9 +316,10 @@
       max-height: 90vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
       overflow: hidden;
     }
+
     .edit-modal-header {
       padding: 14px 20px;
       background: #0f172a;
@@ -271,12 +329,14 @@
       align-items: center;
       flex-shrink: 0;
     }
+
     .edit-modal-body {
       padding: 20px;
       overflow-y: auto;
       flex: 1;
       -webkit-overflow-scrolling: touch;
     }
+
     .edit-modal-footer {
       padding: 12px 20px;
       border-top: 1px solid var(--border);
@@ -310,21 +370,23 @@
       white-space: nowrap;
       text-align: center;
     }
+
     .tab-btn:hover {
       color: #1e293b;
       background: rgba(255, 255, 255, 0.7);
     }
+
     .tab-btn.active {
       background: #ffffff;
       color: var(--primary-dark);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     .tab-content {
       display: none;
     }
 
-    
+
     /* ============================================================ */
     /* 🎨 版型 3：左編輯 ＋ 右買家即時預覽 (Layout 3) */
     /* ============================================================ */
@@ -354,9 +416,11 @@
       padding-bottom: 20px;
       scrollbar-width: thin;
     }
+
     .split-sticky-box::-webkit-scrollbar {
       width: 4px;
     }
+
     .split-sticky-box::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 4px;
@@ -370,6 +434,7 @@
       overflow: hidden;
       box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
     }
+
     .line-flex-hero {
       width: 100%;
       height: 210px;
@@ -377,11 +442,13 @@
       position: relative;
       overflow: hidden;
     }
+
     .line-flex-hero img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+
     .line-flex-badge {
       position: absolute;
       top: 10px;
@@ -394,6 +461,7 @@
       border-radius: 20px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
+
     .line-flex-deadline-pill {
       position: absolute;
       bottom: 10px;
@@ -406,9 +474,11 @@
       border-radius: 8px;
       backdrop-filter: blur(4px);
     }
+
     .line-flex-body {
       padding: 14px 16px;
     }
+
     .line-flex-cta {
       background: #06c755;
       color: #fff;
@@ -428,6 +498,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
+
     .cat-pill-btn {
       flex: 0 0 auto;
       width: auto;
@@ -444,10 +515,12 @@
       align-items: center;
       gap: 4px;
     }
+
     .cat-pill-btn:hover {
       border-color: #94a3b8;
       background: #f1f5f9;
     }
+
     .cat-pill-btn.active {
       background: #ecfdf5;
       border-color: var(--primary);
@@ -463,6 +536,7 @@
       margin-bottom: 12px;
       min-height: 72px;
     }
+
     .thumb-item-box {
       position: relative;
       width: 72px;
@@ -476,18 +550,29 @@
       touch-action: none;
       transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
-    .thumb-item-box:active { cursor: grabbing; }
-    .thumb-item-box.dragging { opacity: 0.35; transform: scale(0.92); }
-    .thumb-item-box.drag-over, .thumb-item-box.drop-hover-target {
+
+    .thumb-item-box:active {
+      cursor: grabbing;
+    }
+
+    .thumb-item-box.dragging {
+      opacity: 0.35;
+      transform: scale(0.92);
+    }
+
+    .thumb-item-box.drag-over,
+    .thumb-item-box.drop-hover-target {
       border: 2px dashed #0284c7 !important;
       transform: scale(1.06);
       box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
     }
+
     .thumb-item-box.touch-dragging {
       opacity: 0.88;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
       border-color: #0284c7;
     }
+
     .thumb-img {
       width: 100%;
       height: 100%;
@@ -495,6 +580,7 @@
       display: block;
       pointer-events: none;
     }
+
     .thumb-idx-badge {
       position: absolute;
       top: 3px;
@@ -507,6 +593,7 @@
       border-radius: 4px;
       pointer-events: none;
     }
+
     .thumb-cover-tag {
       position: absolute;
       bottom: 3px;
@@ -521,6 +608,7 @@
       border-radius: 4px;
       pointer-events: none;
     }
+
     .thumb-del-icon {
       position: absolute;
       top: 3px;
@@ -540,7 +628,10 @@
       transition: background 0.15s ease;
       z-index: 5;
     }
-    .thumb-del-icon:hover { background: #dc2626; }
+
+    .thumb-del-icon:hover {
+      background: #dc2626;
+    }
 
     /* ============================================================ */
     /* 📱 手機端底部風格 A2 懸浮膠囊島 (白底綠高亮) */
@@ -555,8 +646,15 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* 左右雙欄佈局 (全方位防禦性 CSS：強制 minmax(0, 1fr) 防止子元素撐爆 Grid) */
@@ -570,7 +668,7 @@
       box-sizing: border-box;
     }
 
-    .grid-layout > * {
+    .grid-layout>* {
       min-width: 0;
       max-width: 100%;
       width: 100%;
@@ -588,7 +686,7 @@
       border-radius: 16px;
       padding: 20px;
       border: 1px solid var(--border);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
     }
 
     .panel-title {
@@ -612,7 +710,8 @@
       margin-bottom: 5px;
     }
 
-    .input-text, .input-textarea {
+    .input-text,
+    .input-textarea {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border);
@@ -622,7 +721,8 @@
       background: #f8fafc;
     }
 
-    .input-text:focus, .input-textarea:focus {
+    .input-text:focus,
+    .input-textarea:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
@@ -658,10 +758,12 @@
       align-items: center;
       gap: 4px;
     }
+
     .btn-time-preset:hover {
       background: #fef3c7;
       border-color: #f59e0b;
     }
+
     .btn-time-preset:active {
       transform: scale(0.96);
     }
@@ -685,7 +787,7 @@
     .product-check-item:hover {
       border-color: #cbd5e1;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .product-check-item.selected {
@@ -820,7 +922,7 @@
       display: flex;
       gap: 12px;
       align-items: flex-start;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
     .flex-preview-bubble {
@@ -829,7 +931,7 @@
       width: 250px;
       flex-shrink: 0;
       overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     }
 
     .preview-img {
@@ -926,6 +1028,7 @@
       body {
         padding: 6px 6px 20px 6px;
       }
+
       .container {
         width: 100% !important;
         max-width: 100% !important;
@@ -934,15 +1037,19 @@
         box-sizing: border-box !important;
         overflow-x: clip !important;
       }
+
       .header {
         margin-bottom: 12px;
       }
+
       .header h1 {
         font-size: 18px !important;
       }
+
       .header p {
         font-size: 11.5px !important;
       }
+
       #liffStatusBadge {
         font-size: 11px !important;
         padding: 4px 10px !important;
@@ -973,6 +1080,7 @@
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05) !important;
         z-index: 9999 !important;
       }
+
       .style-a2-tab {
         background: none;
         border: none;
@@ -988,15 +1096,18 @@
         transition: all 0.2s ease;
         -webkit-tap-highlight-color: transparent;
       }
+
       .style-a2-tab .tab-icon {
         font-size: 16px;
         line-height: 1.1;
       }
+
       .style-a2-tab .tab-text {
         font-size: 10.5px;
         font-weight: 700;
         letter-spacing: -0.2px;
       }
+
       .style-a2-tab.active {
         background: var(--primary) !important;
         color: #ffffff !important;
@@ -1013,6 +1124,7 @@
         grid-template-columns: minmax(0, 1fr) !important;
         gap: 12px !important;
       }
+
       .create-preview-aside {
         display: none !important;
       }
@@ -1027,12 +1139,14 @@
         min-width: 0 !important;
         box-sizing: border-box !important;
       }
-      .grid-layout > * {
+
+      .grid-layout>* {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
         box-sizing: border-box !important;
       }
+
       .panel {
         padding: 12px 10px !important;
         border-radius: 14px !important;
@@ -1042,6 +1156,7 @@
         box-sizing: border-box !important;
         overflow: hidden !important;
       }
+
       .panel-title {
         font-size: 14px;
         margin-bottom: 10px;
@@ -1056,6 +1171,7 @@
         max-width: 100% !important;
         box-sizing: border-box !important;
       }
+
       .product-check-item {
         padding: 10px 10px !important;
         gap: 8px !important;
@@ -1065,6 +1181,7 @@
         min-width: 0 !important;
         box-sizing: border-box !important;
       }
+
       .prod-card-chk {
         width: 20px;
         height: 20px;
@@ -1072,18 +1189,21 @@
         font-size: 11px;
         flex-shrink: 0;
       }
+
       .prod-thumb {
         width: 50px;
         height: 50px;
         border-radius: 8px;
         flex-shrink: 0;
       }
+
       .prod-info {
         flex: 1 1 auto !important;
         min-width: 0 !important;
         width: 100% !important;
         overflow: hidden !important;
       }
+
       .prod-name-row {
         display: flex !important;
         justify-content: space-between !important;
@@ -1092,6 +1212,7 @@
         min-width: 0 !important;
         gap: 6px !important;
       }
+
       .prod-name {
         font-size: 13px !important;
         line-height: 1.35 !important;
@@ -1104,22 +1225,28 @@
         -webkit-box-orient: vertical !important;
         word-break: break-word !important;
       }
+
       .prod-price-tag {
         font-size: 14px !important;
         flex-shrink: 0 !important;
         white-space: nowrap !important;
         margin-left: auto !important;
       }
+
       .prod-meta-row {
         gap: 4px;
         font-size: 10.5px;
         width: 100% !important;
         min-width: 0 !important;
       }
-      .pill-code, .pill-spec, .deadline-badge-pill {
+
+      .pill-code,
+      .pill-spec,
+      .deadline-badge-pill {
         font-size: 10px;
         padding: 2px 6px;
       }
+
       .pill-spec {
         max-width: 100% !important;
         white-space: nowrap !important;
@@ -1135,6 +1262,7 @@
         overflow: hidden !important;
         box-sizing: border-box !important;
       }
+
       .line-chat-simulator {
         min-height: 250px;
         padding: 10px 8px;
@@ -1146,32 +1274,40 @@
         box-sizing: border-box !important;
         overscroll-behavior-x: contain !important;
       }
+
       .flex-preview-bubble {
         width: 180px;
         border-radius: 12px;
         flex-shrink: 0;
       }
+
       .preview-img {
         height: 110px;
       }
+
       .preview-body {
         padding: 8px;
       }
+
       .preview-tag {
         font-size: 9.5px;
         padding: 2px 5px;
       }
+
       .preview-title {
         font-size: 12px;
         height: 30px;
         margin-bottom: 4px;
       }
+
       .preview-price {
         font-size: 14px;
       }
+
       .preview-footer {
         padding: 6px 8px;
       }
+
       .preview-btn {
         padding: 5px 0;
         font-size: 11px;
@@ -1193,7 +1329,9 @@
       }
 
       /* 防止 iOS 聚焦輸入框時視窗自動縮放產生橫向溢出 */
-      .input-text, .input-textarea, select {
+      .input-text,
+      .input-textarea,
+      select {
         font-size: 16px !important;
       }
 
@@ -1207,6 +1345,7 @@
         padding: 0 !important;
         align-items: flex-end !important;
       }
+
       .edit-modal-container {
         max-width: 100% !important;
         height: calc(100vh - 44px) !important;
@@ -1214,6 +1353,7 @@
         border-radius: 22px 22px 0 0 !important;
         border-bottom: none !important;
       }
+
       .edit-modal-footer {
         /* 避讓底部 iPhone Home Bar 安全區，儲存按鈕徹底抬高露出 */
         padding: 12px 14px calc(24px + env(safe-area-inset-bottom, 16px)) 14px !important;
@@ -1222,11 +1362,13 @@
         z-index: 100001 !important;
         box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05) !important;
       }
+
       .edit-modal-footer .btn-card-action {
         flex: 0 0 80px !important;
         text-align: center !important;
         padding: 12px 0 !important;
       }
+
       #btnSaveEditProduct {
         flex: 1 !important;
         width: 100% !important;
@@ -1252,33 +1394,33 @@
     /* ③ 雙軸佈局 (Dual-Axis)：左側縱向作業側欄 + 右側主工作台 */
     .dual-axis-workspace {
       display: flex;
-      gap: 16px;
+      gap: 20px;
       width: 100%;
       align-items: flex-start;
     }
 
     .station-vertical-sidebar {
-      width: 270px;
+      width: 230px;
       background: #ffffff;
       border: 1px solid var(--border-color);
       border-radius: 14px;
-      padding: 14px 12px;
+      padding: 12px 10px;
       display: flex;
       flex-direction: column;
       gap: 6px;
       flex-shrink: 0;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       position: sticky;
-      top: 20px;
+      top: 16px;
     }
 
     .sidebar-brand-box {
-      padding: 6px 10px 12px;
+      padding: 6px 8px 10px;
       border-bottom: 1px solid #f1f5f9;
       margin-bottom: 4px;
     }
     .sidebar-title {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 800;
       color: #0f172a;
       display: flex;
@@ -1301,7 +1443,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 11px 12px;
+      padding: 10px 10px;
       border-radius: 10px;
       background: transparent;
       border: 1px solid transparent;
@@ -1310,6 +1452,7 @@
       text-align: left;
       width: 100%;
       text-decoration: none;
+      box-sizing: border-box;
     }
 
     .sidebar-nav-item:hover {
@@ -1340,7 +1483,7 @@
       min-width: 0;
     }
     .sidebar-nav-item-title {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
       color: #334155;
       white-space: nowrap;
@@ -1350,7 +1493,7 @@
       font-weight: 800;
     }
     .sidebar-nav-item-desc {
-      font-size: 11px;
+      font-size: 10.5px;
       color: #94a3b8;
       margin-top: 1px;
     }
@@ -1358,10 +1501,10 @@
     .sidebar-nav-item .pill-count {
       padding: 2px 7px;
       border-radius: 12px;
-      font-size: 11px;
+      font-size: 10.5px;
       background: #f1f5f9;
       color: #475569;
-      font-weight: 600;
+      font-weight: 700;
       flex-shrink: 0;
       white-space: nowrap;
     }
@@ -1416,133 +1559,163 @@
       flex-direction: column;
       min-height: 480px;
       height: auto;
-      padding: 20px;
-      gap: 16px;
+      padding: 24px;
+      gap: 18px;
       background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
     }
 
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 1024px) {
+      .kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 600px) {
+      .kpi-row {
+        grid-template-columns: 1fr;
+      }
     }
 
     .kpi-box {
       background: #ffffff;
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 14px 18px;
+      border-radius: 12px;
+      padding: 16px 20px;
       border-left: 4px solid #cbd5e1;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .kpi-box.blue { border-left-color: #3b82f6; }
+    .kpi-box.orange { border-left-color: #f97316; }
     .kpi-box.green { border-left-color: #10b981; }
     .kpi-box.amber { border-left-color: #f59e0b; }
     .kpi-box.red { border-left-color: #ef4444; }
 
     .kpi-box-label {
-      font-size: 12px;
+      font-size: 12.5px;
       color: var(--text-muted);
       font-weight: 600;
     }
 
     .kpi-box-val {
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 24px;
+      font-weight: 800;
       color: var(--text-main);
-      margin-top: 4px;
+      margin-top: 6px;
     }
 
     .procure-summary-card {
       background: #ffffff;
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 16px;
+      border-radius: 12px;
+      padding: 18px 20px;
       display: flex;
-      gap: 18px;
-      align-items: center;
+      gap: 20px;
+      align-items: flex-start;
       transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .procure-summary-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
       border-color: #cbd5e1;
     }
 
     .procure-img {
-      width: 72px;
-      height: 72px;
-      border-radius: 8px;
+      width: 76px;
+      height: 76px;
+      border-radius: 10px;
       object-fit: cover;
       border: 1px solid var(--border-color);
       background: #f8fafc;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
-    .procure-info { flex: 1; }
+    .procure-info {
+      flex: 1;
+      min-width: 0;
+    }
 
     .procure-title {
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 15.5px;
+      font-weight: 800;
       color: #0f172a;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .procure-meta {
       font-size: 12.5px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     .spec-allocation-table {
       width: 100%;
-      margin-top: 10px;
+      margin-top: 14px;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 13.5px;
       background: #f8fafc;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
+      border: 1px solid #e2e8f0;
     }
 
     .spec-allocation-table th {
       background: #f1f5f9;
-      padding: 8px 12px;
+      padding: 10px 14px;
       text-align: left;
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 600;
+      font-size: 12.5px;
+      color: #475569;
+      font-weight: 700;
+      border-bottom: 1px solid #e2e8f0;
     }
 
     .spec-allocation-table td {
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-top: 1px solid #e2e8f0;
       vertical-align: middle;
     }
 
     .qty-input {
-      width: 65px;
-      padding: 4px 8px;
-      border: 1px solid #cbd5e1;
-      border-radius: 5px;
+      width: 75px;
+      padding: 6px 8px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
       font-size: 14px;
       font-weight: 700;
       text-align: center;
       outline: none;
       color: #0f172a;
+      background: #ffffff;
+      transition: border-color 0.15s;
+    }
+    .qty-input:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
     }
 
     .btn-auto-allocate {
-      padding: 8px 16px;
+      padding: 7px 16px;
       background: #059669;
       color: #fff;
       border: none;
       border-radius: 8px;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 700;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       transition: all 0.2s;
@@ -1637,24 +1810,27 @@
       min-height: 480px;
       height: auto;
       overflow: visible;
-      padding: 20px;
-      gap: 16px;
+      padding: 24px;
+      gap: 18px;
       background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
     }
 
     .table-container {
       background: #ffffff;
       border: 1px solid var(--border-color);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       width: 100%;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
 
     .order-table {
       width: 100%;
-      min-width: 1060px;
+      min-width: 1000px;
       border-collapse: collapse;
       font-size: 13.5px;
     }
@@ -1665,8 +1841,9 @@
       text-align: left;
       font-size: 12.5px;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 700;
       border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
     }
 
     .order-table td {
@@ -1680,10 +1857,11 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: 4px 10px;
+      border-radius: 6px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
+      white-space: nowrap;
     }
 
     .badge-success {
@@ -1711,12 +1889,12 @@
     }
 
     .status-btn {
-      width: 68px;
+      width: 62px;
       height: 30px;
       padding: 0 4px;
       border-radius: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       border: 1px solid #cbd5e1;
       background: #fff;
@@ -1728,6 +1906,7 @@
       text-align: center;
       white-space: nowrap;
       box-sizing: border-box;
+      flex-shrink: 0;
     }
 
     .status-btn:hover { border-color: #94a3b8; }
@@ -1766,11 +1945,17 @@
       flex-direction: column;
       min-height: 480px;
       height: auto;
-      padding: 24px 20px;
+      padding: 24px;
       background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
     }
 
-    .notify-panel { width: 100%; }
+    .notify-panel {
+      width: 100%;
+      max-width: 100%;
+    }
 
     .btn-notify-action {
       border: none;
@@ -1820,31 +2005,31 @@
       height: auto;
       width: 100%;
       background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
       border: 1px solid var(--border-color);
       overflow: hidden;
     }
 
     .station2-left {
-      width: 380px;
+      width: 300px;
       border-right: 1px solid var(--border-color);
       background: #ffffff;
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      max-height: 750px;
+      max-height: 800px;
     }
 
     #station3ParcelList {
       overflow-y: auto;
       flex: 1;
-      max-height: 680px;
+      max-height: 720px;
       -webkit-overflow-scrolling: touch;
     }
 
     .split-item-row {
-      padding: 13px 16px;
+      padding: 14px 16px;
       border-bottom: 1px solid #f1f5f9;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -1863,12 +2048,12 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
-      max-height: 750px;
+      max-height: 800px;
     }
 
     .right-header {
       background: #ffffff;
-      padding: 16px 24px;
+      padding: 18px 24px;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
@@ -1905,7 +2090,7 @@
     .info-box {
       background: #ffffff;
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 16px;
     }
 
@@ -1942,6 +2127,7 @@
 
   </style>
 </head>
+
 <body>
 
   <div class="container">
@@ -1949,470 +2135,598 @@
       <span class="badge-pro">SELLER HUB v1.3 (防溢出優化版)</span>
       <h1 style="font-size: 22px; font-weight: 900;">連線代購管理中心</h1>
       <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">電腦商品建檔 ➔ 手機勾選多樣商品打包發布到 LINE 群組</p>
-      
-      <div style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
-        <div id="liffStatusBadge" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 20px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+
+      <div
+        style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
+        <div id="liffStatusBadge"
+          style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 20px; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <span style="color:#64748b;">⏳ 正在驗證賣家管理員身分...</span>
         </div>
-        <a href="index.html?view=store" target="_blank" style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; color: #334155; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <a href="index.html?view=store" target="_blank"
+          style="font-size: 12px; font-weight: 700; padding: 5px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; color: #334155; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <span>🛍️ 預覽買家賣場</span>
         </a>
       </div>
     </div>
 
     <!-- 🛡️ 全頁門禁鎖定畫面 (未驗證白名單管理員前，嚴格隱藏下方所有後台介面) -->
-    <div id="adminAuthGate" style="max-width: 520px; margin: 28px auto; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 32px 24px; text-align: center; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);">
+    <div id="adminAuthGate"
+      style="max-width: 520px; margin: 28px auto; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 32px 24px; text-align: center; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);">
       <div id="adminAuthGateIcon" style="font-size: 42px; margin-bottom: 12px;">🛡️</div>
-      <h2 id="adminAuthGateTitle" style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">正在驗證賣家管理員權限...</h2>
+      <h2 id="adminAuthGateTitle" style="font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">
+        正在驗證賣家管理員權限...</h2>
       <p id="adminAuthGateDesc" style="font-size: 13.5px; color: #64748b; line-height: 1.6; margin-bottom: 20px;">
         連線代購管理中心受白名單雙重門禁保護，僅限授權管理員帳號進入操作與編輯。
       </p>
-      <div id="adminAuthGateActions" style="display: flex; flex-direction: column; gap: 10px; align-items: center;"></div>
+      <div id="adminAuthGateActions" style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+      </div>
     </div>
 
     <!-- 🔒 受保護的後台管理主畫面 (通過白名單驗證後才解鎖顯示) -->
     <div id="adminProtectedContent" style="display: none;">
 
-    <!-- 功能切換 Tab (桌機版導覽) -->
-    <div class="tabs-nav">
-      <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 推播</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 建檔</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabManageProducts', this)">🛠️ 維護</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabManageOrders', this)">📦 管理</button>
-      <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 統計</button>
-    </div>
-
-    <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
-    <div id="tabPublish" class="tab-content active">
-      <div class="grid-layout">
-        <!-- 左側：商品勾選列表 -->
-        <div class="panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div class="panel-title" style="margin-bottom: 0;">📦 選擇要推播的商品 (可選 1~10 件)</div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span id="searchStatsText" style="font-size: 11px; color: var(--text-muted); font-weight: 600;"></span>
-              <button type="button" style="font-size: 12px; color: var(--primary-dark); background: none; border: none; cursor: pointer; font-weight: 700;" onclick="refreshProductList()">🔄 重新整理</button>
-            </div>
-          </div>
-          
-          <!-- 🔍 商品即時搜尋框 -->
-          <div style="position: relative; margin-bottom: 12px;">
-            <input type="text" id="productSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 P001)、規格或分類..." oninput="handleProductSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
-            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
-            <button type="button" id="btnClearSearch" onclick="clearProductSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
-          </div>
-
-          <div id="loadingBox" style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px;">正在從 Google 試算表載入商品...</div>
-          <div class="product-select-list" id="productListContainer"></div>
-
-          <div style="margin-top: 14px; margin-bottom: 8px;">
-            <label class="form-label" style="font-size: 12px; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
-              <span>📢 LINE 群組推播標題 (通知外層文字)</span>
-              <span style="font-size: 11px; color: #64748b; font-weight: normal;">可依連線情境自訂</span>
-            </label>
-            <input type="text" id="customPushTitle" class="input-text" style="padding: 9px 12px; font-size: 13px;" value="【W.W.親飛連線中～10/11】商品上架囉～～🔥" placeholder="例：【W.W.親飛連線中～10/11】商品上架囉～～🔥">
-          </div>
-
-          <button type="button" class="btn-action" id="btnShareBatch" onclick="shareBatchCarousel()">
-            <span id="shareBtnText">🚀 一鍵打包推播至 LINE 群組 (已選 0 件)</span>
-          </button>
-        </div>
-
-        <!-- 右側：即時 Carousel 輪播預覽 -->
-        <div class="preview-column-wrapper">
-          <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>📱 LINE 輪播卡片預覽</span>
-            <span style="font-size:11px; color:#64748b; font-weight:normal;">👈 左右可滑動預覽 👉</span>
-          </div>
-          <div class="line-chat-simulator" id="carouselPreview">
-            <!-- 輪播 Bubble 預覽由 JS 動態生成 -->
-          </div>
-        </div>
+      <!-- 功能切換 Tab (桌機版導覽) -->
+      <div class="tabs-nav">
+        <button type="button" class="tab-btn active" onclick="switchTab('tabPublish', this)">📱 推播</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tabCreate', this)">💻 建檔</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tabManageProducts', this)">🛠️ 維護</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tabManageOrders', this)">📦 管理</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tabAnalytics', this)">📊 統計</button>
       </div>
-    </div>
 
-    <!-- ================= 分頁 2：商品快速建檔 (Layout 3：左編輯 ＋ 右買家即時預覽) ================= -->
-    <div id="tabCreate" class="tab-content">
-      <div class="tab-create-split-grid">
-        <!-- 左側編輯主區塊 -->
-        <div class="create-editor-column">
+      <!-- ================= 分頁 1：勾選商品 ➔ 發送輪播卡片 (手機/電腦皆可看) ================= -->
+      <div id="tabPublish" class="tab-content active">
+        <div class="grid-layout">
+          <!-- 左側：商品勾選列表 -->
           <div class="panel">
-            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-              <span>📝 新增商品至 Google 試算表商品庫</span>
-              <span style="font-size: 11px; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; font-weight: 700;">✨ 支援雙模式即時連動</span>
-            </div>
-
-            <!-- 1. 基本資訊與價格 -->
-            <!-- 自訂商品編號 (268px寬與標籤對齊) 與 活動分類標籤 (往左移緊鄰) -->
-            <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px;">
-              <div style="flex: 0 0 auto; width: 268px; max-width: 100%;">
-                <label class="form-label" style="white-space: nowrap;">自訂商品編號 (選填，留空自動跳號)</label>
-                <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)" style="width: 100%;">
-              </div>
-              <div style="flex: 1 1 auto; min-width: 0;">
-                <label class="form-label">活動分類標籤 *</label>
-                <div class="category-pills-row">
-                  <button type="button" class="cat-pill-btn active" data-cat="預購" onclick="selectCreateCategory(this, '預購')">📦 預購</button>
-                  <button type="button" class="cat-pill-btn" data-cat="現貨" onclick="selectCreateCategory(this, '現貨')">⚡ 現貨</button>
-                  <button type="button" class="cat-pill-btn" data-cat="親飛連線" onclick="selectCreateCategory(this, '親飛連線')">✈️ 親飛連線</button>
-                  <button type="button" class="cat-pill-btn" data-cat="每週採購" onclick="selectCreateCategory(this, '每週採購')">🗓️ 每週採購</button>
-                </div>
-                <input type="hidden" id="newProdCategory" value="預購">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div class="panel-title" style="margin-bottom: 0;">📦 選擇要推播的商品 (可選 1~10 件)</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="searchStatsText" style="font-size: 11px; color: var(--text-muted); font-weight: 600;"></span>
+                <button type="button"
+                  style="font-size: 12px; color: var(--primary-dark); background: none; border: none; cursor: pointer; font-weight: 700;"
+                  onclick="refreshProductList()">🔄 重新整理</button>
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">商品名稱 *</label>
-              <input type="text" id="newProdName" class="input-text" placeholder="例：日本專櫃限量 帆布手提托特包" oninput="updateCreateLivePreview()">
+            <!-- 🔍 商品即時搜尋框 -->
+            <div style="position: relative; margin-bottom: 12px;">
+              <input type="text" id="productSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 P001)、規格或分類..."
+                oninput="handleProductSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
+              <span
+                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
+              <button type="button" id="btnClearSearch" onclick="clearProductSearch()" title="清空搜尋"
+                style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
             </div>
 
-            <div class="row-2">
-              <div class="form-group">
-                <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
-                <input type="number" id="newProdPrice" class="input-text" placeholder="例：980" oninput="calculateCost(); updateCreateLivePreview();">
-              </div>
-              <div class="form-group">
-                <label class="form-label">專櫃原價/參考市價 (NT$)</label>
-                <input type="number" id="newProdOriginalPrice" class="input-text" placeholder="例：1280" oninput="updateCreateLivePreview()">
-              </div>
-            </div>
+            <div id="loadingBox" style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px;">
+              正在從 Google 試算表載入商品...</div>
+            <div class="product-select-list" id="productListContainer"></div>
 
-            <!-- 2. 🧮 連線代購成本計算機 (收合展開折疊抽屜) -->
-            <div class="cost-calc-card" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px 16px; margin: 16px 0;">
-              <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" onclick="toggleCostCalcDrawer()">
-                <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <span>🧮 連線代購成本計算機</span>
-                  <span style="font-size: 11px; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <button type="button" style="font-size: 11.5px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;" onclick="event.stopPropagation(); resetCostCalculator();">重置計算</button>
-                  <span id="costCalcArrow" style="font-size: 12px; color: #64748b; transition: transform 0.2s;">▲</span>
-                </div>
-              </div>
-
-              <div id="costCalcBody" style="margin-top: 12px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px;">
-                  <div>
-                    <label class="form-label" style="font-size: 11.5px;">採購幣別</label>
-                    <select id="calcCurrency" class="input-text" style="padding: 7px 8px; font-size: 13px;" onchange="changeCurrencyPreset()">
-                      <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
-                      <option value="USD">🇺🇸 美金 (USD)</option>
-                      <option value="KRW">🇰🇷 韓元 (KRW)</option>
-                      <option value="TWD">🇹🇼 台幣 (TWD)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="form-label" style="font-size: 11.5px;">原幣稅前金額</label>
-                    <input type="number" id="calcPricePreTax" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：3000" oninput="calculateCost()">
-                  </div>
-                  <div>
-                    <label class="form-label" style="font-size: 11.5px;">稅金 (原幣)</label>
-                    <input type="number" id="calcTaxAmount" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：300" oninput="calculateCost()">
-                  </div>
-                  <div>
-                    <label class="form-label" style="font-size: 11.5px;">採購匯率</label>
-                    <input type="number" step="0.0001" id="calcExchangeRate" class="input-text" style="padding: 7px 8px; font-size: 13px;" value="0.2200" oninput="calculateCost()">
-                  </div>
-                  <div>
-                    <label class="form-label" style="font-size: 11.5px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240/kg</span></label>
-                    <input type="number" id="calcWeight" class="input-text" style="padding: 7px 8px; font-size: 13px;" placeholder="例：350" oninput="calculateCost()">
-                  </div>
-                </div>
-
-                <!-- 計算結果看板 -->
-                <div style="background: #ffffff; border-radius: 10px; padding: 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
-                  <div style="font-size: 12.5px; line-height: 1.6;">
-                    <div>採購金額：<span id="resTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span id="resItemTwd">0</span>)</div>
-                    <div>國際空運：<span id="resShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span id="resWeightG">0</span>g)</div>
-                    <div style="color: #047857; font-weight: 800; font-size: 13.5px; margin-top: 2px;">
-                      👉 總成本價：NT$ <span id="resTotalCost" style="font-size: 15px;">0</span>
-                    </div>
-                  </div>
-                  <div style="text-align: right;">
-                    <div id="resProfitBox" style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 6px;">預估毛利：NT$ 0 (0%)</div>
-                    <input type="hidden" id="finalCostPrice" value="0">
-                    <input type="hidden" id="finalCostNote" value="">
-                    <input type="hidden" id="finalCostPreTax" value="0">
-                    <input type="hidden" id="finalTaxAmount" value="0">
-                    <input type="hidden" id="finalCostForeign" value="0">
-                    <input type="hidden" id="finalExchangeRate" value="0">
-                    <input type="hidden" id="finalWeightG" value="0">
-                    <input type="hidden" id="finalShippingRate" value="240">
-                    <button type="button" style="background: #0f172a; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;" onclick="applyCostToRecord()">📥 套用成本紀錄</button>
-                  </div>
-                  <div style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 6px 8px; border-radius: 6px; border: 1px solid #bae6fd; display: flex; align-items: center; gap: 4px;">
-                    <span>⚡ 試算表公式自動連動：原幣稅前金額 (Q欄) 與 稅金 (R欄) 獨立登記，並以 =ROUND((Q+R)*S + T/1000*U) 公式儲存！未來在試算表修改進貨價、稅金或重量，成本價將自動重算！</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. 🏷️ 規格款式與庫存數量設定 -->
-            <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
-                  <span>🏷️ 規格款式、個別售價與庫存數量</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
-                  <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleSpecMode()">
-                  <span>啟用各規格「獨立價格」與「個別庫存」</span>
-                </label>
-              </div>
-
-              <!-- 模式 A：簡易規格模式 -->
-              <div id="simpleSpecBox">
-                <div class="row-2">
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
-                    <div style="padding: 6px 0;">
-                      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                        <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleStockInput()">
-                        <span>連線時間不限名額跟庫存（無限接單）</span>
-                      </label>
-                    </div>
-                    <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
-                    <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色" oninput="updateCreateLivePreview()">
-                  </div>
-                </div>
-              </div>
-
-              <!-- 模式 B：進階規格表格模式 -->
-              <div id="advancedSpecBox" style="display: none;">
-                <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
-                  💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
-                </div>
-
-                <!-- 快速批次轉換小工具 -->
-                <div style="display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
-                  <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
-                  <input type="text" id="batchSpecInput" class="input-text" style="font-size: 12px; padding: 6px 10px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
-                  <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddSpecs()">批次套用</button>
-                </div>
-
-                <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
-                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="specTable">
-                    <thead>
-                      <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
-                        <th style="padding: 8px 12px; font-weight: 700;">規格款式名稱 *</th>
-                        <th style="padding: 8px 12px; font-weight: 700; width: 140px;">規格售價 (NT$)</th>
-                        <th style="padding: 8px 12px; font-weight: 700; width: 140px;">現貨數量</th>
-                        <th style="padding: 8px 12px; font-weight: 700; width: 100px; text-align: center;">不限名額</th>
-                        <th style="padding: 8px 12px; font-weight: 700; width: 60px; text-align: center;">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody id="specTableBody">
-                      <!-- 動態列由 JavaScript 渲染 -->
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                  <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="addSpecRow()">
-                    <span>➕ 新增規格款式</span>
-                  </button>
-                  <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
-                    📊 規格合計：0 種 ｜ 現貨庫存：0 件
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. ⏰ 指定收單截止時間 (單一整合選單) -->
-            <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <div style="font-size: 13.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
-                  <span>⏰ 指定收單截止時間</span>
-                  <span style="font-size: 11.5px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
-                </div>
-                <button type="button" onclick="clearDeadlineCombined()" style="background: none; border: none; color: #b91c1c; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕ 清空</button>
-              </div>
-
-              <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="newProdDeadline" class="input-text" style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b; width: 100%; border: 1.5px solid #cbd5e1;" placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" value="" oninput="handleManualCombinedInput(this.value)">
-                <div style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;" title="點擊打開單一日曆+時間選單">
-                  <span style="font-size: 17px; pointer-events: none;">📅</span>
-                  <input type="datetime-local" id="nativeDateTimeInput" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="handleNativeCombinedChange(this.value)">
-                </div>
-              </div>
-              <div id="deadlineHintText" style="font-size: 11.5px; color: #92400e; margin-top: 6px; font-weight: 700;">
-                💡 留空將自動採用「全站統一結單時間」
-              </div>
-            </div>
-
-            <!-- 5. 📷 商品圖片上傳區塊 (支援拖曳排序、封面標籤、多選附件、網址) -->
-            <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;">
-              <label class="form-label" style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
-                <span>📷 商品圖片 (附件上傳 & 網址，皆支援多張) *</span>
-                <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張將作為 LINE 卡片封面主圖</span>
+            <div style="margin-top: 14px; margin-bottom: 8px;">
+              <label class="form-label"
+                style="font-size: 12px; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
+                <span>📢 LINE 群組推播標題 (通知外層文字)</span>
+                <span style="font-size: 11px; color: #64748b; font-weight: normal;">可依連線情境自訂</span>
               </label>
+              <input type="text" id="customPushTitle" class="input-text" style="padding: 9px 12px; font-size: 13px;"
+                value="【W.W.親飛連線中～10/11】商品上架囉～～🔥" placeholder="例：【W.W.親飛連線中～10/11】商品上架囉～～🔥">
+            </div>
 
-              <!-- 方式一：附件直接上傳 (多選) -->
-              <div style="margin-bottom: 10px;">
-                <label for="fileUploadInput" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                  <span>📁 點此選擇照片上傳 (可多選檔案)</span>
+            <button type="button" class="btn-action" id="btnShareBatch" onclick="shareBatchCarousel()">
+              <span id="shareBtnText">🚀 一鍵打包推播至 LINE 群組 (已選 0 件)</span>
+            </button>
+          </div>
+
+          <!-- 右側：即時 Carousel 輪播預覽 -->
+          <div class="preview-column-wrapper">
+            <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>📱 LINE 輪播卡片預覽</span>
+              <span style="font-size:11px; color:#64748b; font-weight:normal;">👈 左右可滑動預覽 👉</span>
+            </div>
+            <div class="line-chat-simulator" id="carouselPreview">
+              <!-- 輪播 Bubble 預覽由 JS 動態生成 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= 分頁 2：商品快速建檔 (Layout 3：左編輯 ＋ 右買家即時預覽) ================= -->
+      <div id="tabCreate" class="tab-content">
+        <div class="tab-create-split-grid">
+          <!-- 左側編輯主區塊 -->
+          <div class="create-editor-column">
+            <div class="panel">
+              <div class="panel-title"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <span>📝 新增商品至 Google 試算表商品庫</span>
+                <span
+                  style="font-size: 11px; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; font-weight: 700;">✨
+                  支援雙模式即時連動</span>
+              </div>
+
+              <!-- 1. 基本資訊與價格 -->
+              <!-- 自訂商品編號 (268px寬與標籤對齊) 與 活動分類標籤 (往左移緊鄰) -->
+              <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px;">
+                <div style="flex: 0 0 auto; width: 268px; max-width: 100%;">
+                  <label class="form-label" style="white-space: nowrap;">自訂商品編號 (選填，留空自動跳號)</label>
+                  <input type="text" id="newProdId" class="input-text" placeholder="留空自動產生 (日幣 J... / 韓元 K...)"
+                    style="width: 100%;">
+                </div>
+                <div style="flex: 1 1 auto; min-width: 0;">
+                  <label class="form-label">活動分類標籤 *</label>
+                  <div class="category-pills-row">
+                    <button type="button" class="cat-pill-btn active" data-cat="預購"
+                      onclick="selectCreateCategory(this, '預購')">📦 預購</button>
+                    <button type="button" class="cat-pill-btn" data-cat="現貨"
+                      onclick="selectCreateCategory(this, '現貨')">⚡ 現貨</button>
+                    <button type="button" class="cat-pill-btn" data-cat="親飛連線"
+                      onclick="selectCreateCategory(this, '親飛連線')">✈️ 親飛連線</button>
+                    <button type="button" class="cat-pill-btn" data-cat="每週採購"
+                      onclick="selectCreateCategory(this, '每週採購')">🗓️ 每週採購</button>
+                  </div>
+                  <input type="hidden" id="newProdCategory" value="預購">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">商品名稱 *</label>
+                <input type="text" id="newProdName" class="input-text" placeholder="例：日本限定 帆布手提托特包"
+                  oninput="updateCreateLivePreview()">
+              </div>
+
+              <div class="row-2">
+                <div class="form-group">
+                  <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
+                  <input type="number" id="newProdPrice" class="input-text" placeholder="例：980"
+                    oninput="calculateCost(); updateCreateLivePreview();">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">官方原價/參考市價 (NT$)</label>
+                  <input type="number" id="newProdOriginalPrice" class="input-text" placeholder="例：1280"
+                    oninput="updateCreateLivePreview()">
+                </div>
+              </div>
+
+              <!-- 2. 🧮 連線代購成本計算機 (收合展開折疊抽屜) -->
+              <div class="cost-calc-card"
+                style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px 16px; margin: 16px 0;">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;"
+                  onclick="toggleCostCalcDrawer()">
+                  <div
+                    style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                    <span>🧮 連線代購成本計算機</span>
+                    <span
+                      style="font-size: 11px; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button"
+                      style="font-size: 11.5px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;"
+                      onclick="event.stopPropagation(); resetCostCalculator();">重置計算</button>
+                    <span id="costCalcArrow"
+                      style="font-size: 12px; color: #64748b; transition: transform 0.2s;">▲</span>
+                  </div>
+                </div>
+
+                <div id="costCalcBody" style="margin-top: 12px;">
+                  <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                    <div>
+                      <label class="form-label" style="font-size: 11.5px;">採購幣別</label>
+                      <select id="calcCurrency" class="input-text" style="padding: 7px 8px; font-size: 13px;"
+                        onchange="changeCurrencyPreset()">
+                        <option value="JPY" selected>🇯🇵 日幣 (JPY)</option>
+                        <option value="USD">🇺🇸 美金 (USD)</option>
+                        <option value="KRW">🇰🇷 韓元 (KRW)</option>
+                        <option value="TWD">🇹🇼 台幣 (TWD)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11.5px;">原幣稅前金額</label>
+                      <input type="number" id="calcPricePreTax" class="input-text"
+                        style="padding: 7px 8px; font-size: 13px;" placeholder="例：3000" oninput="calculateCost()">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11.5px;">稅金 (原幣)</label>
+                      <input type="number" id="calcTaxAmount" class="input-text"
+                        style="padding: 7px 8px; font-size: 13px;" placeholder="例：300" oninput="calculateCost()">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11.5px;">採購匯率</label>
+                      <input type="number" step="0.0001" id="calcExchangeRate" class="input-text"
+                        style="padding: 7px 8px; font-size: 13px;" value="0.2200" oninput="calculateCost()">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11.5px;">重量 (g) <span
+                          style="color:#64748b; font-weight:normal;">240/kg</span></label>
+                      <input type="number" id="calcWeight" class="input-text" style="padding: 7px 8px; font-size: 13px;"
+                        placeholder="例：350" oninput="calculateCost()">
+                    </div>
+                  </div>
+
+                  <!-- 計算結果看板 -->
+                  <div
+                    style="background: #ffffff; border-radius: 10px; padding: 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="font-size: 12.5px; line-height: 1.6;">
+                      <div>採購金額：<span id="resTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span
+                          id="resItemTwd">0</span>)</div>
+                      <div>國際空運：<span id="resShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span
+                          id="resWeightG">0</span>g)</div>
+                      <div style="color: #047857; font-weight: 800; font-size: 13.5px; margin-top: 2px;">
+                        👉 總成本價：NT$ <span id="resTotalCost" style="font-size: 15px;">0</span>
+                      </div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div id="resProfitBox"
+                        style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 6px;">預估毛利：NT$ 0 (0%)
+                      </div>
+                      <input type="hidden" id="finalCostPrice" value="0">
+                      <input type="hidden" id="finalCostNote" value="">
+                      <input type="hidden" id="finalCostPreTax" value="0">
+                      <input type="hidden" id="finalTaxAmount" value="0">
+                      <input type="hidden" id="finalCostForeign" value="0">
+                      <input type="hidden" id="finalExchangeRate" value="0">
+                      <input type="hidden" id="finalWeightG" value="0">
+                      <input type="hidden" id="finalShippingRate" value="240">
+                      <button type="button"
+                        style="background: #0f172a; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;"
+                        onclick="applyCostToRecord()">📥 套用成本紀錄</button>
+                    </div>
+                    <div
+                      style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 6px 8px; border-radius: 6px; border: 1px solid #bae6fd; display: flex; align-items: center; gap: 4px;">
+                      <span>⚡ 試算表公式自動連動：原幣稅前金額 (Q欄) 與 稅金 (R欄) 獨立登記，並以 =ROUND((Q+R)*S + T/1000*U)
+                        公式儲存！未來在試算表修改進貨價、稅金或重量，成本價將自動重算！</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. 🏷️ 規格款式與庫存數量設定 -->
+              <div class="form-group"
+                style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <label class="form-label"
+                    style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                    <span>🏷️ 規格款式、個別售價與庫存數量</span>
+                  </label>
+                  <label
+                    style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
+                    <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;"
+                      onchange="toggleSpecMode()">
+                    <span>啟用各規格「獨立價格」與「個別庫存」</span>
+                  </label>
+                </div>
+
+                <!-- 模式 A：簡易規格模式 -->
+                <div id="simpleSpecBox">
+                  <div class="row-2">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
+                      <div style="padding: 6px 0;">
+                        <label
+                          style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                          <input type="checkbox" id="unlimitedStockCheck" checked style="width: 16px; height: 16px;"
+                            onchange="toggleStockInput()">
+                          <span>連線時間不限名額跟庫存（無限接單）</span>
+                        </label>
+                      </div>
+                      <input type="number" id="newProdStock" class="input-text" value="9999" style="display: none;"
+                        placeholder="現貨庫存數量">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
+                      <input type="text" id="newProdSpecs" class="input-text" placeholder="例：米白色, 經典黑, 卡其色"
+                        oninput="updateCreateLivePreview()">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 模式 B：進階規格表格模式 -->
+                <div id="advancedSpecBox" style="display: none;">
+                  <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
+                    💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
+                  </div>
+
+                  <!-- 快速批次轉換小工具 -->
+                  <div
+                    style="display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡
+                      快速批次產生：</span>
+                    <input type="text" id="batchSpecInput" class="input-text"
+                      style="font-size: 12px; padding: 6px 10px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
+                    <button type="button" class="btn-time-preset"
+                      style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;"
+                      onclick="batchAddSpecs()">批次套用</button>
+                  </div>
+
+                  <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="specTable">
+                      <thead>
+                        <tr
+                          style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
+                          <th style="padding: 8px 12px; font-weight: 700;">規格款式名稱 *</th>
+                          <th style="padding: 8px 12px; font-weight: 700; width: 140px;">規格售價 (NT$)</th>
+                          <th style="padding: 8px 12px; font-weight: 700; width: 140px;">現貨數量</th>
+                          <th style="padding: 8px 12px; font-weight: 700; width: 100px; text-align: center;">不限名額</th>
+                          <th style="padding: 8px 12px; font-weight: 700; width: 60px; text-align: center;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody id="specTableBody">
+                        <!-- 動態列由 JavaScript 渲染 -->
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <button type="button"
+                      style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+                      onclick="addSpecRow()">
+                      <span>➕ 新增規格款式</span>
+                    </button>
+                    <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
+                      📊 規格合計：0 種 ｜ 現貨庫存：0 件
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. ⏰ 指定收單截止時間 (單一整合選單) -->
+              <div class="form-group"
+                style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <div
+                    style="font-size: 13.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 4px;">
+                    <span>⏰ 指定收單截止時間</span>
+                    <span style="font-size: 11.5px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
+                  </div>
+                  <button type="button" onclick="clearDeadlineCombined()"
+                    style="background: none; border: none; color: #b91c1c; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕
+                    清空</button>
+                </div>
+
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="text" id="newProdDeadline" class="input-text"
+                    style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b; width: 100%; border: 1.5px solid #cbd5e1;"
+                    placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" value=""
+                    oninput="handleManualCombinedInput(this.value)">
+                  <div
+                    style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;"
+                    title="點擊打開單一日曆+時間選單">
+                    <span style="font-size: 17px; pointer-events: none;">📅</span>
+                    <input type="datetime-local" id="nativeDateTimeInput"
+                      style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;"
+                      onchange="handleNativeCombinedChange(this.value)">
+                  </div>
+                </div>
+                <div id="deadlineHintText"
+                  style="font-size: 11.5px; color: #92400e; margin-top: 6px; font-weight: 700;">
+                  💡 留空將自動採用「全站統一結單時間」
+                </div>
+              </div>
+
+              <!-- 5. 📷 商品圖片上傳區塊 (支援拖曳排序、封面標籤、多選附件、網址) -->
+              <div class="form-group"
+                style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;">
+                <label class="form-label"
+                  style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between;">
+                  <span>📷 商品圖片 (附件上傳 & 網址，皆支援多張) *</span>
+                  <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">第 1 張將作為 LINE
+                    卡片封面主圖</span>
                 </label>
-                <input type="file" id="fileUploadInput" multiple accept="image/*" style="display: none;" onchange="handleLocalFilesSelected()">
-                <span id="uploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
-              </div>
 
-              <!-- 拖曳提示條 -->
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #0284c7; background: #f0f9ff; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd; margin-bottom: 10px;">
-                <span>✋ <b>滑鼠拖曳 或 手指長按滑動</b> 即可調整照片順序（第一張自動為封面）</span>
-                <span style="font-weight: 800;" id="photoCountDisplay">共 0 張</span>
-              </div>
-
-              <!-- 縮圖預覽清單 (支援拖曳排序) -->
-              <div id="imageThumbsContainer" class="photo-thumbs-grid"></div>
-
-              <!-- 方式二：圖片網址輸入框 (多行) -->
-              <div>
-                <label class="form-label" style="font-size: 12px;">或直接貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
-                <textarea id="newProdImageUrls" class="input-textarea" rows="2" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" oninput="handleUrlInput()"></textarea>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">商品詳細描述 / 規格說明（支援換行與條列排版）</label>
-              <textarea id="newProdDesc" class="input-textarea" rows="4" placeholder="日本專櫃直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍" oninput="updateCreateLivePreview()"></textarea>
-            </div>
-
-            <!-- 表單底部的儲存按鈕 (在手機版顯示，電腦版亦可直接點擊) -->
-            <button type="button" class="btn-action btn-secondary" id="btnSaveProduct" onclick="saveNewProduct()">
-              <span>💾 儲存並同步至 Google 試算表</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 右側：買家視角即時預覽控制台 (版型 3 專用，桌機常駐隨畫面滾動) -->
-        <aside class="create-preview-aside">
-          <div class="split-sticky-box">
-            <div style="font-size: 13.5px; font-weight: 900; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
-              <span>📱 買家視角即時預覽</span>
-              <span style="font-size: 11px; color: #059669; background: #dcfce7; padding: 2px 8px; border-radius: 10px;">即時連動第 1 張封面</span>
-            </div>
-
-            <!-- 即時 LINE / 賣場卡片 -->
-            <div class="line-flex-card-preview">
-              <div class="line-flex-hero">
-                <img id="previewHeroImg" src="" alt="封面預覽">
-                <span class="line-flex-badge" id="previewCatBadge">📦 預購</span>
-                <span class="line-flex-deadline-pill" id="previewDeadlineBadge" style="display: none;">⏰ 結單</span>
-              </div>
-              <div class="line-flex-body">
-                <div id="previewTitle" style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">商品名稱預覽</div>
-                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
-                  <span style="font-size: 20px; font-weight: 900; color: #ef4444; font-family: 'Outfit', sans-serif;" id="previewPrice">NT$ 0</span>
-                  <span style="font-size: 12px; color: #94a3b8; text-decoration: line-through; display: none;" id="previewOrigPrice">原價 NT$ 0</span>
+                <!-- 方式一：附件直接上傳 (多選) -->
+                <div style="margin-bottom: 10px;">
+                  <label for="fileUploadInput"
+                    style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                    <span>📁 點此選擇照片上傳 (可多選檔案)</span>
+                  </label>
+                  <input type="file" id="fileUploadInput" multiple accept="image/*" style="display: none;"
+                    onchange="handleLocalFilesSelected()">
+                  <span id="uploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
                 </div>
-                <div id="previewSpecsText" style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px;">
-                  規格：單一規格
+
+                <!-- 拖曳提示條 -->
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #0284c7; background: #f0f9ff; padding: 6px 10px; border-radius: 8px; border: 1px solid #bae6fd; margin-bottom: 10px;">
+                  <span>✋ <b>滑鼠拖曳 或 手指長按滑動</b> 即可調整照片順序（第一張自動為封面）</span>
+                  <span style="font-weight: 800;" id="photoCountDisplay">共 0 張</span>
                 </div>
-                <div id="previewDescText" style="font-size: 11.5px; color: #64748b; line-height: 1.45; white-space: pre-line; max-height: 55px; overflow: hidden;"></div>
-                <div class="line-flex-cta">🛒 立即選擇規格下單</div>
+
+                <!-- 縮圖預覽清單 (支援拖曳排序) -->
+                <div id="imageThumbsContainer" class="photo-thumbs-grid"></div>
+
+                <!-- 方式二：圖片網址輸入框 (多行) -->
+                <div>
+                  <label class="form-label" style="font-size: 12px;">或直接貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
+                  <textarea id="newProdImageUrls" class="input-textarea" rows="2"
+                    placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                    oninput="handleUrlInput()"></textarea>
+                </div>
               </div>
+
+              <div class="form-group">
+                <label class="form-label">商品詳細描述 / 規格說明（支援換行與條列排版）</label>
+                <textarea id="newProdDesc" class="input-textarea" rows="4"
+                  placeholder="日本原裝直購，輕便好收納！&#10;【尺寸】：寬30cm * 高42cm&#10;【材質】：防潑水尼龍"
+                  oninput="updateCreateLivePreview()"></textarea>
+              </div>
+
+              <!-- 表單底部的儲存按鈕 (在手機版顯示，電腦版亦可直接點擊) -->
+              <button type="button" class="btn-action btn-secondary" id="btnSaveProduct" onclick="saveNewProduct()">
+                <span>💾 儲存並同步至 Google 試算表</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 右側：買家視角即時預覽控制台 (版型 3 專用，桌機常駐隨畫面滾動) -->
+          <aside class="create-preview-aside">
+            <div class="split-sticky-box">
+              <div
+                style="font-size: 13.5px; font-weight: 900; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+                <span>📱 買家視角即時預覽</span>
+                <span
+                  style="font-size: 11px; color: #059669; background: #dcfce7; padding: 2px 8px; border-radius: 10px;">即時連動第
+                  1 張封面</span>
+              </div>
+
+              <!-- 即時 LINE / 賣場卡片 -->
+              <div class="line-flex-card-preview">
+                <div class="line-flex-hero">
+                  <img id="previewHeroImg" src="" alt="封面預覽">
+                  <span class="line-flex-badge" id="previewCatBadge">📦 預購</span>
+                  <span class="line-flex-deadline-pill" id="previewDeadlineBadge" style="display: none;">⏰ 結單</span>
+                </div>
+                <div class="line-flex-body">
+                  <div id="previewTitle"
+                    style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.35; margin-bottom: 6px;">
+                    商品名稱預覽</div>
+                  <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+                    <span style="font-size: 20px; font-weight: 900; color: #ef4444; font-family: 'Outfit', sans-serif;"
+                      id="previewPrice">NT$ 0</span>
+                    <span style="font-size: 12px; color: #94a3b8; text-decoration: line-through; display: none;"
+                      id="previewOrigPrice">原價 NT$ 0</span>
+                  </div>
+                  <div id="previewSpecsText"
+                    style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px;">
+                    規格：單一規格
+                  </div>
+                  <div id="previewDescText"
+                    style="font-size: 11.5px; color: #64748b; line-height: 1.45; white-space: pre-line; max-height: 55px; overflow: hidden;">
+                  </div>
+                  <div class="line-flex-cta">🛒 立即選擇規格下單</div>
+                </div>
+              </div>
+
+              <!-- 右側即時常駐儲存按鈕 -->
+              <button type="button" class="btn-action btn-secondary" onclick="saveNewProduct()"
+                style="margin-top: 4px; box-shadow: 0 4px 14px rgba(6, 199, 85, 0.28);">
+                <span>💾 儲存並同步至 Google 試算表</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- ================= 分頁 3：商品資料維護與批次管理 (線上免開試算表) ================= -->
+      <div id="tabManageProducts" class="tab-content">
+        <div class="panel" style="max-width: 920px; margin: 0 auto;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div class="panel-title" style="margin-bottom: 2px;">🛠️ 商品資料線上維護與批次管理</div>
+              <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;">支援線上修改完整欄位、切換上下架、批次更新分類與最後更新時間，完全不需開啟
+                Google 試算表！</p>
+            </div>
+            <button type="button"
+              style="font-size: 12.5px; color: var(--primary-dark); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"
+              onclick="loadManageProducts(true)">
+              <span>🔄 重新整理商品清單</span>
+            </button>
+          </div>
+
+          <!-- 🛡️ 安全隱私保護提示（非管理者時顯示） -->
+          <div id="manageSecurityNotice"
+            style="display: none; padding: 10px 14px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; font-size: 12.5px; color: #b45309; margin-bottom: 12px; line-height: 1.5;">
+          </div>
+
+          <!-- 頂部即時統計看板 (點擊直接切換狀態，直覺免多一列按鈕) -->
+          <div class="manage-stats-grid">
+            <div class="manage-stat-box active" id="statBoxAll" data-status="all" onclick="selectManageStatus('all')"
+              title="點擊切換：檢視全部商品">
+              <div class="manage-stat-label">📦 全部品項數</div>
+              <div id="manageStatAll" class="manage-stat-num">--</div>
+              <div class="stat-indicator" style="font-size: 10px; color: #2563eb; font-weight: 800; margin-top: 3px;">●
+                目前檢視中</div>
+            </div>
+            <div class="manage-stat-box" id="statBoxActive" data-status="active" onclick="selectManageStatus('active')"
+              title="點擊切換：僅看上架中商品" style="background: #f0fdf4; border-color: #bbf7d0;">
+              <div class="manage-stat-label" style="color: #15803d;">🟢 上架中 (前台可買)</div>
+              <div id="manageStatActive" class="manage-stat-num" style="color: #15803d;">--</div>
+              <div class="stat-indicator"
+                style="font-size: 10px; color: #16a34a; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
+            </div>
+            <div class="manage-stat-box" id="statBoxInactive" data-status="inactive"
+              onclick="selectManageStatus('inactive')" title="點擊切換：僅看已下架商品"
+              style="background: #f8fafc; border-color: #cbd5e1;">
+              <div class="manage-stat-label" style="color: #64748b;">⚪️ 已下架 (暫停販售)</div>
+              <div id="manageStatInactive" class="manage-stat-num" style="color: #64748b;">--</div>
+              <div class="stat-indicator"
+                style="font-size: 10px; color: #64748b; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
+            </div>
+          </div>
+
+          <!-- 搜尋與活動分類過濾列 (防溢出優化：自適應換行與 min-width: 0) -->
+          <div class="manage-filter-bar"
+            style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div class="manage-search-col" style="flex: 1 1 200px; min-width: 0; position: relative; width: 100%;">
+              <input type="text" id="manageSearchInput" class="input-text"
+                placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()"
+                style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
+              <span
+                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
+              <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋"
+                style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
+            </div>
+            <div class="manage-filter-col"
+              style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; width: 100%; justify-content: space-between;">
+              <select id="manageCategoryFilter" class="input-text"
+                style="flex: 1; min-width: 0; max-width: 100%; font-size: 13px; padding: 8px 12px;"
+                onchange="handleManageSearch()">
+                <option value="">全部活動分類</option>
+              </select>
+              <div id="manageResultCountText"
+                style="font-size: 12px; color: var(--text-muted); font-weight: 700; white-space: nowrap;"></div>
+            </div>
+          </div>
+
+          <!-- 🚀 批次管理工具列 (有勾選商品時自動彈出) -->
+          <div id="batchToolbar" class="batch-toolbar" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label
+                style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700;">
+                <input type="checkbox" id="batchSelectAllCheck"
+                  style="width: 18px; height: 18px; accent-color: var(--primary);"
+                  onchange="toggleSelectAllManage(this.checked)">
+                <span>全選此頁</span>
+              </label>
+              <span
+                style="font-size: 13px; font-weight: 800; background: rgba(255,255,255,0.18); padding: 3px 10px; border-radius: 20px;">
+                已選取 <span id="batchSelectedCount" style="color: #6ee7b7; font-size: 15px;">0</span> 件商品
+              </span>
             </div>
 
-            <!-- 右側即時常駐儲存按鈕 -->
-            <button type="button" class="btn-action btn-secondary" onclick="saveNewProduct()" style="margin-top: 4px; box-shadow: 0 4px 14px rgba(6, 199, 85, 0.28);">
-              <span>💾 儲存並同步至 Google 試算表</span>
-            </button>
+            <div class="batch-toolbar-actions">
+              <button type="button" class="btn-batch btn-batch-green" onclick="batchUpdateStatus('上架中')">
+                <span>🟢 批次上架</span>
+              </button>
+              <button type="button" class="btn-batch btn-batch-gray" onclick="batchUpdateStatus('已下架')">
+                <span>⚪️ 批次下架</span>
+              </button>
+              <button type="button" class="btn-batch btn-batch-blue" onclick="openBatchCategoryModal()">
+                <span>🏷️ 批次修改分類</span>
+              </button>
+              <button type="button"
+                style="background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline;"
+                onclick="clearManageSelection()">
+                取消選取
+              </button>
+            </div>
           </div>
-        </aside>
+
+          <!-- 商品列表容器 -->
+          <div id="manageLoadingBox"
+            style="text-align: center; padding: 35px 20px; color: var(--text-muted); font-size: 14px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+            正在載入商品清單...
+          </div>
+          <div id="manageProductListContainer"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- ================= 分頁 3：商品資料維護與批次管理 (線上免開試算表) ================= -->
-    <div id="tabManageProducts" class="tab-content">
-      <div class="panel" style="max-width: 920px; margin: 0 auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <div class="panel-title" style="margin-bottom: 2px;">🛠️ 商品資料線上維護與批次管理</div>
-            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;">支援線上修改完整欄位、切換上下架、批次更新分類與最後更新時間，完全不需開啟 Google 試算表！</p>
-          </div>
-          <button type="button" style="font-size: 12.5px; color: var(--primary-dark); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" onclick="loadManageProducts(true)">
-            <span>🔄 重新整理商品清單</span>
-          </button>
-        </div>
-
-        <!-- 🛡️ 安全隱私保護提示（非管理者時顯示） -->
-        <div id="manageSecurityNotice" style="display: none; padding: 10px 14px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; font-size: 12.5px; color: #b45309; margin-bottom: 12px; line-height: 1.5;"></div>
-
-        <!-- 頂部即時統計看板 (點擊直接切換狀態，直覺免多一列按鈕) -->
-        <div class="manage-stats-grid">
-          <div class="manage-stat-box active" id="statBoxAll" data-status="all" onclick="selectManageStatus('all')" title="點擊切換：檢視全部商品">
-            <div class="manage-stat-label">📦 全部品項數</div>
-            <div id="manageStatAll" class="manage-stat-num">--</div>
-            <div class="stat-indicator" style="font-size: 10px; color: #2563eb; font-weight: 800; margin-top: 3px;">● 目前檢視中</div>
-          </div>
-          <div class="manage-stat-box" id="statBoxActive" data-status="active" onclick="selectManageStatus('active')" title="點擊切換：僅看上架中商品" style="background: #f0fdf4; border-color: #bbf7d0;">
-            <div class="manage-stat-label" style="color: #15803d;">🟢 上架中 (前台可買)</div>
-            <div id="manageStatActive" class="manage-stat-num" style="color: #15803d;">--</div>
-            <div class="stat-indicator" style="font-size: 10px; color: #16a34a; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
-          </div>
-          <div class="manage-stat-box" id="statBoxInactive" data-status="inactive" onclick="selectManageStatus('inactive')" title="點擊切換：僅看已下架商品" style="background: #f8fafc; border-color: #cbd5e1;">
-            <div class="manage-stat-label" style="color: #64748b;">⚪️ 已下架 (暫停販售)</div>
-            <div id="manageStatInactive" class="manage-stat-num" style="color: #64748b;">--</div>
-            <div class="stat-indicator" style="font-size: 10px; color: #64748b; font-weight: 800; margin-top: 3px; display: none;">● 目前檢視中</div>
-          </div>
-        </div>
-
-        <!-- 搜尋與活動分類過濾列 (防溢出優化：自適應換行與 min-width: 0) -->
-        <div class="manage-filter-bar" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-          <div class="manage-search-col" style="flex: 1 1 200px; min-width: 0; position: relative; width: 100%;">
-            <input type="text" id="manageSearchInput" class="input-text" placeholder="🔍 搜尋商品名稱、編號 (如 J2610...)、規格或分類..." oninput="handleManageSearch()" style="padding-left: 36px; padding-right: 32px; font-size: 13px;">
-            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;">🔍</span>
-            <button type="button" id="btnManageClearSearch" onclick="clearManageSearch()" title="清空搜尋" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;">✕</button>
-          </div>
-          <div class="manage-filter-col" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; width: 100%; justify-content: space-between;">
-            <select id="manageCategoryFilter" class="input-text" style="flex: 1; min-width: 0; max-width: 100%; font-size: 13px; padding: 8px 12px;" onchange="handleManageSearch()">
-              <option value="">全部活動分類</option>
-            </select>
-            <div id="manageResultCountText" style="font-size: 12px; color: var(--text-muted); font-weight: 700; white-space: nowrap;"></div>
-          </div>
-        </div>
-
-        <!-- 🚀 批次管理工具列 (有勾選商品時自動彈出) -->
-        <div id="batchToolbar" class="batch-toolbar" style="display: none;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700;">
-              <input type="checkbox" id="batchSelectAllCheck" style="width: 18px; height: 18px; accent-color: var(--primary);" onchange="toggleSelectAllManage(this.checked)">
-              <span>全選此頁</span>
-            </label>
-            <span style="font-size: 13px; font-weight: 800; background: rgba(255,255,255,0.18); padding: 3px 10px; border-radius: 20px;">
-              已選取 <span id="batchSelectedCount" style="color: #6ee7b7; font-size: 15px;">0</span> 件商品
-            </span>
-          </div>
-
-          <div class="batch-toolbar-actions">
-            <button type="button" class="btn-batch btn-batch-green" onclick="batchUpdateStatus('上架中')">
-              <span>🟢 批次上架</span>
-            </button>
-            <button type="button" class="btn-batch btn-batch-gray" onclick="batchUpdateStatus('已下架')">
-              <span>⚪️ 批次下架</span>
-            </button>
-            <button type="button" class="btn-batch btn-batch-blue" onclick="openBatchCategoryModal()">
-              <span>🏷️ 批次修改分類</span>
-            </button>
-            <button type="button" style="background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="clearManageSelection()">
-              取消選取
-            </button>
-          </div>
-        </div>
-
-        <!-- 商品列表容器 -->
-        <div id="manageLoadingBox" style="text-align: center; padding: 35px 20px; color: var(--text-muted); font-size: 14px;">
-          <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
-          正在載入商品清單...
-        </div>
-        <div id="manageProductListContainer"></div>
-      </div>
-    </div>
-
-    <!-- ================= 分頁 4：顧客結帳通知 (1 對 1 免額度推播) ================= -->
-    <!-- ================= 分頁 4：連線採購與出貨管理中心 (四站作業流) ================= -->
+      <!-- ================= 分頁 4：顧客結帳通知 (1 對 1 免額度推播) ================= -->
+      <!-- ================= 分頁 4：連線採購與出貨管理中心 (四站作業流) ================= -->
       <div id="tabManageOrders" class="tab-content">
         <!-- ③ 雙軸佈局 (Dual-Axis)：左側縱向作業側欄 + 右側主工作台 (徹底解決上下按鈕誤觸) -->
         <div class="dual-axis-workspace">
@@ -2475,12 +2789,12 @@
 
           <!-- 站點 0：【📦 1. 現場採購總表與自動配貨】 -->
           <div class="procure-station-container" id="viewStation0">
-            <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="kpi-row">
               <div class="kpi-box blue">
                 <div class="kpi-box-label">📦 本次連線總需採購</div>
                 <div class="kpi-box-val" id="kpiTotalDemand">-- <span>件</span></div>
               </div>
-              <div class="kpi-box orange" style="border-left: 4px solid #f97316;">
+              <div class="kpi-box orange">
                 <div class="kpi-box-label">🛒 買手已採購叫貨</div>
                 <div class="kpi-box-val" style="color: #ea580c;" id="kpiTotalProcured">-- <span>件</span></div>
               </div>
@@ -2535,15 +2849,15 @@
               <table class="order-table">
                 <thead>
                   <tr>
-                    <th style="width: 140px;">訂單編號 / 時間</th>
-                    <th style="width: 120px;">訂購買家</th>
+                    <th style="width: 130px;">訂單編號 / 時間</th>
+                    <th style="width: 125px;">訂購買家</th>
                     <th>訂購商品名稱</th>
                     <th style="width: 110px;">規格</th>
                     <th style="width: 75px; text-align: center;">需求數</th>
                     <th style="width: 85px; text-align: center;">實配數</th>
-                    <th style="width: 95px; text-align: right;">小計金額</th>
-                    <th style="width: 110px; text-align: center;">當前配貨狀況</th>
-                    <th style="width: 250px; text-align: center;">手動調整狀況</th>
+                    <th style="width: 105px; text-align: right;">小計金額</th>
+                    <th style="width: 120px; text-align: center;">當前配貨狀況</th>
+                    <th style="width: 270px; text-align: center;">手動調整狀況</th>
                   </tr>
                 </thead>
                 <tbody id="orderAllocationTableBody">
@@ -2555,7 +2869,7 @@
 
           <!-- 站點 2：【📢 3. 通知客人結帳】 -->
           <div class="station-notify-container" id="viewStation2" style="display: none;">
-            <div class="notify-panel" style="max-width: 760px; margin: 0 auto; width: 100%;">
+            <div class="notify-panel">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div class="panel-title" style="margin-bottom: 0; font-size: 16px;">📢 顧客專屬採購清單推播 (0 額度消耗)</div>
                 <button type="button" style="font-size: 12px; color: #15803d; background: none; border: none; cursor: pointer; font-weight: 700;" onclick="loadCustomerNotifyList(true)">
@@ -2570,7 +2884,7 @@
                 </span>
               </p>
 
-              <div id="notifyStatsBox" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
+              <div id="notifyStatsBox" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px;">
                 <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
                   <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">👥 待結帳顧客數</div>
                   <div id="statNotifyCustCount" style="font-size: 22px; font-weight: 900; color: #0f172a; margin-top: 3px;">--</div>
@@ -2624,42 +2938,42 @@
 
               <div class="right-body">
                 <div class="info-box">
-                  <h4>👤 超商門市與收件人資訊</h4>
-                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
+                  <h4 style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 14px;">👤 超商門市與收件人資訊</h4>
+                  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; font-size: 13px;">
                     <div>
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人姓名</label>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">收件人姓名</label>
                       <span style="font-weight:700; color:#0f172a;" id="st2Name">--</span>
                     </div>
                     <div>
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人電話</label>
-                      <span style="font-weight:700; font-family:monospace;" id="st2Phone">--</span>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">收件人電話</label>
+                      <span style="font-weight:700; font-family:monospace; color:#0f172a;" id="st2Phone">--</span>
                     </div>
                     <div>
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">LINE 買家姓名</label>
-                      <span style="font-weight:600;" id="st2LineName">--</span>
-                    </div>
-                    <div style="grid-column: span 2;">
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">7-11 取件超商門市</label>
-                      <span style="color:#0369a1; font-weight:700;" id="st2Store">🏪 7-ELEVEN 敦南門市 (店號: 982314)</span>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">LINE 買家姓名</label>
+                      <span style="font-weight:600; color:#334155;" id="st2LineName">--</span>
                     </div>
                     <div>
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">門市地址</label>
-                      <span style="font-size:12px; color:#64748b;" id="st2StoreAddr">台北市大安區敦化南路一段 188 號</span>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">取件超商門市</label>
+                      <span style="color:#0369a1; font-weight:700;" id="st2Store">🏪 門市資訊載入中...</span>
+                    </div>
+                    <div style="grid-column: span 4; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px; font-weight:600;">門市詳細地址</label>
+                      <span style="font-size:13px; color:#1e293b; font-weight:600;" id="st2StoreAddr">--</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="info-box">
-                  <h4>📦 包裹內實際出貨品項</h4>
-                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <h4 style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 14px;">📦 包裹內實際出貨品項</h4>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
                     <thead>
-                      <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
-                        <th style="padding: 8px 12px; text-align: left; width: 64px;">圖片</th>
-                        <th style="padding: 8px 12px; text-align: left;">商品名稱</th>
-                        <th style="padding: 8px 12px; text-align: left;">規格</th>
-                        <th style="padding: 8px 12px; text-align: left;">實出件數</th>
-                        <th style="padding: 8px 12px; text-align: left;">單價</th>
-                        <th style="padding: 8px 12px; text-align: right;">應付小計</th>
+                      <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 12.5px;">
+                        <th style="padding: 10px 14px; text-align: left; width: 64px;">圖片</th>
+                        <th style="padding: 10px 14px; text-align: left;">商品名稱</th>
+                        <th style="padding: 10px 14px; text-align: left; width: 140px;">規格</th>
+                        <th style="padding: 10px 14px; text-align: left; width: 95px;">實出件數</th>
+                        <th style="padding: 10px 14px; text-align: left; width: 110px;">單價</th>
+                        <th style="padding: 10px 14px; text-align: right; width: 120px;">應付小計</th>
                       </tr>
                     </thead>
                     <tbody id="st2ProdRows">
@@ -2668,16 +2982,20 @@
                   </table>
                 </div>
 
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
                   <div>
-                    <div style="font-size: 12.5px; color: #64748b;">結帳總額 (含運 $60)：<strong style="font-size: 18px; color: #15803d;" id="st2Total">--</strong></div>
-                    <div style="font-size: 13px; color: #1e293b; margin-top: 4px;">
-                      匯款後五碼：<strong style="color: #15803d; font-family: monospace; font-size: 15px;" id="st2Last5">98214</strong>
-                      <button style="margin-left: 8px; padding: 4px 10px; background: #10b981; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
+                    <div style="font-size: 13px; color: #64748b;">結帳總額 (含運 $60)：<strong style="font-size: 20px; color: #15803d;" id="st2Total">--</strong></div>
+                    <div style="font-size: 13.5px; color: #1e293b; margin-top: 5px;">
+                      匯款後五碼：<strong style="color: #15803d; font-family: monospace; font-size: 16px;" id="st2Last5">--</strong>
+                      <button style="margin-left: 10px; padding: 4px 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
                     </div>
                   </div>
 
-                  <div style="display: flex; gap: 8px; align-items: center;">
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="inputTrackingCode" placeholder="輸入超商寄件單號" value="" style="padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-family: monospace; width: 180px;">
+                    <button style="padding: 9px 18px; background: #ee4d2d; color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);" onclick="confirmShippingAction()">📦 確認出貨</button>
+                  </div>
+                </div>
                     <input type="text" id="inputTrackingCode" placeholder="輸入 7-11 寄件單號" value="98273615243" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: monospace; width: 160px;">
                     <button style="padding: 8px 16px; background: #ee4d2d; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="confirmShippingAction()">📦 確認出貨</button>
                   </div>
@@ -2691,93 +3009,106 @@
       </div>
 
       <!-- ================= 分頁 4：全站與商品瀏覽人次統計 (僅賣家可見) ================= -->
-    <div id="tabAnalytics" class="tab-content">
-      <div style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
-        
-        <!-- 頂部總覽標題與功能列 -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <div class="panel-title" style="margin-bottom: 4px; font-size: 16px;">📊 全站各頁面與商品瀏覽人次統計</div>
-            <div style="font-size: 12px; color: var(--text-muted);">自動記錄買家進入的大廳首頁、單品介紹與訂單頁面，數據即時記錄至 Google 試算表「瀏覽統計」工作表。</div>
-          </div>
-          <button type="button" class="btn" style="width: auto; padding: 7px 14px; font-size: 12px; background: #4f46e5; color: #fff;" onclick="loadViewStats(true)">
-            🔄 重新整理統計
-          </button>
-        </div>
+      <div id="tabAnalytics" class="tab-content">
+        <div style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
 
-        <!-- 數據指標概覽 Cards -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #4f46e5;">
-            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📈 全站累計總瀏覽量</div>
-            <div id="statTotalViews" style="font-size: 26px; font-weight: 900; color: #4f46e5; margin-top: 4px;">--</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">包含大廳、商品單品頁、訂購單等</div>
+          <!-- 頂部總覽標題與功能列 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div class="panel-title" style="margin-bottom: 4px; font-size: 16px;">📊 全站各頁面與商品瀏覽人次統計</div>
+              <div style="font-size: 12px; color: var(--text-muted);">自動記錄買家進入的大廳首頁、單品介紹與訂單頁面，數據即時記錄至 Google
+                試算表「瀏覽統計」工作表。</div>
+            </div>
+            <button type="button" class="btn"
+              style="width: auto; padding: 7px 14px; font-size: 12px; background: #4f46e5; color: #fff;"
+              onclick="loadViewStats(true)">
+              🔄 重新整理統計
+            </button>
           </div>
-          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #06c755;">
-            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🔥 人氣第一名商品</div>
-            <div id="statTopProduct" style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div>
-            <div id="statTopProductViews" style="font-size: 12px; color: #06c755; font-weight: 700; margin-top: 2px;">-- 次瀏覽</div>
-          </div>
-          <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #f59e0b;">
-            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📑 已追蹤頁面與商品數</div>
-            <div id="statTrackedPages" style="font-size: 26px; font-weight: 900; color: #f59e0b; margin-top: 4px;">--</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">不重複路徑/商品記錄</div>
-          </div>
-        </div>
 
-        <!-- 🏆 TOP 熱門人氣商品排行 (圖文卡片) -->
-        <div class="panel" style="margin-bottom: 0;">
-          <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span>🔥 商品關注度排行榜 (Top 10)</span>
-            <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">依買家瀏覽單品頁次數排序</span>
+          <!-- 數據指標概覽 Cards -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #4f46e5;">
+              <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📈 全站累計總瀏覽量</div>
+              <div id="statTotalViews" style="font-size: 26px; font-weight: 900; color: #4f46e5; margin-top: 4px;">--
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">包含大廳、商品單品頁、訂購單等</div>
+            </div>
+            <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #06c755;">
+              <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🔥 人氣第一名商品</div>
+              <div id="statTopProduct"
+                style="font-size: 15px; font-weight: 800; color: var(--text-main); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                --</div>
+              <div id="statTopProductViews" style="font-size: 12px; color: #06c755; font-weight: 700; margin-top: 2px;">
+                -- 次瀏覽</div>
+            </div>
+            <div class="panel" style="margin-bottom: 0; padding: 16px; border-left: 4px solid #f59e0b;">
+              <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">📑 已追蹤頁面與商品數</div>
+              <div id="statTrackedPages" style="font-size: 26px; font-weight: 900; color: #f59e0b; margin-top: 4px;">--
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">不重複路徑/商品記錄</div>
+            </div>
           </div>
-          <div id="topProductsList" style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;">點擊上方 Tab 或重新整理按鈕以讀取排行</div>
-          </div>
-        </div>
 
-        <!-- 📋 所有頁面瀏覽細項表格 -->
-        <div class="panel" style="margin-bottom: 0;">
-          <div class="panel-title" style="margin-bottom: 12px;">📑 各頁面與商品瀏覽人次明細表</div>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
-              <thead>
-                <tr style="background: #f1f5f9; color: #475569; border-bottom: 1px solid var(--border);">
-                  <th style="padding: 10px 12px; font-weight: 700;">頁面名稱 / 商品</th>
-                  <th style="padding: 10px 12px; font-weight: 700;">路徑 / 參數</th>
-                  <th style="padding: 10px 12px; font-weight: 700; text-align: center;">商品編號</th>
-                  <th style="padding: 10px 12px; font-weight: 700; text-align: right;">累計瀏覽</th>
-                  <th style="padding: 10px 12px; font-weight: 700; text-align: right;">最後瀏覽時間</th>
-                </tr>
-              </thead>
-              <tbody id="pageViewsTableBody">
-                <tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">點擊上方 Tab 或重新整理按鈕以讀取明細</td></tr>
-              </tbody>
-            </table>
+          <!-- 🏆 TOP 熱門人氣商品排行 (圖文卡片) -->
+          <div class="panel" style="margin-bottom: 0;">
+            <div class="panel-title"
+              style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span>🔥 商品關注度排行榜 (Top 10)</span>
+              <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">依買家瀏覽單品頁次數排序</span>
+            </div>
+            <div id="topProductsList" style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 13px;">點擊上方 Tab 或重新整理按鈕以讀取排行
+              </div>
+            </div>
           </div>
-        </div>
 
+          <!-- 📋 所有頁面瀏覽細項表格 -->
+          <div class="panel" style="margin-bottom: 0;">
+            <div class="panel-title" style="margin-bottom: 12px;">📑 各頁面與商品瀏覽人次明細表</div>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+                <thead>
+                  <tr style="background: #f1f5f9; color: #475569; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 10px 12px; font-weight: 700;">頁面名稱 / 商品</th>
+                    <th style="padding: 10px 12px; font-weight: 700;">路徑 / 參數</th>
+                    <th style="padding: 10px 12px; font-weight: 700; text-align: center;">商品編號</th>
+                    <th style="padding: 10px 12px; font-weight: 700; text-align: right;">累計瀏覽</th>
+                    <th style="padding: 10px 12px; font-weight: 700; text-align: right;">最後瀏覽時間</th>
+                  </tr>
+                </thead>
+                <tbody id="pageViewsTableBody">
+                  <tr>
+                    <td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">點擊上方 Tab 或重新整理按鈕以讀取明細
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
       </div>
-    </div>
 
-    
-    <!-- 📱 手機端底部風格 A2 懸浮膠囊島 (白底綠高亮) -->
-    <div id="mobileFloatingNav" class="style-a2-floating-bar">
-      <button type="button" class="style-a2-tab active" onclick="switchTab('tabPublish')">
-        <span class="tab-icon">📱</span><span class="tab-text">推播</span>
-      </button>
-      <button type="button" class="style-a2-tab" onclick="switchTab('tabCreate')">
-        <span class="tab-icon">💻</span><span class="tab-text">建檔</span>
-      </button>
-      <button type="button" class="style-a2-tab" onclick="switchTab('tabManageProducts')">
-        <span class="tab-icon">🛠️</span><span class="tab-text">維護</span>
-      </button>
-      <button type="button" class="style-a2-tab" onclick="switchTab('tabManageOrders')">
+
+      <!-- 📱 手機端底部風格 A2 懸浮膠囊島 (白底綠高亮) -->
+      <div id="mobileFloatingNav" class="style-a2-floating-bar">
+        <button type="button" class="style-a2-tab active" onclick="switchTab('tabPublish')">
+          <span class="tab-icon">📱</span><span class="tab-text">推播</span>
+        </button>
+        <button type="button" class="style-a2-tab" onclick="switchTab('tabCreate')">
+          <span class="tab-icon">💻</span><span class="tab-text">建檔</span>
+        </button>
+        <button type="button" class="style-a2-tab" onclick="switchTab('tabManageProducts')">
+          <span class="tab-icon">🛠️</span><span class="tab-text">維護</span>
+        </button>
+        <button type="button" class="style-a2-tab" onclick="switchTab('tabManageOrders')">
           <span class="tab-icon">📦</span><span class="tab-text">管理</span>
         </button>
-      <button type="button" class="style-a2-tab" onclick="switchTab('tabAnalytics')">
-        <span class="tab-icon">📊</span><span class="tab-text">統計</span>
-      </button>
-    </div>
+        <button type="button" class="style-a2-tab" onclick="switchTab('tabAnalytics')">
+          <span class="tab-icon">📊</span><span class="tab-text">統計</span>
+        </button>
+      </div>
 
     </div><!-- /#adminProtectedContent -->
 
@@ -2789,13 +3120,17 @@
       <div class="edit-modal-header">
         <div style="font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px;">
           <span>✏️ 編輯商品資料</span>
-          <span id="editModalProdIdBadge" style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-family: monospace;"></span>
+          <span id="editModalProdIdBadge"
+            style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-family: monospace;"></span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn-card-action" style="background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 12px; padding: 4px 10px; cursor: pointer;" onclick="copyProductOrderUrl(document.getElementById('editProdId').value)" title="複製 LINE 專屬直達下單連結">
+          <button type="button" class="btn-card-action"
+            style="background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); font-size: 12px; padding: 4px 10px; cursor: pointer;"
+            onclick="copyProductOrderUrl(document.getElementById('editProdId').value)" title="複製 LINE 專屬直達下單連結">
             <span>🔗 複製 LINE 連結</span>
           </button>
-          <button type="button" onclick="closeEditProductModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;">✕</button>
+          <button type="button" onclick="closeEditProductModal()"
+            style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; padding: 4px;">✕</button>
         </div>
       </div>
 
@@ -2806,10 +3141,12 @@
           <div class="form-group">
             <label class="form-label">活動分類標籤 *</label>
             <div class="category-pills-row" id="editCategoryPillsRow">
-              <button type="button" class="cat-pill-btn active" onclick="selectEditCategory(this, '📦 預購')">📦 預購</button>
+              <button type="button" class="cat-pill-btn active" onclick="selectEditCategory(this, '📦 預購')">📦
+                預購</button>
               <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '⚡ 現貨')">⚡ 現貨</button>
               <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '✈️ 親飛連線')">✈️ 親飛連線</button>
-              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '🗓️ 每週採購')">🗓️ 每週採購</button>
+              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '🗓️ 每週採購')">🗓️
+                每週採購</button>
             </div>
             <input type="hidden" id="editProdCategory" value="📦 預購">
           </div>
@@ -2830,32 +3167,41 @@
         <div class="row-2">
           <div class="form-group">
             <label class="form-label" style="color: var(--accent); font-weight: 700;">連線代購價 (NT$) *</label>
-            <input type="number" id="editProdPrice" class="input-text" placeholder="例：980" oninput="calculateEditCost()">
+            <input type="number" id="editProdPrice" class="input-text" placeholder="例：980"
+              oninput="calculateEditCost()">
           </div>
           <div class="form-group">
-            <label class="form-label">專櫃原價/參考市價 (NT$)</label>
+            <label class="form-label">官方原價/參考市價 (NT$)</label>
             <input type="number" id="editProdOriginalPrice" class="input-text" placeholder="例：1280">
           </div>
         </div>
 
         <!-- 🧮 連線代購成本計算機 (管理者專用內部紀錄，抽屜式折疊收合) -->
-        <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px; margin: 14px 0;">
-          <div class="cost-calc-header" onclick="toggleEditCostCalcDrawer()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
-            <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+        <div
+          style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 14px; margin: 14px 0;">
+          <div class="cost-calc-header" onclick="toggleEditCostCalcDrawer()"
+            style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+            <div
+              style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
               <span>🧮 連線代購成本計算機</span>
-              <span style="font-size: 11px; font-weight: 500; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
+              <span
+                style="font-size: 11px; font-weight: 500; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">僅管理者紀錄用</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button type="button" style="font-size: 12px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;" onclick="event.stopPropagation(); resetEditCostCalculator();">重置計算</button>
+              <button type="button"
+                style="font-size: 12px; color: #4f46e5; background: none; border: none; font-weight: 700; cursor: pointer;"
+                onclick="event.stopPropagation(); resetEditCostCalculator();">重置計算</button>
               <span id="editCostDrawerArrow" style="color: #64748b; font-size: 13px; font-weight: 900;">▼</span>
             </div>
           </div>
 
           <div id="editCostCalcBody" style="display: none; margin-top: 10px;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px;">
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px;">
               <div>
                 <label class="form-label" style="font-size: 12px;">採購幣別</label>
-                <select id="editCalcCurrency" class="input-text" style="padding: 7px;" onchange="changeEditCurrencyPreset()">
+                <select id="editCalcCurrency" class="input-text" style="padding: 7px;"
+                  onchange="changeEditCurrencyPreset()">
                   <option value="JPY">🇯🇵 日幣 (JPY)</option>
                   <option value="USD">🇺🇸 美金 (USD)</option>
                   <option value="KRW">🇰🇷 韓元 (KRW)</option>
@@ -2864,37 +3210,47 @@
               </div>
               <div>
                 <label class="form-label" style="font-size: 12px;">原幣稅前金額</label>
-                <input type="number" id="editCalcPricePreTax" class="input-text" style="padding: 7px;" placeholder="例：3000" oninput="calculateEditCost()">
+                <input type="number" id="editCalcPricePreTax" class="input-text" style="padding: 7px;"
+                  placeholder="例：3000" oninput="calculateEditCost()">
               </div>
               <div>
                 <label class="form-label" style="font-size: 12px;">稅金 (原幣)</label>
-                <input type="number" id="editCalcTaxAmount" class="input-text" style="padding: 7px;" placeholder="例：300" oninput="calculateEditCost()">
+                <input type="number" id="editCalcTaxAmount" class="input-text" style="padding: 7px;" placeholder="例：300"
+                  oninput="calculateEditCost()">
               </div>
               <div>
                 <label class="form-label" style="font-size: 12px;">採購匯率</label>
-                <input type="number" step="0.0001" id="editCalcExchangeRate" class="input-text" style="padding: 7px;" value="0.2200" oninput="calculateEditCost()">
+                <input type="number" step="0.0001" id="editCalcExchangeRate" class="input-text" style="padding: 7px;"
+                  value="0.2200" oninput="calculateEditCost()">
               </div>
               <div>
-                <label class="form-label" style="font-size: 12px;">重量 (g) <span style="color:#64748b; font-weight:normal;">240元/kg</span></label>
-                <input type="number" id="editCalcWeight" class="input-text" style="padding: 7px;" placeholder="例：350" oninput="calculateEditCost()">
+                <label class="form-label" style="font-size: 12px;">重量 (g) <span
+                    style="color:#64748b; font-weight:normal;">240元/kg</span></label>
+                <input type="number" id="editCalcWeight" class="input-text" style="padding: 7px;" placeholder="例：350"
+                  oninput="calculateEditCost()">
               </div>
               <div>
                 <label class="form-label" style="font-size: 12px;">空運單價 (元/kg)</label>
-                <input type="number" id="editCalcShippingRate" class="input-text" style="padding: 7px;" value="240" oninput="calculateEditCost()">
+                <input type="number" id="editCalcShippingRate" class="input-text" style="padding: 7px;" value="240"
+                  oninput="calculateEditCost()">
               </div>
             </div>
 
             <!-- 計算結果看板 -->
-            <div style="background: #ffffff; border-radius: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
+            <div
+              style="background: #ffffff; border-radius: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
               <div style="font-size: 12.5px; line-height: 1.6;">
-                <div>採購金額：<span id="editResTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span id="editResItemTwd">0</span>)</div>
-                <div>國際空運：<span id="editResShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span id="editResWeightG">0</span>g)</div>
+                <div>採購金額：<span id="editResTotalForeign" style="font-weight:700;">0 JPY</span> (約 NT$ <span
+                    id="editResItemTwd">0</span>)</div>
+                <div>國際空運：<span id="editResShippingTwd" style="font-weight:700;">NT$ 0</span> (重量: <span
+                    id="editResWeightG">0</span>g)</div>
                 <div style="color: #047857; font-weight: 800; font-size: 13.5px; margin-top: 2px;">
                   👉 總成本價：NT$ <span id="editResTotalCost" style="font-size: 15px;">0</span>
                 </div>
               </div>
               <div style="text-align: right;">
-                <div id="editResProfitBox" style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 4px;">預估毛利：NT$ 0 (0%)</div>
+                <div id="editResProfitBox"
+                  style="font-size: 12.5px; color: #4338ca; font-weight: 700; margin-bottom: 4px;">預估毛利：NT$ 0 (0%)</div>
                 <input type="hidden" id="editFinalCostPrice" value="0">
                 <input type="hidden" id="editFinalCostNote" value="">
                 <input type="hidden" id="editFinalCostPreTax" value="0">
@@ -2903,9 +3259,12 @@
                 <input type="hidden" id="editFinalExchangeRate" value="0">
                 <input type="hidden" id="editFinalWeightG" value="0">
                 <input type="hidden" id="editFinalShippingRate" value="240">
-                <button type="button" style="background: #0f172a; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;" onclick="applyEditCostToRecord()">📥 套用成本紀錄</button>
+                <button type="button"
+                  style="background: #0f172a; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;"
+                  onclick="applyEditCostToRecord()">📥 套用成本紀錄</button>
               </div>
-              <div style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
+              <div
+                style="width: 100%; font-size: 11px; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
                 ⚡ 試算表公式自動連動：原幣稅前金額與稅金獨立登記，儲存後試算表成本價公式將自動重新計算！
               </div>
             </div>
@@ -2913,13 +3272,17 @@
         </div>
 
         <!-- 🏷️ 規格款式與庫存數量設定 -->
-        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+        <div class="form-group"
+          style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
             <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0;">
               <span>🏷️ 規格款式、個別售價與庫存數量</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
-              <input type="checkbox" id="editAdvancedSpecModeCheck" style="width: 16px; height: 16px;" onchange="toggleEditSpecMode()">
+            <label
+              style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <input type="checkbox" id="editAdvancedSpecModeCheck" style="width: 16px; height: 16px;"
+                onchange="toggleEditSpecMode()">
               <span>啟用各規格「獨立價格」與「個別庫存」</span>
             </label>
           </div>
@@ -2930,12 +3293,15 @@
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 12px; color: #64748b;">總庫存名額控制</label>
                 <div style="padding: 6px 0;">
-                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                    <input type="checkbox" id="editUnlimitedStockCheck" checked style="width: 16px; height: 16px;" onchange="toggleEditStockInput()">
+                  <label
+                    style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" id="editUnlimitedStockCheck" checked style="width: 16px; height: 16px;"
+                      onchange="toggleEditStockInput()">
                     <span>連線時間不限名額跟庫存（無限接單）</span>
                   </label>
                 </div>
-                <input type="number" id="editProdStock" class="input-text" value="9999" style="display: none;" placeholder="現貨庫存數量">
+                <input type="number" id="editProdStock" class="input-text" value="9999" style="display: none;"
+                  placeholder="現貨庫存數量">
               </div>
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 12px; color: #64748b;">規格款式 (以逗號隔開)</label>
@@ -2951,16 +3317,21 @@
             </div>
 
             <!-- 快速批次轉換 -->
-            <div style="display: flex; gap: 8px; margin-bottom: 10px; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
+            <div
+              style="display: flex; gap: 8px; margin-bottom: 10px; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center;">
               <span style="font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap;">⚡ 快速批次產生：</span>
-              <input type="text" id="editBatchSpecInput" class="input-text" style="font-size: 12px; padding: 5px 8px;" placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
-              <button type="button" class="btn-time-preset" style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;" onclick="batchAddEditSpecs()">批次套用</button>
+              <input type="text" id="editBatchSpecInput" class="input-text" style="font-size: 12px; padding: 5px 8px;"
+                placeholder="輸入多個規格以逗號隔開 (例：黑色 S, 黑色 M, 白色 S)">
+              <button type="button" class="btn-time-preset"
+                style="background: #0f172a; color: #fff; border-color: #0f172a; white-space: nowrap;"
+                onclick="batchAddEditSpecs()">批次套用</button>
             </div>
 
             <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
               <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;" id="editSpecTable">
                 <thead>
-                  <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
+                  <tr
+                    style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border);">
                     <th style="padding: 7px 10px; font-weight: 700;">規格款式名稱 *</th>
                     <th style="padding: 7px 10px; font-weight: 700; width: 130px;">規格售價 (NT$)</th>
                     <th style="padding: 7px 10px; font-weight: 700; width: 120px;">現貨數量</th>
@@ -2973,7 +3344,9 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-              <button type="button" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="addEditSpecRow()">
+              <button type="button"
+                style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;"
+                onclick="addEditSpecRow()">
                 <span>➕ 新增規格款式</span>
               </button>
               <div id="editSpecSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;"></div>
@@ -2982,20 +3355,30 @@
         </div>
 
         <!-- ⏰ 指定收單截止時間 (單一整合選單 + 雙向同步) -->
-        <div class="form-group" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div class="form-group"
+          style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <div style="font-weight: 800; font-size: 13.5px; color: #92400e; display: flex; align-items: center; gap: 4px;">
+            <div
+              style="font-weight: 800; font-size: 13.5px; color: #92400e; display: flex; align-items: center; gap: 4px;">
               <span>⏰ 指定收單截止時間</span>
               <span style="font-size: 12px; font-weight: normal; color: #b45309;">(選填，留空依全站)</span>
             </div>
-            <button type="button" onclick="clearEditDeadlineCombined()" style="background: none; border: none; color: #b91c1c; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕ 清空</button>
+            <button type="button" onclick="clearEditDeadlineCombined()"
+              style="background: none; border: none; color: #b91c1c; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 2px;">✕
+              清空</button>
           </div>
-          
+
           <div style="position: relative; display: flex; align-items: center;">
-            <input type="text" id="editProdDeadline" class="input-text" style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b; width: 100%; border: 1.5px solid #cbd5e1;" placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" oninput="handleEditManualCombinedInput(this.value)">
-            <div style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;" title="點擊打開單一日曆+時間選單">
+            <input type="text" id="editProdDeadline" class="input-text"
+              style="font-size: 14.5px; font-weight: 800; padding: 9px 44px 9px 12px; background: #ffffff; border-radius: 10px; font-family: monospace; color: #1e293b; width: 100%; border: 1.5px solid #cbd5e1;"
+              placeholder="例：2026/11/30 15:30 或 2026-11-30 15:30" oninput="handleEditManualCombinedInput(this.value)">
+            <div
+              style="position: absolute; right: 4px; width: 36px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #fef3c7; border-radius: 8px; border: 1px solid #fde68a;"
+              title="點擊打開單一日曆+時間選單">
               <span style="font-size: 17px; pointer-events: none;">📅</span>
-              <input type="datetime-local" id="editNativeDateTimeInput" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;" onchange="handleEditNativeCombinedChange(this.value)">
+              <input type="datetime-local" id="editNativeDateTimeInput"
+                style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance: none;"
+                onchange="handleEditNativeCombinedChange(this.value)">
             </div>
           </div>
           <div id="editDeadlineHintText" style="font-size: 11.5px; color: #92400e; margin-top: 5px; font-weight: 700;">
@@ -3004,18 +3387,22 @@
         </div>
 
         <!-- 📷 商品圖片維護 (支援拖曳排序、首圖封面標籤、檔案上傳、網址管理) -->
-        <div class="form-group" style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <label class="form-label" style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div class="form-group"
+          style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <label class="form-label"
+            style="font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span>📷 商品圖片清單 (支援多張) *</span>
             <span style="font-size: 11.5px; color: var(--text-muted); font-weight: normal;">第 1 張為封面主圖，支援拖曳或滑動排序</span>
           </label>
 
           <!-- 方式一：照片上傳 -->
           <div style="margin-bottom: 10px;">
-            <label for="editFileUploadInput" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer;">
+            <label for="editFileUploadInput"
+              style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px dashed #0284c7; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer;">
               <span>📁 追加上傳照片 (Google Drive 自動託管)</span>
             </label>
-            <input type="file" id="editFileUploadInput" multiple accept="image/*" style="display: none;" onchange="handleEditLocalFilesSelected()">
+            <input type="file" id="editFileUploadInput" multiple accept="image/*" style="display: none;"
+              onchange="handleEditLocalFilesSelected()">
             <span id="editUploadStatusText" style="font-size: 12px; color: #64748b; margin-left: 8px;"></span>
           </div>
 
@@ -3025,7 +3412,8 @@
           <!-- 方式二：網址輸入框 -->
           <div>
             <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">或貼上圖片網址 (每行 1 個網址，或用逗號隔開)：</label>
-            <textarea id="editProdImageUrls" class="input-textarea" rows="2" placeholder="https://example.com/image1.jpg" oninput="renderEditUrlThumbs()"></textarea>
+            <textarea id="editProdImageUrls" class="input-textarea" rows="2"
+              placeholder="https://example.com/image1.jpg" oninput="renderEditUrlThumbs()"></textarea>
           </div>
         </div>
 
@@ -3035,7 +3423,8 @@
         </div>
 
         <!-- 建立與最後更新時間顯示 -->
-        <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+        <div
+          style="background: #f1f5f9; padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
           <div>📅 建立時間：<span id="editCreatedAtText" style="font-weight: 700; color: #334155;">--</span></div>
           <div>🕒 最後更新：<span id="editUpdatedAtText" style="font-weight: 700; color: #0f172a;">--</span></div>
         </div>
@@ -3043,7 +3432,8 @@
 
       <div class="edit-modal-footer">
         <button type="button" class="btn-card-action" onclick="closeEditProductModal()">✕ 取消</button>
-        <button type="button" class="btn-action btn-secondary" id="btnSaveEditProduct" style="margin: 0; width: auto; padding: 9px 22px;" onclick="saveEditProduct()">
+        <button type="button" class="btn-action btn-secondary" id="btnSaveEditProduct"
+          style="margin: 0; width: auto; padding: 9px 22px;" onclick="saveEditProduct()">
           <span>💾 儲存修改並同步至 Google 試算表</span>
         </button>
       </div>
@@ -3055,7 +3445,8 @@
     <div class="edit-modal-container" style="max-width: 480px;">
       <div class="edit-modal-header">
         <div style="font-weight: 800; font-size: 15px;">🏷️ 批次修改商品分類標籤</div>
-        <button type="button" onclick="closeBatchCategoryModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1;">✕</button>
+        <button type="button" onclick="closeBatchCategoryModal()"
+          style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1;">✕</button>
       </div>
       <div class="edit-modal-body" style="padding: 16px 20px;">
         <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
@@ -3079,7 +3470,8 @@
       </div>
       <div class="edit-modal-footer">
         <button type="button" class="btn-card-action" onclick="closeBatchCategoryModal()">取消</button>
-        <button type="button" class="btn-action btn-secondary" id="btnConfirmBatchCategory" style="margin: 0; width: auto; padding: 8px 18px;" onclick="confirmBatchCategoryUpdate()">
+        <button type="button" class="btn-action btn-secondary" id="btnConfirmBatchCategory"
+          style="margin: 0; width: auto; padding: 8px 18px;" onclick="confirmBatchCategoryUpdate()">
           <span>確認套用分類</span>
         </button>
       </div>
@@ -3136,7 +3528,7 @@
       try {
         sessionStorage.setItem('liff_admin_login_pending', '1');
         sessionStorage.setItem('liff_admin_return_url', window.location.href);
-      } catch (e) {}
+      } catch (e) { }
       if (typeof liff !== 'undefined') {
         // 核心：傳遞與 LINE Developers Console Endpoint 嚴格一致的 redirectUri (index.html?action=admin)
         // 確保 LINE OAuth 100% 接受不報錯，並由 index.html 的靜默授權中繼完成換 Token 後瞬間切換回後台
@@ -3158,7 +3550,7 @@
         sessionStorage.removeItem('liff_admin_login_pending');
         sessionStorage.removeItem('liff_admin_return_url');
         sessionStorage.removeItem('liff_admin_heal_attempted');
-      } catch (e) {}
+      } catch (e) { }
       if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
         liff.logout();
       }
@@ -3228,7 +3620,7 @@
         try {
           localStorage.setItem('line_order_is_admin', '1');
           localStorage.setItem('line_order_admin_uid', currentAdminUserId);
-        } catch (e) {}
+        } catch (e) { }
         if (gate) gate.style.display = 'none';
         if (protectedContent) protectedContent.style.display = 'block';
         await fetchProductList();
@@ -3289,13 +3681,13 @@
         const adminTag = (currentAdminUserId === PRIMARY_ADMIN_UID)
           ? '<span style="color:#10b981; font-weight:800;">👑 主管理員</span>'
           : (isVerifiedAdmin
-              ? '<span style="color:#10b981; font-weight:800;">🛡️ 授權管理員</span>'
-              : '<span style="color:#ef4444; font-weight:700;">🚫 未授權訪客</span>');
-        const clientTag = liffInClient 
-          ? '<span style="color:#10b981;">📱 LINE 內</span>' 
+            ? '<span style="color:#10b981; font-weight:800;">🛡️ 授權管理員</span>'
+            : '<span style="color:#ef4444; font-weight:700;">🚫 未授權訪客</span>');
+        const clientTag = liffInClient
+          ? '<span style="color:#10b981;">📱 LINE 內</span>'
           : '<span style="color:#6366f1;">💻 外部瀏覽器</span>';
-        const shareTag = liffCanShare 
-          ? '<span style="color:#10b981;">｜可推播</span>' 
+        const shareTag = liffCanShare
+          ? '<span style="color:#10b981;">｜可推播</span>'
           : '<span style="color:#f59e0b;">｜未開推播</span>';
 
         badge.innerHTML = `
@@ -3315,14 +3707,14 @@
     function switchTab(tabId, btnElement) {
       if (tabId === 'tabNotifyCustomer') tabId = 'tabManageOrders';
       if (!isVerifiedAdmin) return;
-      
-      const tabMap = { 
-        'tabPublish': 0, 
-        'tabCreate': 1, 
-        'tabManageProducts': 2, 
+
+      const tabMap = {
+        'tabPublish': 0,
+        'tabCreate': 1,
+        'tabManageProducts': 2,
         'tabManageOrders': 3,
-        'tabNotifyCustomer': 3, 
-        'tabAnalytics': 4 
+        'tabNotifyCustomer': 3,
+        'tabAnalytics': 4
       };
       const tabIdx = tabMap[tabId] !== undefined ? tabMap[tabId] : 0;
 
@@ -3335,7 +3727,7 @@
             if (typeof btn.scrollIntoView === 'function') {
               btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
-          } catch(e) {}
+          } catch (e) { }
         } else {
           btn.classList.remove('active');
         }
@@ -3406,11 +3798,11 @@
       const pages = rawPages.filter(pg => {
         const p = String(pg.path || '').toLowerCase();
         const t = String(pg.title || '');
-        return p !== 'admin-card-generator.html' && 
-               p !== 'my-orders.html' && 
-               !t.includes('賣家管理') && 
-               !t.includes('買家訂購清單') && 
-               !t.includes('合併結帳');
+        return p !== 'admin-card-generator.html' &&
+          p !== 'my-orders.html' &&
+          !t.includes('賣家管理') &&
+          !t.includes('買家訂購清單') &&
+          !t.includes('合併結帳');
       });
 
       // 重新計算實際顧客公開總瀏覽人次
@@ -3544,9 +3936,9 @@
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload),
             keepalive: true
-          }).catch(() => {});
+          }).catch(() => { });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     let notifyCustomers = [
@@ -3721,7 +4113,7 @@
       notifyCustomers.forEach((cust, idx) => {
         const item = document.createElement('div');
         item.style.cssText = 'background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; display:flex; flex-direction:column; box-shadow:0 1px 3px rgba(0,0,0,0.02); gap:10px;';
-        
+
         let typeBadge = '';
         if (cust.type === 'all_out') {
           typeBadge = '<span style="font-size:11px; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:6px; font-weight:700; margin-left:6px;">⚠️ 全數缺貨斷貨</span>';
@@ -3827,7 +4219,7 @@
       const outText = outCount > 0 ? `\n      ❌ 缺貨斷貨：${outCount} 件` : '';
       const freeTip = totalAmount >= 3000 ? ' (已達滿額免運 ✨)' : ' (滿 $3,000 即享超商免運)';
       const text = `【🌸 W.W. 連線代購 • 採購結果通知】\n\n${name} 您好：\n您登記的連線商品明細已整理好囉！\n\n📦 採購結果：\n      ✅ 採購完成：${successCount} 件${outText}\n💰 商品總額：NT$ ${totalAmount.toLocaleString()}${freeTip}\n\n👉 點此確認明細與完成結帳作業：\n${targetUrl}\n\n小幫手打包中，完成後會以最快速度為您寄出，謝謝您！❤️`;
-      
+
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
           alert(`📋 已成功複製【${name}】的純文字結帳通知文案！`);
@@ -3991,7 +4383,7 @@
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify({ action: 'markCustomerNotified', userId: userId, adminUserId: currentAdminUserId }),
               keepalive: true
-            }).catch(() => {});
+            }).catch(() => { });
             // 更新本地顧客狀態
             const target = notifyCustomers.find(c => c.userId === userId);
             if (target) {
@@ -3999,7 +4391,7 @@
               target.lastNotifiedTime = '剛剛';
               renderCustomerNotifyList();
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       } catch (e) {
         console.error('推播失敗:', e);
@@ -4129,10 +4521,10 @@
         }
         specsStr = specsStr.toLowerCase();
 
-        return nameStr.includes(currentSearchKeyword) || 
-               idStr.includes(currentSearchKeyword) || 
-               catStr.includes(currentSearchKeyword) || 
-               specsStr.includes(currentSearchKeyword);
+        return nameStr.includes(currentSearchKeyword) ||
+          idStr.includes(currentSearchKeyword) ||
+          catStr.includes(currentSearchKeyword) ||
+          specsStr.includes(currentSearchKeyword);
       });
 
       // 🎯 需求 2：由新到舊排序（最新商品排在最前面）
@@ -4211,7 +4603,7 @@
             } else {
               specsDisplay = prod.specs;
             }
-          } catch(e) {
+          } catch (e) {
             specsDisplay = prod.specs;
           }
         }
@@ -4287,7 +4679,7 @@
     function getSafeMainImage(rawUrl) {
       const fallback = 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80';
       if (!rawUrl) return fallback;
-      
+
       const parts = String(rawUrl).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean);
       if (parts.length === 0) return fallback;
 
@@ -4321,8 +4713,8 @@
         const displayImg = getSafeMainImage(prod.imageUrl);
         const priceNum = Number(prod.price) || 0;
         const origPriceNum = Number(prod.originalPrice) || 0;
-        const origPriceHtml = (origPriceNum > 0 && origPriceNum > priceNum) 
-          ? `<span style="font-size:11px; color:#94a3b8; text-decoration:line-through; margin-left:6px;">NT$ ${origPriceNum.toLocaleString()}</span>` 
+        const origPriceHtml = (origPriceNum > 0 && origPriceNum > priceNum)
+          ? `<span style="font-size:11px; color:#94a3b8; text-decoration:line-through; margin-left:6px;">NT$ ${origPriceNum.toLocaleString()}</span>`
           : '';
 
         bubble.innerHTML = `
@@ -4702,7 +5094,7 @@
       }
     }
 
-    
+
     // 🎨 分類標籤切換
     function selectCreateCategory(btn, val) {
       document.querySelectorAll('.cat-pill-btn').forEach(b => b.classList.remove('active'));
@@ -4748,7 +5140,7 @@
         const parsed = parseFlexibleDeadline(val);
         if (parsed) {
           const pad = n => String(n).padStart(2, '0');
-          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth()+1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth() + 1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
           statusEl.style.color = '#15803d';
           statusEl.textContent = `✅ 系統解析正確：將於 ${fmt} 準時截單`;
         } else {
@@ -4774,11 +5166,11 @@
       const parsed = parseFlexibleDeadline(val);
       if (parsed) {
         const pad = n => String(n).padStart(2, '0');
-        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
         try {
           const picker = document.getElementById('nativeDateTimeInput');
           if (picker) picker.value = isoVal;
-        } catch(e) {}
+        } catch (e) { }
       }
     }
 
@@ -4903,7 +5295,7 @@
     function handleUrlInput() {
       const text = document.getElementById('newProdImageUrls').value;
       const lines = text.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 5 && !s.startsWith('[本地'));
-      
+
       const fileItems = photosList.filter(p => p.type === 'file');
       const existingUrlMap = new Map();
       photosList.filter(p => p.type === 'url').forEach(p => existingUrlMap.set(p.url, p));
@@ -4930,7 +5322,7 @@
     function removePhotoItem(idx) {
       const item = photosList[idx];
       if (item && item.type === 'file' && item.previewUrl) {
-        try { URL.revokeObjectURL(item.previewUrl); } catch(e) {}
+        try { URL.revokeObjectURL(item.previewUrl); } catch (e) { }
       }
       photosList.splice(idx, 1);
       syncUrlTextarea();
@@ -5228,8 +5620,8 @@
           specsPayload = specs;
         }
 
-        const finalStock = isAdvancedSpec 
-          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock) 
+        const finalStock = isAdvancedSpec
+          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock)
           : stock;
         const finalIsUnlimited = isAdvancedSpec ? hasUnlimitedSpec : isUnlimited;
 
@@ -5291,7 +5683,7 @@
           if (document.getElementById('newProdDeadline')) document.getElementById('newProdDeadline').value = '';
           if (document.getElementById('nativeDateTimeInput')) document.getElementById('nativeDateTimeInput').value = '';
           updateDeadlineParseStatus('');
-          
+
           // 重設規格獨立表格
           document.getElementById('advancedSpecModeCheck').checked = false;
           toggleSpecMode();
@@ -5313,7 +5705,7 @@
           });
           updateCreateLivePreview();
           resetCostCalculator();
-          
+
           // ⚡ 樂觀秒加（Optimistic UI）：結合前端完整欄位與後端回傳的 ID，確保即便 GAS 部署舊版也能完美呈現！
           const newProdId = (result.product && result.product.id) || result.productId || customId;
           const newProdItem = {
@@ -5550,10 +5942,10 @@
         } else if (typeof p.specs === 'string') {
           specsStr = p.specs.toLowerCase();
         }
-        return nameStr.includes(manageSearchKeyword) || 
-               idStr.includes(manageSearchKeyword) || 
-               catStr.includes(manageSearchKeyword) || 
-               specsStr.includes(manageSearchKeyword);
+        return nameStr.includes(manageSearchKeyword) ||
+          idStr.includes(manageSearchKeyword) ||
+          catStr.includes(manageSearchKeyword) ||
+          specsStr.includes(manageSearchKeyword);
       });
 
       // 依編號/時間新到舊排序
@@ -5630,9 +6022,9 @@
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">
                   <span style="font-family:'Outfit', monospace; font-size:11.5px; font-weight:800; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px;">#${escapeHtml(p.id)}</span>
                   <span style="font-size:11px; background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(p.category || '連線好物')}</span>
-                  ${p.status === '上架中' 
-                    ? '<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">🟢 上架中</span>' 
-                    : '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">⚪️ 已下架</span>'}
+                  ${p.status === '上架中'
+            ? '<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">🟢 上架中</span>'
+            : '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">⚪️ 已下架</span>'}
                 </div>
                 <div style="font-size:14px; font-weight:800; color:#0f172a; line-height:1.4; word-break:break-word;">
                   ${escapeHtml(p.name)}
@@ -5643,9 +6035,9 @@
                 <div style="font-family:'Outfit', sans-serif; font-size:16px; font-weight:900; color:var(--accent);">
                   NT$ ${Number(p.price).toLocaleString()}
                 </div>
-                ${(p.originalPrice && Number(p.originalPrice) > Number(p.price)) 
-                  ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through;">NT$ ${Number(p.originalPrice).toLocaleString()}</div>` 
-                  : ''}
+                ${(p.originalPrice && Number(p.originalPrice) > Number(p.price))
+            ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through;">NT$ ${Number(p.originalPrice).toLocaleString()}</div>`
+            : ''}
               </div>
             </div>
 
@@ -5667,8 +6059,8 @@
                   <span>✏️ 編輯商品</span>
                 </button>
                 ${p.status === '上架中'
-                  ? `<button type="button" class="btn-card-action" style="color:#dc2626; border-color:#fecaca;" onclick="quickToggleProductStatus('${p.id}', '已下架')">⚪️ 點擊下架</button>`
-                  : `<button type="button" class="btn-card-action" style="color:#16a34a; border-color:#bbf7d0;" onclick="quickToggleProductStatus('${p.id}', '上架中')">🟢 點擊上架</button>`}
+            ? `<button type="button" class="btn-card-action" style="color:#dc2626; border-color:#fecaca;" onclick="quickToggleProductStatus('${p.id}', '已下架')">⚪️ 點擊下架</button>`
+            : `<button type="button" class="btn-card-action" style="color:#16a34a; border-color:#bbf7d0;" onclick="quickToggleProductStatus('${p.id}', '上架中')">🟢 點擊上架</button>`}
                 <button type="button" class="btn-card-action" onclick="copyProductOrderUrl('${p.id}')" title="複製 LINE 專屬直達下單連結">
                   <span>🔗 複製連結</span>
                 </button>
@@ -6019,7 +6411,7 @@
         const parsed = parseFlexibleDeadline(val);
         if (parsed) {
           const pad = n => String(n).padStart(2, '0');
-          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth()+1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+          const fmt = `${parsed.getFullYear()}/${pad(parsed.getMonth() + 1)}/${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
           statusEl.style.color = '#15803d';
           statusEl.textContent = `✅ 系統解析正確：將於 ${fmt} 準時截單`;
         } else {
@@ -6042,11 +6434,11 @@
       const parsed = parseFlexibleDeadline(val);
       if (parsed) {
         const pad = n => String(n).padStart(2, '0');
-        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+        const isoVal = `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
         try {
           const picker = document.getElementById('editNativeDateTimeInput');
           if (picker) picker.value = isoVal;
-        } catch(e) {}
+        } catch (e) { }
       }
     }
 
@@ -6096,7 +6488,7 @@
           customBtn.type = 'button';
           customBtn.className = 'cat-pill-btn active';
           customBtn.textContent = catVal;
-          customBtn.onclick = function() { selectEditCategory(this, catVal); };
+          customBtn.onclick = function () { selectEditCategory(this, catVal); };
           pillsRow.appendChild(customBtn);
         }
       }
@@ -6173,7 +6565,7 @@
         const parsed = parseFlexibleDeadline(dlVal);
         if (parsed) {
           const pad = n => String(n).padStart(2, '0');
-          document.getElementById('editNativeDateTimeInput').value = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+          document.getElementById('editNativeDateTimeInput').value = `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
         } else {
           document.getElementById('editNativeDateTimeInput').value = '';
         }
@@ -6704,8 +7096,8 @@
           calculatedTotalStock = hasUnlimitedSpec ? 999999 : (Number(document.getElementById('editProdStock').value) || 10);
         }
 
-        const finalStock = isAdv 
-          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock) 
+        const finalStock = isAdv
+          ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock)
           : calculatedTotalStock;
 
         // 3. 成本計算數值
@@ -7131,10 +7523,10 @@
         const btnId = `procureBtn_${idx}`;
         const buyerRows = g.buyers.map(b => `
           <tr>
-            <td>${b.orderId}</td>
-            <td><strong>${b.name}</strong> (${b.phone})</td>
+            <td style="font-family: monospace; font-weight: 600; font-size: 12px;">${b.orderId}</td>
+            <td><strong>${b.name}</strong> <span style="color:#64748b; font-size:11.5px;">(${b.phone})</span></td>
             <td style="text-align: center;"><span style="color:#2563eb; font-weight:700;">x ${b.qty}</span></td>
-            <td><span style="font-size:11px; background:#ecfdf5; color:#065f46; padding:2px 6px; border-radius:4px;">下單順位有效</span></td>
+            <td style="text-align: center;"><span style="font-size:11px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:2px 8px; border-radius:4px; font-weight:700;">下單順位有效</span></td>
           </tr>
         `).join('');
 
@@ -7154,10 +7546,10 @@
                 <thead>
                   <tr>
                     <th>規格</th>
-                    <th style="width: 120px;">訂購需求</th>
-                    <th style="width: 110px;">已採購件數</th>
-                    <th style="width: 110px;">實到件數</th>
-                    <th style="width: 110px; text-align: center;">自動配貨</th>
+                    <th style="width: 130px;">訂購需求</th>
+                    <th style="width: 120px;">已採購件數</th>
+                    <th style="width: 120px;">實到件數</th>
+                    <th style="width: 120px; text-align: center;">自動配貨</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -7187,10 +7579,10 @@
                         <table class="demand-drawer-table">
                           <thead>
                             <tr>
-                              <th>訂單編號</th>
+                              <th style="width: 160px;">訂單編號</th>
                               <th>訂購買家</th>
-                              <th style="text-align: center;">訂購數量</th>
-                              <th>配貨資格</th>
+                              <th style="width: 100px; text-align: center;">訂購數量</th>
+                              <th style="width: 140px; text-align: center;">配貨資格</th>
                             </tr>
                           </thead>
                           <tbody>${buyerRows}</tbody>
@@ -7263,20 +7655,20 @@
         return `
           <tr>
             <td>
-              <strong>${o.orderId}</strong>
-              <div style="font-size: 11px; color: #94a3b8;">即時登記</div>
+              <strong style="font-family: monospace; font-size: 13px; color: #0f172a;">${o.orderId}</strong>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">即時登記</div>
             </td>
             <td>
-              <strong>${o.customerName}</strong>
-              <div style="font-size: 11px; color: #64748b;">${o.customerPhone}</div>
+              <strong style="color: #0f172a; font-size: 13.5px;">${o.customerName}</strong>
+              <div style="font-size: 11.5px; color: #64748b; font-family: monospace; margin-top: 1px;">${o.customerPhone}</div>
             </td>
-            <td><strong>${o.productName}</strong></td>
-            <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${o.spec}</span></td>
-            <td style="text-align: center; font-weight: 700;">${o.demandQty}</td>
+            <td><strong style="color: #1e293b; font-size: 13.5px;">${o.productName}</strong></td>
+            <td><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #475569;">${o.spec}</span></td>
+            <td style="text-align: center; font-weight: 700; font-size: 14px; color: #0f172a;">${o.demandQty}</td>
             <td style="text-align: center;">
-              <input type="number" id="input_qty_${idx}" value="${displayAllocated}" min="0" max="${o.demandQty}" style="width: 50px; text-align: center; padding: 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700;" onchange="manualChangeRowQty('${idx}', this.value, ${o.demandQty}, ${o.unitPrice})">
+              <input type="number" id="input_qty_${idx}" value="${displayAllocated}" min="0" max="${o.demandQty}" style="width: 58px; text-align: center; padding: 4px 2px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-weight: 700; font-size: 13.5px; color: #0f172a;" onchange="manualChangeRowQty('${idx}', this.value, ${o.demandQty}, ${o.unitPrice})">
             </td>
-            <td style="text-align: right; font-weight: 700;" id="subtotal_${idx}">NT$ ${subtotalVal.toLocaleString()}</td>
+            <td style="text-align: right; font-weight: 800; font-size: 13.5px; color: #0f172a; white-space: nowrap;" id="subtotal_${idx}">NT$ ${subtotalVal.toLocaleString()}</td>
             <td style="text-align: center;" id="badgeContainer_${idx}">${statusBadge}</td>
             <td style="text-align: center;">
               <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap;">
@@ -7798,4 +8190,5 @@
   <div class="toast-box" id="toastBox">提示訊息</div>
 
 </body>
+
 </html>
