@@ -4185,13 +4185,13 @@
               </div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center; flex-shrink:0; white-space:nowrap;">
-              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#00c300; color:#fff; box-shadow:0 3px 10px rgba(0,195,0,0.28); white-space:nowrap; flex-shrink:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#00c300; color:#fff; box-shadow:0 3px 10px rgba(0,195,0,0.28); white-space:nowrap; flex-shrink:0;" onclick="sendCustomerNotifyByIndex(${idx})">
                 🚀 發送 1 對 1 卡片
               </button>
-              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; white-space:nowrap; flex-shrink:0;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; white-space:nowrap; flex-shrink:0;" onclick="copyCustomerRawTextByIndex(${idx})">
                 📋 複製純文字
               </button>
-              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; flex-shrink:0;" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; flex-shrink:0;" onclick="previewCustomerOrdersByIndex(${idx})">
                 👁️ 預覽訂單
               </button>
             </div>
@@ -4205,6 +4205,19 @@
         `;
         container.appendChild(item);
       });
+    }
+
+    function sendCustomerNotifyByIndex(idx) {
+      const cust = notifyCustomers[idx];
+      if (cust) sendSingleCustomerNotify(cust.userId, cust.name, cust.successCount, cust.outOfStockCount, cust.totalAmount);
+    }
+    function copyCustomerRawTextByIndex(idx) {
+      const cust = notifyCustomers[idx];
+      if (cust) copyCustomerRawText(cust.userId, cust.name, cust.successCount, cust.outOfStockCount, cust.totalAmount);
+    }
+    function previewCustomerOrdersByIndex(idx) {
+      const cust = notifyCustomers[idx];
+      if (cust) previewCustomerOrders(cust.userId, cust.name);
     }
 
     function toggleNotifyItemDrawer(drawerId, btn) {
@@ -7612,7 +7625,7 @@
 
         return `
           <div class="procure-summary-card">
-            <img src="${g.imageUrl}" class="procure-img" onclick="zoomImage('${g.imageUrl}', '${g.productName}')" title="點擊放大商品圖片">
+            <img src="${g.imageUrl}" class="procure-img" onclick="zoomImage(this.src, this.alt)" alt="${(g.productName || '').replace(/"/g, '&quot;')}" title="點擊放大商品圖片">
             <div class="procure-info">
               <div class="procure-title">
                 <span>${g.productName}</span>
@@ -7639,13 +7652,13 @@
                       </button>
                     </td>
                     <td>
-                      <input type="number" class="qty-input" id="inputProcured_${idx}" value="${displayProcured}" min="0" placeholder="已叫貨" title="買手海外專櫃或官網已下單/採買數量" onchange="updateGroupProcured('${g.groupKey}', this.value)">
+                      <input type="number" class="qty-input" id="inputProcured_${idx}" value="${displayProcured}" min="0" placeholder="已叫貨" title="買手海外專櫃或官網已下單/採買數量" onchange="updateGroupProcured(${idx}, this.value)">
                     </td>
                     <td>
-                      <input type="number" class="qty-input" id="inputBought_${idx}" value="${displayBought}" min="0" max="${g.totalDemand}" placeholder="未到貨" title="現場拆箱清點實到件數，空值時配貨為連線中" onchange="updateGroupBought('${g.groupKey}', this.value)">
+                      <input type="number" class="qty-input" id="inputBought_${idx}" value="${displayBought}" min="0" max="${g.totalDemand}" placeholder="未到貨" title="現場拆箱清點實到件數，空值時配貨為連線中" onchange="updateGroupBought(${idx}, this.value)">
                     </td>
                     <td style="text-align: center;">
-                      <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation('${g.groupKey}', '${g.productName}', document.getElementById('inputBought_${idx}').value, ${g.totalDemand}, document.getElementById('inputProcured_${idx}').value)">
+                      <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation(${idx})">
                         ⚡️ 配貨
                       </button>
                     </td>
@@ -7675,8 +7688,8 @@
       }).join('');
     }
 
-    function updateGroupProcured(skuKey, val) {
-      const g = station0ProcureGroups.find(x => x.groupKey === skuKey);
+    function updateGroupProcured(idx, val) {
+      const g = (typeof idx === 'number') ? station0ProcureGroups[idx] : station0ProcureGroups.find(x => x.groupKey === idx);
       if (g) {
         let n = parseInt(val, 10);
         g.procuredQty = isNaN(n) ? 0 : n;
@@ -7684,8 +7697,8 @@
       }
     }
 
-    function updateGroupBought(skuKey, val) {
-      const g = station0ProcureGroups.find(x => x.groupKey === skuKey);
+    function updateGroupBought(idx, val) {
+      const g = (typeof idx === 'number') ? station0ProcureGroups[idx] : station0ProcureGroups.find(x => x.groupKey === idx);
       if (g) {
         if (val === '' || val === null) {
           g.actualBought = null;
@@ -7890,7 +7903,7 @@
           return `
             <tr>
               <td style="padding: 10px 12px;">
-                <img src="${img}" style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;" onclick="zoomImage('${img}', '${it.productName}')">
+                <img src="${img}" style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;" onclick="zoomImage(this.src, this.alt)" alt="${(it.productName || '').replace(/"/g, '&quot;')}" title="點擊放大商品圖片">
               </td>
               <td style="padding: 10px 12px;"><strong>${it.productName}</strong></td>
               <td style="padding: 10px 12px;"><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${it.spec || '單一規格'}</span></td>
@@ -8000,15 +8013,36 @@
       }
     }
 
-    function executeAutoAllocation(skuKey, prodName, boughtQtyVal, demandQty, procuredQtyVal) {
+    function executeAutoAllocation(param1, param2, param3, param4, param5) {
+      let g, skuKey, prodName, demandQty, boughtQtyVal, procuredQtyVal;
+
+      if (typeof param1 === 'number') {
+        const idx = param1;
+        g = station0ProcureGroups[idx];
+        if (!g) return;
+        skuKey = g.groupKey;
+        prodName = g.productName;
+        demandQty = g.totalDemand;
+        const boughtInput = document.getElementById(`inputBought_${idx}`);
+        const procuredInput = document.getElementById(`inputProcured_${idx}`);
+        boughtQtyVal = boughtInput ? boughtInput.value.trim() : (g.actualBought !== null ? g.actualBought : '');
+        procuredQtyVal = procuredInput ? procuredInput.value.trim() : g.totalDemand;
+      } else {
+        skuKey = param1;
+        prodName = param2;
+        boughtQtyVal = param3;
+        demandQty = param4;
+        procuredQtyVal = param5;
+        g = station0ProcureGroups.find(x => x.groupKey === skuKey);
+      }
+
       const isBoughtEmpty = (boughtQtyVal === '' || boughtQtyVal === null || boughtQtyVal === undefined);
       let pQty = parseInt(procuredQtyVal, 10);
-      if (isNaN(pQty) || pQty < 0) pQty = 0;
+      if (isNaN(pQty) || pQty < 0) pQty = (g && g.totalDemand) ? g.totalDemand : 0;
 
-      const targetGroup = station0ProcureGroups.find(g => g.groupKey === skuKey);
-      if (targetGroup) {
-        targetGroup.procuredQty = pQty;
-        targetGroup.actualBought = isBoughtEmpty ? null : parseInt(boughtQtyVal, 10);
+      if (g) {
+        g.procuredQty = pQty;
+        g.actualBought = isBoughtEmpty ? null : parseInt(boughtQtyVal, 10);
       }
 
       // 情境 A：實到件數為空值，但買手已有採購叫貨 -> 當前配貨狀況標記為「連線中」（橘色）！
