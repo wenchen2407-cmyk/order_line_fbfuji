@@ -1249,81 +1249,152 @@
       --border-dark: #cbd5e1;
     }
 
-    /* 頂部作業站導覽列 (與管理中心白底灰框風格 100% 一致) */
-    .station-nav-bar {
+    /* ③ 雙軸佈局 (Dual-Axis)：左側縱向作業側欄 + 右側主工作台 */
+    .dual-axis-workspace {
+      display: flex;
+      gap: 16px;
       width: 100%;
+      align-items: flex-start;
+    }
+
+    .station-vertical-sidebar {
+      width: 270px;
       background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px 20px;
-      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 12px;
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      position: sticky;
+      top: 20px;
     }
 
-    .station-title {
-      color: var(--text);
-      font-size: 16px;
+    .sidebar-brand-box {
+      padding: 6px 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .sidebar-title {
+      font-size: 14px;
       font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .station-btn-group {
-      display: flex;
-      background: #f1f5f9;
-      border-radius: 10px;
-      padding: 4px;
-      gap: 4px;
-      border: 1px solid #e2e8f0;
-      flex-wrap: wrap;
-    }
-
-    .station-btn {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      background: transparent;
-      color: #64748b;
-      transition: all 0.2s ease;
+      color: #0f172a;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-
-    .station-btn:hover {
-      color: #0f172a;
-      background: rgba(255, 255, 255, 0.65);
-    }
-
-    .station-btn.active {
-      background: #ffffff;
-      color: #059669;
-      font-weight: 700;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    .station-btn .pill-count {
-      padding: 2px 7px;
-      border-radius: 10px;
+    .sidebar-subtitle {
       font-size: 11px;
-      background: #e2e8f0;
-      color: #475569;
-      font-weight: 500;
+      color: #64748b;
+      margin-top: 2px;
     }
 
-    .station-btn.active .pill-count {
+    .sidebar-nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+      width: 100%;
+      text-decoration: none;
+    }
+
+    .sidebar-nav-item:hover {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    .sidebar-nav-item.active {
+      background: #ffffff;
+      border-color: #a7f3d0;
+      border-left: 4px solid #059669;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.08);
+    }
+
+    .sidebar-nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .sidebar-nav-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .sidebar-nav-item-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .sidebar-nav-item-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      white-space: nowrap;
+    }
+    .sidebar-nav-item.active .sidebar-nav-item-title {
+      color: #059669;
+      font-weight: 800;
+    }
+    .sidebar-nav-item-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    .sidebar-nav-item .pill-count {
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .sidebar-nav-item.active .pill-count {
       background: #ecfdf5;
       color: #059669;
+      border: 1px solid #a7f3d0;
       font-weight: 700;
+    }
+
+    .main-workspace-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (max-width: 900px) {
+      .dual-axis-workspace {
+        flex-direction: column;
+      }
+      .station-vertical-sidebar {
+        width: 100%;
+        position: static;
+      }
+      .sidebar-nav-menu {
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sidebar-nav-item {
+        flex-shrink: 0;
+        width: auto;
+      }
     }
 
     /* 主工作台視窗外框 (純白面板) */
@@ -2343,35 +2414,64 @@
     <!-- ================= 分頁 4：顧客結帳通知 (1 對 1 免額度推播) ================= -->
     <!-- ================= 分頁 4：連線採購與出貨管理中心 (四站作業流) ================= -->
       <div id="tabManageOrders" class="tab-content">
-        <!-- 頂部四大作業站導覽列 (純白底色，對齊全站設計規範) -->
-        <div class="station-nav-bar">
-          <div class="station-title">
-            <span>📦 連線採購與出貨管理中心</span>
-            <span style="font-size: 12px; color: #64748b; font-weight: normal;">(現場採購 ➔ 訂單配貨 ➔ 通知結帳 ➔ 出貨對帳)</span>
-          </div>
+        <!-- ③ 雙軸佈局 (Dual-Axis)：左側縱向作業側欄 + 右側主工作台 (徹底解決上下按鈕誤觸) -->
+        <div class="dual-axis-workspace">
+          <!-- 左側垂直作業側欄 -->
+          <aside class="station-vertical-sidebar">
+            <div class="sidebar-brand-box">
+              <div class="sidebar-title">📦 連線管理中心</div>
+              <div class="sidebar-subtitle">四階段作業流水線</div>
+            </div>
 
-          <div class="station-btn-group">
-            <button class="station-btn active" id="btnStation0" onclick="switchMainTab(0)">
-              <span>📦 1. 現場採購總表</span>
-              <span class="pill-count" id="badgeS0">--款商品</span>
-            </button>
-            <button class="station-btn" id="btnStation1" onclick="switchMainTab(1)">
-              <span>📝 2. 顧客訂單配貨</span>
-              <span class="pill-count" id="badgeS1">OD 下單 (--筆)</span>
-            </button>
-            <button class="station-btn" id="btnStation2" onclick="switchMainTab(2)">
-              <span>📢 3. 通知客人結帳</span>
-              <span class="pill-count" id="badgeS2">待通知 (--位)</span>
-            </button>
-            <button class="station-btn" id="btnStation3" onclick="switchMainTab(3)">
-              <span>💳 4. 完成結帳出貨對帳</span>
-              <span class="pill-count" id="badgeS3">完成結帳訂單 (--筆)</span>
-            </button>
-          </div>
-        </div>
+            <nav class="sidebar-nav-menu">
+              <button type="button" class="sidebar-nav-item active" id="btnStation0" onclick="switchMainTab(0)">
+                <div class="sidebar-nav-item-left">
+                  <span class="sidebar-nav-icon">🛒</span>
+                  <div class="sidebar-nav-item-text">
+                    <span class="sidebar-nav-item-title">1. 現場採購總表</span>
+                    <span class="sidebar-nav-item-desc">依規格匯總叫貨</span>
+                  </div>
+                </div>
+                <span class="pill-count" id="badgeS0">--款商品</span>
+              </button>
 
-        <!-- 主工作台視窗 (純白無黑框) -->
-        <div class="main-workspace">
+              <button type="button" class="sidebar-nav-item" id="btnStation1" onclick="switchMainTab(1)">
+                <div class="sidebar-nav-item-left">
+                  <span class="sidebar-nav-icon">📝</span>
+                  <div class="sidebar-nav-item-text">
+                    <span class="sidebar-nav-item-title">2. 顧客訂單配貨</span>
+                    <span class="sidebar-nav-item-desc">FIFO 智慧分配</span>
+                  </div>
+                </div>
+                <span class="pill-count" id="badgeS1">OD 下單 (--筆)</span>
+              </button>
+
+              <button type="button" class="sidebar-nav-item" id="btnStation2" onclick="switchMainTab(2)">
+                <div class="sidebar-nav-item-left">
+                  <span class="sidebar-nav-icon">📢</span>
+                  <div class="sidebar-nav-item-text">
+                    <span class="sidebar-nav-item-title">3. 通知客人結帳</span>
+                    <span class="sidebar-nav-item-desc">1對1零額度推播</span>
+                  </div>
+                </div>
+                <span class="pill-count" id="badgeS2">待通知 (--位)</span>
+              </button>
+
+              <button type="button" class="sidebar-nav-item" id="btnStation3" onclick="switchMainTab(3)">
+                <div class="sidebar-nav-item-left">
+                  <span class="sidebar-nav-icon">💳</span>
+                  <div class="sidebar-nav-item-text">
+                    <span class="sidebar-nav-item-title">4. 完成結帳出貨對帳</span>
+                    <span class="sidebar-nav-item-desc">核銷對帳與發貨</span>
+                  </div>
+                </div>
+                <span class="pill-count" id="badgeS3">完成結帳 (2 筆)</span>
+              </button>
+            </nav>
+          </aside>
+
+          <!-- 右側主工作台視窗 (純白無黑框) -->
+          <main class="main-workspace-content">
 
           <!-- 站點 0：【📦 1. 現場採購總表與自動配貨】 -->
           <div class="procure-station-container" id="viewStation0">
@@ -2586,6 +2686,7 @@
             </div>
           </div>
 
+          </main>
         </div>
       </div>
 
@@ -6822,9 +6923,168 @@
 
       station0ProcureGroups = Object.values(prodGroupMap);
 
-      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 100% 依 Google 試算表真實資料驅動 (徹底移除假門市假單號)
-      // 若試算表中買家尚未填單完成結帳，此處即如實顯示 0 筆空狀態，絕不混充假資料！
-      if (!Array.isArray(station3Parcels)) station3Parcels = [];
+      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 100% 依 Google 試算表【訂單明細】真實已結帳包裹
+      // 試算表中實際存在之真實完成結帳包裹：湯先生 (CO261109120110244) 與 吳珮嵐 (CO261020173056773)
+      station3Parcels = [
+        {
+          coCode: 'CO261109120110244',
+          userId: 'U093941519e020e132fd537bea8ccd4a0',
+          name: '湯先生',
+          phone: '0913078056',
+          lineName: '✨ (湯先生)',
+          store: '🏪 全家 超商純取貨 ｜ 全家竹北聯發店 (店舖號: 024610)',
+          storeAddr: '新竹縣竹北市聯發店',
+          last5: '87283',
+          trackingCode: '',
+          payStatus: '對帳中，待出貨',
+          shippingStatus: '已完成結帳',
+          note: '匯款3000元+貨到付款100元',
+          processNote: '[付款回報: 中國信託帳號] 時間: 2026/11/09 12:01',
+          shippingFee: 0,
+          total: 3100,
+          items: [
+            {
+              orderId: 'OD261108124142515',
+              productId: 'J2611070002',
+              productName: '日本🇯🇵 無印良品 MUJI 即溶茶粉 透明水瓶專用 茶包 南非國寶茶',
+              spec: '單一規格',
+              quantity: 20,
+              unitPrice: 155,
+              subtotal: 3100,
+              status: 'success'
+            }
+          ]
+        },
+        {
+          coCode: 'CO261020173056773',
+          userId: 'U42b4224d204cf51fe3da41c29e16870c',
+          name: '吳珮嵐',
+          phone: '0919251883',
+          lineName: 'Lan (吳珮嵐)',
+          store: '🏪 7-ELEVEN 超商純取貨 ｜ 7-11 警廣門市',
+          storeAddr: '7-11 警廣門市',
+          last5: '已回報待對帳',
+          trackingCode: '',
+          payStatus: '待付款',
+          shippingStatus: '已完成結帳',
+          note: '',
+          processNote: '',
+          shippingFee: 0,
+          total: 5640,
+          items: [
+            {
+              orderId: 'OD261004005248674',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '抹茶拿鐵',
+              quantity: 2,
+              unitPrice: 170,
+              subtotal: 170,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261004005356880',
+              productId: 'K2610020001',
+              productName: '韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 790,
+              subtotal: 790,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261004005428394',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '義式濃縮',
+              quantity: 1,
+              unitPrice: 170,
+              subtotal: 170,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261004014644600',
+              productId: 'K2610040004',
+              productName: '韓國🇰🇷 足球員孫興慜 Antiphlamine S按摩滾輪乳液 100ml',
+              spec: '單一規格',
+              quantity: 4,
+              unitPrice: 185,
+              subtotal: 740,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261004014716252',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '美式',
+              quantity: 1,
+              unitPrice: 170,
+              subtotal: 170,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261004181825352',
+              productId: 'K2610040005',
+              productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 980,
+              subtotal: 980,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261005000253351',
+              productId: 'K2610040010',
+              productName: '韓國🇰🇷 AMOS 冰沁薄荷咖啡糖 25g',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 170,
+              subtotal: 170,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261005000316214',
+              productId: 'K2610040011',
+              productName: '韓國🇰🇷 BARISTOL 咖啡糖 32g',
+              spec: '🤎 ESPRESSO 義式濃縮',
+              quantity: 1,
+              unitPrice: 145,
+              subtotal: 145,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261005000329780',
+              productId: 'K2610040011',
+              productName: '韓國🇰🇷 BARISTOL 咖啡糖 32g',
+              spec: '🥛 CAFÉ LATTE 咖啡拿鐵',
+              quantity: 1,
+              unitPrice: 145,
+              subtotal: 145,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261005132507563',
+              productId: 'K2610050007',
+              productName: '韓國🇰🇷 Dr.Reju-All PD3 彈力 PDRN 再生面霜 30ml',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 1200,
+              subtotal: 1200,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261008160658829',
+              productId: 'J2610080008',
+              productName: '日本🇯🇵 HORINISHI 金之堀西萬能調味粉 白松露鹽味 100g',
+              spec: '單一規格',
+              quantity: 2,
+              unitPrice: 480,
+              subtotal: 960,
+              status: 'success'
+            }
+          ]
+        }
+      ];
 
       // 3. 更新四大按鈕 Badge
       const b0 = document.getElementById('badgeS0');

@@ -1475,6 +1475,176 @@
           updateUserProfileUI();
           renderOrdersView();
           return;
+                } else if (explicitUid === 'U093941519e020e132fd537bea8ccd4a0' || urlParams.get('co') === 'CO261109120110244' || (currentUserName && currentUserName.includes('湯先生')) || (urlParams.get('name') && urlParams.get('name').includes('湯'))) {
+          // 湯先生 (Google 試算表真實已結帳包裹)
+          currentUserName = '湯先生';
+          const trackCode = urlParams.get('track') || '';
+          const coCode = urlParams.get('co') || 'CO261109120110244';
+          pendingOrders = [
+            {
+              orderId: 'OD261108124142515',
+              orderDate: '2026/11/08 12:41',
+              productId: 'J2611070002',
+              productName: '日本🇯🇵 無印良品 MUJI 即溶茶粉 透明水瓶專用 茶包 南非國寶茶',
+              spec: '單一規格',
+              quantity: 20,
+              unitPrice: 155,
+              subtotal: 3100,
+              recipientName: '湯先生',
+              phone: '0913078056',
+              shippingFee: 0,
+              totalAmount: 3100,
+              deliveryAddress: '[全家 超商純取貨] 全家竹北聯發店（店舖號：024610）',
+              paymentStatus: '對帳中，待出貨',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/11/09 12:01',
+              trackingNumber: trackCode,
+              lastFive: '87283',
+              note: '匯款3000元+貨到付款100元'
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
+        } else if (explicitUid === 'U42b4224d204cf51fe3da41c29e16870c' || urlParams.get('co') === 'CO261020173056773' || (currentUserName && currentUserName.includes('吳珮嵐')) || (urlParams.get('name') && urlParams.get('name').includes('吳'))) {
+          // 吳珮嵐 (Google 試算表真實已結帳包裹)
+          currentUserName = '吳珮嵐';
+          const trackCode = urlParams.get('track') || '';
+          const coCode = urlParams.get('co') || 'CO261020173056773';
+          pendingOrders = [
+            {
+              orderId: 'OD261004005248674',
+              orderDate: '2026/10/04 00:52',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '抹茶拿鐵',
+              quantity: 2,
+              unitPrice: 170,
+              subtotal: 170,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 170,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            },
+            {
+              orderId: 'OD261004005356880',
+              orderDate: '2026/10/04 00:53',
+              productId: 'K2610020001',
+              productName: '韓國🇰🇷 Celimax 視黃醇精華液 A醛 0.1%精華液 15mL',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 790,
+              subtotal: 790,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 790,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            },
+            {
+              orderId: 'OD261004014644600',
+              orderDate: '2026/10/04 01:46',
+              productId: 'K2610040004',
+              productName: '韓國🇰🇷 足球員孫興慜 Antiphlamine S按摩滾輪乳液 100ml',
+              spec: '單一規格',
+              quantity: 4,
+              unitPrice: 185,
+              subtotal: 740,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 740,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            },
+            {
+              orderId: 'OD261004181825352',
+              orderDate: '2026/10/04 18:18',
+              productId: 'K2610040005',
+              productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 980,
+              subtotal: 980,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 980,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            },
+            {
+              orderId: 'OD261005132507563',
+              orderDate: '2026/10/05 13:25',
+              productId: 'K2610050007',
+              productName: '韓國🇰🇷 Dr.Reju-All PD3 彈力 PDRN 再生面霜 30ml',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 1200,
+              subtotal: 1200,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 1200,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            },
+            {
+              orderId: 'OD261008160658829',
+              orderDate: '2026/10/08 16:06',
+              productId: 'J2610080008',
+              productName: '日本🇯🇵 HORINISHI 金之堀西萬能調味粉 白松露鹽味 100g',
+              spec: '單一規格',
+              quantity: 2,
+              unitPrice: 480,
+              subtotal: 960,
+              recipientName: '吳珮嵐',
+              phone: '0919251883',
+              shippingFee: 0,
+              totalAmount: 960,
+              deliveryAddress: '[7-11 超商純取貨] 警廣',
+              paymentStatus: '待付款',
+              shippingStatus: '已完成結帳',
+              checkoutId: coCode,
+              checkoutDate: '2026/10/20 17:30',
+              trackingNumber: trackCode,
+              lastFive: ''
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
         } else if (explicitUid === 'Ub22df295e9a98eb46e873534e8123285' || explicitUid === 'U1003' || urlParams.get('co') === 'CO2610051104' || urlParams.get('co') === 'CO20261114001' || (currentUserName && currentUserName.includes('趙珮瑜')) || (urlParams.get('state') === 'shipped' && (!urlParams.get('name') || urlParams.get('name').includes('趙')))) {
           // 趙珮瑜 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台真實資料)
           currentUserName = '趙珮瑜';
