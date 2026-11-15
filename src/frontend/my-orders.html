@@ -1473,51 +1473,51 @@
           updateUserProfileUI();
           renderOrdersView();
           return;
-        } else if (explicitUid === 'U1003' || urlParams.get('co') === 'CO20261114001') {
-          // 王小美 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台資料)
-          currentUserName = currentUserName || '王小美';
+        } else if (explicitUid === 'Ub22df295e9a98eb46e873534e8123285' || explicitUid === 'U1003' || urlParams.get('co') === 'CO2610051104' || urlParams.get('co') === 'CO20261114001' || (currentUserName && currentUserName.includes('趙珮瑜')) || (urlParams.get('state') === 'shipped' && (!urlParams.get('name') || urlParams.get('name').includes('趙')))) {
+          // 趙珮瑜 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台真實資料)
+          currentUserName = '趙珮瑜';
           const trackCode = urlParams.get('track') || '98273615243';
-          const coCode = urlParams.get('co') || 'CO20261114001';
+          const coCode = urlParams.get('co') || 'CO2610051104';
           pendingOrders = [
             {
-              orderId: 'OD20261114001',
-              orderDate: '2026/11/14 09:15',
-              productId: 'JP-2026-W01',
-              productName: '日製超輕量長版防風羽絨外套',
-              spec: '經典霧黑 / M',
-              quantity: 2,
-              unitPrice: 3880,
-              subtotal: 7760,
-              recipientName: '王小美',
-              phone: '0912-345-678',
+              orderId: 'OD261005110439737',
+              orderDate: '2026/10/05 11:04',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '抹茶拿鐵',
+              quantity: 3,
+              unitPrice: 170,
+              subtotal: 510,
+              recipientName: '趙珮瑜',
+              phone: '0925564080',
               shippingFee: 60,
-              totalAmount: 7820,
-              deliveryAddress: '[7-11 超商純取貨] 7-11 敦南門市 (店號: 982314)',
+              totalAmount: 570,
+              deliveryAddress: '[7-11 超商取貨] 7-ELEVEN 敦南門市 (店號: 982314) 台北市大安區敦化南路一段 188 號',
               paymentStatus: '已完成付款',
               shippingStatus: '已出貨配送中',
               checkoutId: coCode,
-              checkoutDate: '2026/11/14 11:20',
+              checkoutDate: '2026/10/05 11:15',
               trackingNumber: trackCode,
               lastFive: '98214'
             },
             {
-              orderId: 'OD20261114001_OUT',
-              orderDate: '2026/11/14 09:15',
-              productId: 'JP-2026-W01',
-              productName: '日製超輕量長版防風羽絨外套',
-              spec: '經典霧黑 / M',
+              orderId: 'OD261005110511336',
+              orderDate: '2026/10/05 11:05',
+              productId: 'K2610040005',
+              productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
+              spec: '單一規格',
               quantity: 1,
-              unitPrice: 3880,
-              subtotal: 0,
-              recipientName: '王小美',
-              phone: '0912-345-678',
+              unitPrice: 980,
+              subtotal: 980,
+              recipientName: '趙珮瑜',
+              phone: '0925564080',
               shippingFee: 0,
-              totalAmount: 0,
-              deliveryAddress: '[7-11 超商純取貨] 7-11 敦南門市 (店號: 982314)',
-              paymentStatus: '免付款(缺貨取消)',
-              shippingStatus: '缺貨斷貨',
+              totalAmount: 980,
+              deliveryAddress: '[7-11 超商取貨] 7-ELEVEN 敦南門市 (店號: 982314) 台北市大安區敦化南路一段 188 號',
+              paymentStatus: '已完成付款',
+              shippingStatus: '已出貨配送中',
               checkoutId: coCode,
-              checkoutDate: '2026/11/14 11:20',
+              checkoutDate: '2026/10/05 11:15',
               trackingNumber: trackCode,
               lastFive: '98214'
             }
@@ -1526,30 +1526,30 @@
           updateUserProfileUI();
           renderOrdersView();
           return;
-        } else if (explicitUid === 'U1004' || urlParams.get('co') === 'CO20261114002') {
-          // 張佳琪 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台資料)
-          currentUserName = currentUserName || '張佳琪';
-          const trackCode = urlParams.get('track') || '98273615243';
-          const coCode = urlParams.get('co') || 'CO20261114002';
+        } else if (explicitUid === 'U022acdc062e1bf86ac37672f40ff8c1b' || explicitUid === 'U1004' || urlParams.get('co') === 'CO2610101842' || urlParams.get('co') === 'CO20261114002' || (currentUserName && currentUserName.includes('徐偉萍')) || (urlParams.get('state') === 'shipped' && urlParams.get('name') && urlParams.get('name').includes('徐'))) {
+          // 徐偉萍 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台真實資料)
+          currentUserName = '徐偉萍';
+          const trackCode = urlParams.get('track') || '98273615244';
+          const coCode = urlParams.get('co') || 'CO2610101842';
           pendingOrders = [
             {
-              orderId: 'OD20261114003',
-              orderDate: '2026/11/14 10:00',
-              productId: 'JP-2026-C09',
-              productName: '北海道限定極潤保濕乳霜 100g',
-              spec: '單一規格 (100g)',
-              quantity: 2,
-              unitPrice: 680,
-              subtotal: 1360,
-              recipientName: '張佳琪',
-              phone: '0933-112-998',
+              orderId: 'OD261010184212940',
+              orderDate: '2026/10/10 18:42',
+              productId: 'J2610100006',
+              productName: '日本🇯🇵 Blue Bottle Coffee藍瓶咖啡 Craft Matcha 抹茶粉 30g',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 890,
+              subtotal: 890,
+              recipientName: '徐偉萍',
+              phone: '0966916243',
               shippingFee: 60,
-              totalAmount: 1420,
-              deliveryAddress: '[7-11 超商純取貨] 7-11 新莊立言門市 (店號: 182741)',
+              totalAmount: 950,
+              deliveryAddress: '[7-11 超商取貨] 7-ELEVEN 新莊立言門市 (店號: 182741) 新北市新莊區立言街 28 號',
               paymentStatus: '已完成付款',
               shippingStatus: '已出貨配送中',
               checkoutId: coCode,
-              checkoutDate: '2026/11/14 12:45',
+              checkoutDate: '2026/10/10 18:50',
               trackingNumber: trackCode,
               lastFive: '12345'
             }

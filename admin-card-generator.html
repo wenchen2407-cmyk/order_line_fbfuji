@@ -1464,8 +1464,8 @@
     .procure-station-container {
       display: flex;
       flex-direction: column;
-      height: 720px;
-      overflow-y: auto;
+      min-height: 480px;
+      height: auto;
       padding: 20px;
       gap: 16px;
       background: #ffffff;
@@ -1684,8 +1684,9 @@
     .station1-container {
       display: flex;
       flex-direction: column;
-      height: 720px;
-      overflow-y: auto;
+      min-height: 480px;
+      height: auto;
+      overflow: visible;
       padding: 20px;
       gap: 16px;
       background: #ffffff;
@@ -1695,11 +1696,15 @@
       background: #ffffff;
       border: 1px solid var(--border-color);
       border-radius: 10px;
-      overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
     .order-table {
       width: 100%;
+      min-width: 1060px;
       border-collapse: collapse;
       font-size: 13.5px;
     }
@@ -1796,8 +1801,8 @@
     .station-notify-container {
       display: flex;
       flex-direction: column;
-      height: 720px;
-      overflow-y: auto;
+      min-height: 480px;
+      height: auto;
       padding: 24px 20px;
       background: #ffffff;
     }
@@ -1848,10 +1853,14 @@
     /* 站點四：完成結帳出貨對帳站 */
     .station2-container {
       display: flex;
-      height: 720px;
+      min-height: 640px;
+      height: auto;
       width: 100%;
-      overflow: hidden;
       background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
     }
 
     .station2-left {
@@ -1861,6 +1870,14 @@
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
+      max-height: 750px;
+    }
+
+    #station3ParcelList {
+      overflow-y: auto;
+      flex: 1;
+      max-height: 680px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .split-item-row {
@@ -1882,6 +1899,8 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      min-width: 0;
+      max-height: 750px;
     }
 
     .right-header {
@@ -1893,6 +1912,24 @@
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 900px) {
+      .station2-container {
+        flex-direction: column !important;
+        min-height: auto !important;
+      }
+      .station2-left {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        max-height: 280px !important;
+      }
+      .station2-right {
+        max-height: none !important;
+      }
     }
 
     .right-body {
@@ -2599,7 +2636,7 @@
                   📊 匯出採購清單 Excel
                 </button>
                 <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700;" onclick="copyProcurementText()">
-                  📋 複製採購文字 (LINE記事本)
+                  📋 複製採購文字
                 </button>
                 <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; font-weight: 700;" onclick="openA4PrintModal()">
                   🖨️ A4 現場採購檢核單
@@ -7087,32 +7124,73 @@
 
       station0ProcureGroups = Object.values(prodGroupMap);
 
-      // 2. 整理出貨包裹清單 (Station 4) - 取 checkout 買家
-      station3Parcels = [];
-      const checkoutCusts = (notifyCustomers || []).filter(c => c.type === 'checkout' || c.totalAmount > 0);
-      checkoutCusts.forEach((c, idx) => {
-        const coCode = 'CO26' + String(1005 + idx * 5) + '110' + (4 + idx);
-        const totalWithShip = (c.totalAmount || 0) + 60;
-        const stores = [
-          { name: '🏪 7-ELEVEN 敦南門市 (店號: 982314)', addr: '台北市大安區敦化南路一段 188 號', last5: '98214' },
-          { name: '🏪 7-ELEVEN 新莊立言門市 (店號: 182741)', addr: '新北市新莊區立言街 28 號', last5: '12345' },
-          { name: '🏪 7-ELEVEN 信義威秀門市 (店號: 198421)', addr: '台北市信義區松壽路 20 號', last5: '88231' }
-        ];
-        const storeInfo = stores[idx % stores.length];
-
-        station3Parcels.push({
-          coCode: coCode,
-          userId: c.userId,
-          name: c.name,
-          phone: c.phone || '0912-345-678',
-          lineName: c.name,
-          store: storeInfo.name,
-          storeAddr: storeInfo.addr,
-          last5: storeInfo.last5,
-          total: totalWithShip,
-          items: c.items || []
-        });
-      });
+      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 真實對齊 Google Sheets 欄位規格 (第 13~24 欄)
+      station3Parcels = [
+        {
+          coCode: 'CO2610051104',
+          userId: 'Ub22df295e9a98eb46e873534e8123285',
+          name: '趙珮瑜',
+          phone: '0925564080',
+          lineName: '趙珮瑜',
+          store: '🏪 7-ELEVEN 敦南門市 (店號: 982314)',
+          storeAddr: '台北市大安區敦化南路一段 188 號',
+          last5: '98214',
+          trackingCode: '98273615243',
+          payStatus: '已完成付款',
+          shippingStatus: '已完成結帳待出貨',
+          shippingFee: 60,
+          total: 1550,
+          items: [
+            {
+              orderId: 'OD261005110439737',
+              productId: 'K2610040003',
+              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+              spec: '抹茶拿鐵',
+              quantity: 3,
+              unitPrice: 170,
+              subtotal: 510,
+              status: 'success'
+            },
+            {
+              orderId: 'OD261005110511336',
+              productId: 'K2610040005',
+              productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 980,
+              subtotal: 980,
+              status: 'success'
+            }
+          ]
+        },
+        {
+          coCode: 'CO2610101842',
+          userId: 'U022acdc062e1bf86ac37672f40ff8c1b',
+          name: '徐偉萍',
+          phone: '0966916243',
+          lineName: '徐偉萍',
+          store: '🏪 7-ELEVEN 新莊立言門市 (店號: 182741)',
+          storeAddr: '新北市新莊區立言街 28 號',
+          last5: '12345',
+          trackingCode: '98273615244',
+          payStatus: '已完成付款',
+          shippingStatus: '已完成結帳待出貨',
+          shippingFee: 60,
+          total: 950,
+          items: [
+            {
+              orderId: 'OD261010184212940',
+              productId: 'J2610100006',
+              productName: '日本🇯🇵 Blue Bottle Coffee藍瓶咖啡 Craft Matcha 抹茶粉 30g',
+              spec: '單一規格',
+              quantity: 1,
+              unitPrice: 890,
+              subtotal: 890,
+              status: 'success'
+            }
+          ]
+        }
+      ];
 
       // 3. 更新四大按鈕 Badge
       const b0 = document.getElementById('badgeS0');
@@ -7283,29 +7361,31 @@
       }
 
       listEl.innerHTML = station3Parcels.map((p, idx) => {
-        const isActive = (idx === 0) ? 'active' : '';
-        if (idx === 0) currentActiveParcelCode = p.coCode;
+        const isActive = (p.coCode === currentActiveParcelCode || (!currentActiveParcelCode && idx === 0)) ? 'active' : '';
+        if (isActive) currentActiveParcelCode = p.coCode;
         return `
           <div class="split-item-row ${isActive}" onclick="selectStation2Order(this, '${p.coCode}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <strong style="color: #0f172a; font-size: 13.5px;">${p.coCode}</strong>
               <span style="font-size: 13px; font-weight: 700; color: #15803d;">NT$ ${p.total.toLocaleString()}</span>
             </div>
-            <div style="font-size: 12.5px; color: #334155; margin-top: 3px;">
-              買家：<strong>${p.name}</strong> (${p.phone})
+            <div style="font-size: 12.5px; color: #334155; margin-top: 4px;">
+              買家：<strong>${p.name}</strong> <span style="color:#64748b; font-family:monospace;">(${p.phone})</span>
             </div>
-            <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+            <div style="font-size: 11.5px; color: #0369a1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               ${p.store}
             </div>
-            <div style="margin-top: 5px;">
-              <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">待出貨 (已核銷)</span>
+            <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">${p.shippingStatus || '待出貨'}</span>
+              <span style="font-size: 11px; color: #64748b;">末五碼: <code style="color:#15803d; font-weight:700;">${p.last5}</code></span>
             </div>
           </div>
         `;
       }).join('');
 
-      if (station3Parcels.length > 0) {
-        loadStation3ParcelDetail(station3Parcels[0]);
+      const activeParcel = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
+      if (activeParcel) {
+        loadStation3ParcelDetail(activeParcel);
       }
     }
 
@@ -7328,6 +7408,7 @@
       const storeAddr = document.getElementById('st2StoreAddr');
       const last5 = document.getElementById('st2Last5');
       const total = document.getElementById('st2Total');
+      const trackingInput = document.getElementById('inputTrackingCode');
       const prodRows = document.getElementById('st2ProdRows');
 
       if (title) title.innerText = `結帳編號：${p.coCode}`;
@@ -7339,9 +7420,10 @@
       if (storeAddr) storeAddr.innerText = p.storeAddr;
       if (last5) last5.innerText = p.last5;
       if (total) total.innerText = `NT$ ${p.total.toLocaleString()}`;
+      if (trackingInput) trackingInput.value = p.trackingCode || '';
 
       if (prodRows) {
-        prodRows.innerHTML = p.items.map(it => {
+        let rowsHtml = (p.items || []).map(it => {
           const matchedProd = (allProducts || []).find(x => x.id === it.productId) || {};
           const img = matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
           const unitPrice = it.unitPrice || 0;
@@ -7361,6 +7443,17 @@
             </tr>
           `;
         }).join('');
+
+        // 補上超商運費行，讓品項與總額對齊無疑義
+        rowsHtml += `
+          <tr style="background: #fafafa; border-top: 1px dashed #cbd5e1;">
+            <td colspan="3" style="padding: 10px 12px; color: #64748b; font-size: 12.5px;">🚚 超商物流運費 (${p.store ? p.store.substring(0, 15) : '7-11'})</td>
+            <td style="padding: 10px 12px; font-size: 12.5px; color: #64748b;">1 件包裹</td>
+            <td style="padding: 10px 12px; font-size: 12.5px; color: #64748b;">NT$ ${p.shippingFee || 60}</td>
+            <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #64748b;">NT$ ${p.shippingFee || 60}</td>
+          </tr>
+        `;
+        prodRows.innerHTML = rowsHtml;
       }
     }
 
@@ -7559,9 +7652,15 @@
     }
 
     function confirmShippingAction() {
+      const p = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
       const trackingInput = document.getElementById('inputTrackingCode');
-      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
-      showToast(`🚚 出貨成功！單號【${trackingCode}】已回寫試算表！`);
+      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : (p ? p.trackingCode : '98273615243');
+      if (p) {
+        p.trackingCode = trackingCode;
+        p.shippingStatus = '已完成出貨';
+      }
+      showToast(`🚚 出貨成功！單號【${trackingCode}】已回寫試算表第 21 欄，狀態更新為【已完成出貨】！`);
+      renderStation3Parcels();
     }
 
     function zoomImage(src, title) {
