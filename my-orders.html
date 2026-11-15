@@ -1437,6 +1437,79 @@
         currentUserId = explicitUid;
       }
 
+      // 示範/預覽顧客專屬訂單還原 (支援管理員從站點 3 點擊「👁 預覽訂單」即時呈現該顧客的採購商品)
+      if (explicitUid === 'U1001') {
+        currentUserName = currentUserName || '趙珮瑜';
+        pendingOrders = [
+          {
+            orderId: 'OD20261114001',
+            orderDate: '2026/11/14 10:30',
+            productId: 'P101',
+            productName: '日系透膚涼感防曬罩衫',
+            spec: '經典白/F',
+            quantity: 2,
+            unitPrice: 390,
+            subtotal: 780,
+            recipientName: '趙珮瑜',
+            phone: '0925564080',
+            shippingFee: 0,
+            totalAmount: 780,
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '採購成功',
+            checkoutId: ''
+          },
+          {
+            orderId: 'OD20261114002',
+            orderDate: '2026/11/14 10:35',
+            productId: 'P102',
+            productName: '植萃保濕水潤護手霜 50ml',
+            spec: '單一規格',
+            quantity: 2,
+            unitPrice: 355,
+            subtotal: 710,
+            recipientName: '趙珮瑜',
+            phone: '0925564080',
+            shippingFee: 0,
+            totalAmount: 710,
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '採購成功',
+            checkoutId: ''
+          }
+        ];
+        completedOrders = [];
+        updateUserProfileUI();
+        renderOrdersView();
+        return;
+      } else if (explicitUid === 'U1002') {
+        currentUserName = currentUserName || '徐偉萍';
+        pendingOrders = [
+          {
+            orderId: 'OD20261114003',
+            orderDate: '2026/11/14 11:15',
+            productId: 'P103',
+            productName: '森林系刺繡純棉手帕組 (3入)',
+            spec: '森林綠',
+            quantity: 1,
+            unitPrice: 890,
+            subtotal: 890,
+            recipientName: '徐偉萍',
+            phone: '0966916243',
+            shippingFee: 0,
+            totalAmount: 890,
+            deliveryAddress: '[待出貨結帳填寫]',
+            paymentStatus: '未結帳',
+            shippingStatus: '採購成功',
+            checkoutId: ''
+          }
+        ];
+        completedOrders = [];
+        updateUserProfileUI();
+        renderOrdersView();
+        return;
+      }
+
       // 若線上環境依然尚未獲得 UID，且非本機/demo，先暫緩發送無效請求
       if (!currentUserId && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         console.log('尚未取得 LINE User ID，等待身分驗證完成...');
@@ -1592,7 +1665,7 @@
         orderId: 'OD2609280015',
         orderDate: '2026/09/28 11:10',
         productId: 'P003',
-        productName: '日本專櫃限量 保溫瓶 500ml',
+        productName: '日本限定 保溫瓶 500ml',
         spec: '霧面灰',
         quantity: 1,
         unitPrice: 680,
