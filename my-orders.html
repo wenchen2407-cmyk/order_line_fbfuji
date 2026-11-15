@@ -1392,6 +1392,177 @@
     // 取得使用者資料
     async function fetchUserData() {
       const urlParams = new URLSearchParams(window.location.search);
+      const isPreviewMode = urlParams.get('preview') === '1';
+      const explicitUid = urlParams.get('uid');
+      if (explicitUid && currentUserId !== explicitUid) {
+        currentUserId = explicitUid;
+      }
+
+      // 🌟 管理員預覽模式優先：依指定的顧客 UID、單號或 state=shipped 還原真實明細（不被 generic demo 覆蓋，並隱藏情境切換列）
+      if (isPreviewMode) {
+        const switcher = document.getElementById('demoScenarioSwitcher');
+        if (switcher) switcher.style.display = 'none';
+
+        if (explicitUid === 'U1001') {
+          // 趙珮瑜 (站點 3: 待通知結帳)
+          currentUserName = currentUserName || '趙珮瑜';
+          pendingOrders = [
+            {
+              orderId: 'OD20261114001',
+              orderDate: '2026/11/14 10:30',
+              productId: 'P101',
+              productName: '日系透膚涼感防曬罩衫',
+              spec: '經典白/F',
+              quantity: 2,
+              unitPrice: 390,
+              subtotal: 780,
+              recipientName: '趙珮瑜',
+              phone: '0925564080',
+              shippingFee: 0,
+              totalAmount: 780,
+              deliveryAddress: '[待出貨結帳填寫]',
+              paymentStatus: '未結帳',
+              shippingStatus: '採購成功',
+              checkoutId: ''
+            },
+            {
+              orderId: 'OD20261114002',
+              orderDate: '2026/11/14 10:35',
+              productId: 'P102',
+              productName: '植萃保濕水潤護手霜 50ml',
+              spec: '單一規格',
+              quantity: 2,
+              unitPrice: 355,
+              subtotal: 710,
+              recipientName: '趙珮瑜',
+              phone: '0925564080',
+              shippingFee: 0,
+              totalAmount: 710,
+              deliveryAddress: '[待出貨結帳填寫]',
+              paymentStatus: '未結帳',
+              shippingStatus: '採購成功',
+              checkoutId: ''
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
+        } else if (explicitUid === 'U1002') {
+          // 徐偉萍 (站點 3: 待通知結帳)
+          currentUserName = currentUserName || '徐偉萍';
+          pendingOrders = [
+            {
+              orderId: 'OD20261114003',
+              orderDate: '2026/11/14 11:15',
+              productId: 'P103',
+              productName: '森林系刺繡純棉手帕組 (3入)',
+              spec: '森林綠',
+              quantity: 1,
+              unitPrice: 890,
+              subtotal: 890,
+              recipientName: '徐偉萍',
+              phone: '0966916243',
+              shippingFee: 0,
+              totalAmount: 890,
+              deliveryAddress: '[待出貨結帳填寫]',
+              paymentStatus: '未結帳',
+              shippingStatus: '採購成功',
+              checkoutId: ''
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
+        } else if (explicitUid === 'U1003' || urlParams.get('co') === 'CO20261114001') {
+          // 王小美 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台資料)
+          currentUserName = currentUserName || '王小美';
+          const trackCode = urlParams.get('track') || '98273615243';
+          const coCode = urlParams.get('co') || 'CO20261114001';
+          pendingOrders = [
+            {
+              orderId: 'OD20261114001',
+              orderDate: '2026/11/14 09:15',
+              productId: 'JP-2026-W01',
+              productName: '日製超輕量長版防風羽絨外套',
+              spec: '經典霧黑 / M',
+              quantity: 2,
+              unitPrice: 3880,
+              subtotal: 7760,
+              recipientName: '王小美',
+              phone: '0912-345-678',
+              shippingFee: 60,
+              totalAmount: 7820,
+              deliveryAddress: '[7-11 超商純取貨] 7-11 敦南門市 (店號: 982314)',
+              paymentStatus: '已完成付款',
+              shippingStatus: '已出貨配送中',
+              checkoutId: coCode,
+              checkoutDate: '2026/11/14 11:20',
+              trackingNumber: trackCode,
+              lastFive: '98214'
+            },
+            {
+              orderId: 'OD20261114001_OUT',
+              orderDate: '2026/11/14 09:15',
+              productId: 'JP-2026-W01',
+              productName: '日製超輕量長版防風羽絨外套',
+              spec: '經典霧黑 / M',
+              quantity: 1,
+              unitPrice: 3880,
+              subtotal: 0,
+              recipientName: '王小美',
+              phone: '0912-345-678',
+              shippingFee: 0,
+              totalAmount: 0,
+              deliveryAddress: '[7-11 超商純取貨] 7-11 敦南門市 (店號: 982314)',
+              paymentStatus: '免付款(缺貨取消)',
+              shippingStatus: '缺貨斷貨',
+              checkoutId: coCode,
+              checkoutDate: '2026/11/14 11:20',
+              trackingNumber: trackCode,
+              lastFive: '98214'
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
+        } else if (explicitUid === 'U1004' || urlParams.get('co') === 'CO20261114002') {
+          // 張佳琪 (站點 4: 已完成出貨配送中，對齊賣家出貨工作台資料)
+          currentUserName = currentUserName || '張佳琪';
+          const trackCode = urlParams.get('track') || '98273615243';
+          const coCode = urlParams.get('co') || 'CO20261114002';
+          pendingOrders = [
+            {
+              orderId: 'OD20261114003',
+              orderDate: '2026/11/14 10:00',
+              productId: 'JP-2026-C09',
+              productName: '北海道限定極潤保濕乳霜 100g',
+              spec: '單一規格 (100g)',
+              quantity: 2,
+              unitPrice: 680,
+              subtotal: 1360,
+              recipientName: '張佳琪',
+              phone: '0933-112-998',
+              shippingFee: 60,
+              totalAmount: 1420,
+              deliveryAddress: '[7-11 超商純取貨] 7-11 新莊立言門市 (店號: 182741)',
+              paymentStatus: '已完成付款',
+              shippingStatus: '已出貨配送中',
+              checkoutId: coCode,
+              checkoutDate: '2026/11/14 12:45',
+              trackingNumber: trackCode,
+              lastFive: '12345'
+            }
+          ];
+          completedOrders = [];
+          updateUserProfileUI();
+          renderOrdersView();
+          return;
+        }
+      }
+
       const demoParam = urlParams.get('demo') || urlParams.get('test') || urlParams.get('state');
 
       // 🌟 核心最優先：若處於 demo / 測試模式，直接載入對應情境資料，並阻斷遠端空資料覆蓋！
@@ -1421,7 +1592,6 @@
       }
 
       // 搶救 currentUserId：從 localStorage 或 sessionStorage 快取中讀取 (僅在沒有 explicitUid 時)
-      const explicitUid = urlParams.get('uid');
       if (!currentUserId && !explicitUid) {
         try {
           const cached = localStorage.getItem('liff_user_profile') || sessionStorage.getItem('liff_user_profile');
@@ -1432,82 +1602,6 @@
             if (p.pictureUrl && !currentUserAvatar) currentUserAvatar = p.pictureUrl;
           }
         } catch (e) {}
-      }
-      if (explicitUid && currentUserId !== explicitUid) {
-        currentUserId = explicitUid;
-      }
-
-      // 示範/預覽顧客專屬訂單還原 (支援管理員從站點 3 點擊「👁 預覽訂單」即時呈現該顧客的採購商品)
-      if (explicitUid === 'U1001') {
-        currentUserName = currentUserName || '趙珮瑜';
-        pendingOrders = [
-          {
-            orderId: 'OD20261114001',
-            orderDate: '2026/11/14 10:30',
-            productId: 'P101',
-            productName: '日系透膚涼感防曬罩衫',
-            spec: '經典白/F',
-            quantity: 2,
-            unitPrice: 390,
-            subtotal: 780,
-            recipientName: '趙珮瑜',
-            phone: '0925564080',
-            shippingFee: 0,
-            totalAmount: 780,
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '採購成功',
-            checkoutId: ''
-          },
-          {
-            orderId: 'OD20261114002',
-            orderDate: '2026/11/14 10:35',
-            productId: 'P102',
-            productName: '植萃保濕水潤護手霜 50ml',
-            spec: '單一規格',
-            quantity: 2,
-            unitPrice: 355,
-            subtotal: 710,
-            recipientName: '趙珮瑜',
-            phone: '0925564080',
-            shippingFee: 0,
-            totalAmount: 710,
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '採購成功',
-            checkoutId: ''
-          }
-        ];
-        completedOrders = [];
-        updateUserProfileUI();
-        renderOrdersView();
-        return;
-      } else if (explicitUid === 'U1002') {
-        currentUserName = currentUserName || '徐偉萍';
-        pendingOrders = [
-          {
-            orderId: 'OD20261114003',
-            orderDate: '2026/11/14 11:15',
-            productId: 'P103',
-            productName: '森林系刺繡純棉手帕組 (3入)',
-            spec: '森林綠',
-            quantity: 1,
-            unitPrice: 890,
-            subtotal: 890,
-            recipientName: '徐偉萍',
-            phone: '0966916243',
-            shippingFee: 0,
-            totalAmount: 890,
-            deliveryAddress: '[待出貨結帳填寫]',
-            paymentStatus: '未結帳',
-            shippingStatus: '採購成功',
-            checkoutId: ''
-          }
-        ];
-        completedOrders = [];
-        updateUserProfileUI();
-        renderOrdersView();
-        return;
       }
 
       // 若線上環境依然尚未獲得 UID，且非本機/demo，先暫緩發送無效請求
