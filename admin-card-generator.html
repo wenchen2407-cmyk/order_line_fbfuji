@@ -3075,14 +3075,14 @@
                 </div>
               </div>
             </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+            <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center; flex-shrink:0; white-space:nowrap;">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#00c300; color:#fff; box-shadow:0 3px 10px rgba(0,195,0,0.28); white-space:nowrap; flex-shrink:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
                 🚀 發送 1 對 1 卡片
               </button>
-              <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; white-space:nowrap; flex-shrink:0;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
                 📋 複製純文字
               </button>
-              <button type="button" class="btn-action" style="width:auto; padding:8px 12px; font-size:12px; margin-top:0; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; flex-shrink:0;" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
                 👁️ 預覽訂單
               </button>
             </div>
