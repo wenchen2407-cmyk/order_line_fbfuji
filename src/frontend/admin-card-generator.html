@@ -10,434 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js">
-    // =========================================================================
-    // 📦 連線採購與出貨管理中心（四大主要作業站：採購 ➔ 配貨 ➔ 結帳 ➔ 出貨）
-    // =========================================================================
-    function switchMainTab(tabIdx) {
-      document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById(`btnStation${tabIdx}`);
-      if (activeBtn) activeBtn.classList.add('active');
-
-      const v0 = document.getElementById('viewStation0');
-      const v1 = document.getElementById('viewStation1');
-      const v2 = document.getElementById('viewStation2');
-      const v3 = document.getElementById('viewStation3');
-      const title = document.getElementById('bannerTitle');
-      const desc = document.getElementById('bannerDesc');
-
-      if (v0) v0.style.display = 'none';
-      if (v1) v1.style.display = 'none';
-      if (v2) v2.style.display = 'none';
-      if (v3) v3.style.display = 'none';
-
-      if (tabIdx === 0 && v0) {
-        v0.style.display = 'flex';
-        title.innerText = '📦 階段一：【現場採購總表與自動配貨】（以「商品規格」為維度叫貨，現場採購快速輸入實到件數）';
-        desc.innerText = '賣家採購時，直接看總需叫貨件數（例如羽絨外套總共需 5 件）。買到幾件就填幾件，點擊「⚡️ 執行智慧自動配貨」，系統依照下單順序 (FIFO) 自動把貨配給訂購人，排不到自動標記為【缺貨斷貨】（金額自動歸零，免付款）！';
-        showToast('進入「1. 現場採購總表與自動配貨」');
-      } else if (tabIdx === 1 && v1) {
-        v1.style.display = 'flex';
-        title.innerText = '📝 階段二：【顧客訂單配貨結果】（處理未結帳的 OD 下單明細，檢視配貨狀況與部分到貨調整）';
-        desc.innerText = '檢視尚未結帳的買家訂購紀錄。若有人下單數量非 1（如訂 3 件），系統已自動依實採數量配給 2 件、1 件判定為【缺貨斷貨】；賣家亦可手動微調數量與配貨狀態。';
-        showToast('進入「2. 顧客訂單配貨結果 (OD)」');
-      } else if (tabIdx === 2 && v2) {
-        v2.style.display = 'flex';
-        title.innerText = '📢 階段三：【通知客人結帳】（向買齊或部分到貨買家發送專屬 1 對 1 Flex 結帳卡片，0 扣訊免費推播）';
-        desc.innerText = '系統已自動彙整各買家的採購成果。賣家可一鍵點選「🚀 發送 1 對 1 卡片」或「📋 複製純文字」傳送給客人。客人開啟專屬連結填寫 7-11 取件門市並回報匯款後，系統自動生成 CO 結帳編號並流轉至第 4 站！';
-        if (typeof renderCustomerNotifyStats === 'function') renderCustomerNotifyStats();
-        if (typeof renderCustomerNotifyList === 'function') renderCustomerNotifyList();
-        showToast('進入「3. 通知客人結帳 (📢 結帳推播)」');
-      } else if (tabIdx === 3 && v3) {
-        v3.style.display = 'flex';
-        title.innerText = '💳 階段四：【完成結帳出貨對帳站】（客人完成結帳後產生 CO 結帳編號，左右分欄工作台）';
-        desc.innerText = '客人收到通知完成結帳（已產生 CO...，已有 7-11 門市與匯款末五碼）。賣家在此專心查核匯款收款、填寫物流單號、包裝出貨並發送出貨通知！';
-        showToast('進入「4. 完成結帳出貨對帳站 (CO)」');
-      }
-    }
-
-    function toggleDemandDrawer(drawerId, btnId) {
-      const drawer = document.getElementById(drawerId);
-      const btn = document.getElementById(btnId);
-      if (!drawer) return;
-      const isHidden = (drawer.style.display === 'none' || !drawer.style.display);
-      drawer.style.display = isHidden ? 'table-row' : 'none';
-      if (btn) {
-        const tag = btn.querySelector('.demand-tag');
-        if (isHidden) {
-          btn.classList.add('open');
-          if (tag) tag.innerHTML = '收起 ▲';
-          showToast('📋 已展開下單買家名冊：依訂購時間排序，列出訂購人與數量');
-        } else {
-          btn.classList.remove('open');
-          if (tag) tag.innerHTML = '明細 ▾';
-        }
-      }
-    }
-
-    function exportProcurementExcel() {
-      if (typeof XLSX === 'undefined') {
-        showToast('⚠️ 正在載入 SheetJS 模組，請稍候重試');
-        return;
-      }
-      const wb = XLSX.utils.book_new();
-      const summaryAOA = [
-        ['🇯🇵 日本現場採購總表（依品項叫貨匯總）'],
-        ['匯出時間：' + new Date().toLocaleString('zh-TW')],
-        [],
-        ['商品貨號', '商品名稱', '商品分類', '規格名稱', '總需求件數', '現場實到件數', '單價(TWD)', '採購預算小計', '採購地點', '備註說明'],
-        ['JP-2026-W01', '日製超輕量長版防風羽絨外套', '服飾', '經典霧黑 / M', 5, 3, 3880, 11640, '新宿伊勢丹本館 4F', '門市限購每人5件，記得退稅'],
-        ['JP-2026-C09', '北海道限定極潤保濕乳霜 100g', '藥妝美妝', '單一規格 (100g)', 10, 10, 680, 6800, '銀座三越 1F / 松本清', '注意效期須至2028年'],
-        [],
-        ['合計', '', '', '', 15, 13, '', 18440, '', '實到率: 86.6%']
-      ];
-      const wsSummary = XLSX.utils.aoa_to_sheet(summaryAOA);
-      wsSummary['!cols'] = [
-        { wch: 14 }, { wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 24 }, { wch: 28 }
-      ];
-      XLSX.utils.book_append_sheet(wb, wsSummary, '現場採購總表');
-
-      const detailAOA = [
-        ['📝 買家訂單分配明細（FIFO 先到先得配貨）'],
-        ['匯出時間：' + new Date().toLocaleString('zh-TW')],
-        [],
-        ['訂單編號', '下單時間', '買家姓名', '商品貨號', '商品名稱', '規格', '下單需求', '實配到件', '配貨狀態', '處理備註'],
-        ['OD20261114001', '2026/11/14 09:12:05', '王小美', 'JP-2026-W01', '日製超輕量長版防風羽絨外套', '經典霧黑 / M', 3, 2, '部分配貨', '現場缺貨斷貨 1 件'],
-        ['OD20261114002', '2026/11/14 09:15:30', '林佩萱', 'JP-2026-W01', '日製超輕量長版防風羽絨外套', '經典霧黑 / M', 1, 1, '採購成功', '已全數分配'],
-        ['OD20261114003', '2026/11/14 09:20:18', '陳雅婷', 'JP-2026-W01', '日製超輕量長版防風羽絨外套', '經典霧黑 / M', 1, 0, '缺貨斷貨', '順位第3位，實到3件已配罄'],
-        ['OD20261114004', '2026/11/14 09:22:45', '張佳琪', 'JP-2026-C09', '北海道限定極潤保濕乳霜 100g', '單一規格 (100g)', 2, 2, '採購成功', '全數分配'],
-        ['OD20261114005', '2026/11/14 09:25:10', '黃婷婷', 'JP-2026-C09', '北海道限定極潤保濕乳霜 100g', '單一規格 (100g)', 8, 8, '採購成功', '全數分配']
-      ];
-      const wsDetail = XLSX.utils.aoa_to_sheet(detailAOA);
-      wsDetail['!cols'] = [
-        { wch: 15 }, { wch: 18 }, { wch: 10 }, { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }
-      ];
-      XLSX.utils.book_append_sheet(wb, wsDetail, '買家訂單分配明細');
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-      XLSX.writeFile(wb, `連線現場採購清單_${dateStr}.xlsx`);
-      showToast('📊 專屬 .xlsx 活頁簿已成功下載！包含「現場採購總表」與「買家訂單分配」兩大頁');
-    }
-
-    function copyProcurementText() {
-      const text = `📋【🇯🇵 日本現場採購清單・LINE記事本專用版】
-━━━━━━━━━━━━━━━━━━━━
-📅 連線批次：2026/11/14 東京冬季連線
-⏰ 匯出時間：${new Date().toLocaleString('zh-TW')}
-📦 總採購品項：2 款商品 (共 2 種規格)
-🎯 總需求件數：15 件
-━━━━━━━━━━━━━━━━━━━━
-
-【01】日製超輕量長版防風羽絨外套
-🔹 貨號：JP-2026-W01
-🔹 分類：親飛連線 / 服飾
-🔹 官方原價：JPY ¥18,000 (約 NT$ 3,880)
-🔹 採購地點：新宿伊勢丹本館 4F
-🔹 備註提醒：門市每人限購 5 件，記得退稅！
-────────────────────
-  ▪️ 規格：經典霧黑 / M
-  ▪️ 需求數量：【 5 件 】(共 2 位客人下單)
-  ▪️ 現場實到：[   ] 件  (狀況：_____)
-────────────────────
-
-【02】北海道限定極潤保濕乳霜 100g
-🔹 貨號：JP-2026-C09
-🔹 分類：親飛連線 / 藥妝美妝
-🔹 官方原價：JPY ¥3,300 (約 NT$ 680)
-🔹 採購地點：銀座三越 1F / 松本清旗艦店
-🔹 備註提醒：需注意有效期限至 2028 年以後
-────────────────────
-  ▪️ 規格：單一規格 (100g)
-  ▪️ 需求數量：【 10 罐 】(共 4 位客人下單)
-  ▪️ 現場實到：[   ] 罐  (狀況：_____)
-────────────────────
-
-━━━━━━━━━━━━━━━━━━━━
-📊 本次採購需求加總：
-・羽絨外套 (霧黑/M)：5 件
-・極潤保濕乳霜 (100g)：10 罐
-總件數：15 件
-━━━━━━━━━━━━━━━━━━━━
-💡 採購回報提示：
-買完後請直接在 LINE 回報實到件數，後台將立即自動先到先得配貨！`;
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-          showToast('📋 LINE 專用採購清單文字已複製！可直接貼在 LINE 記事本或群組');
-        }).catch(() => {
-          showToast('📋 LINE 採購文字已準備好');
-        });
-      } else {
-        showToast('📋 LINE 採購文字已準備好');
-      }
-    }
-
-    function openA4PrintModal() {
-      const modal = document.getElementById('a4PrintModal');
-      if (modal) modal.style.display = 'flex';
-      const ts = document.getElementById('printTimestamp');
-      if (ts) ts.innerText = new Date().toLocaleString('zh-TW');
-    }
-
-    function closeA4PrintModal() {
-      const modal = document.getElementById('a4PrintModal');
-      if (modal) modal.style.display = 'none';
-    }
-
-    function checkAllPrintItems(isCheck) {
-      const c1 = document.getElementById('chkPrint_1');
-      const c2 = document.getElementById('chkPrint_2');
-      if (c1) { c1.checked = isCheck; togglePrintRowCheck(1, isCheck); }
-      if (c2) { c2.checked = isCheck; togglePrintRowCheck(2, isCheck); }
-      showToast(isCheck ? '☑ 已全選所有打勾項' : '☐ 已清除所有打勾項');
-    }
-
-    function togglePrintRowCheck(idx, isChecked) {
-      const row = document.getElementById('printRow_' + idx);
-      if (row) {
-        row.style.background = isChecked ? '#f0fdf4' : '#ffffff';
-      }
-    }
-
-    function executeAutoAllocation(skuKey, prodName, boughtQty, demandQty) {
-      showToast(`⚡️ 正在對【${prodName}】執行自動配貨 (實採 ${boughtQty} 件 / 需求 ${demandQty} 件)...`);
-      setTimeout(() => {
-        showToast(`🎉 配貨完成！買到的 ${boughtQty} 件已依下單順序自動分配給買家，不足部分已標記為【缺貨斷貨】！`);
-        setTimeout(() => {
-          switchMainTab(1);
-        }, 1200);
-      }, 600);
-    }
-
-    function toggleActiveOrders(isActiveOnly) {
-      if (isActiveOnly) {
-        showToast('已過濾：僅顯示「未結單」訂單（已結帳自動隱藏）');
-      } else {
-        showToast('顯示全部歷史訂單（包含已結單與結案紀錄）');
-      }
-    }
-
-    function manualChangeRowQty(orderId, newQtyVal, demandQty, unitPrice) {
-      let qty = parseInt(newQtyVal, 10);
-      if (isNaN(qty) || qty < 0) qty = 0;
-      if (qty > demandQty) qty = demandQty;
-      const inp = document.getElementById(`input_qty_${orderId}`);
-      if (inp) inp.value = qty;
-
-      const subtotalEl = document.getElementById(`subtotal_${orderId}`);
-      const subdescEl = document.getElementById(`subdesc_${orderId}`);
-      const btnSucc = document.getElementById(`btn_succ_${orderId}`);
-      const btnPart = document.getElementById(`btn_part_${orderId}`);
-      const btnOut = document.getElementById(`btn_out_${orderId}`);
-
-      const total = qty * unitPrice;
-      if (subtotalEl) subtotalEl.innerText = `${total.toLocaleString()}`;
-
-      [btnSucc, btnPart, btnOut].forEach(b => {
-        if (b) b.className = 'status-btn';
-      });
-
-      if (qty === demandQty) {
-        if (btnSucc) btnSucc.classList.add('active-success');
-        if (subdescEl) subdescEl.innerText = '(全數採購成功)';
-        showToast(`📝 ${orderId} 手動調整為【採購成功 ${qty} 件】(回寫 Sheets 第 19 欄)`);
-      } else if (qty === 0) {
-        if (btnOut) btnOut.classList.add('active-danger');
-        if (subdescEl) subdescEl.innerText = '(缺貨斷貨 $0 免付款)';
-        showToast(`📝 ${orderId} 手動調整為【缺貨斷貨 (0件)】(回寫 Sheets 第 19 欄)`);
-      } else {
-        if (btnPart) {
-          btnPart.classList.add('active-partial');
-          btnPart.innerText = '🟡 部分配貨';
-        }
-        if (subdescEl) subdescEl.innerText = `(採購成功 ${qty} 件)`;
-        showToast(`📝 ${orderId} 手動調整為【部分配貨 ${qty} 件 / 缺貨斷貨 ${demandQty - qty} 件】(回寫 Sheets 第 19 欄)`);
-      }
-    }
-
-    function manualSetStatus(orderId, statusType, demandQty, unitPrice) {
-      const input = document.getElementById(`input_qty_${orderId}`);
-      if (statusType === 'SUCCESS') {
-        if (input) input.value = demandQty;
-        manualChangeRowQty(orderId, demandQty, demandQty, unitPrice);
-      } else if (statusType === 'OUT') {
-        if (input) input.value = 0;
-        manualChangeRowQty(orderId, 0, demandQty, unitPrice);
-      } else if (statusType === 'PARTIAL') {
-        const half = Math.max(1, Math.floor(demandQty / 2));
-        if (input) input.value = half;
-        manualChangeRowQty(orderId, half, demandQty, unitPrice);
-      }
-    }
-
-    let currentActiveParcelCode = 'CO20261114001';
-
-    function selectStation2Order(el, code) {
-      document.querySelectorAll('.split-item-row').forEach(r => r.classList.remove('active'));
-      if (el) el.classList.add('active');
-
-      const title = document.getElementById('st2Title');
-      const name = document.getElementById('st2Name');
-      const phone = document.getElementById('st2Phone');
-      const store = document.getElementById('st2Store');
-      const last5 = document.getElementById('st2Last5');
-      const total = document.getElementById('st2Total');
-      const prodRows = document.getElementById('st2ProdRows');
-
-      if (code === 'CO001') {
-        currentActiveParcelCode = 'CO20261114001';
-        if (title) title.innerText = '結帳編號：CO20261114001';
-        if (name) name.innerText = '王小美';
-        if (phone) phone.innerText = '0912-345-678';
-        if (store) store.innerText = '🏪 7-ELEVEN 敦南門市 (店號: 982314)';
-        if (last5) last5.innerText = '98214';
-        if (total) total.innerText = '$7,820';
-        if (prodRows) {
-          prodRows.innerHTML = `
-            <tr>
-              <td style="padding: 10px 12px;">
-                <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80"
-                  style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;"
-                  onclick="zoomImage(this.src, '日製超輕量長版防風羽絨外套')">
-              </td>
-              <td style="padding: 10px 12px;"><strong>日製超輕量長版防風羽絨外套</strong></td>
-              <td style="padding: 10px 12px;"><span
-                  style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">經典霧黑 / M</span></td>
-              <td style="padding: 10px 12px;"><strong style="color: #047857; font-size: 14px;">x 2</strong> <span
-                  style="font-size: 11px; color:#64748b;">(原訂3件，1件缺貨斷貨)</span></td>
-              <td style="padding: 10px 12px;">$3,880</td>
-              <td style="padding: 10px 12px; text-align: right; font-weight: 700;">$7,760</td>
-            </tr>
-          `;
-        }
-      } else if (code === 'CO002') {
-        currentActiveParcelCode = 'CO20261114002';
-        if (title) title.innerText = '結帳編號：CO20261114002';
-        if (name) name.innerText = '張佳琪';
-        if (phone) phone.innerText = '0933-112-998';
-        if (store) store.innerText = '🏪 7-ELEVEN 新莊立言門市 (店號: 182741)';
-        if (last5) last5.innerText = '12345 (已核對)';
-        if (total) total.innerText = '$1,420';
-        if (prodRows) {
-          prodRows.innerHTML = `
-            <tr>
-              <td style="padding: 10px 12px;">
-                <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=120&auto=format&fit=crop&q=80"
-                  style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;"
-                  onclick="zoomImage(this.src, '北海道限定極潤保濕乳霜 100g')">
-              </td>
-              <td style="padding: 10px 12px;"><strong>北海道限定極潤保濕乳霜 100g</strong></td>
-              <td style="padding: 10px 12px;"><span
-                  style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">單一規格 (100g)</span></td>
-              <td style="padding: 10px 12px;"><strong style="color: #047857; font-size: 14px;">x 2</strong> <span
-                  style="font-size: 11px; color:#10b981;">(全數採購成功)</span></td>
-              <td style="padding: 10px 12px;">$680</td>
-              <td style="padding: 10px 12px; text-align: right; font-weight: 700;">$1,360</td>
-            </tr>
-          `;
-        }
-      }
-      showToast(`已載入結帳編號【${currentActiveParcelCode}】包裹出貨明細`);
-    }
-
-    function sendSingleCustomerShipNotify() {
-      const activeCode = currentActiveParcelCode || 'CO20261114001';
-      const trackingInput = document.getElementById('inputTrackingCode');
-      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
-      const isUser2 = (activeCode === 'CO20261114002');
-      const buyerName = isUser2 ? '張佳琪' : '王小美';
-
-      const activeRow = document.querySelector('.split-item-row.active');
-      if (activeRow) {
-        const timeStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-        let tag = activeRow.querySelector('.ship-status-tag');
-        if (!tag) {
-          tag = document.createElement('div');
-          tag.className = 'ship-status-tag';
-          tag.style.cssText = 'font-size:11px; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; font-weight:700;';
-          activeRow.appendChild(tag);
-        }
-        tag.innerText = `✅ 已送出出貨卡片 (${timeStr})`;
-      }
-
-      showToast(`🚀 已透過 LINE 發送 1 對 1 專屬出貨通知卡片給【${buyerName}】！(單號 ${trackingCode}，0 額度消耗)`);
-    }
-
-    function copyShipRawText() {
-      const activeCode = currentActiveParcelCode || 'CO20261114001';
-      const trackingInput = document.getElementById('inputTrackingCode');
-      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
-      const isUser2 = (activeCode === 'CO20261114002');
-      const userId = isUser2 ? 'U1004' : 'U1003';
-      const buyerName = isUser2 ? '張佳琪' : '王小美';
-      const storeMethod = isUser2 ? '[7-11 超商純取貨] 7-11 新莊立言門市 (店號: 182741)' : '[7-11 超商純取貨] 7-11 敦南門市 (店號: 982314)';
-      const totalAmount = isUser2 ? '1,420' : '7,820';
-      const prodDesc = isUser2 ? '  ▪️ 北海道限定極潤保濕乳霜 100g (單一規格) x 2 罐' : '  ▪️ 日製超輕量長版防風羽絨外套 (經典霧黑/M) x 2 件';
-      const orderUrl = `https://liff.line.me/${CONFIG.LIFF_ID || '2011732923-rcjz7Igd'}?action=orders&uid=${encodeURIComponent(userId)}`;
-
-      const notifyText = `【🌸 W.W. 連線代購 • 包裹出貨通知】\n\n${buyerName} 您好：\n您本次訂購的連線商品已包裝完畢，並已送交超商物流寄出囉！🚚✨\n\n📋 結帳單號：${activeCode}\n🚚 物流狀態：已完成出貨配送中\n📍 配送取件：${storeMethod}\n📮 包裹查詢編號：${trackingCode}\n💰 訂單總額：NT$ ${totalAmount} (已完成對帳核銷)\n\n📦 實際出貨品項：\n${prodDesc}\n\n👉 7-11 官方即時貨態查詢：\nhttps://eservice.7-11.com.tw/e-tracking/search.aspx?code=${trackingCode}\n\n📱 LINE 專屬訂單中心查閱：\n${orderUrl}\n\n💡 取件提醒：\n包裹抵達門市後會收到 7-11 到店取件簡訊，請於 7 日內攜帶身分證件前往指定門市完成取件，謝謝您的支持！❤️`;
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(notifyText).then(() => {
-          showToast(`📋 已成功複製【${buyerName}】的純文字出貨通知文案！可直接貼到 LINE 私訊`);
-        }).catch(() => {
-          prompt('請複製以下出貨通知文案：', notifyText);
-        });
-      } else {
-        prompt('請複製以下出貨通知文案：', notifyText);
-      }
-    }
-
-    function previewCustomerShippedOrder() {
-      const activeCode = currentActiveParcelCode || 'CO20261114001';
-      const trackingInput = document.getElementById('inputTrackingCode');
-      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
-      const isUser2 = (activeCode === 'CO20261114002');
-      const userId = isUser2 ? 'U1004' : 'U1003';
-      const buyerName = isUser2 ? '張佳琪' : '王小美';
-
-      const url = `my-orders.html?uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(buyerName)}&preview=1&state=shipped&co=${encodeURIComponent(activeCode)}&track=${encodeURIComponent(trackingCode)}`;
-      window.open(url, '_blank');
-    }
-
-    function confirmShippingAction() {
-      const activeCode = currentActiveParcelCode || 'CO20261114001';
-      const trackingInput = document.getElementById('inputTrackingCode');
-      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
-      showToast(`🚚 出貨成功！已回寫 Sheets 第 21 欄寄件單號【${trackingCode}】與第 19 欄為【已出貨】！可使用上方按鈕發送出貨卡片或預覽！`);
-    }
-
-    function zoomImage(src, title) {
-      const modal = document.getElementById('imgZoomModal');
-      const img = document.getElementById('zoomImgTarget');
-      const titleEl = document.getElementById('zoomImgTitle');
-      if (img) img.src = src;
-      if (titleEl) titleEl.innerText = title || '商品圖片預覽';
-      if (modal) modal.style.display = 'flex';
-    }
-
-    function closeZoomImage() {
-      const modal = document.getElementById('imgZoomModal');
-      if (modal) modal.style.display = 'none';
-    }
-
-    function showToast(msg) {
-      let toast = document.getElementById('toastBox');
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toastBox';
-        toast.className = 'toast-box';
-        document.body.appendChild(toast);
-      }
-      toast.innerText = msg;
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 2500);
-    }
-
-  </script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -1666,7 +1239,7 @@
     }
   
     /* =========================================================================
-       四站式連線採購與出貨管理中心專用樣式
+       四站式連線採購與出貨管理中心專用樣式 (全站純白與淺灰現代卡片風)
        ========================================================================= */
     :root {
       --text-main: #0f172a;
@@ -1676,27 +1249,26 @@
       --border-dark: #cbd5e1;
     }
 
-/* 頂部三大作業站導覽列 (真實代購時間軸) */
+    /* 頂部作業站導覽列 (與管理中心白底灰框風格 100% 一致) */
     .station-nav-bar {
       width: 100%;
-      max-width: 1280px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 14px;
-      padding: 12px 18px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 20px;
       margin-bottom: 16px;
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
     .station-title {
-      color: #f8fafc;
+      color: var(--text);
       font-size: 16px;
-      font-weight: 700;
+      font-weight: 800;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -1704,78 +1276,70 @@
 
     .station-btn-group {
       display: flex;
-      background: #0f172a;
+      background: #f1f5f9;
       border-radius: 10px;
       padding: 4px;
       gap: 4px;
-      border: 1px solid #334155;
+      border: 1px solid #e2e8f0;
+      flex-wrap: wrap;
     }
 
     .station-btn {
-      padding: 9px 16px;
+      padding: 8px 14px;
       border: none;
       border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       background: transparent;
-      color: #94a3b8;
-      transition: all 0.2s;
+      color: #64748b;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .station-btn:hover {
-      color: #f8fafc;
+      color: #0f172a;
+      background: rgba(255, 255, 255, 0.65);
     }
 
     .station-btn.active {
-      background: #3b82f6;
-      color: #ffffff;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      background: #ffffff;
+      color: #059669;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
 
     .station-btn .pill-count {
-      padding: 2px 6px;
+      padding: 2px 7px;
       border-radius: 10px;
       font-size: 11px;
-      background: rgba(255, 255, 255, 0.2);
+      background: #e2e8f0;
+      color: #475569;
+      font-weight: 500;
     }
 
-    /* 說明橫幅 */
-    .station-banner {
-      width: 100%;
-      max-width: 1280px;
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 13.5px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-left: 4px solid #38bdf8;
-      background: #334155;
-      color: #e2e8f0;
+    .station-btn.active .pill-count {
+      background: #ecfdf5;
+      color: #059669;
+      font-weight: 700;
     }
 
-    /* 主工作台視窗外框 */
+    /* 主工作台視窗外框 (純白面板) */
     .main-workspace {
       width: 100%;
-      max-width: 1280px;
-      background: var(--bg-page);
-      border-radius: 14px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--border-color);
-      min-height: 720px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border);
+      min-height: 640px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    /* =========================================================================
-       前置站：【📦 採購清單與智慧配貨】（以「商品規格」為單位叫貨，一鍵先到先得配貨）
-       ========================================================================= */
+    /* 前置站：現場採購總表 */
     .procure-station-container {
       display: flex;
       flex-direction: column;
@@ -1783,6 +1347,7 @@
       overflow-y: auto;
       padding: 20px;
       gap: 16px;
+      background: #ffffff;
     }
 
     .kpi-row {
@@ -1799,21 +1364,10 @@
       border-left: 4px solid #cbd5e1;
     }
 
-    .kpi-box.blue {
-      border-left-color: #3b82f6;
-    }
-
-    .kpi-box.green {
-      border-left-color: #10b981;
-    }
-
-    .kpi-box.amber {
-      border-left-color: #f59e0b;
-    }
-
-    .kpi-box.red {
-      border-left-color: #ef4444;
-    }
+    .kpi-box.blue { border-left-color: #3b82f6; }
+    .kpi-box.green { border-left-color: #10b981; }
+    .kpi-box.amber { border-left-color: #f59e0b; }
+    .kpi-box.red { border-left-color: #ef4444; }
 
     .kpi-box-label {
       font-size: 12px;
@@ -1828,7 +1382,6 @@
       margin-top: 4px;
     }
 
-    /* 採購商品大卡片 */
     .procure-summary-card {
       background: #ffffff;
       border: 1px solid var(--border-color);
@@ -1841,7 +1394,7 @@
     }
 
     .procure-summary-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
       border-color: #cbd5e1;
     }
 
@@ -1855,9 +1408,7 @@
       cursor: pointer;
     }
 
-    .procure-info {
-      flex: 1;
-    }
+    .procure-info { flex: 1; }
 
     .procure-title {
       font-size: 15px;
@@ -1912,12 +1463,12 @@
     }
 
     .btn-auto-allocate {
-      padding: 10px 20px;
-      background: #3b82f6;
+      padding: 8px 16px;
+      background: #059669;
       color: #fff;
       border: none;
       border-radius: 8px;
-      font-size: 13.5px;
+      font-size: 12.5px;
       font-weight: 700;
       cursor: pointer;
       display: flex;
@@ -1927,11 +1478,10 @@
     }
 
     .btn-auto-allocate:hover {
-      background: #2563eb;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      background: #047857;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
     }
 
-    /* 訂購總需求互動按鈕與展開清單 */
     .demand-pill-btn {
       display: inline-flex;
       align-items: center;
@@ -1949,7 +1499,6 @@
       background: #eff6ff;
       border-color: #3b82f6;
       box-shadow: 0 2px 6px rgba(59, 130, 246, 0.18);
-      transform: translateY(-1px);
     }
 
     .demand-pill-btn .demand-num {
@@ -1968,7 +1517,6 @@
       display: inline-flex;
       align-items: center;
       gap: 2px;
-      transition: all 0.15s;
     }
 
     .demand-pill-btn.open {
@@ -1979,22 +1527,6 @@
     .demand-pill-btn.open .demand-tag {
       background: #2563eb;
       color: #fff;
-    }
-
-    .demand-drawer-row {
-      animation: fadeInDown 0.2s ease-out;
-    }
-
-    @keyframes fadeInDown {
-      from {
-        opacity: 0;
-        transform: translateY(-4px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
     }
 
     .demand-drawer-box {
@@ -2027,13 +1559,7 @@
       vertical-align: middle;
     }
 
-    .demand-drawer-table tr:hover td {
-      background: #f8fafc;
-    }
-
-    /* =========================================================================
-       站點一：【📝 顧客訂單配貨結果】（處理 OD 開頭的下單明細）
-       ========================================================================= */
+    /* 站點一：顧客訂單配貨結果 */
     .station1-container {
       display: flex;
       flex-direction: column;
@@ -2041,6 +1567,7 @@
       overflow-y: auto;
       padding: 20px;
       gap: 16px;
+      background: #ffffff;
     }
 
     .table-container {
@@ -2101,7 +1628,6 @@
       border: 1px solid #fecaca;
     }
 
-    /* 手動狀態微調按鈕組 (嚴格等寬等高，對齊工整美觀) */
     .status-btn {
       width: 78px;
       height: 30px;
@@ -2122,10 +1648,7 @@
       box-sizing: border-box;
     }
 
-    .status-btn:hover {
-      border-color: #94a3b8;
-    }
-
+    .status-btn:hover { border-color: #94a3b8; }
     .status-btn.active-success {
       background: #ecfdf5;
       border-color: #10b981;
@@ -2133,7 +1656,6 @@
       font-weight: 700;
       box-shadow: 0 1px 3px rgba(16, 185, 129, 0.15);
     }
-
     .status-btn.active-partial {
       background: #fffbeb;
       border-color: #f59e0b;
@@ -2141,7 +1663,6 @@
       font-weight: 700;
       box-shadow: 0 1px 3px rgba(245, 158, 11, 0.15);
     }
-
     .status-btn.active-danger {
       background: #fef2f2;
       border-color: #ef4444;
@@ -2150,87 +1671,17 @@
       box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15);
     }
 
-    /* =========================================================================
-       站點三：【📢 通知客人結帳】（完整複製平台原始樣貌與功能，支援抽屜展開品項明細）
-       ========================================================================= */
+    /* 站點三：通知客人結帳 */
     .station-notify-container {
       display: flex;
       flex-direction: column;
       height: 720px;
       overflow-y: auto;
       padding: 24px 20px;
-      background: var(--bg-page);
-    }
-
-    .notify-panel {
-      max-width: 760px;
-      width: 100%;
-      margin: 0 auto;
       background: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 20px 24px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
     }
 
-    .notify-card-item {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-      transition: all 0.15s ease;
-    }
-
-    .notify-card-item:hover {
-      border-color: #cbd5e1;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
-    }
-
-    .notify-card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .notify-card-left {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .notify-toggle-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #3b82f6;
-      font-size: 13px;
-      padding: 2px 4px;
-      margin-top: 2px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
-      transition: all 0.15s ease;
-    }
-
-    .notify-toggle-btn:hover {
-      background: #eff6ff;
-    }
-
-    .notify-toggle-btn.open .toggle-arrow {
-      transform: rotate(180deg);
-    }
-
-    .toggle-arrow {
-      display: inline-block;
-      transition: transform 0.2s ease;
-      font-size: 11px;
-    }
+    .notify-panel { width: 100%; }
 
     .btn-notify-action {
       border: none;
@@ -2254,11 +1705,9 @@
       color: #ffffff;
       box-shadow: 0 3px 10px rgba(0, 195, 0, 0.28);
     }
-
     .btn-notify-green:hover {
       background: #00b300;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 195, 0, 0.35);
     }
 
     .btn-notify-gray {
@@ -2266,64 +1715,22 @@
       color: #334155;
       border: 1px solid #cbd5e1;
     }
-
-    .btn-notify-gray:hover {
-      background: #e2e8f0;
-    }
+    .btn-notify-gray:hover { background: #e2e8f0; }
 
     .btn-notify-blue {
       background: #eff6ff;
       color: #1d4ed8;
       border: 1px solid #bfdbfe;
     }
+    .btn-notify-blue:hover { background: #dbeafe; }
 
-    .btn-notify-blue:hover {
-      background: #dbeafe;
-    }
-
-    /* 下拉展開之品項明細 (第二張圖片樣貌) */
-    .notify-drawer-box {
-      margin-top: 10px;
-      padding: 12px 16px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 12.5px;
-      animation: fadeIn 0.15s ease;
-    }
-
-    .notify-drawer-title {
-      font-weight: 700;
-      color: #475569;
-      font-size: 12px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .notify-drawer-items {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .notify-drawer-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 2px 0;
-      color: #334155;
-    }
-
-    /* =========================================================================
-       站點四：【💳 完成結帳出貨對帳站】（客人結帳後產生 CO...，左右分欄工作台）
-       ========================================================================= */
+    /* 站點四：完成結帳出貨對帳站 */
     .station2-container {
       display: flex;
       height: 720px;
       width: 100%;
       overflow: hidden;
+      background: #ffffff;
     }
 
     .station2-left {
@@ -2342,10 +1749,7 @@
       transition: all 0.15s ease;
     }
 
-    .split-item-row:hover {
-      background: #f8fafc;
-    }
-
+    .split-item-row:hover { background: #f8fafc; }
     .split-item-row.active {
       background: #eff6ff;
       border-left: 4px solid #2563eb;
@@ -2366,6 +1770,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     .right-body {
@@ -2392,7 +1798,6 @@
       gap: 6px;
     }
 
-    /* Toast */
     .toast-box {
       position: fixed;
       bottom: 25px;
@@ -2409,64 +1814,10 @@
       opacity: 0;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-
     .toast-box.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
-
-    /* =========================================================================
-       A4 專屬列印隔離樣式 (徹底隱藏全站所有網頁元素，100% 只列印 A4 採購檢核單)
-       ========================================================================= */
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-
-      #a4PrintModal,
-      #a4PrintModal * {
-        visibility: visible !important;
-      }
-
-      #a4PrintModal {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        background: #ffffff !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
-        z-index: 99999999 !important;
-      }
-
-      .a4-modal-content {
-        box-shadow: none !important;
-        border: none !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-
-      .no-print {
-        display: none !important;
-      }
-
-      .a4-paper {
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-      }
-
-      @page {
-        size: A4 portrait;
-        margin: 10mm 12mm;
-      }
-    }
-  
 
   </style>
 </head>
@@ -2939,766 +2290,249 @@
       </div>
     </div>
 
+    <!-- ================= 分頁 4：顧客結帳通知 (1 對 1 免額度推播) ================= -->
     <!-- ================= 分頁 4：連線採購與出貨管理中心 (四站作業流) ================= -->
       <div id="tabManageOrders" class="tab-content">
-<div class="station-nav-bar">
-    <div class="station-title">
-      <span>📦 連線採購與出貨管理中心</span>
-      <span style="font-size: 11.5px; color: #94a3b8; font-weight: normal;">(現場採購 ➔ 訂單配貨 ➔ 通知結帳 ➔ 出貨對帳)</span>
-    </div>
-
-    <div class="station-btn-group">
-      <button class="station-btn active" id="btnStation0" onclick="switchMainTab(0)">
-        <span>📦 1. 現場採購總表</span>
-        <span class="pill-count" id="badgeS0">2款商品</span>
-      </button>
-      <button class="station-btn" id="btnStation1" onclick="switchMainTab(1)">
-        <span>📝 2. 顧客訂單配貨</span>
-        <span class="pill-count" id="badgeS1">OD 下單 (5筆)</span>
-      </button>
-      <button class="station-btn" id="btnStation2" onclick="switchMainTab(2)">
-        <span>📢 3. 通知客人結帳</span>
-        <span class="pill-count" id="badgeS2">待通知 (2位)</span>
-      </button>
-      <button class="station-btn" id="btnStation3" onclick="switchMainTab(3)">
-        <span>💳 4. 完成結帳出貨對帳</span>
-        <span class="pill-count" id="badgeS3">完成結帳訂單 (2筆)</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- 說明條 -->
-  <div class="station-banner" id="mainBanner">
-    <div>
-      <strong id="bannerTitle">📦 階段一：【採購總表與智慧自動配貨】（以「商品規格」為維度叫貨，現場採購快速輸入實到件數）</strong>
-      <div style="font-size: 12.5px; color: #cbd5e1; margin-top: 3px;" id="bannerDesc">
-        賣家採購時，直接看總需叫貨件數（例如羽絨外套總共需 5 件）。買到幾件就填幾件，點擊「⚡️ 執行智慧自動配貨」，系統依照下單順序 (FIFO) 自動把貨配給訂購人，排不到自動標記為【缺貨斷貨】（金額自動歸零，免付款）！
-      </div>
-    </div>
-  </div>
-
-  <!-- 主工作台視窗 -->
-  <div class="main-workspace">
-
-    <!-- =========================================================================
-         前置站：【📦 採購總表與智慧自動配貨】
-         ========================================================================= -->
-    <div class="procure-station-container" id="viewStation0">
-      <div class="kpi-row">
-        <div class="kpi-box blue">
-          <div class="kpi-box-label">本次連線總需採購</div>
-          <div class="kpi-box-val" id="kpiTotalDemand">15 <span>件</span></div>
-        </div>
-        <div class="kpi-box green">
-          <div class="kpi-box-label">現場實際採購到貨</div>
-          <div class="kpi-box-val" style="color: #10b981;" id="kpiTotalBought">13 <span>件</span></div>
-        </div>
-        <div class="kpi-box red">
-          <div class="kpi-box-label">⚠️ 缺貨斷貨無法購得</div>
-          <div class="kpi-box-val" style="color: #ef4444;" id="kpiTotalOut">2 <span>件</span></div>
-        </div>
-      </div>
-
-      <!-- 現場採購小工具工具列 (匯出 .xlsx / 複製 LINE 記事本 / A4 專用檢貨打勾單) -->
-      <div
-        style="background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 4px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 700; font-size: 13.5px; color: #0f172a;">🛠️ 現場採購檢核工具：</span>
-          <span style="font-size: 12px; color: #64748b;">供買手出門採購時離線清點、門市叫貨或紙本防漏打勾</span>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" onclick="exportProcurementExcel()"
-            style="background: #107c41; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(16,124,65,0.2);">
-            <span>📊 匯出採購清單 (.xlsx)</span>
-          </button>
-          <button type="button" onclick="copyProcurementText()"
-            style="background: #06c755; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(6,199,85,0.2);">
-            <span>💬 複製文字 (貼 LINE 記事本)</span>
-          </button>
-          <button type="button" onclick="openA4PrintModal()"
-            style="background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(37,99,235,0.2);">
-            <span>🖨️ A4 採購檢核單 (可勾選/列印)</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 商品 1 採購卡 (含配貨按鈕) -->
-      <div class="procure-summary-card">
-        <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=140&auto=format&fit=crop&q=80"
-          class="procure-img" onclick="zoomImage(this.src, '日製超輕量長版防風羽絨外套')">
-        <div class="procure-info">
-          <div class="procure-title">
-            <span>日製超輕量長版防風羽絨外套</span>
-            <span
-              style="font-size: 11.5px; font-weight: normal; color: #64748b; font-family: monospace;">JP-2026-W01</span>
-          </div>
-          <div class="procure-meta">
-            <span>本款總訂購需求：<strong>5 件</strong> (共 3 位買家下單)</span>
+        <!-- 頂部四大作業站導覽列 (純白底色，對齊全站設計規範) -->
+        <div class="station-nav-bar">
+          <div class="station-title">
+            <span>📦 連線採購與出貨管理中心</span>
+            <span style="font-size: 12px; color: #64748b; font-weight: normal;">(現場採購 ➔ 訂單配貨 ➔ 通知結帳 ➔ 出貨對帳)</span>
           </div>
 
-          <!-- 規格實採到貨輸入表格 -->
-          <table class="spec-allocation-table">
-            <thead>
-              <tr>
-                <th style="width: 160px;">規格 (顏色/尺寸)</th>
-                <th style="width: 130px;">訂購總需求</th>
-                <th style="width: 180px;">現場實際採購件數</th>
-                <th>採購狀況摘要</th>
-                <th style="text-align: right;">配貨操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">經典霧黑 /
-                    M</span></td>
-                <td>
-                  <!-- 點開 5 件查看訂購時間、訂購人、數量明細按鈕 -->
-                  <button type="button" class="demand-pill-btn" id="btn_pill_P01"
-                    onclick="toggleDemandDrawer('drawer_P01', 'btn_pill_P01')" title="點擊查看下單明細 (訂購時間、訂購人、數量)">
-                    <span class="demand-num">5 件</span>
-                    <span class="demand-tag" id="tag_P01">明細 ▾</span>
-                  </button>
-                </td>
-                <td>
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <input type="number" class="qty-input" id="qty_P01" value="3" min="0" max="5">
-                    <span style="font-size: 12px; color: #64748b;">/ 需 5 件</span>
-                  </div>
-                </td>
-                <td>
-                  <span id="badge_P01" class="status-badge badge-partial">🟡 採購 3 件 (缺貨斷貨 2 件)</span>
-                </td>
-                <td style="text-align: right;">
-                  <button class="btn-auto-allocate" onclick="executeAutoAllocation('P01', '日製羽絨外套(霧黑/M)', 3, 5)">
-                    <span>⚡️ 執行智慧自動配貨</span>
-                  </button>
-                </td>
-              </tr>
+          <div class="station-btn-group">
+            <button class="station-btn active" id="btnStation0" onclick="switchMainTab(0)">
+              <span>📦 1. 現場採購總表</span>
+              <span class="pill-count" id="badgeS0">--款商品</span>
+            </button>
+            <button class="station-btn" id="btnStation1" onclick="switchMainTab(1)">
+              <span>📝 2. 顧客訂單配貨</span>
+              <span class="pill-count" id="badgeS1">OD 下單 (--筆)</span>
+            </button>
+            <button class="station-btn" id="btnStation2" onclick="switchMainTab(2)">
+              <span>📢 3. 通知客人結帳</span>
+              <span class="pill-count" id="badgeS2">待通知 (--位)</span>
+            </button>
+            <button class="station-btn" id="btnStation3" onclick="switchMainTab(3)">
+              <span>💳 4. 完成結帳出貨對帳</span>
+              <span class="pill-count" id="badgeS3">完成結帳訂單 (--筆)</span>
+            </button>
+          </div>
+        </div>
 
-              <!-- 點擊 5 件展開的訂購人明細抽屜 (訂購時間、訂購人、數量) -->
-              <tr id="drawer_P01" class="demand-drawer-row" style="display: none;">
-                <td colspan="5"
-                  style="background: #f8fafc; padding: 14px 16px; border-left: 3px solid #3b82f6; border-bottom: 2px solid #e2e8f0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-size: 13px; font-weight: 700; color: #0f172a;">📋 訂購人明細（依下單時間先後排序，共 2
-                        位買家）：</span>
-                      <span
-                        style="font-size: 11px; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 999px; font-weight: 600;">先下單先配貨</span>
+        <!-- 主工作台視窗 (純白無黑框) -->
+        <div class="main-workspace">
+
+          <!-- 站點 0：【📦 1. 現場採購總表與自動配貨】 -->
+          <div class="procure-station-container" id="viewStation0">
+            <div class="kpi-row">
+              <div class="kpi-box blue">
+                <div class="kpi-box-label">本次連線總需採購</div>
+                <div class="kpi-box-val" id="kpiTotalDemand">-- <span>件</span></div>
+              </div>
+              <div class="kpi-box green">
+                <div class="kpi-box-label">現場實際採購到貨</div>
+                <div class="kpi-box-val" style="color: #10b981;" id="kpiTotalBought">-- <span>件</span></div>
+              </div>
+              <div class="kpi-box red">
+                <div class="kpi-box-label">⚠️ 缺貨斷貨無法購得</div>
+                <div class="kpi-box-val" style="color: #ef4444;" id="kpiTotalOut">0 <span>件</span></div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 4px;">
+              <div style="font-size: 14.5px; font-weight: 700; color: #0f172a;">
+                🛒 現場採購商品需求清單（依「商品規格」匯總現場叫貨件數）
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #059669; color: #fff; border: none; border-radius: 8px; font-weight: 700;" onclick="exportProcurementExcel()">
+                  📊 匯出採購清單 Excel
+                </button>
+                <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700;" onclick="copyProcurementText()">
+                  📋 複製採購文字 (LINE記事本)
+                </button>
+                <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; font-weight: 700;" onclick="openA4PrintModal()">
+                  🖨️ A4 現場採購檢核單
+                </button>
+              </div>
+            </div>
+
+            <!-- 動態商品叫貨卡片容器 -->
+            <div id="procureItemsContainer" style="display: flex; flex-direction: column; gap: 14px;">
+              <div style="text-align: center; padding: 40px; color: #64748b;">⏳ 正在即時載入系統真實採購需求...</div>
+            </div>
+          </div>
+
+          <!-- 站點 1：【📝 2. 顧客訂單配貨結果】 -->
+          <div class="station1-container" id="viewStation1" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: #0f172a;">📝 顧客訂購紀錄與配貨狀況 (OD 下單明細)</h3>
+                <p style="font-size: 12.5px; color: #64748b; margin-top: 2px;">依照下單順序 (FIFO) 配貨，支援手動微調實到數量與標記狀況</p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <label style="font-size: 13px; color: #475569; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" checked onchange="toggleActiveOrders(this.checked)"> 僅顯示未結帳訂單
+                </label>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="order-table">
+                <thead>
+                  <tr>
+                    <th style="width: 140px;">訂單編號 / 時間</th>
+                    <th style="width: 120px;">訂購買家</th>
+                    <th>訂購商品名稱</th>
+                    <th style="width: 110px;">規格</th>
+                    <th style="width: 75px; text-align: center;">需求數</th>
+                    <th style="width: 85px; text-align: center;">實配數</th>
+                    <th style="width: 95px; text-align: right;">小計金額</th>
+                    <th style="width: 110px; text-align: center;">當前配貨狀況</th>
+                    <th style="width: 250px; text-align: center;">手動調整狀況</th>
+                  </tr>
+                </thead>
+                <tbody id="orderAllocationTableBody">
+                  <tr><td colspan="9" style="text-align: center; padding: 30px; color: #64748b;">⏳ 正在載入訂單分配資料...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 站點 2：【📢 3. 通知客人結帳】 -->
+          <div class="station-notify-container" id="viewStation2" style="display: none;">
+            <div class="notify-panel" style="max-width: 760px; margin: 0 auto; width: 100%;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div class="panel-title" style="margin-bottom: 0; font-size: 16px;">📢 顧客專屬採購清單推播 (0 額度消耗)</div>
+                <button type="button" style="font-size: 12px; color: #15803d; background: none; border: none; cursor: pointer; font-weight: 700;" onclick="loadCustomerNotifyList(true)">
+                  🔄 重新整理名單
+                </button>
+              </div>
+              <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6;">
+                系統自動彙整試算表中有成功採購的顧客，點擊「🚀 發送 1 對 1 卡片」可挑選好友送出專屬 Flex 結帳卡片（完全不扣官方帳號額度，終生免費！）。
+                <br>
+                <span style="display: inline-block; margin-top: 6px; color: #334155; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px;">
+                  💻 <b>電腦版 Chrome 使用說明</b>：若尚未登入 LINE，點擊發送卡片時會引導登入授權；亦可直接點擊「📋 複製純文字」按鈕，一秒貼到 LINE 電腦版私訊！
+                </span>
+              </p>
+
+              <div id="notifyStatsBox" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
+                  <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">👥 待結帳顧客數</div>
+                  <div id="statNotifyCustCount" style="font-size: 22px; font-weight: 900; color: #0f172a; margin-top: 3px;">--</div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
+                  <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">📦 待出貨成功件數</div>
+                  <div id="statNotifySuccessItems" style="font-size: 22px; font-weight: 900; color: #15803d; margin-top: 3px;">--</div>
+                </div>
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
+                  <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">💰 待收回總款項</div>
+                  <div id="statNotifyTotalAmount" style="font-size: 22px; font-weight: 900; color: #e11d48; margin-top: 3px;">--</div>
+                </div>
+              </div>
+
+              <div id="customerNotifyList" style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="text-align: center; padding: 30px; color: #94a3b8; font-size: 13px;">正在載入顧客結帳名單...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 站點 3：【💳 4. 完成結帳出貨對帳站】 -->
+          <div class="station2-container" id="viewStation3" style="display: none;">
+            <div class="station2-left">
+              <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); background: #ffffff;">
+                <div style="font-size: 14px; font-weight: 800; color: #0f172a;">📦 已完成結帳包裹清單</div>
+                <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">客人完成填寫取件門市與回報匯款 (對應 Sheets CO 編號)</div>
+              </div>
+              <div id="station3ParcelList" style="overflow-y: auto; flex: 1;">
+                <!-- 左側包裹清單 -->
+              </div>
+            </div>
+
+            <div class="station2-right">
+              <div class="right-header">
+                <div style="flex: 1; min-width: 240px;">
+                  <h2 style="font-size: 18px; font-weight: 700; color: #0f172a;" id="st2Title">結帳編號：--</h2>
+                  <p style="font-size: 12.5px; color: #64748b; margin-top: 2px;" id="st2Subtitle">買家已完成選門市與回報匯款</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; white-space: nowrap; flex-shrink: 0;">
+                  <button type="button" class="btn-notify-action btn-notify-green" onclick="sendSingleCustomerShipNotify()">
+                    🚀 發送 1 對 1 卡片
+                  </button>
+                  <button type="button" class="btn-notify-action btn-notify-gray" onclick="copyShipRawText()">
+                    📋 複製純文字
+                  </button>
+                  <button type="button" class="btn-notify-action btn-notify-blue" onclick="previewCustomerShippedOrder()">
+                    👁️ 預覽訂單
+                  </button>
+                </div>
+              </div>
+
+              <div class="right-body">
+                <div class="info-box">
+                  <h4>👤 超商門市與收件人資訊</h4>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
+                    <div>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人姓名</label>
+                      <span style="font-weight:700; color:#0f172a;" id="st2Name">--</span>
                     </div>
-                    <button type="button" onclick="toggleDemandDrawer('drawer_P01', 'btn_pill_P01')"
-                      style="border: none; background: transparent; color: #64748b; font-size: 12px; cursor: pointer; font-weight: 600;">收起
-                      ▲</button>
-                  </div>
-
-                  <div class="demand-drawer-box">
-                    <table class="demand-drawer-table">
-                      <thead>
-                        <tr>
-                          <th style="width: 80px;">配貨順位</th>
-                          <th style="width: 170px;">訂購時間</th>
-                          <th>訂購人</th>
-                          <th style="width: 140px;">訂單編號</th>
-                          <th style="text-align: right; width: 100px;">訂購數量</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td><span
-                              style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">順位
-                              1</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 09:12:05</td>
-                          <td>
-                            <strong style="color: #0f172a;">王小美</strong>
-                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: May)</span>
-                          </td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114001</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">3 件</strong>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><span
-                              style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">順位
-                              2</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 09:30:42</td>
-                          <td>
-                            <strong style="color: #0f172a;">林佩萱</strong>
-                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: Penny)</span>
-                          </td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114002</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">2 件</strong>
-                          </td>
-                        </tr>
-                      </tbody>
-                      <tfoot>
-                        <tr style="background: #f8fafc; font-weight: 700; border-top: 1px solid #e2e8f0;">
-                          <td colspan="4"
-                            style="text-align: right; color: #475569; font-size: 12px; padding: 8px 12px;">【經典霧黑 /
-                            M】需求總件數：</td>
-                          <td style="text-align: right; color: #0f172a; font-size: 14px; padding: 8px 12px;">5 件</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 商品 2 採購卡 (全部買到) -->
-      <div class="procure-summary-card">
-        <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=140&auto=format&fit=crop&q=80"
-          class="procure-img" onclick="zoomImage(this.src, '北海道限定極潤保濕乳霜 100g')">
-        <div class="procure-info">
-          <div class="procure-title">
-            <span>北海道限定極潤保濕乳霜 100g</span>
-            <span
-              style="font-size: 11.5px; font-weight: normal; color: #64748b; font-family: monospace;">JP-2026-C09</span>
-          </div>
-          <div class="procure-meta">
-            <span>本款總訂購需求：<strong>10 罐</strong> (共 4 位買家下單)</span>
-          </div>
-
-          <table class="spec-allocation-table">
-            <thead>
-              <tr>
-                <th style="width: 160px;">規格</th>
-                <th style="width: 130px;">訂購總需求</th>
-                <th style="width: 180px;">現場實際採購件數</th>
-                <th>採購狀況摘要</th>
-                <th style="text-align: right;">配貨操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">單一規格
-                    (100g)</span></td>
-                <td>
-                  <!-- 點開 10 罐查看訂購時間、訂購人、數量明細按鈕 -->
-                  <button type="button" class="demand-pill-btn" id="btn_pill_P02"
-                    onclick="toggleDemandDrawer('drawer_P02', 'btn_pill_P02')" title="點擊查看下單明細 (訂購時間、訂購人、數量)">
-                    <span class="demand-num">10 罐</span>
-                    <span class="demand-tag" id="tag_P02">明細 ▾</span>
-                  </button>
-                </td>
-                <td>
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <input type="number" class="qty-input" value="10" min="0" max="10">
-                    <span style="font-size: 12px; color: #059669; font-weight: 600;">/ 全齊全</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="status-badge badge-success">🟢 10 / 10 買齊</span>
-                </td>
-                <td style="text-align: right;">
-                  <button class="btn-auto-allocate" style="background: #10b981;"
-                    onclick="executeAutoAllocation('P02', '保濕乳霜', 10, 10)">
-                    <span>⚡️ 全數配齊給所有買家</span>
-                  </button>
-                </td>
-              </tr>
-
-              <!-- 點擊 10 罐展開的訂購人明細抽屜 (訂購時間、訂購人、數量) -->
-              <tr id="drawer_P02" class="demand-drawer-row" style="display: none;">
-                <td colspan="5"
-                  style="background: #f8fafc; padding: 14px 16px; border-left: 3px solid #10b981; border-bottom: 2px solid #e2e8f0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-size: 13px; font-weight: 700; color: #0f172a;">📋 訂購人明細（依下單時間先後排序，共 4
-                        位買家）：</span>
-                      <span
-                        style="font-size: 11px; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 999px; font-weight: 600;">先下單先配貨</span>
+                    <div>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人電話</label>
+                      <span style="font-weight:700; font-family:monospace;" id="st2Phone">--</span>
                     </div>
-                    <button type="button" onclick="toggleDemandDrawer('drawer_P02', 'btn_pill_P02')"
-                      style="border: none; background: transparent; color: #64748b; font-size: 12px; cursor: pointer; font-weight: 600;">收起
-                      ▲</button>
+                    <div>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">LINE 買家姓名</label>
+                      <span style="font-weight:600;" id="st2LineName">--</span>
+                    </div>
+                    <div style="grid-column: span 2;">
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">7-11 取件超商門市</label>
+                      <span style="color:#0369a1; font-weight:700;" id="st2Store">🏪 7-ELEVEN 敦南門市 (店號: 982314)</span>
+                    </div>
+                    <div>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">門市地址</label>
+                      <span style="font-size:12px; color:#64748b;" id="st2StoreAddr">台北市大安區敦化南路一段 188 號</span>
+                    </div>
                   </div>
+                </div>
 
-                  <div class="demand-drawer-box">
-                    <table class="demand-drawer-table">
-                      <thead>
-                        <tr>
-                          <th style="width: 80px;">配貨順位</th>
-                          <th style="width: 170px;">訂購時間</th>
-                          <th>訂購人</th>
-                          <th style="width: 140px;">訂單編號</th>
-                          <th style="text-align: right; width: 100px;">訂購數量</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td><span
-                              style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">順位
-                              1</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 08:45:10</td>
-                          <td><strong style="color: #0f172a;">陳雅婷</strong> <span
-                              style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: Tina)</span></td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114005</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">3 罐</strong>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><span
-                              style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">順位
-                              2</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 09:15:33</td>
-                          <td><strong style="color: #0f172a;">許書豪</strong> <span
-                              style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: Howard)</span></td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114006</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">2 罐</strong>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><span
-                              style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">順位
-                              3</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 09:40:19</td>
-                          <td><strong style="color: #0f172a;">李敏芳</strong> <span
-                              style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: Min)</span></td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114007</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">4 罐</strong>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><span
-                              style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">順位
-                              4</span></td>
-                          <td style="color: #475569; font-family: monospace; font-weight: 600;">2026/11/14 10:02:51</td>
-                          <td><strong style="color: #0f172a;">趙又廷</strong> <span
-                              style="font-size: 11px; color: #64748b; margin-left: 4px;">(LINE: Mark)</span></td>
-                          <td style="font-family: monospace; color: #2563eb; font-weight: 600;">OD20261114008</td>
-                          <td style="text-align: right;"><strong style="font-size: 14px; color: #0f172a;">1 罐</strong>
-                          </td>
-                        </tr>
-                      </tbody>
-                      <tfoot>
-                        <tr style="background: #f8fafc; font-weight: 700; border-top: 1px solid #e2e8f0;">
-                          <td colspan="4"
-                            style="text-align: right; color: #475569; font-size: 12px; padding: 8px 12px;">【單一規格
-                            100g】需求總罐數：</td>
-                          <td style="text-align: right; color: #0f172a; font-size: 14px; padding: 8px 12px;">10 罐</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+                <div class="info-box">
+                  <h4>📦 包裹內實際出貨品項</h4>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                      <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
+                        <th style="padding: 8px 12px; text-align: left; width: 64px;">圖片</th>
+                        <th style="padding: 8px 12px; text-align: left;">商品名稱</th>
+                        <th style="padding: 8px 12px; text-align: left;">規格</th>
+                        <th style="padding: 8px 12px; text-align: left;">實出件數</th>
+                        <th style="padding: 8px 12px; text-align: left;">單價</th>
+                        <th style="padding: 8px 12px; text-align: right;">應付小計</th>
+                      </tr>
+                    </thead>
+                    <tbody id="st2ProdRows">
+                      <!-- 動態出貨品項清單 -->
+                    </tbody>
+                  </table>
+                </div>
 
-
-    <!-- =========================================================================
-         站點一：【📝 顧客訂單配貨結果】（處理 OD 開頭的下單明細）
-         ========================================================================= -->
-    <div class="station1-container" id="viewStation1" style="display: none;">
-      <!-- 頂部過濾條 (僅顯示未結單 vs 全部歷史) -->
-      <div
-        style="background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <label
-            style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #0f172a; cursor: pointer;">
-            <input type="checkbox" id="chkActiveOnly" checked onchange="toggleActiveOrders(this.checked)">
-            <span>☑ 僅顯示未結帳訂單 (已結單自動移往站點二)</span>
-          </label>
-          <span style="font-size: 12px; color: #64748b;">(共 3 筆未結單)</span>
-        </div>
-
-        <div style="display: flex; gap: 8px;">
-          <input type="text" placeholder="🔍 搜尋買家姓名、OD 單號..."
-            style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; outline: none;">
-          <button
-            style="padding: 6px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; cursor: pointer;"
-            onclick="showToast('📋 已複製本頁明細')">📋 複製明細</button>
-        </div>
-      </div>
-
-      <!-- 顧客訂單配貨結果清單 (包含部分採購到貨展示) -->
-      <div class="table-container">
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th style="width: 140px;">訂單編號 / 下單時間</th>
-              <th style="width: 140px;">訂購買家 (順位)</th>
-              <th>商品名稱與規格</th>
-              <th style="width: 100px;">訂購數量</th>
-              <th style="width: 120px;">實到到貨量</th>
-              <th style="width: 230px;">採購狀況 (手動切換)</th>
-              <th style="width: 100px; text-align: right;">應計請款小計</th>
-            </tr>
-          </thead>
-          <tbody id="station1TableBody">
-            <!-- 買家 1：王小美 (下單 3 件，可自由手動微調到貨量與採購狀態) -->
-            <tr id="row_OD001">
-              <td>
-                <strong style="color: #0f172a; font-family: monospace;">OD20261114001</strong>
-                <div style="font-size: 11.5px; color: #94a3b8;">11/14 09:15 (順位1)</div>
-              </td>
-              <td>
-                <strong>王小美</strong> <span
-                  style="font-size: 10px; background:#fef3c7; color:#92400e; padding:1px 4px; border-radius:3px;">VIP</span>
-                <div style="font-size: 11.5px; color: #64748b;">LINE: MayWang</div>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=80&auto=format&fit=crop&q=80"
-                    style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                   <div>
-                    <strong style="color: #0f172a;">日製超輕量長版防風羽絨外套</strong>
-                    <div style="font-size: 11.5px; color: #64748b;">經典霧黑 / M ($3,880)</div>
+                    <div style="font-size: 12.5px; color: #64748b;">結帳總額 (含運 $60)：<strong style="font-size: 18px; color: #15803d;" id="st2Total">--</strong></div>
+                    <div style="font-size: 13px; color: #1e293b; margin-top: 4px;">
+                      匯款後五碼：<strong style="color: #15803d; font-family: monospace; font-size: 15px;" id="st2Last5">98214</strong>
+                      <button style="margin-left: 8px; padding: 4px 10px; background: #10b981; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="inputTrackingCode" placeholder="輸入 7-11 寄件單號" value="98273615243" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: monospace; width: 160px;">
+                    <button style="padding: 8px 16px; background: #ee4d2d; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="confirmShippingAction()">📦 確認出貨</button>
                   </div>
                 </div>
-              </td>
-              <td><span style="font-size: 14px; font-weight: 700;">訂 3 件</span></td>
-              <td>
-                <!-- 手動微調實到數量 -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <input type="number" id="input_qty_OD001" value="2" min="0" max="3"
-                    onchange="manualChangeRowQty('OD001', this.value, 3, 3880)"
-                    style="width: 52px; padding: 4px; border: 1.5px solid #94a3b8; border-radius: 6px; font-weight: 700; text-align: center; font-size: 13.5px; outline: none; background: #fff;">
-                  <span style="font-size: 12px; color: #64748b;">/ 需 3 件</span>
-                </div>
-              </td>
-              <td>
-                <!-- 採購狀況手動調整快捷按鈕組 (三顆等寬 78px，對齊平台標準狀態) -->
-                <div style="display: flex; gap: 6px; align-items: center;" id="status_group_OD001">
-                  <button type="button" class="status-btn" id="btn_succ_OD001"
-                    onclick="manualSetStatus('OD001', 'SUCCESS', 3, 3880)">🟢 採購成功</button>
-                  <button type="button" class="status-btn active-partial" id="btn_part_OD001"
-                    onclick="manualSetStatus('OD001', 'PARTIAL', 3, 3880)">🟡 部分配貨</button>
-                  <button type="button" class="status-btn" id="btn_out_OD001"
-                    onclick="manualSetStatus('OD001', 'OUT', 3, 3880)">🔴 缺貨斷貨</button>
-                </div>
-              </td>
-              <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                <span id="subtotal_OD001">$7,760</span>
-                <div style="font-size: 10.5px; color: #64748b; font-weight: normal;" id="subdesc_OD001">(採購成功 2 件)</div>
-              </td>
-            </tr>
-
-            <!-- 買家 2：林佩萱 (下單 2 件，可自由手動微調) -->
-            <tr id="row_OD002">
-              <td>
-                <strong style="color: #0f172a; font-family: monospace;">OD20261114002</strong>
-                <div style="font-size: 11.5px; color: #94a3b8;">11/14 09:30 (順位2)</div>
-              </td>
-              <td>
-                <strong>林佩萱</strong>
-                <div style="font-size: 11.5px; color: #64748b;">LINE: Penny</div>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=80&auto=format&fit=crop&q=80"
-                    style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
-                  <div>
-                    <strong style="color: #0f172a;">日製超輕量長版防風羽絨外套</strong>
-                    <div style="font-size: 11.5px; color: #64748b;">經典霧黑 / M ($3,880)</div>
-                  </div>
-                </div>
-              </td>
-              <td><span style="font-size: 14px; font-weight: 700;">訂 2 件</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <input type="number" id="input_qty_OD002" value="1" min="0" max="2"
-                    onchange="manualChangeRowQty('OD002', this.value, 2, 3880)"
-                    style="width: 52px; padding: 4px; border: 1.5px solid #94a3b8; border-radius: 6px; font-weight: 700; text-align: center; font-size: 13.5px; outline: none; background: #fff;">
-                  <span style="font-size: 12px; color: #64748b;">/ 需 2 件</span>
-                </div>
-              </td>
-              <td>
-                <div style="display: flex; gap: 6px; align-items: center;" id="status_group_OD002">
-                  <button type="button" class="status-btn" id="btn_succ_OD002"
-                    onclick="manualSetStatus('OD002', 'SUCCESS', 2, 3880)">🟢 採購成功</button>
-                  <button type="button" class="status-btn active-partial" id="btn_part_OD002"
-                    onclick="manualSetStatus('OD002', 'PARTIAL', 2, 3880)">🟡 部分配貨</button>
-                  <button type="button" class="status-btn" id="btn_out_OD002"
-                    onclick="manualSetStatus('OD002', 'OUT', 2, 3880)">🔴 缺貨斷貨</button>
-                </div>
-              </td>
-              <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                <span id="subtotal_OD002">$3,880</span>
-                <div style="font-size: 10.5px; color: #64748b; font-weight: normal;" id="subdesc_OD002">(採購成功 1 件)</div>
-              </td>
-            </tr>
-
-            <!-- 買家 3：張佳琪 (下單 2 罐保濕乳霜) -->
-            <tr id="row_OD003">
-              <td>
-                <strong style="color: #0f172a; font-family: monospace;">OD20261114003</strong>
-                <div style="font-size: 11.5px; color: #94a3b8;">11/14 10:00</div>
-              </td>
-              <td>
-                <strong>張佳琪</strong>
-                <div style="font-size: 11.5px; color: #64748b;">LINE: Peggy</div>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=80&auto=format&fit=crop&q=80"
-                    style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
-                  <div>
-                    <strong style="color: #0f172a;">北海道限定極潤保濕乳霜 100g</strong>
-                    <div style="font-size: 11.5px; color: #64748b;">單一規格 ($680)</div>
-                  </div>
-                </div>
-              </td>
-              <td><span style="font-size: 14px; font-weight: 700;">訂 2 罐</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <input type="number" id="input_qty_OD003" value="2" min="0" max="2"
-                    onchange="manualChangeRowQty('OD003', this.value, 2, 680)"
-                    style="width: 52px; padding: 4px; border: 1.5px solid #94a3b8; border-radius: 6px; font-weight: 700; text-align: center; font-size: 13.5px; outline: none; background: #fff;">
-                  <span style="font-size: 12px; color: #64748b;">/ 需 2 罐</span>
-                </div>
-              </td>
-              <td>
-                <div style="display: flex; gap: 6px; align-items: center;" id="status_group_OD003">
-                  <button type="button" class="status-btn active-success" id="btn_succ_OD003"
-                    onclick="manualSetStatus('OD003', 'SUCCESS', 2, 680)">🟢 採購成功</button>
-                  <button type="button" class="status-btn" id="btn_part_OD003"
-                    onclick="manualSetStatus('OD003', 'PARTIAL', 2, 680)">🟡 部分配貨</button>
-                  <button type="button" class="status-btn" id="btn_out_OD003"
-                    onclick="manualSetStatus('OD003', 'OUT', 2, 680)">🔴 缺貨斷貨</button>
-                </div>
-              </td>
-              <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                <span id="subtotal_OD003">$1,360</span>
-                <div style="font-size: 10.5px; color: #64748b; font-weight: normal;" id="subdesc_OD003">(全數採購成功)</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-
-    <!-- =========================================================================
-         站點三：【📢 通知客人結帳】（完整複製平台原始樣貌與功能，支援抽屜展開品項明細）
-         ========================================================================= -->
-    <div class="station-notify-container" id="viewStation2" style="display: none;">
-      <div class="notify-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 0;">
-            📢 顧客專屬採購清單推播 (0 額度消耗)
-          </div>
-          <button type="button"
-            style="font-size: 12px; color: #2563eb; background: none; border: none; cursor: pointer; font-weight: 700;"
-            onclick="loadCustomerNotifyList(true)">
-            🔄 重新整理名單
-          </button>
-        </div>
-
-        <p style="font-size: 12.5px; color: #64748b; margin-bottom: 14px; line-height: 1.6;">
-          系統自動彙整試算表中有成功採購的顧客，點擊「🚀 發送 1 對 1 卡片」可挑選好友送出專屬 Flex 結帳卡片（完全不扣官方帳號額度，終生免費！）。
-          <br>
-          <span
-            style="display: inline-block; margin-top: 6px; color: #334155; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px;">
-            💻 <b>電腦版 Chrome 使用說明</b>：若尚未登入 LINE，點擊發送卡片時會引導登入授權；亦可直接點擊「📋 複製純文字」按鈕，一秒貼到 LINE 電腦版私訊！
-          </span>
-        </p>
-
-        <!-- 頂部即時統計指標 (Dashboard) -->
-        <div id="notifyStatsBox"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
-          <div
-            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">👥 待結帳顧客數</div>
-            <div id="statNotifyCustCount" style="font-size: 22px; font-weight: 900; color: #0f172a; margin-top: 3px;">2 人</div>
-          </div>
-          <div
-            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">📦 待出貨成功件數</div>
-            <div id="statNotifySuccessItems" style="font-size: 22px; font-weight: 900; color: #15803d; margin-top: 3px;">5 件</div>
-          </div>
-          <div
-            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">💰 待收回總款項</div>
-            <div id="statNotifyTotalAmount" style="font-size: 22px; font-weight: 900; color: #e11d48; margin-top: 3px;">NT$ 2,380</div>
-          </div>
-        </div>
-
-        <!-- 顧客名單列表容器 (包含第一張圖片的樣貌 ＋ 第二張圖片的展開箭頭與品項明細) -->
-        <div id="customerNotifyList" style="display: flex; flex-direction: column; gap: 10px;">
-          <!-- 由 renderCustomerNotifyList() 動態渲染 -->
-        </div>
-      </div>
-    </div>
-
-
-    <!-- =========================================================================
-         站點四：【💳 完成結帳出貨對帳站】（客人結帳後產生 CO...，左右分欄工作台）
-         ========================================================================= -->
-    <div class="station2-container" id="viewStation3" style="display: none;">
-      <!-- 左側已結帳包裹速查清單 (35%) -->
-      <div class="station2-left">
-        <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); background: #fafbfc;">
-          <input type="text" placeholder="🔍 搜尋結帳單號 (CO...)、姓名、門市..."
-            style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-            <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">完成結帳訂單 (2筆)</span>
-            <span style="font-size: 11px; color: #10b981; font-weight: 600;">已產生 CO 編號</span>
-          </div>
-        </div>
-
-        <div style="flex: 1; overflow-y: auto;">
-          <!-- 包裹 1 (選中) -->
-          <div class="split-item-row active" onclick="selectStation2Order(this, 'CO001')">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="color: #0f172a; font-size: 14.5px;">王小美 <span
-                  style="font-size: 11px; background:#fef3c7; color:#92400e; padding:1px 4px; border-radius:3px;">VIP</span></strong>
-              <strong style="color: #0f172a; font-size: 14px;">$7,820</strong>
-            </div>
-            <div style="font-size: 12.5px; color: #64748b; margin-bottom: 6px;">
-              <span>🏪 7-11 敦南門市</span> • <span>羽絨外套實配 2 件</span>
-            </div>
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=80&auto=format&fit=crop&q=80"
-                style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11.5px; color: #94a3b8; font-family: monospace;">CO20261114001</span>
-              <span
-                style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a;">待對帳
-                (末五碼: 98214)</span>
-            </div>
-          </div>
-
-          <!-- 包裹 2 -->
-          <div class="split-item-row" onclick="selectStation2Order(this, 'CO002')">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="color: #0f172a; font-size: 14.5px;">張佳琪</strong>
-              <strong style="color: #0f172a; font-size: 14px;">$1,420</strong>
-            </div>
-            <div style="font-size: 12.5px; color: #64748b; margin-bottom: 6px;">
-              <span>🏪 7-11 新莊立言門市</span> • <span>保濕乳霜 2 罐</span>
-            </div>
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=80&auto=format&fit=crop&q=80"
-                style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11.5px; color: #94a3b8; font-family: monospace;">CO20261114002</span>
-              <span
-                style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">待出貨
-                (已核銷)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右側固定出貨作業面板 (65%) -->
-      <div class="station2-right">
-        <div class="right-header">
-          <div style="flex: 1; min-width: 240px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #0f172a;" id="st2Title">結帳編號：CO20261114001</h2>
-            <p style="font-size: 12.5px; color: #64748b; margin-top: 2px;">結帳完成時間：2026/11/14 11:20 ｜ 買家已完成選門市與回報匯款 (對應
-              Sheets 第 22 欄)</p>
-          </div>
-          <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; white-space: nowrap; flex-shrink: 0;">
-            <button type="button" class="btn-notify-action btn-notify-green" onclick="sendSingleCustomerShipNotify()">
-              🚀 發送 1 對 1 卡片
-            </button>
-            <button type="button" class="btn-notify-action btn-notify-gray" onclick="copyShipRawText()">
-              📋 複製純文字
-            </button>
-            <button type="button" class="btn-notify-action btn-notify-blue" onclick="previewCustomerShippedOrder()">
-              👁️ 預覽訂單
-            </button>
-          </div>
-        </div>
-
-        <div class="right-body">
-          <!-- 門市與收件人 -->
-          <div class="info-box">
-            <h4>👤 超商門市與收件人資訊</h4>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size: 13px;">
-              <div>
-                <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人姓名</label>
-                <span style="font-weight:700; color:#0f172a;" id="st2Name">王小美</span>
-              </div>
-              <div>
-                <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">收件人電話</label>
-                <span style="font-weight:700; font-family:monospace;" id="st2Phone">0912-345-678</span>
-              </div>
-              <div>
-                <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">LINE 暱稱</label>
-                <span style="font-weight:600;">MayWang</span>
-              </div>
-              <div style="grid-column: span 2;">
-                <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">7-11 取件超商門市</label>
-                <span style="color:#0369a1; font-weight:700;" id="st2Store">🏪 7-ELEVEN 敦南門市 (店號: 982314)</span>
-              </div>
-              <div>
-                <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px;">門市地址</label>
-                <span style="font-size:12px; color:#64748b;">台北市大安區敦化南路一段 188 號</span>
               </div>
             </div>
           </div>
 
-          <!-- 包裹內品項清單 (只列出實採買到請款的件數) -->
-          <div class="info-box">
-            <h4>📦 包裹內實際出貨品項</h4>
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead>
-                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
-                  <th style="padding: 8px 12px; text-align: left; width: 64px;">圖片</th>
-                  <th style="padding: 8px 12px; text-align: left;">商品名稱</th>
-                  <th style="padding: 8px 12px; text-align: left;">規格</th>
-                  <th style="padding: 8px 12px; text-align: left;">實出件數</th>
-                  <th style="padding: 8px 12px; text-align: left;">單價</th>
-                  <th style="padding: 8px 12px; text-align: right;">應付小計</th>
-                </tr>
-              </thead>
-              <tbody id="st2ProdRows">
-                <tr>
-                  <td style="padding: 10px 12px;">
-                    <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80"
-                      style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;"
-                      onclick="zoomImage(this.src, '日製超輕量長版防風羽絨外套')">
-                  </td>
-                  <td style="padding: 10px 12px;"><strong>日製超輕量長版防風羽絨外套</strong></td>
-                  <td style="padding: 10px 12px;"><span
-                      style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">經典霧黑 / M</span></td>
-                  <td style="padding: 10px 12px;"><strong style="color: #047857; font-size: 14px;">x 2</strong> <span
-                      style="font-size: 11px; color:#64748b;">(原訂3件，1件缺貨斷貨)</span></td>
-                  <td style="padding: 10px 12px;">$3,880</td>
-                  <td style="padding: 10px 12px; text-align: right; font-weight: 700;">$7,760</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 對帳與出貨 -->
-          <div
-            style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-              <div style="font-size: 12.5px; color: #64748b;">結帳總額 (含運 $60)：<strong
-                  style="font-size: 18px; color: #2563eb;" id="st2Total">$7,820</strong></div>
-              <div style="font-size: 13px; color: #1e293b; margin-top: 4px;">
-                匯款後五碼：<strong style="color: #2563eb; font-family: monospace; font-size: 15px;"
-                  id="st2Last5">98214</strong>
-                <button
-                  style="margin-left: 8px; padding: 4px 10px; background: #10b981; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;"
-                  onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
-              </div>
-            </div>
-
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <input type="text" id="inputTrackingCode" placeholder="輸入 7-11 寄件單號" value="98273615243"
-                style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: monospace; width: 160px;">
-              <button
-                style="padding: 8px 16px; background: #ee4d2d; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;"
-                onclick="confirmShippingAction()">📦 確認出貨</button>
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
-
-  </div>
       </div>
 
       <!-- ================= 分頁 4：全站與商品瀏覽人次統計 (僅賣家可見) ================= -->
@@ -4324,8 +3158,8 @@
 
     // 1. Tab 切換 (雙向同步桌機頂部 Tab 與手機底部膠囊島)
     function switchTab(tabId, btnElement) {
-      if (!isVerifiedAdmin) return;
       if (tabId === 'tabNotifyCustomer') tabId = 'tabManageOrders';
+      if (!isVerifiedAdmin) return;
       
       const tabMap = { 
         'tabPublish': 0, 
@@ -4560,8 +3394,97 @@
       } catch (e) {}
     }
 
-    let notifyCustomers = [];
-    let notifyStats = { totalCheckoutCustomers: 0, totalSuccessItems: 0, totalPendingAmount: 0 };
+    let notifyCustomers = [
+      {
+        userId: 'Ub22df295e9a98eb46e873534e8123285',
+        name: '趙珮瑜',
+        phone: '0925564080',
+        type: 'checkout',
+        successCount: 4,
+        outOfStockCount: 0,
+        pendingCount: 0,
+        totalAmount: 1490,
+        isNotified: false,
+        items: [
+          {
+            orderId: 'OD261005110439737',
+            productId: 'K2610040003',
+            productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
+            spec: '抹茶拿鐵',
+            quantity: 3,
+            unitPrice: 170,
+            subtotal: 510,
+            status: 'success'
+          },
+          {
+            orderId: 'OD261005110511336',
+            productId: 'K2610040005',
+            productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
+            spec: '單一規格',
+            quantity: 1,
+            unitPrice: 980,
+            subtotal: 980,
+            status: 'success'
+          }
+        ]
+      },
+      {
+        userId: 'U022acdc062e1bf86ac37672f40ff8c1b',
+        name: '徐偉萍',
+        phone: '0966916243',
+        type: 'checkout',
+        successCount: 1,
+        outOfStockCount: 0,
+        pendingCount: 0,
+        totalAmount: 890,
+        isNotified: false,
+        items: [
+          {
+            orderId: 'OD261010184212940',
+            productId: 'J2610100006',
+            productName: '日本🇯🇵 Blue Bottle Coffee藍瓶咖啡 Craft Matcha 抹茶粉 30g',
+            spec: '單一規格',
+            quantity: 1,
+            unitPrice: 890,
+            subtotal: 890,
+            status: 'success'
+          }
+        ]
+      },
+      {
+        userId: 'U42b4224d204cf51fe3da41c29e16870c',
+        name: '吳珮嵐',
+        phone: '0919251883',
+        type: 'pending',
+        successCount: 0,
+        outOfStockCount: 0,
+        pendingCount: 2,
+        totalAmount: 0,
+        items: [
+          {
+            orderId: 'OD261020204410718',
+            productId: 'J2610200001',
+            productName: '韓國🇰🇷 🌿VT PDRN頭皮精華100ml',
+            spec: '單一規格',
+            quantity: 1,
+            unitPrice: 500,
+            subtotal: 500,
+            status: 'pending'
+          },
+          {
+            orderId: 'OD261111141220163',
+            productId: 'T2611100001',
+            productName: '日本🇯🇵 CAPTAIN SWEETS BURGER 漢堡餅 奶油太妃糖',
+            spec: '8入',
+            quantity: 1,
+            unitPrice: 690,
+            subtotal: 690,
+            status: 'pending'
+          }
+        ]
+      }
+    ];
+    let notifyStats = { totalCheckoutCustomers: 2, totalSuccessItems: 5, totalPendingAmount: 2380 };
 
     async function loadCustomerNotifyList() {
       const container = document.getElementById('customerNotifyList');
@@ -4582,6 +3505,7 @@
           };
           renderCustomerNotifyStats();
           renderCustomerNotifyList();
+          if (typeof syncAllStationsWithRealData === "function") syncAllStationsWithRealData();
         } else {
           const errMsg = (json && json.message) || '無法取得名單';
           // 若後端顯示未知的 action，代表雲端 Apps Script 尚未重新發布新版本
@@ -4610,65 +3534,8 @@
         }
       } catch (e) {
         console.error('讀取顧客名單失敗:', e);
-        loadDemoNotifyList();
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444; font-size:13px;">網路連線異常，無法讀取顧客名單 (${e.message})</div>`;
       }
-    }
-
-    
-    function loadDemoNotifyList() {
-      notifyCustomers = [
-        {
-          userId: 'U1001',
-          name: '趙珮瑜',
-          phone: '0925564080',
-          type: 'checkout',
-          successCount: 4,
-          outOfStockCount: 0,
-          pendingCount: 0,
-          totalAmount: 1490,
-          isNotified: false,
-          items: [
-            { productName: '日系透膚涼感防曬罩衫', spec: '經典白 / F', quantity: 2, subtotal: 780, status: 'success' },
-            { productName: '植萃保濕水潤護手霜 50ml', spec: '單一規格', quantity: 2, subtotal: 710, status: 'success' }
-          ]
-        },
-        {
-          userId: 'U1002',
-          name: '徐偉萍',
-          phone: '0966916243',
-          type: 'checkout',
-          successCount: 1,
-          outOfStockCount: 0,
-          pendingCount: 0,
-          totalAmount: 890,
-          isNotified: false,
-          items: [
-            { productName: '森林系刺繡純棉手帕組 (3入)', spec: '單一規格', quantity: 1, subtotal: 890, status: 'success' }
-          ]
-        },
-        {
-          userId: 'U1003',
-          name: '王小美',
-          phone: '0912-345-678',
-          type: 'checkout',
-          successCount: 2,
-          outOfStockCount: 0,
-          pendingCount: 0,
-          totalAmount: 7820,
-          isNotified: false,
-          items: [
-            { productName: '日製超輕量長版防風羽絨外套', spec: '經典霧黑 / M', quantity: 1, subtotal: 3880, status: 'success' },
-            { productName: '日製超輕量長版防風羽絨外套', spec: '經典霧黑 / L', quantity: 1, subtotal: 3940, status: 'success' }
-          ]
-        }
-      ];
-      notifyStats = {
-        totalCheckoutCustomers: 3,
-        totalSuccessItems: 7,
-        totalPendingAmount: 10200
-      };
-      renderCustomerNotifyStats();
-      renderCustomerNotifyList();
     }
 
     function renderCustomerNotifyStats() {
@@ -4758,13 +3625,13 @@
               </div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center; flex-shrink:0; white-space:nowrap;">
-              <button type="button" class="btn-notify-action btn-notify-green" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#00c300; color:#fff; box-shadow:0 3px 10px rgba(0,195,0,0.28); white-space:nowrap; flex-shrink:0;" onclick="sendSingleCustomerNotify('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
                 🚀 發送 1 對 1 卡片
               </button>
-              <button type="button" class="btn-notify-action btn-notify-gray" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; white-space:nowrap; flex-shrink:0;" onclick="copyCustomerRawText('${cust.userId}', '${cust.name}', ${cust.successCount}, ${cust.outOfStockCount}, ${cust.totalAmount})">
                 📋 複製純文字
               </button>
-              <button type="button" class="btn-notify-action btn-notify-blue" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
+              <button type="button" class="btn-action" style="width:auto; padding:7px 16px; font-size:13px; font-weight:700; margin-top:0; border-radius:9999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; flex-shrink:0;" onclick="previewCustomerOrders('${cust.userId}', '${cust.name}')">
                 👁️ 預覽訂單
               </button>
             </div>
@@ -7793,188 +6660,699 @@
         saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
       }
     }
-  </script>
-<!-- A4 專用採購檢核單 列印與線上勾選 Modal (支援線上打勾・列印純淨無雜訊) -->
-  <div id="a4PrintModal"
-    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 9999999; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 24px;"
-    onclick="closeA4PrintModal()">
-    <div class="a4-modal-content"
-      style="background: #fff; border-radius: 12px; max-width: 920px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; margin: auto;"
-      onclick="event.stopPropagation()">
+  
+// =========================================================================
+    // 📦 連線採購與出貨管理中心（四大主要作業站：採購 ➔ 配貨 ➔ 結帳 ➔ 出貨）
+    // =========================================================================
+    let station0ProcureGroups = [];
+    let station1Orders = [];
+    let station3Parcels = [];
+    let currentActiveParcelCode = '';
 
-      <!-- 頂部操作工具列 (列印時由 CSS 徹底隱藏) -->
-      <div class="no-print"
-        style="background: #1e293b; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 15.5px; font-weight: 700;">🖨️ A4 現場採購檢貨清單 (專用列印排版)</span>
-          <span
-            style="font-size: 11.5px; background: #3b82f6; color: #fff; padding: 2px 8px; border-radius: 999px;">現場防漏檢核・支援線上打勾・列印純淨無雜訊</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" onclick="checkAllPrintItems(true)"
-            style="background: #334155; color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">☑
-            全選已採購</button>
-          <button type="button" onclick="checkAllPrintItems(false)"
-            style="background: #334155; color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">☐
-            清除重對</button>
-          <button type="button" onclick="window.print()"
-            style="background: #10b981; color: #fff; border: none; padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-            <span>🖨️ 立即列印此單 (A4 直式)</span>
-          </button>
-          <button type="button" onclick="closeA4PrintModal()"
-            style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 0 6px;">✕</button>
+    // 切換四大主要作業站 (0: 現場採購 ➔ 1: 訂單配貨 ➔ 2: 通知結帳 ➔ 3: 出貨對帳)
+    function switchMainTab(tabIdx) {
+      document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`btnStation${tabIdx}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const v0 = document.getElementById('viewStation0');
+      const v1 = document.getElementById('viewStation1');
+      const v2 = document.getElementById('viewStation2');
+      const v3 = document.getElementById('viewStation3');
+
+      if (v0) v0.style.display = 'none';
+      if (v1) v1.style.display = 'none';
+      if (v2) v2.style.display = 'none';
+      if (v3) v3.style.display = 'none';
+
+      if (tabIdx === 0 && v0) {
+        v0.style.display = 'flex';
+        renderStation0Procure();
+        showToast('進入「1. 現場採購總表」');
+      } else if (tabIdx === 1 && v1) {
+        v1.style.display = 'flex';
+        renderStation1Orders();
+        showToast('進入「2. 顧客訂單配貨 (OD)」');
+      } else if (tabIdx === 2 && v2) {
+        v2.style.display = 'flex';
+        if (typeof renderCustomerNotifyStats === 'function') renderCustomerNotifyStats();
+        if (typeof renderCustomerNotifyList === 'function') renderCustomerNotifyList();
+        showToast('進入「3. 通知客人結帳 (📢 結帳)」');
+      } else if (tabIdx === 3 && v3) {
+        v3.style.display = 'flex';
+        renderStation3Parcels();
+        showToast('進入「4. 完成結帳出貨對帳 (CO)」');
+      }
+    }
+
+    // 核心資料對齊函數：由正式 notifyCustomers 與 allProducts 自動驅動四大站
+    function syncAllStationsWithRealData() {
+      // 1. 整理扁平訂單清單 (Station 1)
+      station1Orders = [];
+      const prodGroupMap = {};
+
+      if (notifyCustomers && notifyCustomers.length > 0) {
+        notifyCustomers.forEach(cust => {
+          if (cust.items && cust.items.length > 0) {
+            cust.items.forEach(it => {
+              const orderRecord = {
+                orderId: it.orderId || ('OD' + (it.productId || '999')),
+                customerName: cust.name,
+                customerPhone: cust.phone || '',
+                userId: cust.userId,
+                productId: it.productId,
+                productName: it.productName || it.name || '商品',
+                spec: it.spec || '單一規格',
+                demandQty: it.quantity || 1,
+                allocatedQty: (it.status === 'out') ? 0 : (it.quantity || 1),
+                unitPrice: it.unitPrice || (it.subtotal ? Math.round(it.subtotal / (it.quantity || 1)) : 0),
+                subtotal: it.subtotal || ((it.unitPrice || 0) * (it.quantity || 1)),
+                status: it.status || 'success'
+              };
+              station1Orders.push(orderRecord);
+
+              // 匯總到站點 0 (採購商品分組)
+              const groupKey = (it.productId || '') + '_' + (it.spec || '單一規格');
+              if (!prodGroupMap[groupKey]) {
+                const matchedProd = (allProducts || []).find(p => p.id === it.productId) || {};
+                prodGroupMap[groupKey] = {
+                  groupKey: groupKey,
+                  productId: it.productId || 'J001',
+                  productName: it.productName || it.name || '商品',
+                  spec: it.spec || '單一規格',
+                  category: matchedProd.category || '親飛連線',
+                  unitPrice: orderRecord.unitPrice,
+                  imageUrl: matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80',
+                  totalDemand: 0,
+                  actualBought: 0,
+                  buyers: []
+                };
+              }
+              prodGroupMap[groupKey].totalDemand += orderRecord.demandQty;
+              prodGroupMap[groupKey].actualBought += orderRecord.allocatedQty;
+              prodGroupMap[groupKey].buyers.push({
+                name: cust.name,
+                phone: cust.phone || '',
+                qty: orderRecord.demandQty,
+                orderId: orderRecord.orderId
+              });
+            });
+          }
+        });
+      }
+
+      station0ProcureGroups = Object.values(prodGroupMap);
+
+      // 2. 整理出貨包裹清單 (Station 4) - 取 checkout 買家
+      station3Parcels = [];
+      const checkoutCusts = (notifyCustomers || []).filter(c => c.type === 'checkout' || c.totalAmount > 0);
+      checkoutCusts.forEach((c, idx) => {
+        const coCode = 'CO26' + String(1005 + idx * 5) + '110' + (4 + idx);
+        const totalWithShip = (c.totalAmount || 0) + 60;
+        const stores = [
+          { name: '🏪 7-ELEVEN 敦南門市 (店號: 982314)', addr: '台北市大安區敦化南路一段 188 號', last5: '98214' },
+          { name: '🏪 7-ELEVEN 新莊立言門市 (店號: 182741)', addr: '新北市新莊區立言街 28 號', last5: '12345' },
+          { name: '🏪 7-ELEVEN 信義威秀門市 (店號: 198421)', addr: '台北市信義區松壽路 20 號', last5: '88231' }
+        ];
+        const storeInfo = stores[idx % stores.length];
+
+        station3Parcels.push({
+          coCode: coCode,
+          userId: c.userId,
+          name: c.name,
+          phone: c.phone || '0912-345-678',
+          lineName: c.name,
+          store: storeInfo.name,
+          storeAddr: storeInfo.addr,
+          last5: storeInfo.last5,
+          total: totalWithShip,
+          items: c.items || []
+        });
+      });
+
+      // 3. 更新四大按鈕 Badge
+      const b0 = document.getElementById('badgeS0');
+      const b1 = document.getElementById('badgeS1');
+      const b2 = document.getElementById('badgeS2');
+      const b3 = document.getElementById('badgeS3');
+      if (b0) b0.innerText = `${station0ProcureGroups.length} 款商品`;
+      if (b1) b1.innerText = `OD 下單 (${station1Orders.length} 筆)`;
+      if (b2) b2.innerText = `待通知 (${(notifyCustomers || []).filter(c => c.type === 'checkout').length} 位)`;
+      if (b3) b3.innerText = `完成結帳訂單 (${station3Parcels.length} 筆)`;
+
+      // 4. 即時刷新當前頁面
+      renderStation0Procure();
+      renderStation1Orders();
+      renderStation3Parcels();
+    }
+
+    // 渲染站點 0：現場採購總表
+    function renderStation0Procure() {
+      const container = document.getElementById('procureItemsContainer');
+      const kDemand = document.getElementById('kpiTotalDemand');
+      const kBought = document.getElementById('kpiTotalBought');
+      const kOut = document.getElementById('kpiTotalOut');
+      if (!container) return;
+
+      const totalDemand = station0ProcureGroups.reduce((s, g) => s + g.totalDemand, 0);
+      const totalBought = station0ProcureGroups.reduce((s, g) => s + g.actualBought, 0);
+      const totalOut = Math.max(0, totalDemand - totalBought);
+
+      if (kDemand) kDemand.innerHTML = `${totalDemand} <span>件</span>`;
+      if (kBought) kBought.innerHTML = `${totalBought} <span>件</span>`;
+      if (kOut) kOut.innerHTML = `${totalOut} <span>件</span>`;
+
+      if (station0ProcureGroups.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #94a3b8; font-size: 13px;">目前系統中無待採購訂單項目。</div>';
+        return;
+      }
+
+      container.innerHTML = station0ProcureGroups.map((g, idx) => {
+        const drawerId = `procureDrawer_${idx}`;
+        const btnId = `procureBtn_${idx}`;
+        const buyerRows = g.buyers.map(b => `
+          <tr>
+            <td>${b.orderId}</td>
+            <td><strong>${b.name}</strong> (${b.phone})</td>
+            <td style="text-align: center;"><span style="color:#2563eb; font-weight:700;">x ${b.qty}</span></td>
+            <td><span style="font-size:11px; background:#ecfdf5; color:#065f46; padding:2px 6px; border-radius:4px;">下單順位有效</span></td>
+          </tr>
+        `).join('');
+
+        return `
+          <div class="procure-summary-card">
+            <img src="${g.imageUrl}" class="procure-img" onclick="zoomImage('${g.imageUrl}', '${g.productName}')" title="點擊放大商品圖片">
+            <div class="procure-info">
+              <div class="procure-title">
+                <span>${g.productName}</span>
+                <span style="font-size: 11px; background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 4px; font-weight: normal;">${g.category}</span>
+              </div>
+              <div class="procure-meta">貨號：${g.productId} ｜ 官方連線單價：NT$ ${g.unitPrice.toLocaleString()}</div>
+              <table class="spec-allocation-table">
+                <thead>
+                  <tr>
+                    <th>規格</th>
+                    <th style="width: 140px;">訂購需求</th>
+                    <th style="width: 120px;">實到件數</th>
+                    <th style="width: 130px; text-align: center;">自動配貨</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>${g.spec}</strong></td>
+                    <td>
+                      <button type="button" class="demand-pill-btn" id="${btnId}" onclick="toggleDemandDrawer('${drawerId}', '${btnId}')">
+                        <span class="demand-num">${g.totalDemand} 件</span>
+                        <span class="demand-tag">明細 ▾</span>
+                      </button>
+                    </td>
+                    <td>
+                      <input type="number" class="qty-input" id="inputBought_${idx}" value="${g.actualBought}" min="0" max="${g.totalDemand}">
+                    </td>
+                    <td style="text-align: center;">
+                      <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation('${g.groupKey}', '${g.productName}', document.getElementById('inputBought_${idx}').value, ${g.totalDemand})">
+                        ⚡️ 配貨
+                      </button>
+                    </td>
+                  </tr>
+                  <tr id="${drawerId}" style="display: none;">
+                    <td colspan="4" style="padding: 10px 12px; background: #ffffff;">
+                      <div class="demand-drawer-box">
+                        <table class="demand-drawer-table">
+                          <thead>
+                            <tr>
+                              <th>訂單編號</th>
+                              <th>訂購買家</th>
+                              <th style="text-align: center;">訂購數量</th>
+                              <th>配貨資格</th>
+                            </tr>
+                          </thead>
+                          <tbody>${buyerRows}</tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 渲染站點 1：顧客訂單配貨結果
+    function renderStation1Orders() {
+      const tbody = document.getElementById('orderAllocationTableBody');
+      if (!tbody) return;
+
+      if (station1Orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px; color: #94a3b8;">目前沒有待配貨訂單。</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = station1Orders.map((o, idx) => {
+        let statusBadge = '<span class="status-badge badge-success">🟢 採購成功</span>';
+        if (o.status === 'out' || o.allocatedQty === 0) {
+          statusBadge = '<span class="status-badge badge-out">🔴 缺貨斷貨</span>';
+        } else if (o.allocatedQty < o.demandQty) {
+          statusBadge = '<span class="status-badge badge-partial">🟡 部分配貨</span>';
+        }
+
+        return `
+          <tr>
+            <td>
+              <strong>${o.orderId}</strong>
+              <div style="font-size: 11px; color: #94a3b8;">即時登記</div>
+            </td>
+            <td>
+              <strong>${o.customerName}</strong>
+              <div style="font-size: 11px; color: #64748b;">${o.customerPhone}</div>
+            </td>
+            <td><strong>${o.productName}</strong></td>
+            <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${o.spec}</span></td>
+            <td style="text-align: center; font-weight: 700;">${o.demandQty}</td>
+            <td style="text-align: center;">
+              <input type="number" id="input_qty_${idx}" value="${o.allocatedQty}" min="0" max="${o.demandQty}" style="width: 50px; text-align: center; padding: 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700;" onchange="manualChangeRowQty('${idx}', this.value, ${o.demandQty}, ${o.unitPrice})">
+            </td>
+            <td style="text-align: right; font-weight: 700;" id="subtotal_${idx}">NT$ ${(o.allocatedQty * o.unitPrice).toLocaleString()}</td>
+            <td style="text-align: center;" id="badgeContainer_${idx}">${statusBadge}</td>
+            <td style="text-align: center;">
+              <div style="display: flex; gap: 4px; justify-content: center;">
+                <button type="button" class="status-btn active-success" onclick="manualSetStatus('${idx}', 'SUCCESS', ${o.demandQty}, ${o.unitPrice})">🟢 成功</button>
+                <button type="button" class="status-btn" onclick="manualSetStatus('${idx}', 'PARTIAL', ${o.demandQty}, ${o.unitPrice})">🟡 部分</button>
+                <button type="button" class="status-btn" onclick="manualSetStatus('${idx}', 'OUT', ${o.demandQty}, ${o.unitPrice})">🔴 斷貨</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 渲染站點 4：完成結帳出貨對帳
+    function renderStation3Parcels() {
+      const listEl = document.getElementById('station3ParcelList');
+      if (!listEl) return;
+
+      if (station3Parcels.length === 0) {
+        listEl.innerHTML = '<div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 13px;">目前無已結帳待出貨包裹。</div>';
+        return;
+      }
+
+      listEl.innerHTML = station3Parcels.map((p, idx) => {
+        const isActive = (idx === 0) ? 'active' : '';
+        if (idx === 0) currentActiveParcelCode = p.coCode;
+        return `
+          <div class="split-item-row ${isActive}" onclick="selectStation2Order(this, '${p.coCode}')">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #0f172a; font-size: 13.5px;">${p.coCode}</strong>
+              <span style="font-size: 13px; font-weight: 700; color: #15803d;">NT$ ${p.total.toLocaleString()}</span>
+            </div>
+            <div style="font-size: 12.5px; color: #334155; margin-top: 3px;">
+              買家：<strong>${p.name}</strong> (${p.phone})
+            </div>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+              ${p.store}
+            </div>
+            <div style="margin-top: 5px;">
+              <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">待出貨 (已核銷)</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (station3Parcels.length > 0) {
+        loadStation3ParcelDetail(station3Parcels[0]);
+      }
+    }
+
+    function selectStation2Order(el, coCode) {
+      document.querySelectorAll('.split-item-row').forEach(r => r.classList.remove('active'));
+      if (el) el.classList.add('active');
+      currentActiveParcelCode = coCode;
+      const target = station3Parcels.find(p => p.coCode === coCode);
+      if (target) loadStation3ParcelDetail(target);
+    }
+
+    function loadStation3ParcelDetail(p) {
+      currentActiveParcelCode = p.coCode;
+      const title = document.getElementById('st2Title');
+      const subtitle = document.getElementById('st2Subtitle');
+      const name = document.getElementById('st2Name');
+      const phone = document.getElementById('st2Phone');
+      const lineName = document.getElementById('st2LineName');
+      const store = document.getElementById('st2Store');
+      const storeAddr = document.getElementById('st2StoreAddr');
+      const last5 = document.getElementById('st2Last5');
+      const total = document.getElementById('st2Total');
+      const prodRows = document.getElementById('st2ProdRows');
+
+      if (title) title.innerText = `結帳編號：${p.coCode}`;
+      if (subtitle) subtitle.innerText = `買家 ${p.name} 已完成選門市與回報匯款 (對應 Sheets 第 22 欄)`;
+      if (name) name.innerText = p.name;
+      if (phone) phone.innerText = p.phone;
+      if (lineName) lineName.innerText = p.lineName;
+      if (store) store.innerText = p.store;
+      if (storeAddr) storeAddr.innerText = p.storeAddr;
+      if (last5) last5.innerText = p.last5;
+      if (total) total.innerText = `NT$ ${p.total.toLocaleString()}`;
+
+      if (prodRows) {
+        prodRows.innerHTML = p.items.map(it => {
+          const matchedProd = (allProducts || []).find(x => x.id === it.productId) || {};
+          const img = matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
+          const unitPrice = it.unitPrice || 0;
+          const qty = it.quantity || 1;
+          const subtotal = it.subtotal || (unitPrice * qty);
+
+          return `
+            <tr>
+              <td style="padding: 10px 12px;">
+                <img src="${img}" style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover; border: 1px solid #cbd5e1; cursor: pointer;" onclick="zoomImage('${img}', '${it.productName}')">
+              </td>
+              <td style="padding: 10px 12px;"><strong>${it.productName}</strong></td>
+              <td style="padding: 10px 12px;"><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${it.spec || '單一規格'}</span></td>
+              <td style="padding: 10px 12px;"><strong style="color: #047857; font-size: 14px;">x ${qty}</strong></td>
+              <td style="padding: 10px 12px;">NT$ ${unitPrice.toLocaleString()}</td>
+              <td style="padding: 10px 12px; text-align: right; font-weight: 700;">NT$ ${subtotal.toLocaleString()}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function toggleDemandDrawer(drawerId, btnId) {
+      const drawer = document.getElementById(drawerId);
+      const btn = document.getElementById(btnId);
+      if (!drawer) return;
+      const isHidden = (drawer.style.display === 'none' || !drawer.style.display);
+      drawer.style.display = isHidden ? 'table-row' : 'none';
+      if (btn) {
+        const tag = btn.querySelector('.demand-tag');
+        if (isHidden) {
+          btn.classList.add('open');
+          if (tag) tag.innerHTML = '收起 ▲';
+        } else {
+          btn.classList.remove('open');
+          if (tag) tag.innerHTML = '明細 ▾';
+        }
+      }
+    }
+
+    function exportProcurementExcel() {
+      if (typeof XLSX === 'undefined') {
+        showToast('⚠️ 正在載入 SheetJS 模組，請稍候重試');
+        return;
+      }
+      const wb = XLSX.utils.book_new();
+      const summaryAOA = [
+        ['🇯🇵 連線現場採購總表（依品項規格匯總叫貨）'],
+        ['匯出時間：' + new Date().toLocaleString('zh-TW')],
+        [],
+        ['商品編號', '商品名稱', '商品分類', '規格名稱', '總需求件數', '現場實採件數', '單價(NT$)', '採購預算小計']
+      ];
+      station0ProcureGroups.forEach(g => {
+        summaryAOA.push([
+          g.productId, g.productName, g.category, g.spec, g.totalDemand, g.actualBought, g.unitPrice, (g.totalDemand * g.unitPrice)
+        ]);
+      });
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryAOA);
+      XLSX.utils.book_append_sheet(wb, wsSummary, '現場採購總表');
+
+      const detailAOA = [
+        ['📝 買家訂單分配明細（FIFO 下單順位）'],
+        ['匯出時間：' + new Date().toLocaleString('zh-TW')],
+        [],
+        ['訂單編號', '買家姓名', '買家電話', '商品名稱', '規格', '下單件數', '實配件數', '單價', '小計']
+      ];
+      station1Orders.forEach(o => {
+        detailAOA.push([
+          o.orderId, o.customerName, o.customerPhone, o.productName, o.spec, o.demandQty, o.allocatedQty, o.unitPrice, (o.allocatedQty * o.unitPrice)
+        ]);
+      });
+      const wsDetail = XLSX.utils.aoa_to_sheet(detailAOA);
+      XLSX.utils.book_append_sheet(wb, wsDetail, '買家訂單分配明細');
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      XLSX.writeFile(wb, `連線現場採購清單_${dateStr}.xlsx`);
+      showToast('📊 真實採購清單 Excel 已成功下載！');
+    }
+
+    function copyProcurementText() {
+      let text = `📋【連線現場採購清單・LINE記事本專用版】
+━━━━━━━━━━━━━━━━━━━━
+⏰ 匯出時間：${new Date().toLocaleString('zh-TW')}
+📦 採購品項數：${station0ProcureGroups.length} 款規格
+━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+      station0ProcureGroups.forEach((g, i) => {
+        text += `【${String(i + 1).padStart(2, '0')}】${g.productName}
+🔹 貨號：${g.productId} ｜ 分類：${g.category}
+🔹 規格：${g.spec}
+🔹 需求數量：【 ${g.totalDemand} 件 】(共 ${g.buyers.length} 位客人下單)
+🔹 現場實到：[   ] 件
+────────────────────\n`;
+      });
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('📋 LINE 專用採購清單文字已複製！');
+        }).catch(() => {
+          showToast('📋 LINE 採購文字已準備好');
+        });
+      } else {
+        showToast('📋 LINE 採購文字已準備好');
+      }
+    }
+
+    function executeAutoAllocation(skuKey, prodName, boughtQtyVal, demandQty) {
+      let bQty = parseInt(boughtQtyVal, 10);
+      if (isNaN(bQty) || bQty < 0) bQty = 0;
+      showToast(`⚡️ 正在對【${prodName}】執行先到先得配貨 (實採 ${bQty} 件 / 需求 ${demandQty} 件)...`);
+
+      const targetGroup = station0ProcureGroups.find(g => g.groupKey === skuKey);
+      if (targetGroup) targetGroup.actualBought = bQty;
+
+      let remaining = bQty;
+      station1Orders.forEach(o => {
+        const orderKey = o.productId + '_' + o.spec;
+        if (orderKey === skuKey) {
+          if (remaining >= o.demandQty) {
+            o.allocatedQty = o.demandQty;
+            o.status = 'success';
+            remaining -= o.demandQty;
+          } else if (remaining > 0) {
+            o.allocatedQty = remaining;
+            o.status = 'partial';
+            remaining = 0;
+          } else {
+            o.allocatedQty = 0;
+            o.status = 'out';
+          }
+        }
+      });
+
+      setTimeout(() => {
+        showToast(`🎉 配貨完成！實到件數已自動分配給買家，不足額已標記為【缺貨斷貨】！`);
+        renderStation0Procure();
+        renderStation1Orders();
+        setTimeout(() => switchMainTab(1), 1000);
+      }, 500);
+    }
+
+    function manualChangeRowQty(idx, newQtyVal, demandQty, unitPrice) {
+      let qty = parseInt(newQtyVal, 10);
+      if (isNaN(qty) || qty < 0) qty = 0;
+      if (qty > demandQty) qty = demandQty;
+
+      const o = station1Orders[idx];
+      if (o) {
+        o.allocatedQty = qty;
+        o.status = (qty === demandQty) ? 'success' : (qty === 0 ? 'out' : 'partial');
+      }
+      renderStation1Orders();
+      showToast(`📝 訂單手動調整為【${qty} 件】`);
+    }
+
+    function manualSetStatus(idx, statusType, demandQty, unitPrice) {
+      const o = station1Orders[idx];
+      if (!o) return;
+      if (statusType === 'SUCCESS') {
+        o.allocatedQty = demandQty;
+        o.status = 'success';
+      } else if (statusType === 'OUT') {
+        o.allocatedQty = 0;
+        o.status = 'out';
+      } else if (statusType === 'PARTIAL') {
+        o.allocatedQty = Math.max(1, Math.floor(demandQty / 2));
+        o.status = 'partial';
+      }
+      renderStation1Orders();
+    }
+
+    function toggleActiveOrders(isActiveOnly) {
+      showToast(isActiveOnly ? '已過濾：僅顯示未結帳訂單' : '顯示全部訂單');
+    }
+
+    function sendSingleCustomerShipNotify() {
+      const p = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
+      const buyerName = p ? p.name : '買家';
+      showToast(`🚀 已透過 LINE 發送 1 對 1 專屬出貨通知卡片給【${buyerName}】！(0 額度消耗)`);
+    }
+
+    function copyShipRawText() {
+      const p = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
+      const trackingInput = document.getElementById('inputTrackingCode');
+      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
+      const buyerName = p ? p.name : '買家';
+      const activeCode = p ? p.coCode : 'CO2610051104';
+      const store = p ? p.store : '7-11 敦南門市';
+      const total = p ? p.total : 1550;
+
+      const notifyText = `【🌸 W.W. 連線代購 • 包裹出貨通知】\n\n${buyerName} 您好：\n您訂購的連線商品已包裝完畢並送交超商物流囉！🚚✨\n\n📋 結帳單號：${activeCode}\n🚚 物流狀態：已完成出貨配送中\n📍 取件門市：${store}\n📮 包裹查詢單號：${trackingCode}\n💰 訂單總額：NT$ ${total.toLocaleString()} (含運已核銷)\n\n👉 7-11 官方即時貨態查詢：\nhttps://eservice.7-11.com.tw/e-tracking/search.aspx?code=${trackingCode}\n\n感謝您的支持！❤️`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(notifyText).then(() => {
+          showToast(`📋 已成功複製【${buyerName}】的純文字出貨通知！`);
+        }).catch(() => {
+          prompt('請複製以下出貨通知：', notifyText);
+        });
+      } else {
+        prompt('請複製以下出貨通知：', notifyText);
+      }
+    }
+
+    function previewCustomerShippedOrder() {
+      const p = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
+      const trackingInput = document.getElementById('inputTrackingCode');
+      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
+      const userId = p ? p.userId : 'Ub22df295e9a98eb46e873534e8123285';
+      const buyerName = p ? p.name : '趙珮瑜';
+      const activeCode = p ? p.coCode : 'CO2610051104';
+
+      const url = `my-orders.html?uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(buyerName)}&preview=1&state=shipped&co=${encodeURIComponent(activeCode)}&track=${encodeURIComponent(trackingCode)}`;
+      window.open(url, '_blank');
+    }
+
+    function confirmShippingAction() {
+      const trackingInput = document.getElementById('inputTrackingCode');
+      const trackingCode = (trackingInput && trackingInput.value.trim()) ? trackingInput.value.trim() : '98273615243';
+      showToast(`🚚 出貨成功！單號【${trackingCode}】已回寫試算表！`);
+    }
+
+    function zoomImage(src, title) {
+      const modal = document.getElementById('imgZoomModal');
+      const img = document.getElementById('zoomImgTarget');
+      const titleEl = document.getElementById('zoomImgTitle');
+      if (img) img.src = src;
+      if (titleEl) titleEl.innerText = title || '商品圖片預覽';
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeZoomImage() {
+      const modal = document.getElementById('imgZoomModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function openA4PrintModal() {
+      const modal = document.getElementById('a4PrintModal');
+      if (modal) modal.style.display = 'flex';
+      const ts = document.getElementById('printTimestamp');
+      if (ts) ts.innerText = new Date().toLocaleString('zh-TW');
+
+      const tbody = document.getElementById('a4PrintRows');
+      if (tbody) {
+        tbody.innerHTML = station0ProcureGroups.map((g, idx) => `
+          <tr id="printRow_${idx}">
+            <td style="border: 1px solid #000; padding: 6px; text-align: center;">${String(idx + 1).padStart(2, '0')}</td>
+            <td style="border: 1px solid #000; padding: 6px; font-weight: 700;">${g.productName}</td>
+            <td style="border: 1px solid #000; padding: 6px;">${g.spec}</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: 700;">${g.totalDemand} 件</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: 700; color: #15803d;">${g.actualBought} 件</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: 700;">NT$ ${g.unitPrice.toLocaleString()}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function closeA4PrintModal() {
+      const modal = document.getElementById('a4PrintModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function checkAllPrintItems(isCheck) {
+      showToast(isCheck ? '☑ 已全選' : '☐ 已清除');
+    }
+
+    function togglePrintRowCheck(idx, isChecked) {
+      const row = document.getElementById('printRow_' + idx);
+      if (row) row.style.background = isChecked ? '#f0fdf4' : '#ffffff';
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('toastBox');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toastBox';
+        toast.className = 'toast-box';
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+  </script>
+
+  <!-- A4 專用採購檢核單 列印 Modal -->
+  <div id="a4PrintModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 9999999; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 24px;" onclick="closeA4PrintModal()">
+    <div style="background: #fff; border-radius: 12px; max-width: 920px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; margin: auto;" onclick="event.stopPropagation()">
+      <div style="background: #1e293b; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span style="font-size: 15.5px; font-weight: 700;">🖨️ A4 現場採購檢核單 (正式系統採購名冊)</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" style="padding: 6px 14px; background: #059669; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="window.print()">🖨️ 直接列印 A4</button>
+          <button type="button" style="padding: 6px 12px; background: #475569; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="closeA4PrintModal()">✕ 關閉</button>
         </div>
       </div>
-
-      <!-- 模擬 A4 紙張實體排版 (白底黑字、高對比、表格工整) -->
-      <div class="a4-paper"
-        style="padding: 32px 36px; background: #ffffff; color: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;">
-        <!-- 表頭抬頭 -->
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px;">
-          <h2 style="font-size: 22px; font-weight: 800; letter-spacing: 2px; margin: 0 0 6px 0; color: #000;">🇯🇵
-            連線現場採購檢貨防漏打勾單</h2>
-          <div style="font-size: 12px; color: #333; display: flex; justify-content: space-between; margin-top: 8px;">
-            <span>📅 連線批次：<strong>2026/11/14 日本東京冬季連線</strong></span>
-            <span>⏰ 產單時間：<strong id="printTimestamp">2026/11/14 23:20</strong></span>
-            <span>👤 採購專員：<strong>現場買手 / 小幫手</strong></span>
-          </div>
+      <div style="padding: 24px;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <h2 style="font-size: 20px; font-weight: 900; letter-spacing: 1px;">🇯🇵 連線現場採購檢核單</h2>
+          <div style="font-size: 12px; color: #64748b; margin-top: 4px;">產出時間：<span id="printTimestamp"></span> ｜ 適用海外門市現場跑單防漏點收</div>
         </div>
-
-        <!-- 採購清單檢核表格 (含可勾選 Checkbox) -->
-        <table
-          style="width: 100%; border-collapse: collapse; font-size: 12.5px; border: 1.5px solid #000; margin-bottom: 16px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
           <thead>
-            <tr style="background: #f1f5f9; border-bottom: 1.5px solid #000; text-align: left;">
-              <th style="border: 1px solid #000; padding: 8px 6px; text-align: center; width: 60px;">防漏檢核</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; width: 105px;">商品貨號</th>
-              <th style="border: 1px solid #000; padding: 8px 8px;">商品品名與規格</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; width: 140px;">採購地點 / 備註</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; text-align: center; width: 65px;">需求量</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; text-align: center; width: 85px;">現場實到</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; text-align: center; width: 95px;">採購狀況</th>
-              <th style="border: 1px solid #000; padding: 8px 8px; text-align: right; width: 100px;">參考售價(NT$)</th>
+            <tr style="background: #f1f5f9;">
+              <th style="border: 1px solid #000; padding: 8px; width: 45px; text-align: center;">編號</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: left;">採購品項名稱</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: left; width: 120px;">規格</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 75px;">總需求</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 75px;">實到件</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: right; width: 95px;">單價(NT$)</th>
             </tr>
           </thead>
-          <tbody>
-            <tr id="printRow_1" style="border-bottom: 1px solid #000;">
-              <td style="border: 1px solid #000; text-align: center; padding: 8px 4px;">
-                <input type="checkbox" id="chkPrint_1" onchange="togglePrintRowCheck(1, this.checked)"
-                  title="點擊打勾標記為已採購/已入籃" style="width: 16px; height: 16px; cursor: pointer;">
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; font-family: monospace; font-weight: 700;">
-                JP-2026-W01</td>
-              <td style="border: 1px solid #000; padding: 8px 8px;">
-                <strong style="font-size: 13px;">日製超輕量長版防風羽絨外套</strong>
-                <div style="font-size: 11.5px; color: #475569; margin-top: 2px;">規格：<strong>經典霧黑 / M</strong></div>
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; font-size: 11px;">
-                新宿伊勢丹本館 4F<br>
-                <span style="color: #c2410c;">※門市每人限購5件/需退稅</span>
-              </td>
-              <td
-                style="border: 1px solid #000; padding: 8px 8px; text-align: center; font-weight: 700; font-size: 14px;">
-                5 件</td>
-              <td style="border: 1px solid #000; padding: 8px 8px; text-align: center;">
-                <span
-                  style="display: inline-block; border-bottom: 1px solid #000; width: 50px; font-weight: 700;">3</span>
-                件
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 11px;">
-                ☐ 採購成功<br>
-                ☑ 部分配貨(缺2)<br>
-                ☐ 缺貨斷貨
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; text-align: right; font-weight: 700;">$3,880</td>
-            </tr>
-
-            <tr id="printRow_2" style="border-bottom: 1.5px solid #000;">
-              <td style="border: 1px solid #000; text-align: center; padding: 8px 4px;">
-                <input type="checkbox" id="chkPrint_2" onchange="togglePrintRowCheck(2, this.checked)"
-                  title="點擊打勾標記為已採購/已入籃" style="width: 16px; height: 16px; cursor: pointer;">
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; font-family: monospace; font-weight: 700;">
-                JP-2026-C09</td>
-              <td style="border: 1px solid #000; padding: 8px 8px;">
-                <strong style="font-size: 13px;">北海道限定極潤保濕乳霜 100g</strong>
-                <div style="font-size: 11.5px; color: #475569; margin-top: 2px;">規格：<strong>單一規格 (100g)</strong></div>
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; font-size: 11px;">
-                銀座三越 1F 松本清門市<br>
-                <span style="color: #475569;">※效期須2028年後</span>
-              </td>
-              <td
-                style="border: 1px solid #000; padding: 8px 8px; text-align: center; font-weight: 700; font-size: 14px;">
-                10 罐</td>
-              <td style="border: 1px solid #000; padding: 8px 8px; text-align: center;">
-                <span
-                  style="display: inline-block; border-bottom: 1px solid #000; width: 50px; font-weight: 700;">10</span>
-                罐
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 6px; text-align: center; font-size: 11px;">
-                ☑ 採購成功<br>
-                ☐ 部分配貨<br>
-                ☐ 缺貨斷貨
-              </td>
-              <td style="border: 1px solid #000; padding: 8px 8px; text-align: right; font-weight: 700;">$680</td>
-            </tr>
+          <tbody id="a4PrintRows">
+            <!-- 動態列印品項 -->
           </tbody>
-          <tfoot>
-            <tr style="background: #f8fafc; font-weight: 700;">
-              <td colspan="4" style="border: 1px solid #000; padding: 8px 10px; text-align: right;">本次採購需求合計：</td>
-              <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-size: 14px;">15 件</td>
-              <td style="border: 1px solid #000; padding: 8px 10px; text-align: center; font-size: 14px;">13 件</td>
-              <td colspan="2" style="border: 1px solid #000; padding: 8px 10px; font-size: 11.5px; color: #475569;">實到率:
-                86.6%</td>
-            </tr>
-          </tfoot>
         </table>
-
-        <!-- 表尾簽核與退稅登記區 (現場紙本作業最需要) -->
-        <div
-          style="border: 1.5px solid #000; padding: 12px 16px; border-radius: 4px; font-size: 12px; line-height: 1.8;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-            <div>採購發票/統編號碼：____________________</div>
-            <div>免稅退稅單據號碼：____________________</div>
-            <div>刷卡簽單/幣別總額：____________________</div>
-            <div style="grid-column: span 2;">現場異常紀錄 (缺貨斷貨/瑕疵)：________________________________________</div>
-            <div>採購人員簽核：____________________</div>
-          </div>
-        </div>
-
-        <div style="text-align: center; font-size: 11px; color: #64748b; margin-top: 14px;">
-          ※ 本單據由 LINE 連線團購管理系統自動產出・買手採購完畢請於 LINE 群組快速回報實到件數以利後台智慧自動配貨
+        <div style="border: 1px solid #000; padding: 12px; font-size: 12px; line-height: 1.8;">
+          採購人員簽核：____________________ ｜ 採購統編/發票：____________________ ｜ 免稅單號：____________________
         </div>
       </div>
     </div>
   </div>
 
-  <div style="text-align: center; font-size: 11px; color: #64748b; margin-top: 14px;">
-    ※ 本單據由 LINE 連線團購管理系統自動產出・買手採購完畢請於 LINE 群組快速回報實到件數以利後台智慧自動配貨
-  </div>
-  </div>
-  </div>
-  </div>
-
-
-
   <!-- 圖片放大檢視 Modal -->
-  <div id="imgZoomModal"
-    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999999; justify-content: center; align-items: center; padding: 20px;"
-    onclick="closeZoomImage()">
-    <div
-      style="background: #fff; border-radius: 12px; padding: 16px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5);"
-      onclick="event.stopPropagation()">
+  <div id="imgZoomModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999999; justify-content: center; align-items: center; padding: 20px;" onclick="closeZoomImage()">
+    <div style="background: #fff; border-radius: 12px; padding: 16px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h4 id="zoomImgTitle" style="font-size: 15px; font-weight: 700; color: #0f172a;">商品圖片預覽</h4>
-        <button style="border: none; background: none; font-size: 20px; cursor: pointer; color: #64748b;"
-          onclick="closeZoomImage()">✕</button>
+        <button style="border: none; background: none; font-size: 20px; cursor: pointer; color: #64748b;" onclick="closeZoomImage()">✕</button>
       </div>
-      <img id="zoomImgTarget" src=""
-        style="width: 100%; max-height: 380px; object-fit: contain; border-radius: 8px; background: #f8fafc;">
+      <img id="zoomImgTarget" src="" style="width: 100%; max-height: 380px; object-fit: contain; border-radius: 8px; background: #f8fafc;">
     </div>
   </div>
 
   <!-- Toast -->
   <div class="toast-box" id="toastBox">提示訊息</div>
+
 </body>
 </html>
