@@ -1633,8 +1633,14 @@
       border: 1px solid #fecaca;
     }
 
+    .badge-connecting {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
     .status-btn {
-      width: 78px;
+      width: 68px;
       height: 30px;
       padding: 0 4px;
       border-radius: 6px;
@@ -1667,6 +1673,13 @@
       color: #92400e;
       font-weight: 700;
       box-shadow: 0 1px 3px rgba(245, 158, 11, 0.15);
+    }
+    .status-btn.active-connecting {
+      background: #fff7ed;
+      border-color: #f97316;
+      color: #c2410c;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(249, 115, 22, 0.15);
     }
     .status-btn.active-danger {
       background: #fef2f2;
@@ -2362,13 +2375,17 @@
 
           <!-- 站點 0：【📦 1. 現場採購總表與自動配貨】 -->
           <div class="procure-station-container" id="viewStation0">
-            <div class="kpi-row">
+            <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
               <div class="kpi-box blue">
-                <div class="kpi-box-label">本次連線總需採購</div>
+                <div class="kpi-box-label">📦 本次連線總需採購</div>
                 <div class="kpi-box-val" id="kpiTotalDemand">-- <span>件</span></div>
               </div>
+              <div class="kpi-box orange" style="border-left: 4px solid #f97316;">
+                <div class="kpi-box-label">🛒 買手已採購叫貨</div>
+                <div class="kpi-box-val" style="color: #ea580c;" id="kpiTotalProcured">-- <span>件</span></div>
+              </div>
               <div class="kpi-box green">
-                <div class="kpi-box-label">現場實際採購到貨</div>
+                <div class="kpi-box-label">✅ 現場實際到貨件數</div>
                 <div class="kpi-box-val" style="color: #10b981;" id="kpiTotalBought">-- <span>件</span></div>
               </div>
               <div class="kpi-box red">
@@ -6781,12 +6798,16 @@
                   unitPrice: orderRecord.unitPrice,
                   imageUrl: matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80',
                   totalDemand: 0,
-                  actualBought: 0,
+                  procuredQty: 0,     // 買手已採購叫貨數
+                  actualBought: null, // 現場實到到貨數 (null 表示尚未清點到貨/空值)
                   buyers: []
                 };
               }
               prodGroupMap[groupKey].totalDemand += orderRecord.demandQty;
-              prodGroupMap[groupKey].actualBought += orderRecord.allocatedQty;
+              prodGroupMap[groupKey].procuredQty += orderRecord.demandQty; // 預設買手依需求全額叫貨
+              if (orderRecord.allocatedQty > 0) {
+                prodGroupMap[groupKey].actualBought = (prodGroupMap[groupKey].actualBought || 0) + orderRecord.allocatedQty;
+              }
               prodGroupMap[groupKey].buyers.push({
                 name: cust.name,
                 phone: cust.phone || '',
@@ -6888,15 +6909,18 @@
     function renderStation0Procure() {
       const container = document.getElementById('procureItemsContainer');
       const kDemand = document.getElementById('kpiTotalDemand');
+      const kProcured = document.getElementById('kpiTotalProcured');
       const kBought = document.getElementById('kpiTotalBought');
       const kOut = document.getElementById('kpiTotalOut');
       if (!container) return;
 
-      const totalDemand = station0ProcureGroups.reduce((s, g) => s + g.totalDemand, 0);
-      const totalBought = station0ProcureGroups.reduce((s, g) => s + g.actualBought, 0);
-      const totalOut = Math.max(0, totalDemand - totalBought);
+      const totalDemand = station0ProcureGroups.reduce((s, g) => s + (g.totalDemand || 0), 0);
+      const totalProcured = station0ProcureGroups.reduce((s, g) => s + (g.procuredQty !== undefined ? g.procuredQty : g.totalDemand), 0);
+      const totalBought = station0ProcureGroups.reduce((s, g) => s + (g.actualBought || 0), 0);
+      const totalOut = Math.max(0, totalDemand - (totalBought || totalProcured));
 
       if (kDemand) kDemand.innerHTML = `${totalDemand} <span>件</span>`;
+      if (kProcured) kProcured.innerHTML = `${totalProcured} <span>件</span>`;
       if (kBought) kBought.innerHTML = `${totalBought} <span>件</span>`;
       if (kOut) kOut.innerHTML = `${totalOut} <span>件</span>`;
 
@@ -6917,6 +6941,9 @@
           </tr>
         `).join('');
 
+        const displayProcured = (g.procuredQty !== undefined && g.procuredQty !== null) ? g.procuredQty : g.totalDemand;
+        const displayBought = (g.actualBought !== undefined && g.actualBought !== null) ? g.actualBought : '';
+
         return `
           <div class="procure-summary-card">
             <img src="${g.imageUrl}" class="procure-img" onclick="zoomImage('${g.imageUrl}', '${g.productName}')" title="點擊放大商品圖片">
@@ -6930,9 +6957,10 @@
                 <thead>
                   <tr>
                     <th>規格</th>
-                    <th style="width: 140px;">訂購需求</th>
-                    <th style="width: 120px;">實到件數</th>
-                    <th style="width: 130px; text-align: center;">自動配貨</th>
+                    <th style="width: 120px;">訂購需求</th>
+                    <th style="width: 110px;">已採購件數</th>
+                    <th style="width: 110px;">實到件數</th>
+                    <th style="width: 110px; text-align: center;">自動配貨</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -6945,16 +6973,19 @@
                       </button>
                     </td>
                     <td>
-                      <input type="number" class="qty-input" id="inputBought_${idx}" value="${g.actualBought}" min="0" max="${g.totalDemand}">
+                      <input type="number" class="qty-input" id="inputProcured_${idx}" value="${displayProcured}" min="0" placeholder="已叫貨" title="買手海外專櫃或官網已下單/採買數量" onchange="updateGroupProcured('${g.groupKey}', this.value)">
+                    </td>
+                    <td>
+                      <input type="number" class="qty-input" id="inputBought_${idx}" value="${displayBought}" min="0" max="${g.totalDemand}" placeholder="未到貨" title="現場拆箱清點實到件數，空值時配貨為連線中" onchange="updateGroupBought('${g.groupKey}', this.value)">
                     </td>
                     <td style="text-align: center;">
-                      <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation('${g.groupKey}', '${g.productName}', document.getElementById('inputBought_${idx}').value, ${g.totalDemand})">
+                      <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation('${g.groupKey}', '${g.productName}', document.getElementById('inputBought_${idx}').value, ${g.totalDemand}, document.getElementById('inputProcured_${idx}').value)">
                         ⚡️ 配貨
                       </button>
                     </td>
                   </tr>
                   <tr id="${drawerId}" style="display: none;">
-                    <td colspan="4" style="padding: 10px 12px; background: #ffffff;">
+                    <td colspan="5" style="padding: 10px 12px; background: #ffffff;">
                       <div class="demand-drawer-box">
                         <table class="demand-drawer-table">
                           <thead>
@@ -6978,6 +7009,26 @@
       }).join('');
     }
 
+    function updateGroupProcured(skuKey, val) {
+      const g = station0ProcureGroups.find(x => x.groupKey === skuKey);
+      if (g) {
+        let n = parseInt(val, 10);
+        g.procuredQty = isNaN(n) ? 0 : n;
+      }
+    }
+
+    function updateGroupBought(skuKey, val) {
+      const g = station0ProcureGroups.find(x => x.groupKey === skuKey);
+      if (g) {
+        if (val === '' || val === null) {
+          g.actualBought = null;
+        } else {
+          let n = parseInt(val, 10);
+          g.actualBought = isNaN(n) ? null : n;
+        }
+      }
+    }
+
     // 渲染站點 1：顧客訂單配貨結果
     function renderStation1Orders() {
       const tbody = document.getElementById('orderAllocationTableBody');
@@ -6990,11 +7041,27 @@
 
       tbody.innerHTML = station1Orders.map((o, idx) => {
         let statusBadge = '<span class="status-badge badge-success">🟢 採購成功</span>';
-        if (o.status === 'out' || o.allocatedQty === 0) {
+        let isSuccessActive = '';
+        let isPartialActive = '';
+        let isConnectingActive = '';
+        let isOutActive = '';
+
+        // 核心規則：若狀態為 connecting，或已採購但實到件數為空/未清點時，配貨狀況顯示「連線中」（橘色）
+        if (o.status === 'connecting' || o.isConnecting || (o.procuredQty > 0 && (o.allocatedQty === null || o.allocatedQty === '' || (o.allocatedQty === 0 && o.status !== 'out')))) {
+          statusBadge = '<span class="status-badge badge-connecting">🟠 連線中</span>';
+          isConnectingActive = 'active-connecting';
+        } else if (o.status === 'out' || o.allocatedQty === 0) {
           statusBadge = '<span class="status-badge badge-out">🔴 缺貨斷貨</span>';
+          isOutActive = 'active-danger';
         } else if (o.allocatedQty < o.demandQty) {
           statusBadge = '<span class="status-badge badge-partial">🟡 部分配貨</span>';
+          isPartialActive = 'active-partial';
+        } else {
+          isSuccessActive = 'active-success';
         }
+
+        const displayAllocated = (o.allocatedQty !== null && o.allocatedQty !== undefined) ? o.allocatedQty : 0;
+        const subtotalVal = (o.status === 'out' || isConnectingActive) ? 0 : (displayAllocated * o.unitPrice);
 
         return `
           <tr>
@@ -7010,15 +7077,16 @@
             <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${o.spec}</span></td>
             <td style="text-align: center; font-weight: 700;">${o.demandQty}</td>
             <td style="text-align: center;">
-              <input type="number" id="input_qty_${idx}" value="${o.allocatedQty}" min="0" max="${o.demandQty}" style="width: 50px; text-align: center; padding: 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700;" onchange="manualChangeRowQty('${idx}', this.value, ${o.demandQty}, ${o.unitPrice})">
+              <input type="number" id="input_qty_${idx}" value="${displayAllocated}" min="0" max="${o.demandQty}" style="width: 50px; text-align: center; padding: 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 700;" onchange="manualChangeRowQty('${idx}', this.value, ${o.demandQty}, ${o.unitPrice})">
             </td>
-            <td style="text-align: right; font-weight: 700;" id="subtotal_${idx}">NT$ ${(o.allocatedQty * o.unitPrice).toLocaleString()}</td>
+            <td style="text-align: right; font-weight: 700;" id="subtotal_${idx}">NT$ ${subtotalVal.toLocaleString()}</td>
             <td style="text-align: center;" id="badgeContainer_${idx}">${statusBadge}</td>
             <td style="text-align: center;">
-              <div style="display: flex; gap: 4px; justify-content: center;">
-                <button type="button" class="status-btn active-success" onclick="manualSetStatus('${idx}', 'SUCCESS', ${o.demandQty}, ${o.unitPrice})">🟢 成功</button>
-                <button type="button" class="status-btn" onclick="manualSetStatus('${idx}', 'PARTIAL', ${o.demandQty}, ${o.unitPrice})">🟡 部分</button>
-                <button type="button" class="status-btn" onclick="manualSetStatus('${idx}', 'OUT', ${o.demandQty}, ${o.unitPrice})">🔴 斷貨</button>
+              <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap;">
+                <button type="button" class="status-btn ${isSuccessActive}" onclick="manualSetStatus('${idx}', 'SUCCESS', ${o.demandQty}, ${o.unitPrice})">🟢 成功</button>
+                <button type="button" class="status-btn ${isPartialActive}" onclick="manualSetStatus('${idx}', 'PARTIAL', ${o.demandQty}, ${o.unitPrice})">🟡 部分</button>
+                <button type="button" class="status-btn ${isConnectingActive}" onclick="manualSetStatus('${idx}', 'CONNECTING', ${o.demandQty}, ${o.unitPrice})">🟠 連線中</button>
+                <button type="button" class="status-btn ${isOutActive}" onclick="manualSetStatus('${idx}', 'OUT', ${o.demandQty}, ${o.unitPrice})">🔴 斷貨</button>
               </div>
             </td>
           </tr>
@@ -7161,11 +7229,11 @@
         ['🇯🇵 連線現場採購總表（依品項規格匯總叫貨）'],
         ['匯出時間：' + new Date().toLocaleString('zh-TW')],
         [],
-        ['商品編號', '商品名稱', '商品分類', '規格名稱', '總需求件數', '現場實採件數', '單價(NT$)', '採購預算小計']
+        ['商品編號', '商品名稱', '商品分類', '規格名稱', '總需求件數', '已採購件數', '現場實到件數', '單價(NT$)', '採購預算小計']
       ];
       station0ProcureGroups.forEach(g => {
         summaryAOA.push([
-          g.productId, g.productName, g.category, g.spec, g.totalDemand, g.actualBought, g.unitPrice, (g.totalDemand * g.unitPrice)
+          g.productId, g.productName, g.category, g.spec, g.totalDemand, (g.procuredQty !== undefined ? g.procuredQty : g.totalDemand), (g.actualBought !== null && g.actualBought !== undefined ? g.actualBought : ''), g.unitPrice, (g.totalDemand * g.unitPrice)
         ]);
       });
       const wsSummary = XLSX.utils.aoa_to_sheet(summaryAOA);
@@ -7202,8 +7270,9 @@
         text += `【${String(i + 1).padStart(2, '0')}】${g.productName}
 🔹 貨號：${g.productId} ｜ 分類：${g.category}
 🔹 規格：${g.spec}
-🔹 需求數量：【 ${g.totalDemand} 件 】(共 ${g.buyers.length} 位客人下單)
-🔹 現場實到：[   ] 件
+🔹 訂購需求：【 ${g.totalDemand} 件 】(共 ${g.buyers.length} 位客人下單)
+🔹 已採購數：[ ${g.procuredQty !== undefined ? g.procuredQty : g.totalDemand} ] 件 (買手已叫貨)
+🔹 現場實到：[ ${g.actualBought !== null && g.actualBought !== undefined ? g.actualBought : '  '} ] 件
 ────────────────────\n`;
       });
 
@@ -7218,39 +7287,64 @@
       }
     }
 
-    function executeAutoAllocation(skuKey, prodName, boughtQtyVal, demandQty) {
-      let bQty = parseInt(boughtQtyVal, 10);
-      if (isNaN(bQty) || bQty < 0) bQty = 0;
-      showToast(`⚡️ 正在對【${prodName}】執行先到先得配貨 (實採 ${bQty} 件 / 需求 ${demandQty} 件)...`);
+    function executeAutoAllocation(skuKey, prodName, boughtQtyVal, demandQty, procuredQtyVal) {
+      const isBoughtEmpty = (boughtQtyVal === '' || boughtQtyVal === null || boughtQtyVal === undefined);
+      let pQty = parseInt(procuredQtyVal, 10);
+      if (isNaN(pQty) || pQty < 0) pQty = 0;
 
       const targetGroup = station0ProcureGroups.find(g => g.groupKey === skuKey);
-      if (targetGroup) targetGroup.actualBought = bQty;
+      if (targetGroup) {
+        targetGroup.procuredQty = pQty;
+        targetGroup.actualBought = isBoughtEmpty ? null : parseInt(boughtQtyVal, 10);
+      }
 
-      let remaining = bQty;
-      station1Orders.forEach(o => {
-        const orderKey = o.productId + '_' + o.spec;
-        if (orderKey === skuKey) {
-          if (remaining >= o.demandQty) {
-            o.allocatedQty = o.demandQty;
-            o.status = 'success';
-            remaining -= o.demandQty;
-          } else if (remaining > 0) {
-            o.allocatedQty = remaining;
-            o.status = 'partial';
-            remaining = 0;
-          } else {
+      // 情境 A：實到件數為空值，但買手已有採購叫貨 -> 當前配貨狀況標記為「連線中」（橘色）！
+      if (isBoughtEmpty) {
+        station1Orders.forEach(o => {
+          const orderKey = o.productId + '_' + o.spec;
+          if (orderKey === skuKey) {
+            o.procuredQty = pQty;
             o.allocatedQty = 0;
-            o.status = 'out';
+            o.status = (pQty > 0) ? 'connecting' : 'out';
+            o.isConnecting = (pQty > 0);
           }
-        }
-      });
+        });
+        showToast(`🟠【${prodName}】已採購 ${pQty} 件 (實到件數為空/待到貨)，顧客配貨狀況已標記為【連線中】！`);
+      } else {
+        // 情境 B：已有明確實到件數 -> 執行 FIFO 配貨分配
+        let bQty = parseInt(boughtQtyVal, 10);
+        if (isNaN(bQty) || bQty < 0) bQty = 0;
+        showToast(`⚡️ 正在對【${prodName}】執行先到先得配貨 (實到 ${bQty} 件 / 需求 ${demandQty} 件)...`);
+
+        let remaining = bQty;
+        station1Orders.forEach(o => {
+          const orderKey = o.productId + '_' + o.spec;
+          if (orderKey === skuKey) {
+            o.procuredQty = pQty;
+            if (remaining >= o.demandQty) {
+              o.allocatedQty = o.demandQty;
+              o.status = 'success';
+              o.isConnecting = false;
+              remaining -= o.demandQty;
+            } else if (remaining > 0) {
+              o.allocatedQty = remaining;
+              o.status = 'partial';
+              o.isConnecting = false;
+              remaining = 0;
+            } else {
+              o.allocatedQty = 0;
+              o.status = (pQty > bQty) ? 'connecting' : 'out';
+              o.isConnecting = (pQty > bQty);
+            }
+          }
+        });
+      }
 
       setTimeout(() => {
-        showToast(`🎉 配貨完成！實到件數已自動分配給買家，不足額已標記為【缺貨斷貨】！`);
         renderStation0Procure();
         renderStation1Orders();
-        setTimeout(() => switchMainTab(1), 1000);
-      }, 500);
+        setTimeout(() => switchMainTab(1), 900);
+      }, 400);
     }
 
     function manualChangeRowQty(idx, newQtyVal, demandQty, unitPrice) {
@@ -7261,6 +7355,7 @@
       const o = station1Orders[idx];
       if (o) {
         o.allocatedQty = qty;
+        o.isConnecting = false;
         o.status = (qty === demandQty) ? 'success' : (qty === 0 ? 'out' : 'partial');
       }
       renderStation1Orders();
@@ -7273,12 +7368,19 @@
       if (statusType === 'SUCCESS') {
         o.allocatedQty = demandQty;
         o.status = 'success';
+        o.isConnecting = false;
       } else if (statusType === 'OUT') {
         o.allocatedQty = 0;
         o.status = 'out';
+        o.isConnecting = false;
       } else if (statusType === 'PARTIAL') {
         o.allocatedQty = Math.max(1, Math.floor(demandQty / 2));
         o.status = 'partial';
+        o.isConnecting = false;
+      } else if (statusType === 'CONNECTING') {
+        o.allocatedQty = 0;
+        o.status = 'connecting';
+        o.isConnecting = true;
       }
       renderStation1Orders();
     }
