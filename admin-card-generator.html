@@ -1400,14 +1400,14 @@
     }
 
     .station-vertical-sidebar {
-      width: 230px;
+      width: 256px;
       background: #ffffff;
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 10px;
+      border-radius: 16px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       position: sticky;
@@ -1415,12 +1415,12 @@
     }
 
     .sidebar-brand-box {
-      padding: 6px 8px 10px;
+      padding: 6px 8px 12px;
       border-bottom: 1px solid #f1f5f9;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     .sidebar-title {
-      font-size: 13.5px;
+      font-size: 14px;
       font-weight: 800;
       color: #0f172a;
       display: flex;
@@ -1428,7 +1428,7 @@
       gap: 6px;
     }
     .sidebar-subtitle {
-      font-size: 11px;
+      font-size: 11.5px;
       color: #64748b;
       margin-top: 2px;
     }
@@ -1436,84 +1436,96 @@
     .sidebar-nav-menu {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
 
     .sidebar-nav-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 10px;
-      border-radius: 10px;
-      background: transparent;
-      border: 1px solid transparent;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.18s ease;
       text-align: left;
       width: 100%;
       text-decoration: none;
       box-sizing: border-box;
+      gap: 8px;
     }
 
     .sidebar-nav-item:hover {
       background: #f8fafc;
-      border-color: #e2e8f0;
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
     }
 
     .sidebar-nav-item.active {
       background: #ffffff;
-      border-color: #a7f3d0;
-      border-left: 4px solid #059669;
-      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.08);
+      border-color: #10b981;
+      border-left: 5px solid #059669;
+      box-shadow: 0 3px 10px rgba(5, 150, 105, 0.12);
     }
 
     .sidebar-nav-item-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       min-width: 0;
+      flex: 1;
     }
     .sidebar-nav-icon {
-      font-size: 16px;
+      font-size: 18px;
       flex-shrink: 0;
+      line-height: 1;
     }
     .sidebar-nav-item-text {
       display: flex;
       flex-direction: column;
       min-width: 0;
+      flex: 1;
     }
     .sidebar-nav-item-title {
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 700;
       color: #334155;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .sidebar-nav-item.active .sidebar-nav-item-title {
       color: #059669;
       font-weight: 800;
     }
     .sidebar-nav-item-desc {
-      font-size: 10.5px;
+      font-size: 11px;
       color: #94a3b8;
-      margin-top: 1px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .sidebar-nav-item .pill-count {
-      padding: 2px 7px;
-      border-radius: 12px;
-      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
       background: #f1f5f9;
       color: #475569;
       font-weight: 700;
       flex-shrink: 0;
       white-space: nowrap;
+      border: 1px solid #e2e8f0;
     }
 
     .sidebar-nav-item.active .pill-count {
       background: #ecfdf5;
       color: #059669;
       border: 1px solid #a7f3d0;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .main-workspace-content {
@@ -2746,7 +2758,7 @@
                     <span class="sidebar-nav-item-desc">依規格匯總叫貨</span>
                   </div>
                 </div>
-                <span class="pill-count" id="badgeS0">--款商品</span>
+                <span class="pill-count" id="badgeS0">5 款</span>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation1" onclick="switchMainTab(1)">
@@ -2757,7 +2769,7 @@
                     <span class="sidebar-nav-item-desc">FIFO 智慧分配</span>
                   </div>
                 </div>
-                <span class="pill-count" id="badgeS1">OD 下單 (--筆)</span>
+                <span class="pill-count" id="badgeS1">5 筆</span>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation2" onclick="switchMainTab(2)">
@@ -2768,18 +2780,18 @@
                     <span class="sidebar-nav-item-desc">1對1零額度推播</span>
                   </div>
                 </div>
-                <span class="pill-count" id="badgeS2">待通知 (--位)</span>
+                <span class="pill-count" id="badgeS2">2 位</span>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation3" onclick="switchMainTab(3)">
                 <div class="sidebar-nav-item-left">
                   <span class="sidebar-nav-icon">💳</span>
                   <div class="sidebar-nav-item-text">
-                    <span class="sidebar-nav-item-title">4. 完成結帳出貨對帳</span>
+                    <span class="sidebar-nav-item-title">4. 完成結帳出貨</span>
                     <span class="sidebar-nav-item-desc">核銷對帳與發貨</span>
                   </div>
                 </div>
-                <span class="pill-count" id="badgeS3">完成結帳 (2 筆)</span>
+                <span class="pill-count" id="badgeS3">2 筆</span>
               </button>
             </nav>
           </aside>
@@ -7217,9 +7229,49 @@
     let station3Parcels = [];
     let currentActiveParcelCode = '';
 
+    // 💾 採購與配貨狀態快取 (含 localStorage 持久化，防止切換頁面或 GAS 重抓時被重設)
+    let procurementStateCache = { groups: {}, orders: {} };
+    try {
+      const savedState = localStorage.getItem('line_order_procure_state');
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        if (parsed && typeof parsed === 'object') {
+          procurementStateCache.groups = parsed.groups || {};
+          procurementStateCache.orders = parsed.orders || {};
+        }
+      }
+    } catch (e) {
+      console.warn('讀取採購狀態快取失敗:', e);
+    }
+
+    function saveProcurementState() {
+      try {
+        const stateToSave = { groups: {}, orders: {} };
+        (station0ProcureGroups || []).forEach(g => {
+          stateToSave.groups[g.groupKey] = {
+            procuredQty: g.procuredQty,
+            actualBought: g.actualBought
+          };
+        });
+        (station1Orders || []).forEach(o => {
+          const k = `${o.orderId}_${o.productId}_${o.spec}`;
+          stateToSave.orders[k] = {
+            allocatedQty: o.allocatedQty,
+            procuredQty: o.procuredQty,
+            status: o.status,
+            isConnecting: o.isConnecting
+          };
+        });
+        procurementStateCache = stateToSave;
+        localStorage.setItem('line_order_procure_state', JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn('儲存採購狀態快取失敗:', e);
+      }
+    }
+
     // 切換四大主要作業站 (0: 現場採購 ➔ 1: 訂單配貨 ➔ 2: 通知結帳 ➔ 3: 出貨對帳)
     function switchMainTab(tabIdx) {
-      document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sidebar-nav-item, .station-btn').forEach(b => b.classList.remove('active'));
       const activeBtn = document.getElementById(`btnStation${tabIdx}`);
       if (activeBtn) activeBtn.classList.add('active');
 
@@ -7263,50 +7315,75 @@
         notifyCustomers.forEach(cust => {
           if (cust.items && cust.items.length > 0) {
             cust.items.forEach(it => {
+              const orderId = it.orderId || ('OD' + (it.productId || '999'));
+              const spec = it.spec || '單一規格';
+              const productId = it.productId || 'J001';
+              const orderKey = `${orderId}_${productId}_${spec}`;
+              const savedOrder = procurementStateCache.orders ? procurementStateCache.orders[orderKey] : null;
+
+              const demandQty = it.quantity || 1;
+              const unitPrice = it.unitPrice || (it.subtotal ? Math.round(it.subtotal / demandQty) : 0);
+              const subtotal = it.subtotal || (unitPrice * demandQty);
+
+              // 關鍵邏輯：若先前有儲存實配結果則尊重快取，否則預設為 null (未清點到貨前為連線中)
+              const allocatedQty = (savedOrder && savedOrder.allocatedQty !== undefined) 
+                ? savedOrder.allocatedQty 
+                : null;
+              const status = (savedOrder && savedOrder.status) 
+                ? savedOrder.status 
+                : ((it.status === 'out') ? 'out' : 'connecting');
+              const isConnecting = (savedOrder && savedOrder.isConnecting !== undefined)
+                ? savedOrder.isConnecting
+                : (status === 'connecting');
+
               const orderRecord = {
-                orderId: it.orderId || ('OD' + (it.productId || '999')),
+                orderId: orderId,
                 customerName: cust.name,
                 customerPhone: cust.phone || '',
                 userId: cust.userId,
-                productId: it.productId,
+                productId: productId,
                 productName: it.productName || it.name || '商品',
-                spec: it.spec || '單一規格',
-                demandQty: it.quantity || 1,
-                allocatedQty: (it.status === 'out') ? 0 : (it.quantity || 1),
-                unitPrice: it.unitPrice || (it.subtotal ? Math.round(it.subtotal / (it.quantity || 1)) : 0),
-                subtotal: it.subtotal || ((it.unitPrice || 0) * (it.quantity || 1)),
-                status: it.status || 'success'
+                spec: spec,
+                demandQty: demandQty,
+                allocatedQty: allocatedQty,
+                unitPrice: unitPrice,
+                subtotal: subtotal,
+                status: status,
+                isConnecting: isConnecting
               };
               station1Orders.push(orderRecord);
 
               // 匯總到站點 0 (採購商品分組)
-              const groupKey = (it.productId || '') + '_' + (it.spec || '單一規格');
+              const groupKey = `${productId}_${spec}`;
               if (!prodGroupMap[groupKey]) {
-                const matchedProd = (allProducts || []).find(p => p.id === it.productId) || {};
+                const matchedProd = (allProducts || []).find(p => p.id === productId) || {};
+                const savedGroup = procurementStateCache.groups ? procurementStateCache.groups[groupKey] : null;
+
                 prodGroupMap[groupKey] = {
                   groupKey: groupKey,
-                  productId: it.productId || 'J001',
+                  productId: productId,
                   productName: it.productName || it.name || '商品',
-                  spec: it.spec || '單一規格',
+                  spec: spec,
                   category: matchedProd.category || '親飛連線',
                   unitPrice: orderRecord.unitPrice,
                   imageUrl: matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80',
                   totalDemand: 0,
-                  procuredQty: 0,     // 買手已採購叫貨數
-                  actualBought: null, // 現場實到到貨數 (null 表示尚未清點到貨/空值)
+                  procuredQty: (savedGroup && savedGroup.procuredQty !== undefined) ? savedGroup.procuredQty : undefined,
+                  actualBought: (savedGroup && savedGroup.actualBought !== undefined) ? savedGroup.actualBought : null, // 關鍵：預設 null (未到貨)，絕不預設為需求數！
                   buyers: []
                 };
               }
-              prodGroupMap[groupKey].totalDemand += orderRecord.demandQty;
-              prodGroupMap[groupKey].procuredQty += orderRecord.demandQty; // 預設買手依需求全額叫貨
-              if (orderRecord.allocatedQty > 0) {
-                prodGroupMap[groupKey].actualBought = (prodGroupMap[groupKey].actualBought || 0) + orderRecord.allocatedQty;
+
+              prodGroupMap[groupKey].totalDemand += demandQty;
+              if (prodGroupMap[groupKey].procuredQty === undefined) {
+                prodGroupMap[groupKey].procuredQty = prodGroupMap[groupKey].totalDemand;
               }
+
               prodGroupMap[groupKey].buyers.push({
                 name: cust.name,
                 phone: cust.phone || '',
-                qty: orderRecord.demandQty,
-                orderId: orderRecord.orderId
+                qty: demandQty,
+                orderId: orderId
               });
             });
           }
@@ -7483,10 +7560,10 @@
       const b1 = document.getElementById('badgeS1');
       const b2 = document.getElementById('badgeS2');
       const b3 = document.getElementById('badgeS3');
-      if (b0) b0.innerText = `${station0ProcureGroups.length} 款商品`;
-      if (b1) b1.innerText = `OD 下單 (${station1Orders.length} 筆)`;
-      if (b2) b2.innerText = `待通知 (${(notifyCustomers || []).filter(c => c.type === 'checkout').length} 位)`;
-      if (b3) b3.innerText = `完成結帳訂單 (${station3Parcels.length} 筆)`;
+      if (b0) b0.innerText = `${station0ProcureGroups.length} 款`;
+      if (b1) b1.innerText = `${station1Orders.length} 筆`;
+      if (b2) b2.innerText = `${(notifyCustomers || []).filter(c => c.type === 'checkout').length} 位`;
+      if (b3) b3.innerText = `${station3Parcels.length} 筆`;
 
       // 4. 即時刷新當前頁面
       renderStation0Procure();
@@ -7603,6 +7680,7 @@
       if (g) {
         let n = parseInt(val, 10);
         g.procuredQty = isNaN(n) ? 0 : n;
+        saveProcurementState();
       }
     }
 
@@ -7615,6 +7693,7 @@
           let n = parseInt(val, 10);
           g.actualBought = isNaN(n) ? null : n;
         }
+        saveProcurementState();
       }
     }
 
@@ -7691,7 +7770,7 @@
       if (!listEl) return;
 
       const parcelCount = (station3Parcels || []).length;
-      if (b3) b3.innerText = `完成結帳訂單 (${parcelCount} 筆)`;
+      if (b3) b3.innerText = `${parcelCount} 筆`;
 
       // 若目前試算表尚無任何買家完成結帳門市填報：
       if (parcelCount === 0) {
@@ -7974,6 +8053,8 @@
         });
       }
 
+      saveProcurementState();
+
       setTimeout(() => {
         renderStation0Procure();
         renderStation1Orders();
@@ -7992,6 +8073,7 @@
         o.isConnecting = false;
         o.status = (qty === demandQty) ? 'success' : (qty === 0 ? 'out' : 'partial');
       }
+      saveProcurementState();
       renderStation1Orders();
       showToast(`📝 訂單手動調整為【${qty} 件】`);
     }
@@ -8016,6 +8098,7 @@
         o.status = 'connecting';
         o.isConnecting = true;
       }
+      saveProcurementState();
       renderStation1Orders();
     }
 
