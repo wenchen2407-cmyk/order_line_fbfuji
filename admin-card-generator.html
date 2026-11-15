@@ -3025,7 +3025,7 @@
         }
 
         const successText = cust.successCount > 0 ? `<span style="color:#15803d; font-weight:700;">✅ 完成 ${cust.successCount} 件</span>` : '';
-        const outText = cust.outOfStockCount > 0 ? `<span style="color:#b91c1c; font-weight:700;">❌ 缺貨 ${cust.outOfStockCount} 件</span>` : '';
+        const outText = cust.outOfStockCount > 0 ? `<span style="color:#b91c1c; font-weight:700;">❌ 缺貨斷貨 ${cust.outOfStockCount} 件</span>` : '';
         const pendingText = cust.pendingCount > 0 ? `<span style="color:#d97706; font-weight:700;">⏳ 連線中 ${cust.pendingCount} 件</span>` : '';
         const countsSummary = [successText, outText, pendingText].filter(Boolean).join(' ｜ ');
 
@@ -3037,7 +3037,7 @@
         if (hasItems) {
           itemsHtml = cust.items.map(it => {
             const statusTag = it.status === 'out' 
-              ? '<span style="color:#b91c1c; font-weight:700;">[斷貨]</span>' 
+              ? '<span style="color:#b91c1c; font-weight:700;">[缺貨斷貨]</span>' 
               : '<span style="color:#15803d; font-weight:700;">[採購成功]</span>';
             return `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:12.5px;">
