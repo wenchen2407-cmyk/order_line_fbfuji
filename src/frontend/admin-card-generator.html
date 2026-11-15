@@ -1400,7 +1400,7 @@
     }
 
     .station-vertical-sidebar {
-      width: 256px;
+      width: 270px;
       background: #ffffff;
       border: 1px solid var(--border-color);
       border-radius: 16px;
@@ -1436,14 +1436,13 @@
     .sidebar-nav-menu {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
     .sidebar-nav-item {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 11px 12px;
+      flex-direction: column;
+      padding: 12px 14px;
       border-radius: 12px;
       background: #ffffff;
       border: 1.5px solid #e2e8f0;
@@ -1470,47 +1469,45 @@
       box-shadow: 0 3px 10px rgba(5, 150, 105, 0.12);
     }
 
-    .sidebar-nav-item-left {
+    .sidebar-nav-item-top {
       display: flex;
       align-items: center;
-      gap: 10px;
-      min-width: 0;
-      flex: 1;
+      gap: 8px;
+      width: 100%;
     }
     .sidebar-nav-icon {
       font-size: 18px;
       flex-shrink: 0;
       line-height: 1;
     }
-    .sidebar-nav-item-text {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      flex: 1;
-    }
     .sidebar-nav-item-title {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #334155;
+      line-height: 1.3;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .sidebar-nav-item.active .sidebar-nav-item-title {
       color: #059669;
       font-weight: 800;
     }
+
+    .sidebar-nav-item-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      width: 100%;
+      padding-left: 26px;
+    }
     .sidebar-nav-item-desc {
       font-size: 11px;
       color: #94a3b8;
-      margin-top: 2px;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .sidebar-nav-item .pill-count {
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 999px;
       font-size: 11px;
       background: #f1f5f9;
@@ -2751,47 +2748,47 @@
 
             <nav class="sidebar-nav-menu">
               <button type="button" class="sidebar-nav-item active" id="btnStation0" onclick="switchMainTab(0)">
-                <div class="sidebar-nav-item-left">
+                <div class="sidebar-nav-item-top">
                   <span class="sidebar-nav-icon">🛒</span>
-                  <div class="sidebar-nav-item-text">
-                    <span class="sidebar-nav-item-title">1. 現場採購總表</span>
-                    <span class="sidebar-nav-item-desc">依規格匯總叫貨</span>
-                  </div>
+                  <span class="sidebar-nav-item-title">1. 現場採購總表</span>
                 </div>
-                <span class="pill-count" id="badgeS0">5 款</span>
+                <div class="sidebar-nav-item-bottom">
+                  <span class="sidebar-nav-item-desc">依規格匯總叫貨</span>
+                  <span class="pill-count" id="badgeS0">5 款商品</span>
+                </div>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation1" onclick="switchMainTab(1)">
-                <div class="sidebar-nav-item-left">
+                <div class="sidebar-nav-item-top">
                   <span class="sidebar-nav-icon">📝</span>
-                  <div class="sidebar-nav-item-text">
-                    <span class="sidebar-nav-item-title">2. 顧客訂單配貨</span>
-                    <span class="sidebar-nav-item-desc">FIFO 智慧分配</span>
-                  </div>
+                  <span class="sidebar-nav-item-title">2. 顧客訂單配貨</span>
                 </div>
-                <span class="pill-count" id="badgeS1">5 筆</span>
+                <div class="sidebar-nav-item-bottom">
+                  <span class="sidebar-nav-item-desc">FIFO 智慧分配</span>
+                  <span class="pill-count" id="badgeS1">OD 下單 (5 筆)</span>
+                </div>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation2" onclick="switchMainTab(2)">
-                <div class="sidebar-nav-item-left">
+                <div class="sidebar-nav-item-top">
                   <span class="sidebar-nav-icon">📢</span>
-                  <div class="sidebar-nav-item-text">
-                    <span class="sidebar-nav-item-title">3. 通知客人結帳</span>
-                    <span class="sidebar-nav-item-desc">1對1零額度推播</span>
-                  </div>
+                  <span class="sidebar-nav-item-title">3. 通知客人結帳</span>
                 </div>
-                <span class="pill-count" id="badgeS2">2 位</span>
+                <div class="sidebar-nav-item-bottom">
+                  <span class="sidebar-nav-item-desc">1對1零額度推播</span>
+                  <span class="pill-count" id="badgeS2">待通知 (2 位)</span>
+                </div>
               </button>
 
               <button type="button" class="sidebar-nav-item" id="btnStation3" onclick="switchMainTab(3)">
-                <div class="sidebar-nav-item-left">
+                <div class="sidebar-nav-item-top">
                   <span class="sidebar-nav-icon">💳</span>
-                  <div class="sidebar-nav-item-text">
-                    <span class="sidebar-nav-item-title">4. 完成結帳出貨</span>
-                    <span class="sidebar-nav-item-desc">核銷對帳與發貨</span>
-                  </div>
+                  <span class="sidebar-nav-item-title">4. 完成結帳出貨對帳</span>
                 </div>
-                <span class="pill-count" id="badgeS3">2 筆</span>
+                <div class="sidebar-nav-item-bottom">
+                  <span class="sidebar-nav-item-desc">核銷對帳與發貨</span>
+                  <span class="pill-count" id="badgeS3">完成結帳訂單 (2 筆)</span>
+                </div>
               </button>
             </nav>
           </aside>
@@ -2815,7 +2812,7 @@
                 <div class="kpi-box-val" style="color: #10b981;" id="kpiTotalBought">-- <span>件</span></div>
               </div>
               <div class="kpi-box red">
-                <div class="kpi-box-label">⚠️ 缺貨斷貨無法購得</div>
+                <div class="kpi-box-label">⚠️ 缺貨斷貨</div>
                 <div class="kpi-box-val" style="color: #ef4444;" id="kpiTotalOut">0 <span>件</span></div>
               </div>
             </div>
@@ -2832,8 +2829,19 @@
                   📋 複製採購文字
                 </button>
                 <button type="button" class="btn-action" style="padding: 6px 14px; font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; font-weight: 700;" onclick="openA4PrintModal()">
-                  🖨️ A4 現場採購檢核單
+                  🖨️ 列印A4採購表
                 </button>
+              </div>
+            </div>
+
+            <!-- 採購與配貨作業提示列 -->
+            <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #9a3412; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <div>
+                💡 <b>現場採購與配貨作業提示</b>：
+                買手叫貨後填寫「已採購件數」，狀態標記為 <b>🟠 採購中（待到貨）</b>；拆箱清點後填「實到件數」並點擊「⚡️ 配貨」，系統依 FIFO 自動配貨（免跳頁，可連續作業！）。
+              </div>
+              <div style="font-size: 11.5px; color: #c2410c;">
+                狀態圖例：🟠 採購中 ｜ 🟢 到貨配妥 ｜ 🟡 部分到貨 ｜ 🔴 缺貨斷貨
               </div>
             </div>
 
@@ -2961,7 +2969,7 @@
                       <span style="font-weight:700; font-family:monospace; color:#0f172a;" id="st2Phone">--</span>
                     </div>
                     <div>
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">LINE 買家姓名</label>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:3px; font-weight:600;">LINE暱稱/真實姓名</label>
                       <span style="font-weight:600; color:#334155;" id="st2LineName">--</span>
                     </div>
                     <div>
@@ -7308,6 +7316,7 @@
         showToast('進入「2. 顧客訂單配貨 (OD)」');
       } else if (tabIdx === 2 && v2) {
         v2.style.display = 'flex';
+        if (typeof syncNotifyCustomersFromAllocations === 'function') syncNotifyCustomersFromAllocations();
         if (typeof renderCustomerNotifyStats === 'function') renderCustomerNotifyStats();
         if (typeof renderCustomerNotifyList === 'function') renderCustomerNotifyList();
         showToast('進入「3. 通知客人結帳 (📢 結帳)」');
@@ -7623,6 +7632,21 @@
         const displayProcured = (g.procuredQty !== undefined && g.procuredQty !== null) ? g.procuredQty : g.totalDemand;
         const displayBought = (g.actualBought !== undefined && g.actualBought !== null) ? g.actualBought : '';
 
+        let statusBadge = '';
+        if (g.actualBought !== null && g.actualBought !== undefined) {
+          if (g.actualBought >= g.totalDemand) {
+            statusBadge = '<span style="display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;">🟢 到貨配妥</span>';
+          } else if (g.actualBought > 0) {
+            statusBadge = `<span style="display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#fefce8; color:#854d0e; border:1px solid #fef08a; font-weight:700;">🟡 部分到貨 (${g.actualBought}/${g.totalDemand})</span>`;
+          } else {
+            statusBadge = '<span style="display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700;">🔴 缺貨斷貨</span>';
+          }
+        } else if (displayProcured > 0) {
+          statusBadge = '<span style="display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-weight:700;">🟠 採購中 (待到貨)</span>';
+        } else {
+          statusBadge = '<span style="display:inline-block; font-size:11px; padding:3px 8px; border-radius:999px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; font-weight:700;">⚪️ 待叫貨</span>';
+        }
+
         return `
           <div class="procure-summary-card">
             <img src="${g.imageUrl}" class="procure-img" onclick="zoomImage(this.src, this.alt)" alt="${(g.productName || '').replace(/"/g, '&quot;')}" title="點擊放大商品圖片">
@@ -7636,10 +7660,11 @@
                 <thead>
                   <tr>
                     <th>規格</th>
-                    <th style="width: 130px;">訂購需求</th>
-                    <th style="width: 120px;">已採購件數</th>
-                    <th style="width: 120px;">實到件數</th>
-                    <th style="width: 120px; text-align: center;">自動配貨</th>
+                    <th style="width: 120px;">訂購需求</th>
+                    <th style="width: 110px;">已採購件數</th>
+                    <th style="width: 110px;">實到件數</th>
+                    <th style="width: 130px; text-align: center;">當前進度</th>
+                    <th style="width: 110px; text-align: center;">自動配貨</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -7658,13 +7683,16 @@
                       <input type="number" class="qty-input" id="inputBought_${idx}" value="${displayBought}" min="0" max="${g.totalDemand}" placeholder="未到貨" title="現場拆箱清點實到件數，空值時配貨為連線中" onchange="updateGroupBought(${idx}, this.value)">
                     </td>
                     <td style="text-align: center;">
+                      ${statusBadge}
+                    </td>
+                    <td style="text-align: center;">
                       <button type="button" class="btn-auto-allocate" onclick="executeAutoAllocation(${idx})">
                         ⚡️ 配貨
                       </button>
                     </td>
                   </tr>
                   <tr id="${drawerId}" style="display: none;">
-                    <td colspan="5" style="padding: 10px 12px; background: #ffffff;">
+                    <td colspan="6" style="padding: 10px 12px; background: #ffffff;">
                       <div class="demand-drawer-box">
                         <table class="demand-drawer-table">
                           <thead>
@@ -7773,6 +7801,81 @@
           </tr>
         `;
       }).join('');
+    }
+
+    // 🔄 將站點 1 (配貨明細) 的配貨結果即時同步回站點 2 (顧客通知名冊與總額)
+    function syncNotifyCustomersFromAllocations() {
+      if (!Array.isArray(notifyCustomers) || !Array.isArray(station1Orders)) return;
+
+      const orderMap = {};
+      station1Orders.forEach(o => {
+        orderMap[o.orderId] = o;
+      });
+
+      notifyCustomers.forEach(cust => {
+        let sCount = 0;
+        let outCount = 0;
+        let pendCount = 0;
+        let totAmt = 0;
+
+        (cust.items || []).forEach(it => {
+          const matchedOrder = orderMap[it.orderId];
+          if (matchedOrder) {
+            it.status = matchedOrder.status;
+            it.allocatedQty = matchedOrder.allocatedQty;
+            it.isConnecting = matchedOrder.isConnecting;
+            it.subtotal = (matchedOrder.allocatedQty || 0) * (it.unitPrice || 0);
+
+            if (matchedOrder.status === 'success') {
+              sCount += matchedOrder.allocatedQty;
+              totAmt += it.subtotal;
+            } else if (matchedOrder.status === 'partial') {
+              sCount += matchedOrder.allocatedQty;
+              outCount += Math.max(0, it.quantity - matchedOrder.allocatedQty);
+              totAmt += it.subtotal;
+            } else if (matchedOrder.status === 'connecting') {
+              pendCount += it.quantity;
+            } else if (matchedOrder.status === 'out') {
+              outCount += it.quantity;
+            }
+          } else {
+            if (it.status === 'success') {
+              sCount += (it.quantity || 1);
+              totAmt += (it.subtotal || 0);
+            } else if (it.status === 'out') {
+              outCount += (it.quantity || 1);
+            } else {
+              pendCount += (it.quantity || 1);
+            }
+          }
+        });
+
+        cust.successCount = sCount;
+        cust.outOfStockCount = outCount;
+        cust.pendingCount = pendCount;
+        cust.totalAmount = totAmt;
+
+        if (sCount > 0) {
+          cust.type = 'checkout';
+        } else if (outCount > 0 && sCount === 0 && pendCount === 0) {
+          cust.type = 'all_out';
+        } else {
+          cust.type = 'connecting';
+        }
+      });
+
+      const checkoutCusts = notifyCustomers.filter(c => c.type === 'checkout');
+      notifyStats = {
+        totalCheckoutCustomers: checkoutCusts.length,
+        totalSuccessItems: checkoutCusts.reduce((s, c) => s + (c.successCount || 0), 0),
+        totalPendingAmount: checkoutCusts.reduce((s, c) => s + (c.totalAmount || 0), 0)
+      };
+
+      const b2 = document.getElementById('badgeS2');
+      if (b2) b2.innerText = `待通知 (${checkoutCusts.length} 位)`;
+
+      if (typeof renderCustomerNotifyStats === 'function') renderCustomerNotifyStats();
+      if (typeof renderCustomerNotifyList === 'function') renderCustomerNotifyList();
     }
 
     // 渲染站點 4：完成結帳出貨對帳 (100% 依 Google 試算表真實資料呈現)
@@ -8092,8 +8195,9 @@
       setTimeout(() => {
         renderStation0Procure();
         renderStation1Orders();
-        setTimeout(() => switchMainTab(1), 900);
-      }, 400);
+        syncNotifyCustomersFromAllocations();
+        showToast(`⚡️【${prodName}】智慧配貨完成！資料已同步，可直接繼續登記下一款！`);
+      }, 300);
     }
 
     function manualChangeRowQty(idx, newQtyVal, demandQty, unitPrice) {
@@ -8109,6 +8213,7 @@
       }
       saveProcurementState();
       renderStation1Orders();
+      syncNotifyCustomersFromAllocations();
       showToast(`📝 訂單手動調整為【${qty} 件】`);
     }
 
@@ -8134,6 +8239,7 @@
       }
       saveProcurementState();
       renderStation1Orders();
+      syncNotifyCustomersFromAllocations();
     }
 
     function toggleActiveOrders(isActiveOnly) {
