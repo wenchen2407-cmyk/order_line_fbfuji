@@ -3884,6 +3884,7 @@
           renderCustomerNotifyStats();
           renderCustomerNotifyList();
           if (typeof syncAllStationsWithRealData === "function") syncAllStationsWithRealData();
+          if (typeof loadRealCheckoutParcelsFromGAS === "function") loadRealCheckoutParcelsFromGAS();
         } else {
           const errMsg = (json && json.message) || '無法取得名單';
           // 若後端顯示未知的 action，代表雲端 Apps Script 尚未重新發布新版本
@@ -7145,73 +7146,9 @@
 
       station0ProcureGroups = Object.values(prodGroupMap);
 
-      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 真實對齊 Google Sheets 欄位規格 (第 13~24 欄)
-      station3Parcels = [
-        {
-          coCode: 'CO2610051104',
-          userId: 'Ub22df295e9a98eb46e873534e8123285',
-          name: '趙珮瑜',
-          phone: '0925564080',
-          lineName: '趙珮瑜',
-          store: '🏪 7-ELEVEN 敦南門市 (店號: 982314)',
-          storeAddr: '台北市大安區敦化南路一段 188 號',
-          last5: '98214',
-          trackingCode: '98273615243',
-          payStatus: '已完成付款',
-          shippingStatus: '已完成結帳待出貨',
-          shippingFee: 60,
-          total: 1550,
-          items: [
-            {
-              orderId: 'OD261005110439737',
-              productId: 'K2610040003',
-              productName: '韓國🇰🇷 I\'MINT 無糖木糖醇咖啡糖 三款可選',
-              spec: '抹茶拿鐵',
-              quantity: 3,
-              unitPrice: 170,
-              subtotal: 510,
-              status: 'success'
-            },
-            {
-              orderId: 'OD261005110511336',
-              productId: 'K2610040005',
-              productName: '韓國🇰🇷 韓國 Dr.Reju-All PDRN藍銅勝肽精華 30ml',
-              spec: '單一規格',
-              quantity: 1,
-              unitPrice: 980,
-              subtotal: 980,
-              status: 'success'
-            }
-          ]
-        },
-        {
-          coCode: 'CO2610101842',
-          userId: 'U022acdc062e1bf86ac37672f40ff8c1b',
-          name: '徐偉萍',
-          phone: '0966916243',
-          lineName: '徐偉萍',
-          store: '🏪 7-ELEVEN 新莊立言門市 (店號: 182741)',
-          storeAddr: '新北市新莊區立言街 28 號',
-          last5: '12345',
-          trackingCode: '98273615244',
-          payStatus: '已完成付款',
-          shippingStatus: '已完成結帳待出貨',
-          shippingFee: 60,
-          total: 950,
-          items: [
-            {
-              orderId: 'OD261010184212940',
-              productId: 'J2610100006',
-              productName: '日本🇯🇵 Blue Bottle Coffee藍瓶咖啡 Craft Matcha 抹茶粉 30g',
-              spec: '單一規格',
-              quantity: 1,
-              unitPrice: 890,
-              subtotal: 890,
-              status: 'success'
-            }
-          ]
-        }
-      ];
+      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 100% 依 Google 試算表真實資料驅動 (徹底移除假門市假單號)
+      // 若試算表中買家尚未填單完成結帳，此處即如實顯示 0 筆空狀態，絕不混充假資料！
+      if (!Array.isArray(station3Parcels)) station3Parcels = [];
 
       // 3. 更新四大按鈕 Badge
       const b0 = document.getElementById('badgeS0');
@@ -7418,13 +7355,43 @@
       }).join('');
     }
 
-    // 渲染站點 4：完成結帳出貨對帳
+    // 渲染站點 4：完成結帳出貨對帳 (100% 依 Google 試算表真實資料呈現)
     function renderStation3Parcels() {
       const listEl = document.getElementById('station3ParcelList');
+      const b3 = document.getElementById('badgeS3');
+      const rightPane = document.querySelector('.station2-right');
       if (!listEl) return;
 
-      if (station3Parcels.length === 0) {
-        listEl.innerHTML = '<div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 13px;">目前無已結帳待出貨包裹。</div>';
+      const parcelCount = (station3Parcels || []).length;
+      if (b3) b3.innerText = `完成結帳訂單 (${parcelCount} 筆)`;
+
+      // 若目前試算表尚無任何買家完成結帳門市填報：
+      if (parcelCount === 0) {
+        listEl.innerHTML = `
+          <div style="padding: 48px 16px; text-align: center; color: #64748b;">
+            <div style="font-size: 32px; margin-bottom: 10px;">📭</div>
+            <div style="font-weight: 700; color: #0f172a; font-size: 14px;">目前尚無已完成結帳之包裹</div>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.6;">
+              Google 試算表目前尚無已填寫取件超商與匯款之結帳訂單。<br>
+              當顧客在第 3 站收到通知並完成結帳填單後，系統將自動於此即時建立出貨對帳單！
+            </div>
+          </div>
+        `;
+        if (rightPane) {
+          rightPane.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 480px; padding: 40px 24px; text-align: center; background: #ffffff;">
+              <div style="font-size: 52px; margin-bottom: 14px;">📦</div>
+              <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">出貨對帳工作台待命中</h3>
+              <p style="font-size: 13px; color: #64748b; max-width: 440px; line-height: 1.6; margin-bottom: 20px;">
+                目前 Google 試算表尚未有顧客完成結帳填單。<br>
+                當買家在「3. 通知客人結帳」收到 LINE 專屬連結並完成填寫取件超商門市與匯款後，系統將在此即時建立出貨對帳單，供您核對末五碼與列印寄件單號！
+              </p>
+              <button type="button" class="btn" style="padding: 9px 20px; font-size: 13px; background: #059669; color: #fff; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);" onclick="switchMainTab(2)">
+                👉 前往「3. 通知客人結帳」
+              </button>
+            </div>
+          `;
+        }
         return;
       }
 
@@ -7445,7 +7412,7 @@
             </div>
             <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">${p.shippingStatus || '待出貨'}</span>
-              <span style="font-size: 11px; color: #64748b;">末五碼: <code style="color:#15803d; font-weight:700;">${p.last5}</code></span>
+              <span style="font-size: 11px; color: #64748b;">末五碼: <code style="color:#15803d; font-weight:700;">${p.last5 || '未填'}</code></span>
             </div>
           </div>
         `;
@@ -7454,6 +7421,21 @@
       const activeParcel = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
       if (activeParcel) {
         loadStation3ParcelDetail(activeParcel);
+      }
+    }
+
+    // 異步向 GAS API 讀取試算表中真正已完成結帳的包裹清單
+    async function loadRealCheckoutParcelsFromGAS() {
+      try {
+        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '&userId=Uee7765ed3c1819cb94fd404cfab8553b';
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getCheckoutParcels${uidParam}`);
+        const json = await res.json();
+        if (json && json.success && Array.isArray(json.parcels)) {
+          station3Parcels = json.parcels;
+          renderStation3Parcels();
+        }
+      } catch (e) {
+        console.warn('暫無法由 GAS 讀取已結帳包裹:', e);
       }
     }
 

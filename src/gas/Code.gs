@@ -1191,6 +1191,12 @@ function doGet(e) {
       } else {
         result = getCustomerNotifyList();
       }
+    } else if (action === 'getCheckoutParcels') {
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者查閱已結帳出貨包裹！', isAdmin: false };
+      } else {
+        result = getCheckoutParcels();
+      }
     } else if (action === 'recalculateCustomerStats') {
       if (!checkIsAdmin(reqUserId)) {
         result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行統計重算！', isAdmin: false };
@@ -4123,3 +4129,92 @@ function handleMarkCustomerNotified(postData) {
   };
 }
 
+/**
+ * 查詢已完成結帳出貨對帳包裹清單 (管理中心第 4 站真實後端)
+ * 遍歷【訂單明細】，依結帳編號 (checkoutId, 第 22 欄) 分組為已結帳待出貨包裹
+ */
+function getCheckoutParcels() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  if (!orderSheet) {
+    return { success: false, message: '訂單工作表不存在' };
+  }
+
+  ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
+  const orderRows = orderSheet.getDataRange().getValues();
+  const parcelMap = {};
+
+  for (let r = 1; r < orderRows.length; r++) {
+    const row = orderRows[r];
+    const checkoutId = String(row[21] || '').trim(); // 第 22 欄 (V 欄)：結帳編號
+    const shipStatus = String(row[18] || '').trim(); // 第 19 欄 (S 欄)：採購出貨狀態
+
+    // 必須有 checkoutId，且未完成取貨結案
+    if (!checkoutId) continue;
+    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案')) continue;
+
+    const userId = String(row[2] || '').trim();
+    const qty = Number(row[7]) || 1;
+    const unitPrice = Number(row[8]) || 0;
+    const subtotal = Number(row[9]) || (unitPrice * qty);
+    const shippingFee = Number(row[10]) || 0;
+    const totalWithFee = Number(row[11]) || (subtotal + shippingFee);
+
+    if (!parcelMap[checkoutId]) {
+      const recipientName = String(row[12] || '').trim() || String(row[22] || '').trim() || String(row[3] || '').trim() || '顧客';
+      const recipientPhone = String(row[13] || '').trim() || String(row[23] || '').trim();
+      const deliveryInfo = String(row[14] || '').trim(); // 取件方式與地址 (O 欄第 15 欄)
+
+      let storeName = deliveryInfo;
+      let storeAddress = deliveryInfo;
+      if (deliveryInfo.includes(']')) {
+        const parts = deliveryInfo.split(']');
+        storeName = parts[0].replace('[', '').trim();
+        storeAddress = parts.slice(1).join(']').trim();
+      }
+
+      parcelMap[checkoutId] = {
+        coCode: checkoutId,
+        userId: userId,
+        name: recipientName,
+        phone: recipientPhone,
+        lineName: String(row[3] || '').trim(),
+        store: storeName || '超商門市',
+        storeAddr: storeAddress || deliveryInfo,
+        deliveryInfo: deliveryInfo,
+        payStatus: String(row[16] || '').trim() || '待付款',
+        last5: String(row[17] || '').replace(/^'/, '').trim(),
+        shippingStatus: shipStatus || '已完成結帳待出貨',
+        trackingCode: String(row[20] || '').trim(), // 第 21 欄 (U 欄)：包裹追蹤單號
+        shippingFee: shippingFee,
+        total: totalWithFee,
+        items: []
+      };
+    } else {
+      if (shippingFee > 0 && parcelMap[checkoutId].shippingFee === 0) {
+        parcelMap[checkoutId].shippingFee = shippingFee;
+      }
+      parcelMap[checkoutId].total += subtotal;
+    }
+
+    parcelMap[checkoutId].items.push({
+      orderId: String(row[0] || '').trim(),
+      productId: String(row[4] || '').trim(),
+      productName: String(row[5] || '').trim(),
+      spec: String(row[6] || '').trim(),
+      quantity: qty,
+      unitPrice: unitPrice,
+      subtotal: subtotal,
+      status: 'success'
+    });
+  }
+
+  const parcels = Object.values(parcelMap);
+  return {
+    success: true,
+    count: parcels.length,
+    parcels: parcels
+  };
+}
