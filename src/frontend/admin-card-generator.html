@@ -2050,6 +2050,59 @@
       border-left: 4px solid #2563eb;
     }
 
+    .parcel-subtab {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #64748b;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .parcel-subtab:hover {
+      background: #f1f5f9;
+      color: #334155;
+    }
+    .parcel-subtab.active {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+    }
+    .btn-quick-pickup {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-quick-pickup:hover {
+      background: #059669;
+      color: #ffffff;
+    }
+    .btn-quick-restore {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-quick-restore:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
     .station2-right {
       flex: 1;
       background: #f8fafc;
@@ -2931,6 +2984,15 @@
               <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); background: #ffffff;">
                 <div style="font-size: 14px; font-weight: 800; color: #0f172a;">📦 已完成結帳包裹清單</div>
                 <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">客人完成填寫取件門市與回報匯款 (對應 Sheets CO 編號)</div>
+                <!-- 智慧分頁過濾器：待取貨 / 已取貨歸檔 -->
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                  <button type="button" class="parcel-subtab active" id="tabParcelPending" onclick="switchParcelFilter('pending')">
+                    ⏳ 待出貨/待取貨 (<span id="countParcelPending">0</span>)
+                  </button>
+                  <button type="button" class="parcel-subtab" id="tabParcelCompleted" onclick="switchParcelFilter('completed')">
+                    📁 已取貨歸檔 (<span id="countParcelCompleted">0</span>)
+                  </button>
+                </div>
               </div>
               <div id="station3ParcelList" style="overflow-y: auto; flex: 1;">
                 <!-- 左側包裹清單 -->
@@ -3011,9 +3073,11 @@
                     </div>
                   </div>
 
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="inputTrackingCode" placeholder="輸入超商寄件單號" value="" style="padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-family: monospace; width: 180px;">
-                    <button style="padding: 9px 18px; background: #ee4d2d; color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);" onclick="confirmShippingAction()">📦 確認出貨</button>
+                  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;" id="st2ActionButtonsContainer">
+                    <input type="text" id="inputTrackingCode" placeholder="輸入超商寄件單號" value="" style="padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-family: monospace; width: 170px;">
+                    <button type="button" id="btnActionShip" style="padding: 9px 16px; background: #ee4d2d; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);" onclick="confirmShippingAction()">📦 確認出貨</button>
+                    <button type="button" id="btnMarkPickupComplete" style="padding: 9px 16px; background: #059669; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);" onclick="markParcelCompletedPickup()">✅ 買家已取貨 (點掉結案)</button>
+                    <button type="button" id="btnRestorePickup" style="display: none; padding: 9px 16px; background: #475569; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(71, 85, 105, 0.2);" onclick="restoreParcelToPending()">↩️ 撤回還原至待取貨</button>
                   </div>
                 </div>
               </div>
@@ -7927,6 +7991,17 @@
       if (typeof renderCustomerNotifyList === 'function') renderCustomerNotifyList();
     }
 
+    let currentParcelFilter = 'pending'; // 'pending' (待出貨/待取貨) 或 'completed' (已取貨歸檔)
+
+    function switchParcelFilter(filter) {
+      currentParcelFilter = filter;
+      const tabPending = document.getElementById('tabParcelPending');
+      const tabCompleted = document.getElementById('tabParcelCompleted');
+      if (tabPending) tabPending.classList.toggle('active', filter === 'pending');
+      if (tabCompleted) tabCompleted.classList.toggle('active', filter === 'completed');
+      renderStation3Parcels();
+    }
+
     // 渲染站點 4：完成結帳出貨對帳 (100% 依 Google 試算表真實資料呈現)
     function renderStation3Parcels() {
       const listEl = document.getElementById('station3ParcelList');
@@ -7934,42 +8009,74 @@
       const rightPane = document.querySelector('.station2-right');
       if (!listEl) return;
 
-      const parcelCount = (station3Parcels || []).length;
-      if (b3) b3.innerText = `${parcelCount} 筆`;
+      const allParcels = station3Parcels || [];
+      const pendingParcels = allParcels.filter(p => !p.isCompleted && p.shippingStatus !== '已完成取貨');
+      const completedParcels = allParcels.filter(p => p.isCompleted || p.shippingStatus === '已完成取貨');
 
-      // 若目前試算表尚無任何買家完成結帳門市填報：
-      if (parcelCount === 0) {
-        listEl.innerHTML = `
-          <div style="padding: 48px 16px; text-align: center; color: #64748b;">
-            <div style="font-size: 32px; margin-bottom: 10px;">📭</div>
-            <div style="font-weight: 700; color: #0f172a; font-size: 14px;">目前尚無已完成結帳之包裹</div>
-            <div style="font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.6;">
-              Google 試算表目前尚無已填寫取件超商與匯款之結帳訂單。<br>
-              當顧客在第 3 站收到通知並完成結帳填單後，系統將自動於此即時建立出貨對帳單！
+      // 更新分頁計數
+      const countPendingEl = document.getElementById('countParcelPending');
+      const countCompletedEl = document.getElementById('countParcelCompleted');
+      if (countPendingEl) countPendingEl.innerText = pendingParcels.length;
+      if (countCompletedEl) countCompletedEl.innerText = completedParcels.length;
+
+      // 側欄徽章只顯示進行中待處理數量
+      if (b3) b3.innerText = `${pendingParcels.length} 筆`;
+
+      const displayList = (currentParcelFilter === 'completed') ? completedParcels : pendingParcels;
+
+      // 若目前所選分類沒有包裹
+      if (displayList.length === 0) {
+        if (currentParcelFilter === 'completed') {
+          listEl.innerHTML = `
+            <div style="padding: 48px 16px; text-align: center; color: #64748b;">
+              <div style="font-size: 32px; margin-bottom: 10px;">📁</div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 14px;">尚無已完成取貨歸檔的訂單</div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.6;">
+                當顧客完成超商取貨或宅配簽收後，在「待出貨/待取貨」清單點擊「買家已取貨 (點掉結案)」，該筆訂單將會自動歸檔於此，供您隨時查閱歷史紀錄！
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          listEl.innerHTML = `
+            <div style="padding: 48px 16px; text-align: center; color: #64748b;">
+              <div style="font-size: 32px; margin-bottom: 10px;">🎉</div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 14px;">太棒了！所有包裹皆已完成出貨與取貨</div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.6;">
+                目前沒有待出貨或待取貨的包裹。<br>
+                若有需要查閱已結案歷史包裹，可點擊上方「📁 已取貨歸檔」分頁隨時查閱或還原！
+              </div>
+            </div>
+          `;
+        }
+
         if (rightPane) {
           rightPane.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 480px; padding: 40px 24px; text-align: center; background: #ffffff;">
-              <div style="font-size: 52px; margin-bottom: 14px;">📦</div>
-              <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">出貨對帳工作台待命中</h3>
+              <div style="font-size: 52px; margin-bottom: 14px;">${currentParcelFilter === 'completed' ? '📁' : '✅'}</div>
+              <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">
+                ${currentParcelFilter === 'completed' ? '已完成取貨歷史歸檔區' : '所有結帳包裹皆已處理完畢'}
+              </h3>
               <p style="font-size: 13px; color: #64748b; max-width: 440px; line-height: 1.6; margin-bottom: 20px;">
-                目前 Google 試算表尚未有顧客完成結帳填單。<br>
-                當買家在「3. 通知客人結帳」收到 LINE 專屬連結並完成填寫取件超商門市與匯款後，系統將在此即時建立出貨對帳單，供您核對末五碼與列印寄件單號！
+                ${currentParcelFilter === 'completed' 
+                  ? '目前尚無歸檔之歷史取貨包裹。' 
+                  : '目前 Google 試算表所有顧客的結帳包裹皆已妥善處理！當有新訂單完成結帳時，系統將在此即時提示。'}
               </p>
-              <button type="button" class="btn" style="padding: 9px 20px; font-size: 13px; background: #059669; color: #fff; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);" onclick="switchMainTab(2)">
-                👉 前往「3. 通知客人結帳」
-              </button>
+              ${currentParcelFilter === 'completed' 
+                ? '<button type="button" class="btn" style="padding: 9px 20px; font-size: 13px; background: #059669; color: #fff; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;" onclick="switchParcelFilter(\'pending\')">👉 返回待取貨清單</button>'
+                : '<button type="button" class="btn" style="padding: 9px 20px; font-size: 13px; background: #059669; color: #fff; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;" onclick="switchMainTab(2)">👉 前往「3. 通知客人結帳」</button>'}
             </div>
           `;
         }
         return;
       }
 
-      listEl.innerHTML = station3Parcels.map((p, idx) => {
-        const isActive = (p.coCode === currentActiveParcelCode || (!currentActiveParcelCode && idx === 0)) ? 'active' : '';
-        if (isActive) currentActiveParcelCode = p.coCode;
+      // 若目前選取的包裹不在當前過濾清單中，自動選取第一筆
+      if (!displayList.some(p => p.coCode === currentActiveParcelCode)) {
+        currentActiveParcelCode = displayList[0].coCode;
+      }
+
+      listEl.innerHTML = displayList.map((p, idx) => {
+        const isActive = (p.coCode === currentActiveParcelCode) ? 'active' : '';
 
         // 門市名稱智慧提取：避免將物流方式顯示為門市
         let displayStore = p.store || '';
@@ -7983,14 +8090,21 @@
           }
         }
 
+        const isPickupDone = p.isCompleted || p.shippingStatus === '已完成取貨';
         const hasPaid = p.last5 && p.last5 !== '未填' && p.last5.trim() !== '';
-        const last5Badge = hasPaid
-          ? `<span style="font-size: 11px; color: #15803d; font-weight: 700;">末五碼: <code>${p.last5}</code></span>`
-          : `<span style="font-size: 11px; color: #ea580c; font-weight: 600;">末五碼: 未填</span>`;
+        
+        let payBadge = '';
+        if (isPickupDone) {
+          payBadge = `<span style="font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #dcfce7; color: #15803d; border: 1px solid #86efac;">✅ 已完成取貨</span>`;
+        } else if (hasPaid) {
+          payBadge = `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">已回報待對帳</span>`;
+        } else {
+          payBadge = `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">待付款</span>`;
+        }
 
-        const payBadge = hasPaid
-          ? `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">已回報待對帳</span>`
-          : `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">待付款</span>`;
+        const quickActionBtn = isPickupDone
+          ? `<button type="button" class="btn-quick-restore" onclick="event.stopPropagation(); restoreParcelToPending('${p.coCode}')" title="還原回待出貨/待取貨清單">↩️ 還原</button>`
+          : `<button type="button" class="btn-quick-pickup" onclick="event.stopPropagation(); markParcelCompletedPickup('${p.coCode}')" title="標記為已取貨並點掉歸檔">點掉結案 ✓</button>`;
 
         return `
           <div class="split-item-row ${isActive}" onclick="selectStation2Order(this, '${p.coCode}')">
@@ -8004,15 +8118,19 @@
             <div style="font-size: 11.5px; color: #0369a1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${displayStore}">
               🏪 ${displayStore}
             </div>
-            <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-              ${payBadge}
-              ${last5Badge}
+            <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                ${payBadge}
+              </div>
+              <div>
+                ${quickActionBtn}
+              </div>
             </div>
           </div>
         `;
       }).join('');
 
-      const activeParcel = station3Parcels.find(x => x.coCode === currentActiveParcelCode) || station3Parcels[0];
+      const activeParcel = displayList.find(x => x.coCode === currentActiveParcelCode) || displayList[0];
       if (activeParcel) {
         loadStation3ParcelDetail(activeParcel);
       }
@@ -8135,6 +8253,16 @@
         `;
         prodRows.innerHTML = rowsHtml;
       }
+
+      // 切換按鈕狀態（待出貨/待取貨 vs 已完成取貨歸檔）
+      const isPickupDone = p.isCompleted || p.shippingStatus === '已完成取貨';
+      const btnShip = document.getElementById('btnActionShip');
+      const btnMarkPickup = document.getElementById('btnMarkPickupComplete');
+      const btnRestore = document.getElementById('btnRestorePickup');
+
+      if (btnShip) btnShip.style.display = isPickupDone ? 'none' : 'inline-block';
+      if (btnMarkPickup) btnMarkPickup.style.display = isPickupDone ? 'none' : 'inline-block';
+      if (btnRestore) btnRestore.style.display = isPickupDone ? 'inline-block' : 'none';
     }
 
     function toggleDemandDrawer(drawerId, btnId) {
@@ -8400,9 +8528,67 @@
       if (p) {
         p.trackingCode = trackingCode;
         p.shippingStatus = '已完成出貨';
+        syncParcelStatusToGAS(p.coCode, '已完成出貨', trackingCode);
       }
       showToast(`🚚 出貨成功！單號【${trackingCode}】已回寫試算表第 21 欄，狀態更新為【已完成出貨】！`);
       renderStation3Parcels();
+    }
+
+    // ✅ 賣家點掉完成取貨訂單（自動歸檔至「📁 已取貨歸檔」）
+    function markParcelCompletedPickup(coCode) {
+      const targetCode = coCode || currentActiveParcelCode;
+      const p = station3Parcels.find(x => x.coCode === targetCode);
+      if (!p) return;
+
+      if (!confirm(`確定要將買家【${p.name}】的結帳包裹【${p.coCode}】標記為「已完成取貨」並從待取貨清單中點掉嗎？`)) {
+        return;
+      }
+
+      p.shippingStatus = '已完成取貨';
+      p.isCompleted = true;
+      syncParcelStatusToGAS(p.coCode, '已完成取貨', p.trackingCode || '');
+      showToast(`🎉 結帳單【${p.coCode}】已標記為【已完成取貨】並歸檔！`);
+      renderStation3Parcels();
+    }
+
+    // ↩️ 撤回已完成取貨（還原回「⏳ 待取貨/待出貨」清單）
+    function restoreParcelToPending(coCode) {
+      const targetCode = coCode || currentActiveParcelCode;
+      const p = station3Parcels.find(x => x.coCode === targetCode);
+      if (!p) return;
+
+      if (!confirm(`確定要將結帳包裹【${p.coCode}】還原為「待取貨」狀態嗎？`)) {
+        return;
+      }
+
+      p.shippingStatus = p.trackingCode ? '已完成出貨' : '已完成結帳';
+      p.isCompleted = false;
+      syncParcelStatusToGAS(p.coCode, p.shippingStatus, p.trackingCode || '');
+      showToast(`↩️ 結帳單【${p.coCode}】已成功還原回待取貨清單！`);
+      renderStation3Parcels();
+    }
+
+    // 🔄 異步將包裹狀態更新寫回 Google 試算表第 19 欄與第 21 欄
+    async function syncParcelStatusToGAS(checkoutId, status, trackingCode) {
+      try {
+        const payload = {
+          action: 'updateParcelStatus',
+          adminUserId: currentAdminUserId || 'Uee7765ed3c1819cb94fd404cfab8553b',
+          data: {
+            checkoutId: checkoutId,
+            status: status,
+            trackingCode: trackingCode || ''
+          }
+        };
+        await fetch(CONFIG.GAS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        console.log(`GAS 狀態更新成功: ${checkoutId} -> ${status}`);
+      } catch (e) {
+        console.warn('GAS 狀態更新失敗 (本地介面已先更新):', e);
+      }
     }
 
     function zoomImage(src, title) {

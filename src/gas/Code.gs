@@ -1255,6 +1255,7 @@ function doPost(e) {
       'batchUpdateProducts',
       'uploadImages',
       'markCustomerNotified',
+      'updateParcelStatus',
       'getViewStats'
     ];
     if (adminProtectedActions.includes(action) && !checkIsAdmin(reqAdminId)) {
@@ -1274,6 +1275,8 @@ function doPost(e) {
       result = handleCheckoutOrders(postData.data);
     } else if (action === 'confirmReceived') {
       result = handleConfirmReceived(postData.data);
+    } else if (action === 'updateParcelStatus') {
+      result = handleUpdateParcelStatus(postData.data || postData);
     } else if (action === 'reportPayment') {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
@@ -4166,9 +4169,9 @@ function getCheckoutParcels() {
     const checkoutId = String(row[21] || '').trim(); // 第 22 欄 (V 欄)：結帳編號
     const shipStatus = String(row[18] || '').trim(); // 第 19 欄 (S 欄)：採購出貨狀態
 
-    // 必須有 checkoutId，且未完成取貨結案
+    // 必須有 checkoutId
     if (!checkoutId) continue;
-    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案')) continue;
+    const isCompleted = shipStatus.includes('完成取貨') || shipStatus.includes('結案');
 
     const userId = String(row[2] || '').trim();
     const qty = Number(row[7]) || 1;
@@ -4214,7 +4217,8 @@ function getCheckoutParcels() {
         deliveryInfo: deliveryInfo,
         payStatus: String(row[16] || '').trim() || '待付款',
         last5: String(row[17] || '').replace(/^'/, '').trim(),
-        shippingStatus: shipStatus || '已完成結帳待出貨',
+        shippingStatus: shipStatus || '已完成結帳',
+        isCompleted: isCompleted,
         trackingCode: String(row[20] || '').trim(), // 第 21 欄 (U 欄)：包裹追蹤單號
         shippingFee: shippingFee,
         total: totalWithFee,
@@ -4246,5 +4250,45 @@ function getCheckoutParcels() {
     success: true,
     count: parcels.length,
     parcels: parcels
+  };
+}
+
+/**
+ * 賣家管理者更新包裹與出貨狀態 (包含完成取貨點掉歸檔、還原待出貨、填寫寄件單號)
+ */
+function handleUpdateParcelStatus(data) {
+  const checkoutId = String(data.checkoutId || '').trim();
+  const newStatus = String(data.status || '').trim(); // 例: '已完成取貨' 或 '已完成出貨' 或 '已完成結帳'
+  const trackingCode = String(data.trackingCode || '').trim();
+
+  if (!checkoutId) return { success: false, message: '缺少結帳單號 checkoutId' };
+  if (!newStatus) return { success: false, message: '缺少欲更新的狀態 status' };
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
+
+  const rows = orderSheet.getDataRange().getValues();
+  let updatedCount = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const rCheckoutId = String(rows[i][21] || '').trim(); // 第 22 欄 (V 欄)：結帳編號
+    if (rCheckoutId === checkoutId) {
+      // 第 19 欄 (S 欄)：採購出貨狀態
+      orderSheet.getRange(i + 1, 19).setValue(newStatus);
+      if (trackingCode) {
+        // 第 21 欄 (U 欄)：超商寄件單號 / 宅配託運單號
+        orderSheet.getRange(i + 1, 21).setValue(trackingCode);
+      }
+      updatedCount++;
+    }
+  }
+
+  return {
+    success: true,
+    message: `已成功將結帳單【${checkoutId}】(${updatedCount} 筆商品) 狀態更新為【${newStatus}】！`,
+    updatedCount: updatedCount,
+    checkoutId: checkoutId,
+    status: newStatus
   };
 }
