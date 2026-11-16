@@ -1197,6 +1197,16 @@ function doGet(e) {
       } else {
         result = getCheckoutParcels();
       }
+    } else if (action === 'updateParcelStatus') {
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者更新包裹出貨狀態！', isAdmin: false };
+      } else {
+        result = handleUpdateParcelStatus({
+          checkoutId: e.parameter.checkoutId,
+          status: e.parameter.status,
+          trackingCode: e.parameter.trackingCode
+        });
+      }
     } else if (action === 'recalculateCustomerStats') {
       if (!checkIsAdmin(reqUserId)) {
         result = { success: false, message: '🔒 存取遭拒：僅限授權管理者執行統計重算！', isAdmin: false };

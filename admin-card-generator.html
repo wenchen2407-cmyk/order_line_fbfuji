@@ -8689,7 +8689,7 @@
       if (p) {
         p.trackingCode = trackingCode;
         p.shippingStatus = '已完成出貨';
-        syncParcelStatusToGAS(p.coCode, '已完成出貨', trackingCode);
+        syncParcelStatusToGAS(p.coCode, '已完成出貨', trackingCode, p.userId);
       }
       showToast(`🚚 出貨成功！單號【${trackingCode}】已回寫試算表第 21 欄，狀態更新為【已完成出貨】！`);
       renderStation3Parcels();
@@ -8707,7 +8707,7 @@
 
       p.shippingStatus = '已完成取貨';
       p.isCompleted = true;
-      syncParcelStatusToGAS(p.coCode, '已完成取貨', p.trackingCode || '');
+      syncParcelStatusToGAS(p.coCode, '已完成取貨', p.trackingCode || '', p.userId);
       showToast(`🎉 結帳單【${p.coCode}】已標記為【已完成取貨】並歸檔！`);
       renderStation3Parcels();
     }
@@ -8724,31 +8724,79 @@
 
       p.shippingStatus = p.trackingCode ? '已完成出貨' : '已完成結帳';
       p.isCompleted = false;
-      syncParcelStatusToGAS(p.coCode, p.shippingStatus, p.trackingCode || '');
+      syncParcelStatusToGAS(p.coCode, p.shippingStatus, p.trackingCode || '', p.userId);
       showToast(`↩️ 結帳單【${p.coCode}】已成功還原回待取貨清單！`);
       renderStation3Parcels();
     }
 
-    // 🔄 異步將包裹狀態更新寫回 Google 試算表第 19 欄與第 21 欄
-    async function syncParcelStatusToGAS(checkoutId, status, trackingCode) {
+    // 🔄 異步將包裹狀態更新寫回 Google 試算表第 19 欄 (採購/出貨狀態) 與第 21 欄 (寄件單號)
+    async function syncParcelStatusToGAS(checkoutId, status, trackingCode, userId) {
+      const adminId = currentAdminUserId || 'Uee7765ed3c1819cb94fd404cfab8553b';
+      let syncSucceeded = false;
+
+      // 1. 【推薦主力：GET 請求】永遠不觸發 CORS OPTIONS 預檢，秒速穿透執行
+      try {
+        const getUrl = `${CONFIG.GAS_API_URL}?action=updateParcelStatus&userId=${encodeURIComponent(adminId)}&checkoutId=${encodeURIComponent(checkoutId)}&status=${encodeURIComponent(status)}&trackingCode=${encodeURIComponent(trackingCode || '')}`;
+        const res = await fetch(getUrl);
+        const json = await res.json();
+        if (json && json.success) {
+          syncSucceeded = true;
+          console.log(`✅ [GET] Google 試算表第19欄已成功同步為【${status}】！(${checkoutId})`);
+          showToast(`☁️ 試算表第 19 欄已同步更新為【${status}】！`);
+          return;
+        }
+      } catch (e) {
+        console.warn('GET 同步通道嘗試中:', e);
+      }
+
+      // 2. 【標準管道：POST 請求】
       try {
         const payload = {
           action: 'updateParcelStatus',
-          adminUserId: currentAdminUserId || 'Uee7765ed3c1819cb94fd404cfab8553b',
+          adminUserId: adminId,
           data: {
             checkoutId: checkoutId,
             status: status,
             trackingCode: trackingCode || ''
           }
         };
-        await fetch(CONFIG.GAS_API_URL, {
+        const res = await fetch(CONFIG.GAS_API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        console.log(`GAS 狀態更新成功: ${checkoutId} -> ${status}`);
+        const json = await res.json().catch(() => null);
+        if (json && json.success) {
+          syncSucceeded = true;
+          console.log(`✅ [POST] Google 試算表狀態同步完成: ${checkoutId} -> ${status}`);
+          showToast(`☁️ 試算表第 19 欄已同步更新為【${status}】！`);
+          return;
+        }
       } catch (e) {
-        console.warn('GAS 狀態更新失敗 (本地介面已先更新):', e);
+        console.warn('POST 同步管道嘗試中:', e);
+      }
+
+      // 3. 【向下相容：若為「已完成取貨」，呼叫現有線上舊版 Apps Script 就支援的 confirmReceived】
+      if (status === '已完成取貨' && userId) {
+        try {
+          await fetch(CONFIG.GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'confirmReceived',
+              userId: userId,
+              data: {
+                userId: userId,
+                checkoutId: checkoutId
+              }
+            })
+          });
+          console.log(`✅ [向下相容 confirmReceived] 已通知現有線上 GAS 更新試算表第 19 欄為完成取貨: ${checkoutId}`);
+          showToast(`🎉 訂單【${checkoutId}】已完成取貨並送出雲端同步！`);
+          syncSucceeded = true;
+        } catch (e) { }
+      }
+
+      if (!syncSucceeded) {
+        console.info('💡 本地介面已即時點掉歸檔。若 Google 試算表尚未同步，請至 Apps Script 部署最新 Code.gs 版本！');
       }
     }
 
