@@ -3016,10 +3016,6 @@
                     <button style="padding: 9px 18px; background: #ee4d2d; color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);" onclick="confirmShippingAction()">📦 確認出貨</button>
                   </div>
                 </div>
-                    <input type="text" id="inputTrackingCode" placeholder="輸入 7-11 寄件單號" value="98273615243" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-family: monospace; width: 160px;">
-                    <button style="padding: 8px 16px; background: #ee4d2d; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="confirmShippingAction()">📦 確認出貨</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -7483,6 +7479,7 @@
               quantity: 20,
               unitPrice: 155,
               subtotal: 3100,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1cgEe-_qxayhDruXfzTiuO1IXO8Gnz810',
               status: 'success'
             }
           ]
@@ -7512,6 +7509,7 @@
               quantity: 2,
               unitPrice: 170,
               subtotal: 170,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1UV0SGPHkJNvt81HUecf_y1Vl39XnCvqI',
               status: 'success'
             },
             {
@@ -7522,6 +7520,7 @@
               quantity: 1,
               unitPrice: 790,
               subtotal: 790,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1HQvRegRK_BegS9mcsE2s1uIiqimqBkTF',
               status: 'success'
             },
             {
@@ -7532,6 +7531,7 @@
               quantity: 1,
               unitPrice: 170,
               subtotal: 170,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1UV0SGPHkJNvt81HUecf_y1Vl39XnCvqI',
               status: 'success'
             },
             {
@@ -7542,6 +7542,7 @@
               quantity: 4,
               unitPrice: 185,
               subtotal: 740,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1jk4tAtJ1oD2PMbERnLlMD3bw7rbvHCGL',
               status: 'success'
             },
             {
@@ -7552,6 +7553,7 @@
               quantity: 1,
               unitPrice: 170,
               subtotal: 170,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1UV0SGPHkJNvt81HUecf_y1Vl39XnCvqI',
               status: 'success'
             },
             {
@@ -7562,6 +7564,7 @@
               quantity: 1,
               unitPrice: 980,
               subtotal: 980,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1cskFSATGRXGh2afY1mzF-Kmm2CEFdIhZ',
               status: 'success'
             },
             {
@@ -7572,6 +7575,7 @@
               quantity: 1,
               unitPrice: 170,
               subtotal: 170,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1FlpjnrZ5PzZ-oGjNGuQbkflCjAsLdUHS',
               status: 'success'
             },
             {
@@ -7582,6 +7586,7 @@
               quantity: 1,
               unitPrice: 145,
               subtotal: 145,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1xdoj5mARZdC4bpkwH_GZbs0hbctrswf-',
               status: 'success'
             },
             {
@@ -7592,6 +7597,7 @@
               quantity: 1,
               unitPrice: 145,
               subtotal: 145,
+              imageUrl: 'https://lh3.googleusercontent.com/d/1xdoj5mARZdC4bpkwH_GZbs0hbctrswf-',
               status: 'success'
             },
             {
@@ -7602,6 +7608,7 @@
               quantity: 1,
               unitPrice: 1200,
               subtotal: 1200,
+              imageUrl: 'https://lh3.googleusercontent.com/d/12W2xDzdjswinnDbm63xlD3wrkQ_oYJ58',
               status: 'success'
             },
             {
@@ -7612,6 +7619,7 @@
               quantity: 2,
               unitPrice: 480,
               subtotal: 960,
+              imageUrl: 'https://lh3.googleusercontent.com/d/16nfI7ylFUuDlhRWku-9AzmonEmCB799l',
               status: 'success'
             }
           ]
@@ -8039,7 +8047,7 @@
       if (prodRows) {
         let rowsHtml = (p.items || []).map(it => {
           const matchedProd = (allProducts || []).find(x => x.id === it.productId) || {};
-          const img = matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
+          const img = it.imageUrl || matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
           const unitPrice = it.unitPrice || 0;
           const qty = it.quantity || 1;
           const subtotal = it.subtotal || (unitPrice * qty);
