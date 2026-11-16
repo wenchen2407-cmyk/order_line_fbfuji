@@ -3984,10 +3984,15 @@ function getCustomerNotifyList() {
     const processNote = String(row[19] || '').trim();
 
     // 排除已結案、已完成取貨、已結帳或已付款完成者
-    if (checkoutId) continue;
-    if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
-    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
-      continue;
+    // 💡 智慧防呆：若管理者在試算表中手動將商品改回「連線登記」、「採購中」、「待採購」或「待處理」，
+    // 即便先前存在舊的結帳編號 (checkoutId) 或付款記錄，亦應強制放行，重新納入採購與配貨流水線！
+    const isPendingProcure = shipStatus.includes('登記') || shipStatus.includes('採購') || shipStatus === '待處理';
+    if (!isPendingProcure) {
+      if (checkoutId) continue;
+      if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
+      if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+        continue;
+      }
     }
 
     // 判斷商品狀態
