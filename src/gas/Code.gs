@@ -4137,11 +4137,26 @@ function getCheckoutParcels() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
   const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+  const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
   if (!orderSheet) {
     return { success: false, message: '訂單工作表不存在' };
   }
 
   ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
+  // 預載商品清單圖片對照 Map
+  const prodMap = {};
+  if (prodSheet) {
+    const prodValues = prodSheet.getDataRange().getValues();
+    for (let p = 1; p < prodValues.length; p++) {
+      const pId = String(prodValues[p][0] || '').trim();
+      if (pId) {
+        prodMap[pId] = {
+          imageUrl: String(prodValues[p][6] || '').trim() // G 欄：商品圖片
+        };
+      }
+    }
+  }
 
   const orderRows = orderSheet.getDataRange().getValues();
   const parcelMap = {};
@@ -4171,8 +4186,21 @@ function getCheckoutParcels() {
       let storeAddress = deliveryInfo;
       if (deliveryInfo.includes(']')) {
         const parts = deliveryInfo.split(']');
-        storeName = parts[0].replace('[', '').trim();
-        storeAddress = parts.slice(1).join(']').trim();
+        const methodTag = parts[0].replace('[', '').trim();
+        const branchInfo = parts.slice(1).join(']').trim();
+
+        if (branchInfo) {
+          storeName = branchInfo;
+          if (methodTag.includes('7-11') && !storeName.includes('7-11') && !storeName.includes('7-ELEVEN')) {
+            storeName = '7-11 ' + storeName + (storeName.endsWith('店') || storeName.endsWith('門市') ? '' : '門市');
+          } else if (methodTag.includes('全家') && !storeName.includes('全家')) {
+            storeName = '全家 ' + storeName + (storeName.endsWith('店') || storeName.endsWith('門市') ? '' : '店');
+          }
+          storeAddress = `${methodTag} ｜ ${storeName}`;
+        } else {
+          storeName = methodTag;
+          storeAddress = deliveryInfo;
+        }
       }
 
       parcelMap[checkoutId] = {
@@ -4199,6 +4227,7 @@ function getCheckoutParcels() {
       parcelMap[checkoutId].total += subtotal;
     }
 
+    const prodInfo = prodMap[String(row[4] || '').trim()] || {};
     parcelMap[checkoutId].items.push({
       orderId: String(row[0] || '').trim(),
       productId: String(row[4] || '').trim(),
@@ -4207,6 +4236,7 @@ function getCheckoutParcels() {
       quantity: qty,
       unitPrice: unitPrice,
       subtotal: subtotal,
+      imageUrl: prodInfo.imageUrl || '',
       status: 'success'
     });
   }

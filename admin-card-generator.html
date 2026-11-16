@@ -2053,11 +2053,11 @@
     .station2-right {
       flex: 1;
       background: #f8fafc;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
       min-width: 0;
-      max-height: 800px;
+      min-height: 600px;
+      height: auto;
     }
 
     .right-header {
@@ -2754,7 +2754,7 @@
                 </div>
                 <div class="sidebar-nav-item-bottom">
                   <span class="sidebar-nav-item-desc">依規格匯總叫貨</span>
-                  <span class="pill-count" id="badgeS0">5 款商品</span>
+                  <span class="pill-count" id="badgeS0">5 款</span>
                 </div>
               </button>
 
@@ -2765,7 +2765,7 @@
                 </div>
                 <div class="sidebar-nav-item-bottom">
                   <span class="sidebar-nav-item-desc">FIFO 智慧分配</span>
-                  <span class="pill-count" id="badgeS1">OD 下單 (5 筆)</span>
+                  <span class="pill-count" id="badgeS1">5 筆</span>
                 </div>
               </button>
 
@@ -2776,7 +2776,7 @@
                 </div>
                 <div class="sidebar-nav-item-bottom">
                   <span class="sidebar-nav-item-desc">1對1零額度推播</span>
-                  <span class="pill-count" id="badgeS2">待通知 (2 位)</span>
+                  <span class="pill-count" id="badgeS2">2 位</span>
                 </div>
               </button>
 
@@ -2787,7 +2787,7 @@
                 </div>
                 <div class="sidebar-nav-item-bottom">
                   <span class="sidebar-nav-item-desc">核銷對帳與發貨</span>
-                  <span class="pill-count" id="badgeS3">完成結帳訂單 (2 筆)</span>
+                  <span class="pill-count" id="badgeS3">2 筆</span>
                 </div>
               </button>
             </nav>
@@ -2943,7 +2943,7 @@
                   <h2 style="font-size: 18px; font-weight: 700; color: #0f172a;" id="st2Title">結帳編號：--</h2>
                   <p style="font-size: 12.5px; color: #64748b; margin-top: 2px;" id="st2Subtitle">買家已完成選門市與回報匯款</p>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; white-space: nowrap; flex-shrink: 0;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                   <button type="button" class="btn-notify-action btn-notify-green" onclick="sendSingleCustomerShipNotify()">
                     🚀 發送 1 對 1 卡片
                   </button>
@@ -7970,6 +7970,28 @@
       listEl.innerHTML = station3Parcels.map((p, idx) => {
         const isActive = (p.coCode === currentActiveParcelCode || (!currentActiveParcelCode && idx === 0)) ? 'active' : '';
         if (isActive) currentActiveParcelCode = p.coCode;
+
+        // 門市名稱智慧提取：避免將物流方式顯示為門市
+        let displayStore = p.store || '';
+        if (p.storeAddr && p.store && (p.store.includes('取貨') || p.store.includes('純取') || p.store.includes('寄件'))) {
+          if (p.store.includes('7-11')) {
+            displayStore = `7-11 ${p.storeAddr}${p.storeAddr.endsWith('門市') || p.storeAddr.endsWith('店') ? '' : '門市'}`;
+          } else if (p.store.includes('全家')) {
+            displayStore = `全家 ${p.storeAddr}${p.storeAddr.endsWith('門市') || p.storeAddr.endsWith('店') ? '' : '店'}`;
+          } else {
+            displayStore = `${p.storeAddr} (${p.store})`;
+          }
+        }
+
+        const hasPaid = p.last5 && p.last5 !== '未填' && p.last5.trim() !== '';
+        const last5Badge = hasPaid
+          ? `<span style="font-size: 11px; color: #15803d; font-weight: 700;">末五碼: <code>${p.last5}</code></span>`
+          : `<span style="font-size: 11px; color: #ea580c; font-weight: 600;">末五碼: 未填</span>`;
+
+        const payBadge = hasPaid
+          ? `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">已回報待對帳</span>`
+          : `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">待付款</span>`;
+
         return `
           <div class="split-item-row ${isActive}" onclick="selectStation2Order(this, '${p.coCode}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -7979,12 +8001,12 @@
             <div style="font-size: 12.5px; color: #334155; margin-top: 4px;">
               買家：<strong>${p.name}</strong> <span style="color:#64748b; font-family:monospace;">(${p.phone})</span>
             </div>
-            <div style="font-size: 11.5px; color: #0369a1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              ${p.store}
+            <div style="font-size: 11.5px; color: #0369a1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${displayStore}">
+              🏪 ${displayStore}
             </div>
             <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">${p.shippingStatus || '待出貨'}</span>
-              <span style="font-size: 11px; color: #64748b;">末五碼: <code style="color:#15803d; font-weight:700;">${p.last5 || '未填'}</code></span>
+              ${payBadge}
+              ${last5Badge}
             </div>
           </div>
         `;
@@ -8035,13 +8057,49 @@
 
       if (title) title.innerText = `結帳編號：${p.coCode}`;
       if (subtitle) subtitle.innerText = `買家 ${p.name} 已完成選門市與回報匯款 (對應 Sheets 第 22 欄)`;
-      if (name) name.innerText = p.name;
-      if (phone) phone.innerText = p.phone;
-      if (lineName) lineName.innerText = p.lineName;
-      if (store) store.innerText = p.store;
-      if (storeAddr) storeAddr.innerText = p.storeAddr;
-      if (last5) last5.innerText = p.last5;
-      if (total) total.innerText = `NT$ ${p.total.toLocaleString()}`;
+      if (name) name.innerText = p.name || '--';
+      if (phone) phone.innerText = p.phone || '--';
+
+      // 格式化 LINE暱稱/真實姓名 (例: Lan (吳珮嵐))
+      const formattedLineName = (p.lineName && p.name && !p.lineName.includes(p.name))
+        ? `${p.lineName} (${p.name})`
+        : (p.lineName || p.name || '--');
+      if (lineName) lineName.innerText = formattedLineName;
+
+      // 門市與取件地址智慧解析
+      let displayStore = p.store || '超商門市';
+      let displayStoreAddr = p.storeAddr || '';
+
+      if (displayStore.includes('取貨') || displayStore.includes('純取') || displayStore.includes('寄件') || displayStore.includes('宅配')) {
+        const methodTag = displayStore;
+        const branch = displayStoreAddr;
+        if (branch && branch !== methodTag) {
+          if (methodTag.includes('7-11') && !branch.includes('7-11') && !branch.includes('7-ELEVEN')) {
+            displayStore = `🏪 7-11 ${branch}${branch.endsWith('門市') || branch.endsWith('店') ? '' : '門市'}`;
+          } else if (methodTag.includes('全家') && !branch.includes('全家')) {
+            displayStore = `🏪 全家 ${branch}${branch.endsWith('門市') || branch.endsWith('店') ? '' : '店'}`;
+          } else {
+            displayStore = `🏪 ${branch}`;
+          }
+          displayStoreAddr = `${methodTag} ｜ ${displayStore.replace('🏪 ', '')}`;
+        }
+      } else if (!displayStore.startsWith('🏪')) {
+        displayStore = `🏪 ${displayStore}`;
+      }
+
+      if (store) store.innerText = displayStore;
+      if (storeAddr) storeAddr.innerText = displayStoreAddr;
+
+      // 末五碼顯示強化
+      if (last5) {
+        if (p.last5 && p.last5 !== '未填' && p.last5.trim() !== '') {
+          last5.innerHTML = `<strong style="color: #15803d; font-family: monospace; font-size: 16px;">${p.last5}</strong> <span style="font-size:12px; color:#15803d; font-weight:600;">(已回報待對帳)</span>`;
+        } else {
+          last5.innerHTML = `<span style="color: #ea580c; font-size: 13px; font-weight: 700;">⚠️ 尚未回報末五碼 (待付款)</span>`;
+        }
+      }
+
+      if (total) total.innerText = `NT$ ${(p.total || 0).toLocaleString()}`;
       if (trackingInput) trackingInput.value = p.trackingCode || '';
 
       if (prodRows) {
