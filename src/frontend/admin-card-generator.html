@@ -3516,6 +3516,23 @@
     let isVerifiedAdmin = false;
 
     window.onload = async () => {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      // 優先從 localStorage 讀取管理員 UID
+      try {
+        const cachedAdmin = localStorage.getItem('line_order_admin_uid');
+        if (cachedAdmin) {
+          currentAdminUserId = cachedAdmin;
+          currentAdminUserName = localStorage.getItem('line_order_admin_name') || '管理員';
+        } else if (isLocal) {
+          // 🌟 本機開發環境：預設直接帶入主管理員身分，徹底避免 LINE OAuth 400 Bad Request
+          currentAdminUserId = PRIMARY_ADMIN_UID;
+          currentAdminUserName = '系統管理員 (本機測試)';
+          localStorage.setItem('line_order_is_admin', '1');
+          localStorage.setItem('line_order_admin_uid', PRIMARY_ADMIN_UID);
+          localStorage.setItem('line_order_admin_name', currentAdminUserName);
+        }
+      } catch (e) { }
+
       await initLiff();
       await verifyAndUnlockAdminHub();
     };
@@ -3545,6 +3562,21 @@
 
     // 🔐 管理員專用 LINE 登入引導 (自動標記意圖，防止 OAuth 回調落入大廳)
     function loginWithLineAdmin() {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocal) {
+        // 🌟 本機環境防護：LINE 官方 OAuth 不支援 http://localhost (會導致 400 Bad Request)
+        // 直接以授權主管理員身分一鍵解鎖通關
+        currentAdminUserId = PRIMARY_ADMIN_UID;
+        currentAdminUserName = '系統管理員 (本機測試)';
+        try {
+          localStorage.setItem('line_order_is_admin', '1');
+          localStorage.setItem('line_order_admin_uid', PRIMARY_ADMIN_UID);
+          localStorage.setItem('line_order_admin_name', currentAdminUserName);
+        } catch (e) { }
+        verifyAndUnlockAdminHub();
+        return;
+      }
+
       try {
         sessionStorage.setItem('liff_admin_login_pending', '1');
         sessionStorage.setItem('liff_admin_return_url', window.location.href);
@@ -3552,12 +3584,8 @@
       if (typeof liff !== 'undefined') {
         // 核心：傳遞與 LINE Developers Console Endpoint 嚴格一致的 redirectUri (index.html?action=admin)
         // 確保 LINE OAuth 100% 接受不報錯，並由 index.html 的靜默授權中繼完成換 Token 後瞬間切換回後台
-        const isOnline = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-        let redirectTarget = window.location.href;
-        if (isOnline) {
-          const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-          redirectTarget = window.location.origin + basePath + 'index.html?action=admin';
-        }
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const redirectTarget = window.location.origin + basePath + 'index.html?action=admin';
         liff.login({ redirectUri: redirectTarget });
       }
     }
@@ -3607,12 +3635,25 @@
           gateDesc.innerHTML = '本後台受<b>雙重白名單門禁保護</b>，僅限授權管理員進入。<br>請先使用管理員 LINE 帳號登入以解鎖商品建檔、資料維護與顧客通知功能。';
         }
         if (gateActions) {
-          gateActions.innerHTML = `
-            <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
-              🟢 使用 LINE 帳號登入驗證
-            </button>
-            <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
-          `;
+          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          if (isLocal) {
+            gateActions.innerHTML = `
+              <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+                💻 本機測試：一鍵以主管理員進入
+              </button>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                💡 本機 (localhost) 不受 LINE OAuth 支援 (避免 400 Bad Request)，點擊上方即可直接解鎖測試
+              </div>
+              <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
+            `;
+          } else {
+            gateActions.innerHTML = `
+              <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+                🟢 使用 LINE 帳號登入驗證
+              </button>
+              <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
+            `;
+          }
         }
         updateLiffStatusBadge();
         return;
