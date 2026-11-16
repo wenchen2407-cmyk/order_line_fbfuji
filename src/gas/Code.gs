@@ -4206,19 +4206,27 @@ function getCheckoutParcels() {
         }
       }
 
+      const rawPayStatus = String(row[16] || '').trim();
+      const isCOD = deliveryInfo.includes('取貨付款') || deliveryInfo.includes('貨到付款') || rawPayStatus.includes('貨到付款') || rawPayStatus.includes('取貨付款');
+
       parcelMap[checkoutId] = {
         coCode: checkoutId,
         userId: userId,
         name: recipientName,
         phone: recipientPhone,
         lineName: String(row[3] || '').trim(),
+        realName: String(row[22] || '').trim(),
+        memberPhone: String(row[23] || '').trim(),
         store: storeName || '超商門市',
         storeAddr: storeAddress || deliveryInfo,
         deliveryInfo: deliveryInfo,
-        payStatus: String(row[16] || '').trim() || '待付款',
+        isCOD: isCOD,
+        payStatus: rawPayStatus || (isCOD ? '貨到付款待出貨' : '待付款'),
         last5: String(row[17] || '').replace(/^'/, '').trim(),
         shippingStatus: shipStatus || '已完成結帳',
         isCompleted: isCompleted,
+        note: String(row[15] || '').trim(),
+        processNote: String(row[19] || '').trim(),
         trackingCode: String(row[20] || '').trim(), // 第 21 欄 (U 欄)：包裹追蹤單號
         shippingFee: shippingFee,
         total: totalWithFee,

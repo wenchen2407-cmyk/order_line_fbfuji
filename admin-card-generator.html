@@ -3039,8 +3039,11 @@
                       <span style="color:#0369a1; font-weight:700;" id="st2Store">🏪 門市資訊載入中...</span>
                     </div>
                     <div style="grid-column: span 4; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
-                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px; font-weight:600;">門市詳細地址</label>
+                      <label style="display:block; color:#64748b; font-size:11.5px; margin-bottom:2px; font-weight:600;">門市詳細地址 / 配送方式</label>
                       <span style="font-size:13px; color:#1e293b; font-weight:600;" id="st2StoreAddr">--</span>
+                    </div>
+                    <div id="st2NotesBox" style="grid-column: span 4; display: none; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #92400e;">
+                      <!-- 動態顯示買家備註與處理備註 -->
                     </div>
                   </div>
                 </div>
@@ -3064,12 +3067,12 @@
                   </table>
                 </div>
 
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-                  <div>
-                    <div style="font-size: 13px; color: #64748b;">結帳總額 (含運 $60)：<strong style="font-size: 20px; color: #15803d;" id="st2Total">--</strong></div>
-                    <div style="font-size: 13.5px; color: #1e293b; margin-top: 5px;">
+                <div id="st2PaymentBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                  <div id="st2PaymentInfoContainer">
+                    <div style="font-size: 13px; color: #64748b;" id="st2TotalLabel">結帳總額 (含運)：<strong style="font-size: 20px; color: #15803d;" id="st2Total">--</strong></div>
+                    <div style="font-size: 13.5px; color: #1e293b; margin-top: 5px;" id="st2PayMethodRow">
                       匯款後五碼：<strong style="color: #15803d; font-family: monospace; font-size: 16px;" id="st2Last5">--</strong>
-                      <button style="margin-left: 10px; padding: 4px 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
+                      <button id="btnVerifyPayment" style="margin-left: 10px; padding: 4px 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
                     </div>
                   </div>
 
@@ -8160,15 +8163,23 @@
         }
 
         const isPickupDone = p.isCompleted || p.shippingStatus === '已完成取貨';
+        const isCOD = Boolean(p.isCOD || (p.deliveryInfo && (p.deliveryInfo.includes('取貨付款') || p.deliveryInfo.includes('貨到付款'))) || (p.payStatus && (p.payStatus.includes('貨到付款') || p.payStatus.includes('取貨付款'))));
         const hasPaid = p.last5 && p.last5 !== '未填' && p.last5.trim() !== '';
         
         let payBadge = '';
+        let subPayInfo = '';
         if (isPickupDone) {
           payBadge = `<span style="font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #dcfce7; color: #15803d; border: 1px solid #86efac;">✅ 已完成取貨</span>`;
+          subPayInfo = `<span style="font-size: 11px; color: #15803d; font-weight: 600;">已結案</span>`;
+        } else if (isCOD) {
+          payBadge = `<span style="font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">💵 取貨付款</span>`;
+          subPayInfo = `<span style="font-size: 11px; color: #1e40af; font-weight: 700;">門市代收: NT$ ${p.total.toLocaleString()}</span>`;
         } else if (hasPaid) {
           payBadge = `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">已回報待對帳</span>`;
+          subPayInfo = `<span style="font-size: 11px; color: #15803d; font-weight: 700;">末五碼: <code>${p.last5}</code></span>`;
         } else {
           payBadge = `<span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">待付款</span>`;
+          subPayInfo = `<span style="font-size: 11px; color: #ea580c; font-weight: 600;">末五碼: 未填</span>`;
         }
 
         const quickActionBtn = isPickupDone
@@ -8179,7 +8190,7 @@
           <div class="split-item-row ${isActive}" onclick="selectStation2Order(this, '${p.coCode}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <strong style="color: #0f172a; font-size: 13.5px;">${p.coCode}</strong>
-              <span style="font-size: 13px; font-weight: 700; color: #15803d;">NT$ ${p.total.toLocaleString()}</span>
+              <span style="font-size: 13px; font-weight: 700; color: ${isCOD ? '#1d4ed8' : '#15803d'};">NT$ ${p.total.toLocaleString()}</span>
             </div>
             <div style="font-size: 12.5px; color: #334155; margin-top: 4px;">
               買家：<strong>${p.name}</strong> <span style="color:#64748b; font-family:monospace;">(${p.phone})</span>
@@ -8188,8 +8199,9 @@
               🏪 ${displayStore}
             </div>
             <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center;">
                 ${payBadge}
+                ${subPayInfo}
               </div>
               <div>
                 ${quickActionBtn}
@@ -8237,13 +8249,19 @@
       const lineName = document.getElementById('st2LineName');
       const store = document.getElementById('st2Store');
       const storeAddr = document.getElementById('st2StoreAddr');
-      const last5 = document.getElementById('st2Last5');
-      const total = document.getElementById('st2Total');
       const trackingInput = document.getElementById('inputTrackingCode');
       const prodRows = document.getElementById('st2ProdRows');
 
+      const isCOD = Boolean(p.isCOD || (p.deliveryInfo && (p.deliveryInfo.includes('取貨付款') || p.deliveryInfo.includes('貨到付款'))) || (p.payStatus && (p.payStatus.includes('貨到付款') || p.payStatus.includes('取貨付款'))));
+
       if (title) title.innerText = `結帳編號：${p.coCode}`;
-      if (subtitle) subtitle.innerText = `買家 ${p.name} 已完成選門市與回報匯款 (對應 Sheets 第 22 欄)`;
+      if (subtitle) {
+        if (isCOD) {
+          subtitle.innerText = `買家 ${p.name} 選擇【超商取貨付款】(門市代收總額 NT$ ${(p.total || 0).toLocaleString()}) - 備貨完成即可安排寄出！`;
+        } else {
+          subtitle.innerText = `買家 ${p.name} 已完成選門市與回報匯款 (對應 Sheets 第 22 欄)`;
+        }
+      }
       if (name) name.innerText = p.name || '--';
       if (phone) phone.innerText = p.phone || '--';
 
@@ -8275,18 +8293,85 @@
       }
 
       if (store) store.innerText = displayStore;
-      if (storeAddr) storeAddr.innerText = displayStoreAddr;
+      if (storeAddr) {
+        storeAddr.innerText = isCOD 
+          ? `${displayStoreAddr} (超商取貨付款 ｜ 門市現場代收 NT$ ${(p.total || 0).toLocaleString()})`
+          : displayStoreAddr;
+      }
 
-      // 末五碼顯示強化
-      if (last5) {
-        if (p.last5 && p.last5 !== '未填' && p.last5.trim() !== '') {
-          last5.innerHTML = `<strong style="color: #15803d; font-family: monospace; font-size: 16px;">${p.last5}</strong> <span style="font-size:12px; color:#15803d; font-weight:600;">(已回報待對帳)</span>`;
+      // 買家備註 (第16欄) 與 處理備註 (第20欄) 智慧展示
+      const notesBox = document.getElementById('st2NotesBox');
+      if (notesBox) {
+        const notesArr = [];
+        if (p.note) notesArr.push(`📝 <strong>買家下單備註：</strong>${p.note}`);
+        if (p.processNote) notesArr.push(`📌 <strong>後台處理備註：</strong>${p.processNote}`);
+        if (notesArr.length > 0) {
+          notesBox.style.display = 'block';
+          notesBox.innerHTML = notesArr.join('<br style="margin: 4px 0;">');
         } else {
-          last5.innerHTML = `<span style="color: #ea580c; font-size: 13px; font-weight: 700;">⚠️ 尚未回報末五碼 (待付款)</span>`;
+          notesBox.style.display = 'none';
         }
       }
 
-      if (total) total.innerText = `NT$ ${(p.total || 0).toLocaleString()}`;
+      // 底部金流與付款方式動態分流渲染 (徹底分離貨到付款與純取貨匯款)
+      const payMethodRow = document.getElementById('st2PayMethodRow');
+      const totalLabel = document.getElementById('st2TotalLabel');
+      const paymentBox = document.getElementById('st2PaymentBox');
+
+      if (isCOD) {
+        if (paymentBox) {
+          paymentBox.style.background = '#f0fdfa';
+          paymentBox.style.borderColor = '#99f6e4';
+        }
+        if (totalLabel) {
+          totalLabel.innerHTML = `結帳總額 (含超商取貨付款運費 $${p.shippingFee || 35})：<strong style="font-size: 20px; color: #0f766e;">NT$ ${(p.total || 0).toLocaleString()}</strong>`;
+        }
+        if (payMethodRow) {
+          payMethodRow.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="background: #eff6ff; color: #1d4ed8; padding: 3px 10px; border-radius: 6px; font-weight: 800; border: 1px solid #bfdbfe; font-size: 12.5px;">
+                💵 超商門市取貨付款
+              </span>
+              <span style="font-size: 12.5px; color: #047857; font-weight: 700;">
+                ✓ 門市代收款：NT$ ${(p.total || 0).toLocaleString()}
+              </span>
+              <span style="font-size: 12px; color: #64748b;">
+                (買家於取件時現場付清，由超商物流代收，免事先匯款與填報末五碼)
+              </span>
+            </div>
+          `;
+        }
+      } else {
+        if (paymentBox) {
+          paymentBox.style.background = '#f0fdf4';
+          paymentBox.style.borderColor = '#bbf7d0';
+        }
+        if (totalLabel) {
+          totalLabel.innerHTML = `結帳總額 (含超商純取貨運費 $${p.shippingFee || 60})：<strong style="font-size: 20px; color: #15803d;">NT$ ${(p.total || 0).toLocaleString()}</strong>`;
+        }
+        const hasPaid = p.last5 && p.last5 !== '未填' && p.last5.trim() !== '';
+        if (payMethodRow) {
+          if (hasPaid) {
+            payMethodRow.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span>匯款後五碼：</span>
+                <strong style="color: #15803d; font-family: monospace; font-size: 16px;">${p.last5}</strong>
+                <span style="font-size: 12px; color: #15803d; font-weight: 600;">(已回報待對帳)</span>
+                <button type="button" style="padding: 4px 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('✅ 末五碼已核對無誤！回寫 Sheets 第 17 欄為已付款')">核對收款無誤</button>
+              </div>
+            `;
+          } else {
+            payMethodRow.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span>匯款後五碼：</span>
+                <span style="color: #ea580c; font-size: 13px; font-weight: 700;">⚠️ 尚未回報末五碼 (待付款)</span>
+                <span style="font-size: 12px; color: #94a3b8;">(買家需事先匯款並回填帳號末五碼)</span>
+              </div>
+            `;
+          }
+        }
+      }
+
       if (trackingInput) trackingInput.value = p.trackingCode || '';
 
       if (prodRows) {
@@ -8312,12 +8397,16 @@
         }).join('');
 
         // 補上超商運費行，讓品項與總額對齊無疑義
+        const shipFeeText = isCOD 
+          ? `🚚 超商取貨付款物流運費 (${p.store ? p.store.substring(0, 15) : '全家'})` 
+          : `🚚 超商純取貨物流運費 (${p.store ? p.store.substring(0, 15) : '7-11'})`;
+
         rowsHtml += `
           <tr style="background: #fafafa; border-top: 1px dashed #cbd5e1;">
-            <td colspan="3" style="padding: 10px 12px; color: #64748b; font-size: 12.5px;">🚚 超商物流運費 (${p.store ? p.store.substring(0, 15) : '7-11'})</td>
+            <td colspan="3" style="padding: 10px 12px; color: #64748b; font-size: 12.5px;">${shipFeeText}</td>
             <td style="padding: 10px 12px; font-size: 12.5px; color: #64748b;">1 件包裹</td>
-            <td style="padding: 10px 12px; font-size: 12.5px; color: #64748b;">NT$ ${p.shippingFee || 60}</td>
-            <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #64748b;">NT$ ${p.shippingFee || 60}</td>
+            <td style="padding: 10px 12px; font-size: 12.5px; color: #64748b;">NT$ ${p.shippingFee || (isCOD ? 35 : 60)}</td>
+            <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #64748b;">NT$ ${p.shippingFee || (isCOD ? 35 : 60)}</td>
           </tr>
         `;
         prodRows.innerHTML = rowsHtml;
@@ -8329,7 +8418,10 @@
       const btnMarkPickup = document.getElementById('btnMarkPickupComplete');
       const btnRestore = document.getElementById('btnRestorePickup');
 
-      if (btnShip) btnShip.style.display = isPickupDone ? 'none' : 'inline-block';
+      if (btnShip) {
+        btnShip.style.display = isPickupDone ? 'none' : 'inline-block';
+        btnShip.innerText = isCOD ? '📦 確認出貨 (取貨付款)' : '📦 確認出貨 (純取件)';
+      }
       if (btnMarkPickup) btnMarkPickup.style.display = isPickupDone ? 'none' : 'inline-block';
       if (btnRestore) btnRestore.style.display = isPickupDone ? 'inline-block' : 'none';
     }
