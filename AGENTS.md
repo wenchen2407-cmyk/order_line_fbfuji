@@ -1,0 +1,50 @@
+# Project LINE Order - AI 開發與升級強制執行規範 (Project Rules)
+
+本工作區（Workspace）是基於 Google Apps Script (GAS)、Google 試算表 (Google Sheets)、LINE LIFF 與前端響應式網頁所架構的電商與代購管理系統。
+
+為避免出現「介面更新頻繁，卻未與後端資料庫（Google Sheets / GAS）實質串接整合」的嚴重脫節問題，**任何在此專案進行操作的 AI 助理，必須嚴格遵守以下標準作業規範**：
+
+---
+
+## 🛑 強制執行閘門（AI 實作前必先詢問確認）
+
+在未經使用者明確回答前，**嚴禁**逕自宣告「功能已完成」或隨便生成帶有死假資料（Mock Data）的孤立檔案。
+遇到功能開發或介面更新需求時，AI 第一步必須主動詢問使用者：
+
+1. **升級類型確認**：
+   - 這是「**純視覺雛形展示（Preview Only）**」？還是「**正式功能上線整合（Production Upgrade）**」？
+2. **資料欄位確認**：
+   - 本次更動是否有**新增、刪除或修改任何後端資料欄位**（例如訂單狀態、商品成本、物流單號、備註標籤等）？
+3. **目標實體檔案**：
+   - 本次更動應該落實在哪一個正式前端檔案（例如 `admin-card-generator.html`、`my-orders.html`、`index.html`）？
+4. **既有資料相容性**：
+   - Google Sheets 中現有的歷史資料是否需要自動補齊預設值？
+
+---
+
+## 📋 開發五步升級法（5-Step Upgrade Protocol）
+
+### 步驟 1：建立前後端欄位對照字典 (Schema Alignment)
+若涉及新欄位，必須在程式碼中與回覆中清楚列出：
+- **Google Sheets 中文表頭名稱**（例如：`採購/出貨狀態`）
+- **前端 JavaScript 物件 Key**（例如：`purchaseStatus`）
+- **資料格式與預設值**（例如：字串、數字、或需標記 `@` 純文字防開頭 0 遺失）
+
+### 步驟 2：後端 Code.gs 與試算表升級
+- 更新 `src/gas/Code.gs` 中的 `setupSpreadsheet()` 表頭常數（`prodHeaders` / `orderHeaders` / `custHeaders`）。
+- 確保包含無損自動擴充欄位的邏輯（`insertColumnsAfter`）。
+- 讀取資料行時，改以「表頭名稱動態查找索引（`indexOf`）」，嚴禁寫死容易跑位的數字索引。
+- 補齊 `doGet` / `doPost` 的 API 處理動作。
+
+### 步驟 3：前端正式程式碼整合
+- 將新介面功能合併到指定的正式前端檔案中。
+- **嚴禁在正式功能中保留寫死的 `let mockOrders = [...]` 假資料**，必須正式接上 `fetch(GAS_API_URL)`。
+- 實作「載入中（Loading）」、「錯誤提示」與「操作成功回饋（Toast）」。
+
+### 步驟 4：主動提供 GAS 部署發布指引
+修改完畢後，AI 必須提醒使用者發布 Web App：
+> 進入 Google Apps Script ➔ 點擊「部署」➔「管理部署作業」➔ 編輯 ➔ 版本選「新版本」➔「部署」。
+
+### 步驟 5：端到端閉環驗收測試
+引導使用者驗證：
+- 前端發起請求 ➔ 後端 GAS 接收寫入 Google Sheets ➔ 重新整理頁面資料正確回顯。

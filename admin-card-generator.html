@@ -3576,10 +3576,25 @@
     const PRIMARY_ADMIN_UID = 'Uee7765ed3c1819cb94fd404cfab8553b';
     let currentAdminUserId = '';
     let currentAdminUserName = '';
+    let currentAdminToken = '';
     let isVerifiedAdmin = false;
 
+    // 檢查是否處於本機開發或本機檔案測試環境 (localhost, 127.0.0.1, file://)
+    function checkIsLocalEnv() {
+      return window.location.hostname === 'localhost' ||
+             window.location.hostname === '127.0.0.1' ||
+             window.location.protocol === 'file:' ||
+             !window.location.hostname;
+    }
+
+    // 取得管理員 API 請求之雙重驗證參數 (LINE UID + 安全通行碼 PIN)
+    function getAdminAuthParams() {
+      const uid = currentAdminUserId || PRIMARY_ADMIN_UID;
+      return `&userId=${encodeURIComponent(uid)}&adminToken=${encodeURIComponent(currentAdminToken || '')}`;
+    }
+
     window.onload = async () => {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isLocal = checkIsLocalEnv();
       // 優先從 localStorage 讀取管理員 UID
       try {
         const cachedAdmin = localStorage.getItem('line_order_admin_uid');
@@ -3587,14 +3602,20 @@
           currentAdminUserId = cachedAdmin;
           currentAdminUserName = localStorage.getItem('line_order_admin_name') || '管理員';
         } else if (isLocal) {
-          // 🌟 本機開發環境：預設直接帶入主管理員身分，徹底避免 LINE OAuth 400 Bad Request
+          // 🌟 本機/本機檔案環境：預設直接帶入主管理員身分，避免 LINE OAuth 400 Bad Request
           currentAdminUserId = PRIMARY_ADMIN_UID;
           currentAdminUserName = '系統管理員 (本機測試)';
-          localStorage.setItem('line_order_is_admin', '1');
           localStorage.setItem('line_order_admin_uid', PRIMARY_ADMIN_UID);
           localStorage.setItem('line_order_admin_name', currentAdminUserName);
         }
       } catch (e) { }
+
+      // 🔐 通行碼門禁防護：每次新會話必須通過安全通行碼 (PIN) 驗證解鎖
+      if (sessionStorage.getItem('admin_pin_verified') === '1') {
+        currentAdminToken = localStorage.getItem('line_order_admin_token') || '';
+      } else {
+        currentAdminToken = '';
+      }
 
       await initLiff();
       await verifyAndUnlockAdminHub();
@@ -3625,14 +3646,13 @@
 
     // 🔐 管理員專用 LINE 登入引導 (自動標記意圖，防止 OAuth 回調落入大廳)
     function loginWithLineAdmin() {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isLocal = checkIsLocalEnv();
       if (isLocal) {
         // 🌟 本機環境防護：LINE 官方 OAuth 不支援 http://localhost (會導致 400 Bad Request)
-        // 直接以授權主管理員身分一鍵解鎖通關
+        // 直接以授權主管理員身分就緒，進入安全通行碼 PIN 驗證流程
         currentAdminUserId = PRIMARY_ADMIN_UID;
         currentAdminUserName = '系統管理員 (本機測試)';
         try {
-          localStorage.setItem('line_order_is_admin', '1');
           localStorage.setItem('line_order_admin_uid', PRIMARY_ADMIN_UID);
           localStorage.setItem('line_order_admin_name', currentAdminUserName);
         } catch (e) { }
@@ -3658,17 +3678,19 @@
       try {
         localStorage.removeItem('line_order_is_admin');
         localStorage.removeItem('line_order_admin_uid');
+        localStorage.removeItem('line_order_admin_token');
+        sessionStorage.removeItem('admin_pin_verified');
         sessionStorage.removeItem('liff_admin_login_pending');
         sessionStorage.removeItem('liff_admin_return_url');
         sessionStorage.removeItem('liff_admin_heal_attempted');
       } catch (e) { }
       if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
-        liff.logout();
+        try { liff.logout(); } catch (e) { }
       }
       window.location.reload();
     }
 
-    // 🛡️ 全頁門禁檢查：必須是白名單管理員才能進入後台操作
+    // 🛡️ 全頁門禁檢查：必須是白名單管理員 + 安全通行碼 PIN 才能進入後台操作
     async function verifyAndUnlockAdminHub() {
       const gate = document.getElementById('adminAuthGate');
       const gateIcon = document.getElementById('adminAuthGateIcon');
@@ -3677,9 +3699,16 @@
       const gateActions = document.getElementById('adminAuthGateActions');
       const protectedContent = document.getElementById('adminProtectedContent');
 
-      // 🌟 核心自癒防護：若在線上環境打開且在手機 LINE 內部卻未取得 UID (非 Endpoint 直接開啟導致)，自動透過官方 LIFF 中繼取回身分
-      const isOnline = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      if (!currentAdminUserId && isOnline && (liffInClient || (navigator.userAgent && navigator.userAgent.includes('Line')))) {
+      const isLocal = checkIsLocalEnv();
+
+      // 🌟 本機或檔案環境直接預設主管理員身分，進入通行碼驗證
+      if (!currentAdminUserId && isLocal) {
+        currentAdminUserId = PRIMARY_ADMIN_UID;
+        currentAdminUserName = '系統管理員 (本機測試)';
+      }
+
+      // 🌟 核心自癒防護：若在線上環境打開且在手機 LINE 內部卻未取得 UID，自動透過官方 LIFF 中繼取回身分
+      if (!currentAdminUserId && !isLocal && (liffInClient || (navigator.userAgent && navigator.userAgent.includes('Line')))) {
         if (!sessionStorage.getItem('liff_admin_heal_attempted')) {
           sessionStorage.setItem('liff_admin_heal_attempted', '1');
           window.location.replace(`https://liff.line.me/${CONFIG.LIFF_ID}?action=admin`);
@@ -3687,7 +3716,7 @@
         }
       }
 
-      // 情境 1：尚未登入 LINE
+      // 情境 1：線上環境尚未登入 LINE
       if (!currentAdminUserId) {
         isVerifiedAdmin = false;
         if (protectedContent) protectedContent.style.display = 'none';
@@ -3698,58 +3727,102 @@
           gateDesc.innerHTML = '本後台受<b>雙重白名單門禁保護</b>，僅限授權管理員進入。<br>請先使用管理員 LINE 帳號登入以解鎖商品建檔、資料維護與顧客通知功能。';
         }
         if (gateActions) {
-          const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          if (isLocal) {
-            gateActions.innerHTML = `
-              <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
-                💻 本機測試：一鍵以主管理員進入
-              </button>
-              <div style="font-size:12px; color:#64748b; margin-top:2px;">
-                💡 本機 (localhost) 不受 LINE OAuth 支援 (避免 400 Bad Request)，點擊上方即可直接解鎖測試
-              </div>
-              <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
-            `;
-          } else {
-            gateActions.innerHTML = `
-              <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
-                🟢 使用 LINE 帳號登入驗證
-              </button>
-              <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
-            `;
-          }
+          gateActions.innerHTML = `
+            <button type="button" onclick="loginWithLineAdmin()" style="width:100%; max-width:320px; padding:13px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+              🟢 使用 LINE 帳號登入驗證
+            </button>
+            <a href="index.html?view=store" style="font-size:13px; color:#64748b; text-decoration:underline; margin-top:6px;">🛍️ 我是買家，返回連線商品大廳</a>
+          `;
         }
         updateLiffStatusBadge();
         return;
       }
 
-      // 情境 2：已登入 LINE，向後端或主管理員白名單校驗權限
-      let adminPass = (currentAdminUserId === PRIMARY_ADMIN_UID);
-      if (!adminPass) {
-        try {
-          const res = await fetch(`${CONFIG.GAS_API_URL}?action=verifyAdmin&userId=${encodeURIComponent(currentAdminUserId)}`);
-          const json = await res.json();
-          if (json && json.success && json.isAdmin) {
-            adminPass = true;
-          }
-        } catch (err) {
-          console.warn('向後端驗證管理員權限失敗:', err);
+      // 情境 2：已取得 LINE UID，向後端校驗「白名單 UID + 安全通行碼 PIN」
+      // 關鍵：若本次會話尚未輸入過通行碼，強制顯示輸入卡片！
+      if (!currentAdminToken) {
+        if (sessionStorage.getItem('admin_pin_verified') === '1') {
+          currentAdminToken = localStorage.getItem('line_order_admin_token') || '';
         }
+      }
+
+      if (!currentAdminToken) {
+        if (protectedContent) protectedContent.style.display = 'none';
+        if (gate) {
+          gate.style.display = 'block';
+          gate.style.borderColor = '#93c5fd';
+          gate.style.background = '#f8fafc';
+        }
+        if (gateIcon) gateIcon.textContent = '🔑';
+        if (gateTitle) {
+          gateTitle.textContent = '賣家管理中心｜請輸入安全通行碼 (PIN)';
+          gateTitle.style.color = '#1e293b';
+        }
+        if (gateDesc) {
+          gateDesc.innerHTML = `
+            已識別您的管理員身分：<b>${escapeHtml(currentAdminUserName || '管理員')}</b><br>
+            <div style="margin:8px auto; padding:4px 8px; background:#e2e8f0; border-radius:6px; font-family:monospace; font-size:11.5px; color:#475569; display:inline-block;">
+              UID: ${escapeHtml(currentAdminUserId)}
+            </div><br>
+            為確保顧客個資與商業機密安全，請輸入<b>安全通行碼 (PIN)</b> 解鎖：<br>
+            <span style="font-size:12px; color:#64748b;">(預設為 <code>admin8888</code>，輸入一次即自動記住於本裝置)</span>
+          `;
+        }
+        if (gateActions) {
+          gateActions.innerHTML = `
+            <div style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px; align-items:center;">
+              <input type="password" id="inputAdminPin" placeholder="請輸入通行碼 (預設 admin8888)" style="width:100%; padding:12px 16px; border:2px solid #cbd5e1; border-radius:10px; font-size:15px; text-align:center; letter-spacing:2px;" autocomplete="off" onkeydown="if(event.key==='Enter') submitAdminPin()" />
+              <button type="button" onclick="submitAdminPin()" style="width:100%; padding:12px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+                🚀 驗證通行碼並進入後台
+              </button>
+              <div style="font-size:12px; color:#64748b; margin-top:4px; text-align:center;">
+                ❓ 忘記通行碼？請開啟 Google 試算表 ➔【系統設定】➔ 查看 <code>ADMIN_API_KEY</code> 欄位
+              </div>
+            </div>
+          `;
+          setTimeout(() => {
+            const pinInp = document.getElementById('inputAdminPin');
+            if (pinInp) pinInp.focus();
+          }, 100);
+        }
+        updateLiffStatusBadge();
+        return;
+      }
+
+      // 雙重驗證：向 GAS 後端發送 UID + PIN
+      let adminPass = false;
+      try {
+        const authParams = getAdminAuthParams();
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=verifyAdmin${authParams}`);
+        const json = await res.json();
+        if (json && json.success && json.isAdmin) {
+          adminPass = true;
+        }
+      } catch (err) {
+        console.warn('向後端驗證管理員雙重身分失敗:', err);
       }
 
       isVerifiedAdmin = adminPass;
       updateLiffStatusBadge();
 
       if (isVerifiedAdmin) {
-        // ✅ 通過白名單驗證：隱藏門禁卡、解鎖完整後台介面並載入資料
+        // ✅ 通過雙重驗證：隱藏門禁卡、解鎖完整後台介面並載入資料
         try {
           localStorage.setItem('line_order_is_admin', '1');
           localStorage.setItem('line_order_admin_uid', currentAdminUserId);
+          localStorage.setItem('line_order_admin_token', currentAdminToken);
+          sessionStorage.setItem('admin_pin_verified', '1');
         } catch (e) { }
         if (gate) gate.style.display = 'none';
         if (protectedContent) protectedContent.style.display = 'block';
         await fetchProductList();
       } else {
-        // 🚫 非白名單管理員：徹底封鎖並移除後台 DOM，禁止查看或操作任何功能
+        // 🚫 驗證失敗：清除錯誤 Token，並提示原因
+        currentAdminToken = '';
+        try {
+          localStorage.removeItem('line_order_admin_token');
+          sessionStorage.removeItem('admin_pin_verified');
+        } catch (e) { }
         if (protectedContent) {
           protectedContent.style.display = 'none';
           protectedContent.innerHTML = '';
@@ -3766,33 +3839,82 @@
         }
         if (gateIcon) gateIcon.textContent = '🚫';
         if (gateTitle) {
-          gateTitle.textContent = '存取遭拒：您的帳號未獲管理員授權';
+          gateTitle.textContent = '管理員身分或安全通行碼驗證失敗';
           gateTitle.style.color = '#dc2626';
         }
         if (gateDesc) {
           gateDesc.innerHTML = `
             目前登入帳號：<b>${escapeHtml(currentAdminUserName || 'LINE 用戶')}</b><br>
-            <div style="margin:8px auto; padding:6px 10px; background:#f1f5f9; border-radius:8px; font-family:monospace; font-size:12px; color:#334155; word-break:break-all;">
+            <div style="margin:8px auto; padding:6px 10px; background:#fee2e2; border-radius:8px; font-family:monospace; font-size:12px; color:#991b1b; word-break:break-all;">
               UID: ${escapeHtml(currentAdminUserId)}
             </div>
-            此帳號不在賣家管理員白名單中，無法瀏覽或編輯後台資料。<br>
-            <span style="font-size:12px; color:#94a3b8;">（若您為小幫手，請複製上方 UID 提供給主管理員加入試算表【系統設定】的 ADMIN_LINE_UIDS 白名單）</span>
+            <span style="color:#ef4444; font-weight:700;">原因：安全通行碼 (PIN) 錯誤，或此 LINE UID 尚未加入白名單。</span><br>
+            <span style="font-size:12px; color:#64748b;">(若忘記通行碼，請打開 Google 試算表 ➔【系統設定】工作表查看 <b>ADMIN_API_KEY</b> 與 <b>ADMIN_LINE_UIDS</b>)</span>
           `;
         }
         if (gateActions) {
           gateActions.innerHTML = `
-            <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(currentAdminUserId)}').then(() => alert('✅ 已複製您的 LINE UID！請傳給主管理員加入白名單。'))" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; border-radius:10px; cursor:pointer; font-weight:700;">
-              📋 複製我的 LINE UID
-            </button>
-            <button type="button" onclick="logoutAdmin()" style="width:100%; max-width:320px; padding:10px 16px; font-size:13.5px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:10px; cursor:pointer; font-weight:700;">
-              🔄 登出並切換管理員 LINE 帳號
-            </button>
-            <a href="index.html?view=store" style="display:inline-block; margin-top:6px; padding:10px 20px; background:var(--primary); color:#fff; border-radius:10px; font-size:13.5px; font-weight:800; text-decoration:none;">
-              🛍️ 前往買家連線商品大廳
-            </a>
+            <div style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px; align-items:center;">
+              <input type="password" id="inputAdminPin" placeholder="重新輸入通行碼 (預設 admin8888)" style="width:100%; padding:12px 16px; border:2px solid #ef4444; border-radius:10px; font-size:15px; text-align:center; letter-spacing:2px;" autocomplete="off" onkeydown="if(event.key==='Enter') submitAdminPin()" />
+              <button type="button" onclick="submitAdminPin()" style="width:100%; padding:12px 20px; font-size:15px; background:#06c755; color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 4px 12px rgba(6,199,85,0.25);">
+                🔄 重新驗證通行碼
+              </button>
+              <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(currentAdminUserId)}').then(() => alert('✅ 已複製您的 LINE UID！請傳給主管理員加入白名單。'))" style="width:100%; padding:10px 16px; font-size:13px; background:#f8fafc; color:#334155; border:1px solid #cbd5e1; border-radius:10px; cursor:pointer; font-weight:700;">
+                📋 複製我的 LINE UID
+              </button>
+              <button type="button" onclick="logoutAdmin()" style="width:100%; padding:10px 16px; font-size:13px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:10px; cursor:pointer; font-weight:700;">
+                🔄 登出並切換管理員 LINE 帳號
+              </button>
+            </div>
           `;
+          setTimeout(() => {
+            const pinInp = document.getElementById('inputAdminPin');
+            if (pinInp) pinInp.focus();
+          }, 100);
         }
       }
+    }
+
+    // 提交管理員安全通行碼 (PIN)
+    async function submitAdminPin() {
+      const pinInp = document.getElementById('inputAdminPin');
+      const pin = (pinInp ? pinInp.value : '').trim();
+      if (!pin) {
+        alert('請輸入安全通行碼！(預設 admin8888)');
+        return;
+      }
+      currentAdminToken = pin;
+      try {
+        localStorage.setItem('line_order_admin_token', pin);
+        sessionStorage.setItem('admin_pin_verified', '1');
+      } catch (e) { }
+      await verifyAndUnlockAdminHub();
+    }
+
+    // 變更/重設安全通行碼
+    function resetAdminPin() {
+      const newPin = prompt('請輸入新的管理員安全通行碼 (PIN)：\n(注意：請確認已在 Google 試算表【系統設定】ADMIN_API_KEY 同步修改)', currentAdminToken || 'admin8888');
+      if (newPin !== null && newPin.trim()) {
+        currentAdminToken = newPin.trim();
+        try {
+          localStorage.setItem('line_order_admin_token', currentAdminToken);
+          sessionStorage.setItem('admin_pin_verified', '1');
+        } catch (e) { }
+        alert('✅ 已更新本地保存之安全通行碼！即將重新向後端校驗。');
+        verifyAndUnlockAdminHub();
+      }
+    }
+
+    // 管理員完整登出
+    function logoutAdmin() {
+      try {
+        localStorage.removeItem('line_order_admin_uid');
+        localStorage.removeItem('line_order_admin_name');
+        localStorage.removeItem('line_order_admin_token');
+        localStorage.removeItem('line_order_is_admin');
+        sessionStorage.removeItem('admin_pin_verified');
+      } catch (e) { }
+      location.reload();
     }
 
     function updateLiffStatusBadge(errMsg) {
@@ -3819,6 +3941,7 @@
             <span>${adminTag} <b>${currentAdminUserName || '管理員'}</b></span>
             <span style="color:#94a3b8; font-size:11px; font-family:monospace;">(${currentAdminUserId.substring(0, 6)}...${currentAdminUserId.substring(currentAdminUserId.length - 4)})</span>
             <span style="font-size:11px;">[${clientTag}${shareTag}]</span>
+            <a href="javascript:void(0)" onclick="resetAdminPin();" style="font-size:11px; color:#38bdf8; margin-left:6px; text-decoration:underline;">🔑 變更通行碼</a>
             <a href="javascript:void(0)" onclick="logoutAdmin();" style="font-size:11px; color:#ef4444; margin-left:6px; text-decoration:underline;">登出</a>
           </div>
         `;
@@ -3902,7 +4025,7 @@
       if (tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">⏳ 正在讀取「瀏覽統計」工作表...</td></tr>';
 
       try {
-        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '';
+        const uidParam = getAdminAuthParams();
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getViewStats${uidParam}`);
         const data = await res.json();
         if (data.success) {
@@ -4163,7 +4286,7 @@
       container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:13px;">⏳ 正在即時讀取 Google 試算表訂單與顧客名單...</div>';
 
       try {
-        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '';
+        const uidParam = getAdminAuthParams();
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getCustomerNotifyList${uidParam}`);
         const json = await res.json();
 
@@ -4519,7 +4642,7 @@
             fetch(CONFIG.GAS_API_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ action: 'markCustomerNotified', userId: userId, adminUserId: currentAdminUserId }),
+              body: JSON.stringify({ action: 'markCustomerNotified', userId: userId, adminUserId: currentAdminUserId, adminToken: currentAdminToken }),
               keepalive: true
             }).catch(() => { });
             // 更新本地顧客狀態
@@ -5685,6 +5808,7 @@
               body: JSON.stringify({
                 action: 'uploadImages',
                 adminUserId: currentAdminUserId,
+                adminToken: currentAdminToken,
                 data: { files: base64Files }
               })
             });
@@ -5766,6 +5890,7 @@
         const payload = {
           action: 'addProduct',
           adminUserId: currentAdminUserId,
+          adminToken: currentAdminToken,
           data: {
             id: customId,
             currency: document.getElementById('calcCurrency') ? document.getElementById('calcCurrency').value : 'JPY',
@@ -5931,7 +6056,7 @@
       if (container) container.innerHTML = '';
 
       try {
-        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '';
+        const uidParam = getAdminAuthParams();
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getAllProducts${uidParam}`);
         const json = await res.json();
         if (loading) loading.style.display = 'none';
@@ -6299,6 +6424,7 @@
           body: JSON.stringify({
             action: 'batchUpdateProducts',
             adminUserId: currentAdminUserId,
+            adminToken: currentAdminToken,
             data: {
               productIds: ids,
               updateType: 'status',
@@ -6394,6 +6520,7 @@
           body: JSON.stringify({
             action: 'batchUpdateProducts',
             adminUserId: currentAdminUserId,
+            adminToken: currentAdminToken,
             data: {
               productIds: ids,
               updateType: 'category',
@@ -6443,6 +6570,7 @@
           body: JSON.stringify({
             action: 'batchUpdateProducts',
             adminUserId: currentAdminUserId,
+            adminToken: currentAdminToken,
             data: {
               productIds: [productId],
               updateType: 'status',
@@ -7154,6 +7282,7 @@
             body: JSON.stringify({
               action: 'uploadImages',
               adminUserId: currentAdminUserId,
+              adminToken: currentAdminToken,
               data: { files: base64Files }
             })
           });
@@ -7254,6 +7383,7 @@
         const payload = {
           action: 'updateProduct',
           adminUserId: currentAdminUserId,
+          adminToken: currentAdminToken,
           data: {
             id: pid,
             name: name,
@@ -7465,7 +7595,7 @@
     // 異步向 GAS API 讀取試算表中真正全量連線訂單 (包含連線登記、採購中、待配貨等)
     async function loadRealProcurementFromGAS() {
       try {
-        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '&userId=Uee7765ed3c1819cb94fd404cfab8553b';
+        const uidParam = getAdminAuthParams();
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getProcurementOrders${uidParam}`);
         const json = await res.json();
         if (json && json.success && Array.isArray(json.orders)) {
@@ -8352,7 +8482,7 @@
     // 異步向 GAS API 讀取試算表中真正已完成結帳的包裹清單
     async function loadRealCheckoutParcelsFromGAS() {
       try {
-        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '&userId=Uee7765ed3c1819cb94fd404cfab8553b';
+        const uidParam = getAdminAuthParams();
         const res = await fetch(`${CONFIG.GAS_API_URL}?action=getCheckoutParcels${uidParam}`);
         const json = await res.json();
         if (json && json.success && Array.isArray(json.parcels)) {
@@ -8895,12 +9025,12 @@
 
     // 🔄 異步將包裹狀態更新寫回 Google 試算表第 19 欄 (採購/出貨狀態) 與第 21 欄 (寄件單號)
     async function syncParcelStatusToGAS(checkoutId, status, trackingCode, userId) {
-      const adminId = currentAdminUserId || 'Uee7765ed3c1819cb94fd404cfab8553b';
+      const adminId = currentAdminUserId || PRIMARY_ADMIN_UID;
       let syncSucceeded = false;
 
       // 1. 【推薦主力：GET 請求】永遠不觸發 CORS OPTIONS 預檢，秒速穿透執行
       try {
-        const getUrl = `${CONFIG.GAS_API_URL}?action=updateParcelStatus&userId=${encodeURIComponent(adminId)}&checkoutId=${encodeURIComponent(checkoutId)}&status=${encodeURIComponent(status)}&trackingCode=${encodeURIComponent(trackingCode || '')}`;
+        const getUrl = `${CONFIG.GAS_API_URL}?action=updateParcelStatus${getAdminAuthParams()}&checkoutId=${encodeURIComponent(checkoutId)}&status=${encodeURIComponent(status)}&trackingCode=${encodeURIComponent(trackingCode || '')}`;
         const res = await fetch(getUrl);
         const json = await res.json();
         if (json && json.success) {
@@ -8918,6 +9048,7 @@
         const payload = {
           action: 'updateParcelStatus',
           adminUserId: adminId,
+          adminToken: currentAdminToken,
           data: {
             checkoutId: checkoutId,
             status: status,
