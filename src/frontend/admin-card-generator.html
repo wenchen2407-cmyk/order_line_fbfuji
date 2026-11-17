@@ -4177,6 +4177,7 @@
           renderCustomerNotifyStats();
           renderCustomerNotifyList();
           if (typeof syncAllStationsWithRealData === "function") syncAllStationsWithRealData();
+          if (typeof loadRealProcurementFromGAS === "function") loadRealProcurementFromGAS();
           if (typeof loadRealCheckoutParcelsFromGAS === "function") loadRealCheckoutParcelsFromGAS();
         } else {
           const errMsg = (json && json.message) || '無法取得名單';
@@ -7431,13 +7432,141 @@
       }
     }
 
-    // 核心資料對齊函數：由正式 notifyCustomers 與 allProducts 自動驅動四大站
+    // 全域安全提取商品圖片工具 (防呆過濾規格 JSON、陣列或無效字串)
+    function safeGetProductImageUrl(raw, fallback = '') {
+      if (!raw) return fallback;
+      if (typeof raw !== 'string') return fallback;
+      raw = raw.trim();
+      if (raw.startsWith('[') || raw.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const first = parsed[0];
+            if (typeof first === 'string' && (first.startsWith('http://') || first.startsWith('https://') || first.startsWith('data:'))) {
+              return first;
+            }
+            if (first && typeof first === 'object') {
+              return first.url || first.imageUrl || fallback;
+            }
+          }
+        } catch (e) {}
+        return fallback;
+      }
+      if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) {
+        return raw;
+      }
+      return fallback;
+    }
+
+    // 全量連線採購與配貨未結案訂單暫存
+    let realProcurementOrders = null;
+    let realProcureGroups = null;
+
+    // 異步向 GAS API 讀取試算表中真正全量連線訂單 (包含連線登記、採購中、待配貨等)
+    async function loadRealProcurementFromGAS() {
+      try {
+        const uidParam = currentAdminUserId ? `&userId=${encodeURIComponent(currentAdminUserId)}` : '&userId=Uee7765ed3c1819cb94fd404cfab8553b';
+        const res = await fetch(`${CONFIG.GAS_API_URL}?action=getProcurementOrders${uidParam}`);
+        const json = await res.json();
+        if (json && json.success && Array.isArray(json.orders)) {
+          realProcurementOrders = json.orders;
+          realProcureGroups = json.procureGroups || [];
+          syncAllStationsWithRealData();
+        }
+      } catch (e) {
+        console.warn('暫無法由 GAS 讀取全量採購配貨訂單:', e);
+      }
+    }
+
+    // 核心資料對齊函數：由正式 realProcurementOrders / notifyCustomers 與 allProducts 自動驅動四大站
     function syncAllStationsWithRealData() {
-      // 1. 整理扁平訂單清單 (Station 1)
+      // 1. 整理扁平訂單清單 (Station 1) 與 現場採購總表 (Station 0)
       station1Orders = [];
       const prodGroupMap = {};
 
-      if (notifyCustomers && notifyCustomers.length > 0) {
+      // 優先使用由 Google Sheets【訂單明細】讀取之全量未結案訂單 (包含所有連線登記)
+      if (Array.isArray(realProcurementOrders) && realProcurementOrders.length > 0) {
+        realProcurementOrders.forEach(o => {
+          const orderId = o.orderId;
+          const spec = o.spec || '單一規格';
+          const productId = o.productId || 'J001';
+          const orderKey = `${orderId}_${productId}_${spec}`;
+          const savedOrder = procurementStateCache.orders ? procurementStateCache.orders[orderKey] : null;
+
+          const demandQty = o.quantity || 1;
+          const unitPrice = o.unitPrice || 0;
+          const subtotal = o.subtotal || (unitPrice * demandQty);
+
+          const allocatedQty = (savedOrder && savedOrder.allocatedQty !== undefined)
+            ? savedOrder.allocatedQty
+            : (o.status === 'procured' ? demandQty : null);
+          const status = (savedOrder && savedOrder.status)
+            ? savedOrder.status
+            : (o.status === 'out_of_stock' ? 'out' : (o.status === 'procured' ? 'allocated' : 'connecting'));
+          const isConnecting = (savedOrder && savedOrder.isConnecting !== undefined)
+            ? savedOrder.isConnecting
+            : (status === 'connecting');
+
+          const orderRecord = {
+            orderId: orderId,
+            customerName: o.name || o.lineName || '顧客',
+            customerPhone: o.phone || '',
+            userId: o.userId,
+            productId: productId,
+            productName: o.productName || '商品',
+            spec: spec,
+            demandQty: demandQty,
+            allocatedQty: allocatedQty,
+            unitPrice: unitPrice,
+            subtotal: subtotal,
+            status: status,
+            isConnecting: isConnecting,
+            shippingStatus: o.shippingStatus,
+            payStatus: o.payStatus,
+            checkoutId: o.checkoutId,
+            imageUrl: o.imageUrl
+          };
+          station1Orders.push(orderRecord);
+
+          // 匯總到站點 0 (採購商品分組)
+          const groupKey = `${productId}_${spec}`;
+          if (!prodGroupMap[groupKey]) {
+            const matchedProd = (allProducts || []).find(p => p.id === productId) || {};
+            const savedGroup = procurementStateCache.groups ? procurementStateCache.groups[groupKey] : null;
+            const img = safeGetProductImageUrl(o.imageUrl) ||
+                       safeGetProductImageUrl(matchedProd.imageUrl) ||
+                       (matchedProd.imageUrls && safeGetProductImageUrl(matchedProd.imageUrls[0])) ||
+                       'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
+
+            prodGroupMap[groupKey] = {
+              groupKey: groupKey,
+              productId: productId,
+              productName: o.productName || '商品',
+              spec: spec,
+              category: matchedProd.category || '親飛連線',
+              unitPrice: unitPrice,
+              imageUrl: img,
+              totalDemand: 0,
+              procuredQty: (savedGroup && savedGroup.procuredQty !== undefined) ? savedGroup.procuredQty : undefined,
+              actualBought: (savedGroup && savedGroup.actualBought !== undefined) ? savedGroup.actualBought : null,
+              buyers: []
+            };
+          }
+
+          prodGroupMap[groupKey].totalDemand += demandQty;
+          if (prodGroupMap[groupKey].procuredQty === undefined) {
+            prodGroupMap[groupKey].procuredQty = prodGroupMap[groupKey].totalDemand;
+          }
+
+          prodGroupMap[groupKey].buyers.push({
+            name: o.name || o.lineName || '顧客',
+            phone: o.phone || '',
+            qty: demandQty,
+            orderId: orderId,
+            shipStatus: o.shippingStatus
+          });
+        });
+      } else if (notifyCustomers && notifyCustomers.length > 0) {
         notifyCustomers.forEach(cust => {
           if (cust.items && cust.items.length > 0) {
             cust.items.forEach(it => {
@@ -7451,7 +7580,6 @@
               const unitPrice = it.unitPrice || (it.subtotal ? Math.round(it.subtotal / demandQty) : 0);
               const subtotal = it.subtotal || (unitPrice * demandQty);
 
-              // 關鍵邏輯：若先前有儲存實配結果則尊重快取，否則預設為 null (未清點到貨前為連線中)
               const allocatedQty = (savedOrder && savedOrder.allocatedQty !== undefined) 
                 ? savedOrder.allocatedQty 
                 : null;
@@ -7484,6 +7612,9 @@
               if (!prodGroupMap[groupKey]) {
                 const matchedProd = (allProducts || []).find(p => p.id === productId) || {};
                 const savedGroup = procurementStateCache.groups ? procurementStateCache.groups[groupKey] : null;
+                const img = safeGetProductImageUrl(matchedProd.imageUrl) ||
+                           (matchedProd.imageUrls && safeGetProductImageUrl(matchedProd.imageUrls[0])) ||
+                           'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
 
                 prodGroupMap[groupKey] = {
                   groupKey: groupKey,
@@ -7492,10 +7623,10 @@
                   spec: spec,
                   category: matchedProd.category || '親飛連線',
                   unitPrice: orderRecord.unitPrice,
-                  imageUrl: matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80',
+                  imageUrl: img,
                   totalDemand: 0,
                   procuredQty: (savedGroup && savedGroup.procuredQty !== undefined) ? savedGroup.procuredQty : undefined,
-                  actualBought: (savedGroup && savedGroup.actualBought !== undefined) ? savedGroup.actualBought : null, // 關鍵：預設 null (未到貨)，絕不預設為需求數！
+                  actualBought: (savedGroup && savedGroup.actualBought !== undefined) ? savedGroup.actualBought : null,
                   buyers: []
                 };
               }
@@ -7518,9 +7649,9 @@
 
       station0ProcureGroups = Object.values(prodGroupMap);
 
-      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 100% 依 Google 試算表【訂單明細】真實已結帳包裹
-      // 試算表中實際存在之真實完成結帳包裹：湯先生 (CO261109120110244) 與 吳珮嵐 (CO261020173056773)
-      station3Parcels = [
+      // 2. 整理已完成結帳出貨包裹清單 (Station 4) - 優先保留由 GAS API 讀取之真實試算表包裹
+      if (!Array.isArray(station3Parcels) || station3Parcels.length === 0) {
+        station3Parcels = [
         {
           coCode: 'CO261109120110244',
           userId: 'U093941519e020e132fd537bea8ccd4a0',
@@ -7761,6 +7892,7 @@
           ]
         }
       ];
+      }
 
       // 3. 更新四大按鈕 Badge
       const b0 = document.getElementById('badgeS0');
@@ -8271,33 +8403,62 @@
         : (p.lineName || p.name || '--');
       if (lineName) lineName.innerText = formattedLineName;
 
-      // 門市與取件地址智慧解析
-      let displayStore = p.store || '超商門市';
-      let displayStoreAddr = p.storeAddr || '';
+      // 門市與取件地址智慧解析 (防呆雙重保險：徹底分離配送方式與門市店名)
+      let displayMethod = p.deliveryMethod || '';
+      let displayBranch = p.storeBranch || '';
+      let rawStore = p.store || '';
+      let rawAddr = p.storeAddr || '';
 
-      if (displayStore.includes('取貨') || displayStore.includes('純取') || displayStore.includes('寄件') || displayStore.includes('宅配')) {
-        const methodTag = displayStore;
-        const branch = displayStoreAddr;
-        if (branch && branch !== methodTag) {
-          if (methodTag.includes('7-11') && !branch.includes('7-11') && !branch.includes('7-ELEVEN')) {
-            displayStore = `🏪 7-11 ${branch}${branch.endsWith('門市') || branch.endsWith('店') ? '' : '門市'}`;
-          } else if (methodTag.includes('全家') && !branch.includes('全家')) {
-            displayStore = `🏪 全家 ${branch}${branch.endsWith('門市') || branch.endsWith('店') ? '' : '店'}`;
-          } else {
-            displayStore = `🏪 ${branch}`;
-          }
-          displayStoreAddr = `${methodTag} ｜ ${displayStore.replace('🏪 ', '')}`;
+      // 若 rawStore 誤為配送方式 (例如 "7-11 超商純取貨")
+      if (!displayMethod && (rawStore.includes('純取') || rawStore.includes('取貨付款') || rawStore.includes('寄件') || rawStore.includes('宅配'))) {
+        displayMethod = rawStore.replace(/^🏪\s*/, '').trim();
+        rawStore = '';
+      }
+      if (!displayMethod && rawAddr) {
+        const m = rawAddr.match(/\[(.*?)\]/) || rawAddr.match(/^(7-11[^｜|]+|全家[^｜|]+|黑貓[^｜|]+|郵局[^｜|]+)/);
+        if (m) displayMethod = (m[1] || m[0]).replace(/\[|\]/g, '').trim();
+      }
+
+      // 提取真實門市分店名稱
+      if (!displayBranch) {
+        if (rawStore && !rawStore.includes('純取') && !rawStore.includes('取貨付款')) {
+          displayBranch = rawStore.replace(/^🏪\s*/, '').trim();
+        } else if (rawAddr) {
+          const parts = rawAddr.split(/[｜|]/);
+          displayBranch = parts[parts.length - 1].replace(/\[.*?\]/, '').trim();
         }
-      } else if (!displayStore.startsWith('🏪')) {
-        displayStore = `🏪 ${displayStore}`;
+      }
+      if (!displayBranch && p.deliveryInfo) {
+        const parts = p.deliveryInfo.split(']');
+        if (parts.length > 1) displayBranch = parts.slice(1).join(']').trim();
+      }
+
+      // 格式化展示門市
+      let displayStoreTitle = displayBranch || '超商門市';
+      const is711 = (displayMethod && displayMethod.includes('7-11')) || rawAddr.includes('7-11') || rawStore.includes('7-11') || (p.deliveryInfo && p.deliveryInfo.includes('7-11'));
+      const isFami = (displayMethod && displayMethod.includes('全家')) || rawAddr.includes('全家') || rawStore.includes('全家') || (p.deliveryInfo && p.deliveryInfo.includes('全家'));
+
+      if (is711) {
+        if (!displayStoreTitle.includes('7-11') && !displayStoreTitle.includes('7-ELEVEN')) {
+          displayStoreTitle = `7-11 ${displayStoreTitle}${displayStoreTitle.endsWith('門市') || displayStoreTitle.endsWith('店') ? '' : '門市'}`;
+        }
+      } else if (isFami) {
+        if (!displayStoreTitle.includes('全家')) {
+          displayStoreTitle = `全家 ${displayStoreTitle}${displayStoreTitle.endsWith('門市') || displayStoreTitle.endsWith('店') ? '' : '店'}`;
+        }
+      }
+
+      const displayStore = `🏪 ${displayStoreTitle.replace(/^🏪\s*/, '')}`;
+      let displayStoreAddr = displayMethod ? `【${displayMethod}】` : '【超商取件】';
+      if (displayBranch) {
+        displayStoreAddr += ` 門市資訊：${displayStoreTitle.replace(/^🏪\s*/, '')}`;
+      }
+      if (isCOD) {
+        displayStoreAddr += `（門市現場取貨付款 NT$ ${(p.total || 0).toLocaleString()}）`;
       }
 
       if (store) store.innerText = displayStore;
-      if (storeAddr) {
-        storeAddr.innerText = isCOD 
-          ? `${displayStoreAddr} (超商取貨付款 ｜ 門市現場代收 NT$ ${(p.total || 0).toLocaleString()})`
-          : displayStoreAddr;
-      }
+      if (storeAddr) storeAddr.innerText = displayStoreAddr;
 
       // 買家備註 (第16欄) 與 處理備註 (第20欄) 智慧展示
       const notesBox = document.getElementById('st2NotesBox');
@@ -8377,7 +8538,10 @@
       if (prodRows) {
         let rowsHtml = (p.items || []).map(it => {
           const matchedProd = (allProducts || []).find(x => x.id === it.productId) || {};
-          const img = it.imageUrl || matchedProd.imageUrl || (matchedProd.imageUrls && matchedProd.imageUrls[0]) || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
+          const img = safeGetProductImageUrl(matchedProd.imageUrl) ||
+                    (matchedProd.imageUrls && safeGetProductImageUrl(matchedProd.imageUrls[0])) ||
+                    safeGetProductImageUrl(it.imageUrl) ||
+                    'https://images.unsplash.com/photo-1544441893-675973e31985?w=120&auto=format&fit=crop&q=80';
           const unitPrice = it.unitPrice || 0;
           const qty = it.quantity || 1;
           const subtotal = it.subtotal || (unitPrice * qty);

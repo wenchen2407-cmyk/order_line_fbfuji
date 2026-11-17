@@ -1197,6 +1197,12 @@ function doGet(e) {
       } else {
         result = getCheckoutParcels();
       }
+    } else if (action === 'getProcurementOrders') {
+      if (!checkIsAdmin(reqUserId)) {
+        result = { success: false, message: '🔒 存取遭拒：僅限授權管理者查閱採購配貨清單！', isAdmin: false };
+      } else {
+        result = getProcurementOrders();
+      }
     } else if (action === 'updateParcelStatus') {
       if (!checkIsAdmin(reqUserId)) {
         result = { success: false, message: '🔒 存取遭拒：僅限授權管理者更新包裹出貨狀態！', isAdmin: false };
@@ -1287,6 +1293,10 @@ function doPost(e) {
       result = handleConfirmReceived(postData.data);
     } else if (action === 'updateParcelStatus') {
       result = handleUpdateParcelStatus(postData.data || postData);
+    } else if (action === 'getCheckoutParcels') {
+      result = getCheckoutParcels();
+    } else if (action === 'getProcurementOrders') {
+      result = getProcurementOrders();
     } else if (action === 'reportPayment') {
       result = handleReportPayment(postData.data);
     } else if (action === 'addProduct') {
@@ -3984,15 +3994,10 @@ function getCustomerNotifyList() {
     const processNote = String(row[19] || '').trim();
 
     // 排除已結案、已完成取貨、已結帳或已付款完成者
-    // 💡 智慧防呆：若管理者在試算表中手動將商品改回「連線登記」、「採購中」、「待採購」或「待處理」，
-    // 即便先前存在舊的結帳編號 (checkoutId) 或付款記錄，亦應強制放行，重新納入採購與配貨流水線！
-    const isPendingProcure = shipStatus.includes('登記') || shipStatus.includes('採購') || shipStatus === '待處理';
-    if (!isPendingProcure) {
-      if (checkoutId) continue;
-      if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
-      if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
-        continue;
-      }
+    if (checkoutId) continue;
+    if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
+    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+      continue;
     }
 
     // 判斷商品狀態
@@ -4162,15 +4167,35 @@ function getCheckoutParcels() {
 
   ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
 
-  // 預載商品清單圖片對照 Map
+  // 預載商品清單圖片對照 Map (精確對齊第 8 欄 H 欄: 封面主圖網址)
   const prodMap = {};
   if (prodSheet) {
     const prodValues = prodSheet.getDataRange().getValues();
     for (let p = 1; p < prodValues.length; p++) {
       const pId = String(prodValues[p][0] || '').trim();
       if (pId) {
+        let img = String(prodValues[p][7] || '').trim(); // H 欄 (8): 封面主圖網址
+        if (!img || img.startsWith('[') || img.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(img);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              img = typeof parsed[0] === 'string' ? parsed[0] : (parsed[0].url || parsed[0].imageUrl || '');
+            }
+          } catch (e) { img = ''; }
+        }
+        if (!img) {
+          const allImgsRaw = String(prodValues[p][13] || '').trim(); // N 欄 (14): 所有圖片清單(JSON)
+          if (allImgsRaw.startsWith('[')) {
+            try {
+              const parsedAll = JSON.parse(allImgsRaw);
+              if (Array.isArray(parsedAll) && parsedAll.length > 0) {
+                img = typeof parsedAll[0] === 'string' ? parsedAll[0] : (parsedAll[0].url || '');
+              }
+            } catch (e) {}
+          }
+        }
         prodMap[pId] = {
-          imageUrl: String(prodValues[p][6] || '').trim() // G 欄：商品圖片
+          imageUrl: img
         };
       }
     }
@@ -4200,25 +4225,35 @@ function getCheckoutParcels() {
       const recipientPhone = String(row[13] || '').trim() || String(row[23] || '').trim();
       const deliveryInfo = String(row[14] || '').trim(); // 取件方式與地址 (O 欄第 15 欄)
 
-      let storeName = deliveryInfo;
-      let storeAddress = deliveryInfo;
+      // 精確解析配送方式與門市店名 (避免取貨方式被誤當成超商門市)
+      let deliveryMethod = '超商取貨';
+      let storeBranch = '';
       if (deliveryInfo.includes(']')) {
         const parts = deliveryInfo.split(']');
-        const methodTag = parts[0].replace('[', '').trim();
-        const branchInfo = parts.slice(1).join(']').trim();
+        deliveryMethod = parts[0].replace('[', '').trim();
+        storeBranch = parts.slice(1).join(']').trim();
+      } else {
+        storeBranch = deliveryInfo;
+      }
 
-        if (branchInfo) {
-          storeName = branchInfo;
-          if (methodTag.includes('7-11') && !storeName.includes('7-11') && !storeName.includes('7-ELEVEN')) {
-            storeName = '7-11 ' + storeName + (storeName.endsWith('店') || storeName.endsWith('門市') ? '' : '門市');
-          } else if (methodTag.includes('全家') && !storeName.includes('全家')) {
-            storeName = '全家 ' + storeName + (storeName.endsWith('店') || storeName.endsWith('門市') ? '' : '店');
-          }
-          storeAddress = `${methodTag} ｜ ${storeName}`;
-        } else {
-          storeName = methodTag;
-          storeAddress = deliveryInfo;
+      let fullStoreName = storeBranch || '超商門市';
+      if (deliveryMethod.includes('7-11')) {
+        if (!fullStoreName.includes('7-11') && !fullStoreName.includes('7-ELEVEN')) {
+          fullStoreName = `7-11 ${storeBranch}${storeBranch.endsWith('門市') || storeBranch.endsWith('店') ? '' : '門市'}`;
         }
+      } else if (deliveryMethod.includes('全家')) {
+        if (!fullStoreName.includes('全家')) {
+          fullStoreName = `全家 ${storeBranch}${storeBranch.endsWith('門市') || storeBranch.endsWith('店') ? '' : '店'}`;
+        }
+      } else if (deliveryMethod.includes('黑貓') || deliveryMethod.includes('宅配') || deliveryMethod.includes('郵局')) {
+        fullStoreName = deliveryMethod;
+      }
+
+      let fullStoreAddr = '';
+      if (deliveryMethod.includes('黑貓') || deliveryMethod.includes('宅配') || deliveryMethod.includes('郵局')) {
+        fullStoreAddr = storeBranch ? `${deliveryMethod} ｜ ${storeBranch}` : deliveryMethod;
+      } else {
+        fullStoreAddr = storeBranch ? `${deliveryMethod} ｜ ${fullStoreName}` : deliveryMethod;
       }
 
       const rawPayStatus = String(row[16] || '').trim();
@@ -4232,8 +4267,10 @@ function getCheckoutParcels() {
         lineName: String(row[3] || '').trim(),
         realName: String(row[22] || '').trim(),
         memberPhone: String(row[23] || '').trim(),
-        store: storeName || '超商門市',
-        storeAddr: storeAddress || deliveryInfo,
+        deliveryMethod: deliveryMethod,
+        storeBranch: storeBranch,
+        store: fullStoreName,
+        storeAddr: fullStoreAddr,
         deliveryInfo: deliveryInfo,
         isCOD: isCOD,
         payStatus: rawPayStatus || (isCOD ? '貨到付款待出貨' : '待付款'),
@@ -4273,6 +4310,173 @@ function getCheckoutParcels() {
     success: true,
     count: parcels.length,
     parcels: parcels
+  };
+}
+
+/**
+ * 查詢現場採購與顧客訂單配貨清單 (管理中心第 1 站與第 2 站獨立資料來源 API)
+ * 100% 依 Google Sheets【訂單明細】與【商品清單】驅動，包含所有「連線登記」、「採購中」、「待配貨」等品項
+ * 徹底解決「連線登記」未出現在現場採購總表或配貨清單的問題！
+ */
+function getProcurementOrders() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+  const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+  if (!orderSheet) {
+    return { success: false, message: '訂單工作表不存在' };
+  }
+
+  // 1. 建立商品圖文對照 Map
+  const prodMap = {};
+  if (prodSheet) {
+    const prodValues = prodSheet.getDataRange().getValues();
+    for (let p = 1; p < prodValues.length; p++) {
+      const pId = String(prodValues[p][0] || '').trim();
+      if (pId) {
+        let img = String(prodValues[p][7] || '').trim(); // H 欄: 封面主圖
+        if (!img || img.startsWith('[') || img.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(img);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              img = typeof parsed[0] === 'string' ? parsed[0] : (parsed[0].url || parsed[0].imageUrl || '');
+            }
+          } catch (e) { img = ''; }
+        }
+        if (!img) {
+          const allImgsRaw = String(prodValues[p][13] || '').trim(); // N 欄: 所有圖片
+          if (allImgsRaw.startsWith('[')) {
+            try {
+              const parsedAll = JSON.parse(allImgsRaw);
+              if (Array.isArray(parsedAll) && parsedAll.length > 0) {
+                img = typeof parsedAll[0] === 'string' ? parsedAll[0] : (parsedAll[0].url || '');
+              }
+            } catch (e) {}
+          }
+        }
+        prodMap[pId] = {
+          name: String(prodValues[p][1] || '').trim(),
+          category: String(prodValues[p][2] || '').trim(),
+          price: Number(prodValues[p][4]) || 0,
+          imageUrl: img
+        };
+      }
+    }
+  }
+
+  // 2. 遍歷【訂單明細】所有未結案訂單
+  const orderRows = orderSheet.getDataRange().getValues();
+  const orders = [];
+  const procureGroupMap = {};
+
+  for (let r = 1; r < orderRows.length; r++) {
+    const row = orderRows[r];
+    const orderId = String(row[0] || '').trim();
+    if (!orderId) continue;
+
+    const shipStatus = String(row[18] || '').trim(); // S 欄: 採購出貨狀態
+    // 嚴格排除已完成取貨或已結案的歷史訂單
+    if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已取消')) {
+      continue;
+    }
+
+    const orderDate = row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : String(row[1] || '');
+    const userId = String(row[2] || '').trim();
+    const lineName = String(row[3] || '').trim();
+    const productId = String(row[4] || '').trim();
+    const productName = String(row[5] || '').trim();
+    const spec = String(row[6] || '').trim() || '單一規格';
+    const qty = Number(row[7]) || 1;
+    const unitPrice = Number(row[8]) || 0;
+    const subtotal = Number(row[9]) || (unitPrice * qty);
+    const recipientName = String(row[12] || '').trim() || String(row[22] || '').trim() || lineName || '顧客';
+    const recipientPhone = String(row[13] || '').trim() || String(row[23] || '').trim();
+    const note = String(row[15] || '').trim();
+    const payStatus = String(row[16] || '').trim();
+    const processNote = String(row[19] || '').trim();
+    const checkoutId = String(row[21] || '').trim();
+    const realName = String(row[22] || '').trim();
+    const memberPhone = String(row[23] || '').trim();
+
+    const prodInfo = prodMap[productId] || {};
+    const itemImg = prodInfo.imageUrl || '';
+
+    // 判斷該品項採購狀態標記
+    let itemStatus = 'pending'; // 預設連線登記 / 待採購
+    if (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('已採購') || shipStatus.includes('配貨中')) {
+      itemStatus = 'procured';
+    } else if (shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('買不到')) {
+      itemStatus = 'out_of_stock';
+    } else if (shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+      itemStatus = 'procured';
+    }
+
+    orders.push({
+      orderId: orderId,
+      orderDate: orderDate,
+      userId: userId,
+      lineName: lineName,
+      realName: realName,
+      name: recipientName,
+      phone: recipientPhone || memberPhone,
+      productId: productId,
+      productName: productName,
+      spec: spec,
+      quantity: qty,
+      unitPrice: unitPrice,
+      subtotal: subtotal,
+      shippingStatus: shipStatus || '連線登記',
+      payStatus: payStatus,
+      checkoutId: checkoutId,
+      note: note,
+      processNote: processNote,
+      imageUrl: itemImg,
+      status: itemStatus
+    });
+
+    // 匯總至 Station 1 現場採購總表
+    const groupKey = `${productId}__${spec}`;
+    if (!procureGroupMap[groupKey]) {
+      procureGroupMap[groupKey] = {
+        key: groupKey,
+        productId: productId,
+        productName: productName,
+        spec: spec,
+        unitPrice: unitPrice,
+        imageUrl: itemImg,
+        totalQty: 0,
+        procuredQty: 0,
+        outOfStockQty: 0,
+        pendingQty: 0,
+        buyerDetails: []
+      };
+    }
+
+    procureGroupMap[groupKey].totalQty += qty;
+    if (itemStatus === 'procured') {
+      procureGroupMap[groupKey].procuredQty += qty;
+    } else if (itemStatus === 'out_of_stock') {
+      procureGroupMap[groupKey].outOfStockQty += qty;
+    } else {
+      procureGroupMap[groupKey].pendingQty += qty;
+    }
+
+    procureGroupMap[groupKey].buyerDetails.push({
+      orderId: orderId,
+      buyerName: recipientName,
+      lineName: lineName,
+      qty: qty,
+      status: itemStatus,
+      shipStatus: shipStatus
+    });
+  }
+
+  const procureGroups = Object.values(procureGroupMap);
+
+  return {
+    success: true,
+    count: orders.length,
+    orders: orders,
+    procureGroups: procureGroups
   };
 }
 
