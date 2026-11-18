@@ -5,6 +5,18 @@
   <script>
     // ⚡ 0 毫秒極速路由與靜默授權中繼 (單一 LIFF ID 終極優化)
     (function() {
+      const APP_VER = '20261118_v1';
+      function appendVersion(target, searchStr) {
+        let [path, q] = target.split('?');
+        let params = new URLSearchParams(q || '');
+        if (searchStr) {
+          let s = new URLSearchParams(searchStr.startsWith('?') ? searchStr.slice(1) : searchStr);
+          s.forEach((v, k) => params.set(k, v));
+        }
+        if (!params.has('v')) params.set('v', APP_VER);
+        return path + '?' + params.toString();
+      }
+
       let search = window.location.search;
       let p = new URLSearchParams(search);
 
@@ -28,7 +40,7 @@
       // 🛡️ 核心情境 B：純管理員直通 (已有快取或帶有 admin 參數)，且非預覽大廳，0 毫秒直接直達後台
       if (!isStoreMode && (isAdminAction || isAdminCached)) {
         document.documentElement.style.display = 'none';
-        window.location.replace('admin-card-generator.html' + search);
+        window.location.replace(appendVersion('admin-card-generator.html', search));
         return;
       }
 
@@ -41,7 +53,7 @@
           document.documentElement.style.display = 'none';
           const qIndex = stateRaw.indexOf('?');
           const cleanQuery = qIndex !== -1 ? stateRaw.substring(qIndex) : '';
-          window.location.replace('admin-card-generator.html' + cleanQuery);
+          window.location.replace(appendVersion('admin-card-generator.html', cleanQuery));
           return;
         }
 
@@ -49,18 +61,18 @@
         const sAction = (stateParams.get('action') || stateParams.get('page') || '').toLowerCase();
         if (sAction === 'admin' || sAction === 'card' || sAction === 'manage') {
           document.documentElement.style.display = 'none';
-          window.location.replace('admin-card-generator.html?' + stateParams.toString());
+          window.location.replace(appendVersion('admin-card-generator.html', stateParams.toString()));
           return;
         }
         if (sAction === 'orders' || sAction === 'myorders' || sAction === 'checkout' || stateParams.has('orders')) {
           document.documentElement.style.display = 'none';
-          window.location.replace('my-orders.html?' + stateParams.toString());
+          window.location.replace(appendVersion('my-orders.html', stateParams.toString()));
           return;
         }
         const sPid = stateParams.get('p') || stateParams.get('pid') || stateParams.get('productId') || stateParams.get('id');
         if (sPid) {
           document.documentElement.style.display = 'none';
-          window.location.replace('product.html?' + stateParams.toString());
+          window.location.replace(appendVersion('product.html', stateParams.toString()));
           return;
         }
       }
@@ -68,7 +80,7 @@
       // 買家查單 / 結帳通知入口分流 (帶有 action=orders 或 page=orders 或 orders)
       if (action === 'orders' || action === 'myorders' || action === 'checkout' || p.has('orders')) {
         document.documentElement.style.display = 'none';
-        window.location.replace('my-orders.html' + search);
+        window.location.replace(appendVersion('my-orders.html', search));
         return;
       }
 
@@ -76,7 +88,7 @@
       const pid = p.get('p') || p.get('pid') || p.get('productId') || p.get('id');
       if (pid) {
         document.documentElement.style.display = 'none';
-        window.location.replace('product.html' + search);
+        window.location.replace(appendVersion('product.html', search));
         return;
       }
     })();
@@ -744,10 +756,10 @@
         <span class="brand-badge">精選代購</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <a href="admin-card-generator.html" class="btn-admin-hub" id="topAdminBtn" style="display: none;">
+        <a href="admin-card-generator.html?v=20261118_v1" class="btn-admin-hub" id="topAdminBtn" style="display: none;">
           <span>⚙️ 管理中心</span>
         </a>
-        <a href="my-orders.html" class="btn-my-orders" id="topOrderBtn">
+        <a href="my-orders.html?v=20261118_v1" class="btn-my-orders" id="topOrderBtn">
           <span>📦 訂購清單</span>
         </a>
       </div>
@@ -805,7 +817,7 @@
         <div style="font-size: 10px; color: var(--text-muted);">點擊商品即可火速登記</div>
       </div>
     </div>
-    <a href="my-orders.html" class="bottom-btn-orders" id="bottomOrderBtn">
+    <a href="my-orders.html?v=20261118_v1" class="bottom-btn-orders" id="bottomOrderBtn">
       📦 查看我的訂購清單
     </a>
   </div>
@@ -824,7 +836,9 @@
     const _envParam = (new URLSearchParams(window.location.search)).get('env');
     const USE_TEST_ENV = _envParam ? (_envParam === 'test') : IS_LOCAL_DEV;
 
+    const APP_VER = '20261118_v1';
     const CONFIG = {
+      APP_VER: APP_VER,
       LIFF_ID: '2011732923-rcjz7Igd',
       GAS_API_URL: USE_TEST_ENV ? TEST_GAS_URL : PROD_GAS_URL,
       IS_TEST_ENV: USE_TEST_ENV
@@ -1149,12 +1163,15 @@
       if (avatarElem && avatarElem.src && !avatarElem.src.includes('placeholder')) {
         params.set('avatar', avatarElem.src);
       }
+      params.set('v', APP_VER);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
 
       const topBtn = document.getElementById('topOrderBtn');
       const bottomBtn = document.getElementById('bottomOrderBtn');
       if (topBtn) topBtn.href = `my-orders.html${queryStr}`;
       if (bottomBtn) bottomBtn.href = `my-orders.html${queryStr}`;
+      const topAdminBtn = document.getElementById('topAdminBtn');
+      if (topAdminBtn) topAdminBtn.href = `admin-card-generator.html?v=${APP_VER}`;
     }
 
     // 初始化 LINE LIFF (身分驗證與後端歸戶自動對齊)
@@ -1230,7 +1247,7 @@
                 if (window.IS_SILENT_ADMIN_RELAY || !isExplicitStore) {
                   sessionStorage.removeItem('liff_admin_login_pending');
                   sessionStorage.removeItem('liff_admin_return_url');
-                  window.location.replace('admin-card-generator.html');
+                  window.location.replace('admin-card-generator.html?v=' + APP_VER);
                   return;
                 }
               } catch (e) {}
@@ -1533,9 +1550,9 @@
       paginatedProducts.forEach(prod => {
         const card = document.createElement('a');
         card.className = 'prod-card';
-        // 點擊卡片跳轉至下單頁，帶入 p 與 uid
+        // 點擊卡片跳轉至下單頁，帶入 p 與 uid 及防快取版本號
         const uidParam = currentUserId ? `&uid=${encodeURIComponent(currentUserId)}` : '';
-        card.href = `product.html?p=${encodeURIComponent(prod.id)}${uidParam}`;
+        card.href = `product.html?p=${encodeURIComponent(prod.id)}${uidParam}&v=${APP_VER}`;
 
         const imgUrl = getSafeImageUrl(prod.imageUrl);
         const priceNum = Number(prod.price) || 0;

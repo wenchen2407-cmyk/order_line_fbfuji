@@ -2,6 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>連線代購即時訂購單</title>
   <!-- Google Fonts & LINE LIFF SDK -->
@@ -788,10 +791,10 @@
   <div class="container">
     <!-- 頂部快速導航 Bar (返回更多商品 / 訂購清單) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
-      <a href="index.html" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <a href="index.html?v=20261118_v1" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         🛍️ 更多商品
       </a>
-      <a href="my-orders.html" id="linkToMyOrders" onclick="handleGoToOrders(event)" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <a href="my-orders.html?v=20261118_v1" id="linkToMyOrders" onclick="handleGoToOrders(event)" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         📦 訂購清單
       </a>
     </div>
@@ -953,7 +956,9 @@
     const _envParam = (new URLSearchParams(window.location.search)).get('env');
     const USE_TEST_ENV = _envParam ? (_envParam === 'test') : IS_LOCAL_DEV;
 
+    const APP_VER = '20261118_v1';
     const CONFIG = {
+      APP_VER: APP_VER,
       LIFF_ID: '2011732923-rcjz7Igd',
       GAS_API_URL: USE_TEST_ENV ? TEST_GAS_URL : PROD_GAS_URL,
       IS_TEST_ENV: USE_TEST_ENV
@@ -2116,6 +2121,7 @@
       if (currentUser && currentUser.pictureUrl && !currentUser.pictureUrl.includes('placeholder')) {
         params.set('avatar', currentUser.pictureUrl);
       }
+      params.set('v', APP_VER);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
 
       const catBtn = document.getElementById('linkBackToCatalog');
@@ -2140,6 +2146,7 @@
       if (currentUser && currentUser.pictureUrl && !currentUser.pictureUrl.includes('placeholder')) {
         params.set('avatar', currentUser.pictureUrl);
       }
+      params.set('v', APP_VER);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       window.location.href = `index.html${queryStr}`;
     }
@@ -2165,6 +2172,7 @@
       if (uid) params.set('uid', uid);
       if (name) params.set('name', name);
       if (avatar) params.set('avatar', avatar);
+      params.set('v', APP_VER);
       params.set('t', Date.now());
 
       const queryStr = params.toString() ? `?${params.toString()}` : '';
