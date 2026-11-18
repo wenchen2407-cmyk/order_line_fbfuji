@@ -3562,9 +3562,23 @@
   </div>
 
   <script>
+    // ======= 雙軌後端環境自動分流 (正式營運 vs 本機測試實體隔離) =======
+    const PROD_GAS_URL = 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec';
+    const TEST_GAS_URL = 'https://script.google.com/macros/s/AKfycbzHdEBRN4OsqvXECkypDGvt_NHOjlAxet_9KP3LeaBJgzRlt478i-qhwDl7WmxcdGch/exec';
+
+    const IS_LOCAL_DEV = window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.protocol === 'file:' ||
+                         !window.location.hostname;
+
+    // 支援網址參數 ?env=prod 或 ?env=test 強制指定環境，預設本機連測試庫、線上連正式庫
+    const _envParam = (new URLSearchParams(window.location.search)).get('env');
+    const USE_TEST_ENV = _envParam ? (_envParam === 'test') : IS_LOCAL_DEV;
+
     const CONFIG = {
       LIFF_ID: '2011732923-rcjz7Igd',
-      GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec'
+      GAS_API_URL: USE_TEST_ENV ? TEST_GAS_URL : PROD_GAS_URL,
+      IS_TEST_ENV: USE_TEST_ENV
     };
 
     let allProducts = [];
@@ -3936,11 +3950,16 @@
           ? '<span style="color:#10b981;">｜可推播</span>'
           : '<span style="color:#f59e0b;">｜未開推播</span>';
 
+        const envBadge = CONFIG.IS_TEST_ENV
+          ? '<span style="background:#fef3c7; color:#b45309; padding:2px 7px; border-radius:6px; font-weight:800; font-size:11px; border:1px solid #fde68a;">🧪 測試環境</span>'
+          : '<span style="background:#ecfdf5; color:#047857; padding:2px 7px; border-radius:6px; font-weight:800; font-size:11px; border:1px solid #a7f3d0;">🏢 正式環境</span>';
+
         badge.innerHTML = `
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span>${adminTag} <b>${currentAdminUserName || '管理員'}</b></span>
             <span style="color:#94a3b8; font-size:11px; font-family:monospace;">(${currentAdminUserId.substring(0, 6)}...${currentAdminUserId.substring(currentAdminUserId.length - 4)})</span>
             <span style="font-size:11px;">[${clientTag}${shareTag}]</span>
+            ${envBadge}
             <a href="javascript:void(0)" onclick="resetAdminPin();" style="font-size:11px; color:#38bdf8; margin-left:6px; text-decoration:underline;">🔑 變更通行碼</a>
             <a href="javascript:void(0)" onclick="logoutAdmin();" style="font-size:11px; color:#ef4444; margin-left:6px; text-decoration:underline;">登出</a>
           </div>

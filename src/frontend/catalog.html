@@ -811,10 +811,23 @@
   </div>
 
   <script>
-    // ======= 核心設定 (請替換為賣家的 GAS 部署網址與 LIFF ID) =======
+    // ======= 雙軌後端環境自動分流 (正式營運 vs 本機測試實體隔離) =======
+    const PROD_GAS_URL = 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec';
+    const TEST_GAS_URL = 'https://script.google.com/macros/s/AKfycbzHdEBRN4OsqvXECkypDGvt_NHOjlAxet_9KP3LeaBJgzRlt478i-qhwDl7WmxcdGch/exec';
+
+    const IS_LOCAL_DEV = window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.protocol === 'file:' ||
+                         !window.location.hostname;
+
+    // 支援網址參數 ?env=prod 或 ?env=test 強制指定環境，預設本機連測試庫、線上連正式庫
+    const _envParam = (new URLSearchParams(window.location.search)).get('env');
+    const USE_TEST_ENV = _envParam ? (_envParam === 'test') : IS_LOCAL_DEV;
+
     const CONFIG = {
       LIFF_ID: '2011732923-rcjz7Igd',
-      GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzz5Upj-2ho-n6kdWqffD3a0B6xNki6FYjwrQP7RVDP9d41PALA-6JVZeeC1CnJn7ZG/exec'
+      GAS_API_URL: USE_TEST_ENV ? TEST_GAS_URL : PROD_GAS_URL,
+      IS_TEST_ENV: USE_TEST_ENV
     };
 
     let allProducts = [];
@@ -973,7 +986,9 @@
                 userName: lineName,
                 realName: realName,
                 phone: cleanPhone,
-                source: source
+                source: source,
+                page: 'catalog.html (VIP守門牆)',
+                device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置'
               }
             })
           });
@@ -1055,6 +1070,7 @@
 
         const uname = (document.getElementById('userNameText') ? document.getElementById('userNameText').textContent : '') || (urlParams.get('name') || '');
         const uid = (currentUserId && currentUserId !== 'TEST_USER_999') ? currentUserId : (urlParams.get('uid') || '');
+        const deviceType = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone/iOS' : /Android/i.test(navigator.userAgent) ? 'Android' : /Macintosh/i.test(navigator.userAgent) ? 'Mac (電腦)' : /Windows/i.test(navigator.userAgent) ? 'Windows (電腦)' : '行動/電腦裝置';
 
         const payload = {
           action: 'recordPageView',
@@ -1063,7 +1079,8 @@
             title: pageTitle || '🇯🇵🇰🇷 連線商品大廳首頁',
             productId: productId || '-',
             userId: uid,
-            userName: (uname !== '訪客' && uname !== '載入中...') ? uname : ''
+            userName: (uname !== '訪客' && uname !== '載入中...') ? uname : '',
+            device: deviceType
           }
         };
 
