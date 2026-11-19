@@ -4022,8 +4022,8 @@ function sendPageViewAlertEmail(info) {
     const visitorDisplay = formatVisitorDisplayName(lineNick, customerRealName, customerPhone);
 
     // 🛡️ 防短時間灌訊保護 (以頁面與訪客身分為 key，60 秒內不重複推播相同訪客點擊相同頁面)
-    const visitorKey = userId || lineNick || 'anon';
-    const cacheKey = 'pv_tg_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(visitorKey);
+    const tgVisitorAlertCacheKey = userId || lineNick || 'anon';
+    const cacheKey = 'pv_tg_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(tgVisitorAlertCacheKey);
     const cache = CacheService.getScriptCache();
     if (cache.get(cacheKey)) {
       return; // 60 秒冷卻略過
