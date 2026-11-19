@@ -1,4 +1,27 @@
-  /**
+/**
+ * ==============================================================================
+ * LINE 連線代購 & 群組團購整合系統 - GAS 後端 API (正式整合部署檔)
+ * ==============================================================================
+ * ⚠️ 本檔案為【自動編譯生成檔】，請勿直接手動編輯此檔案！
+ * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
+ *   node scripts/build-gas.js
+ * 
+ * 打包時間：2026/11/19 下午8:28:40 (Asia/Taipei)
+ * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
+ * ==============================================================================
+ */
+
+
+/* ==================== 模組起點：00_Config.gs ==================== */
+/**
+ * ==============================================================================
+ * 【00_Config.gs】系統常數、白名單與共用基礎函式
+ * ==============================================================================
+ * 說明：存放全域工作表名稱、Google Drive 資料夾 ID、管理員白名單及基礎共用函式。
+ * ==============================================================================
+ */
+
+/**
   * LINE 連線代購 & 群組團購整合系統 - GAS 後端 API
   * 專為 Google Sheets + LINE LIFF 架構設計
   */
@@ -27,7 +50,7 @@
   // 預設管理員安全通行碼 (忘記時可直接至 Google 試算表【系統設定】ADMIN_API_KEY 欄位查看或自訂修改)
   const DEFAULT_ADMIN_API_KEY = 'admin8888';
 
-  /**
+/**
   * 檢查傳入之 LINE User ID 與安全通行碼 (adminToken) 是否具備管理者權限
   * 雙重防護機制：
   * 1. LINE User ID 必須符合常數白名單或試算表【系統設定】中的 ADMIN_LINE_UIDS。
@@ -73,308 +96,880 @@
     return false;
   }
 
-  /**
-  * 試算表初次安裝設定與欄位升級：自動補齊成本價、重量備註與多圖欄位
-  * 可在 Apps Script 編輯器中直接執行此函式升級試算表結構
+/**
+  * 工具函式：輸出 JSON
   */
-  function setupSpreadsheet() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量、公式連動欄位與最後更新時間)
-    let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-    const prodHeaders = [
-      '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
-      '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
-      '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定結單時間',
-      '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
-      '最後更新時間'
-    ];
-
-    if (!prodSheet) {
-      prodSheet = ss.insertSheet(SHEET_NAMES.PRODUCTS);
-      prodSheet.appendRow(prodHeaders);
-      prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
-      
-      // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
-      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
-      prodSheet.appendRow([
-        'J2609270001', '日本代購限定 輕量防潑水後背包', '親飛連線', 1880, 1450, 999999,
-        JSON.stringify(['米白色', '經典黑', '海軍藍']),
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
-        '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
-        '=IF(OR(N(Q2)>0, N(T2)>0), ROUND((N(Q2) + N(R2)) * N(S2)) + ROUND((N(T2) / 1000) * IF(N(U2)>0, N(U2), 240)), 850)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
-        '2026/10/10 23:59',
-        'JPY', 3000, 300, 0.22, 380, 240,
-        nowStr
-      ]);
-    } else {
-      // 既有表格：升級表頭為最新 22 欄規格
-      const curCols = prodSheet.getMaxColumns();
-      if (curCols < prodHeaders.length) {
-        prodSheet.insertColumnsAfter(curCols, prodHeaders.length - curCols);
-      }
-      prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
-      prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
-      
-      // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/稅金/重量欄位與最後更新時間，並將成本價全面升級為連動公式
-      upgradeExistingProductsToFormula(prodSheet);
-    }
-    // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
-    prodSheet.getRange("O:O").setNumberFormat('@');
-
-    // 2. 訂單明細工作表 (升級為 24 欄規格：徹底分離 M/N 欄「結帳收件人姓名/電話」與 W/X 欄「LINE 會員真實姓名/電話」)
-    let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    const orderHeaders = [
-      '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
-      '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
-      '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
-      '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
-      '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
-    ];
-    if (!orderSheet) {
-      orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
-      orderSheet.appendRow(orderHeaders);
-    } else {
-      const curOrderCols = orderSheet.getMaxColumns();
-      if (curOrderCols < orderHeaders.length) {
-        orderSheet.insertColumnsAfter(curOrderCols, orderHeaders.length - curOrderCols);
-      }
-      orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
-    }
-    orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
-    orderSheet.getRange("N:N").setNumberFormat('@'); // 收件人電話純文字格式
-    orderSheet.getRange("R:R").setNumberFormat('@');
-    orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
-    orderSheet.getRange("V:V").setNumberFormat('@'); // 結帳編號 (Checkout_ID) 純文字格式
-    orderSheet.getRange("X:X").setNumberFormat('@'); // 會員電話純文字格式防止開頭 0 丟失
-
-    // 為 S 欄 (第19欄) 建立「採購/出貨狀態」快速下拉選單 (與系統全流程 100% 精準對齊)
-    try {
-      const validStatuses = [
-        '連線登記', 
-        '採購成功', 
-        '缺貨斷貨', 
-        '通知結帳', 
-        '已完成結帳', 
-        '已完成出貨', 
-        '已完成取貨'
-      ];
-      const statusRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(validStatuses, true)
-        .setAllowInvalid(true)
-        .build();
-      orderSheet.getRange("S2:S2000").setDataValidation(statusRule);
-
-      // 既有訂單中，若有舊版不一致的名稱，自動批次替換對齊
-      const orderData = orderSheet.getDataRange().getValues();
-      for (let r = 1; r < orderData.length; r++) {
-        const cur = String(orderData[r][18] || '').trim();
-        if (cur === '連線中待出貨' || cur === '連線登記中') {
-          orderSheet.getRange(r + 1, 19).setValue('連線登記');
-        } else if (cur === '已完成結帳待出貨' || cur === '對帳中，待出貨' || cur === '已結帳') {
-          orderSheet.getRange(r + 1, 19).setValue('已完成結帳');
-        } else if (cur.startsWith('已完成取貨')) {
-          orderSheet.getRange(r + 1, 19).setValue('已完成取貨');
-        }
-      }
-    } catch (e) {
-      console.warn('建立下拉選單略過:', e);
-    }
-
-    // 3. 顧客歸戶表 (升級為 17 欄規格：完整記錄會員動態、進站天數、商品頁面瀏覽次數、消費、選單設定)
-    const custHeaders = [
-      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-      '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
-      '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-    ];
-    let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (!custSheet) {
-      custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
-      custSheet.appendRow(custHeaders);
-    } else {
-      const curCustCols = custSheet.getMaxColumns();
-      if (curCustCols < custHeaders.length) {
-        custSheet.insertColumnsAfter(curCustCols, custHeaders.length - curCustCols);
-      }
-      custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
-    }
-    custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
-    custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式防止開頭 0 丟失
-    custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
-    custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
-    custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數 (以日計)
-    custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數 (累計PV)
-    custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
-    custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
-
-    // 3.1 為【顧客歸戶】建立下拉選單 (會員等級、顧客生命狀態、顧客來源、黑名單標記)
-    try {
-      // L 欄 (第12欄): 會員等級
-      const tierRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
-        .setAllowInvalid(true)
-        .build();
-      custSheet.getRange("L2:L2000").setDataValidation(tierRule);
-
-      // M 欄 (第13欄): 顧客生命狀態
-      const lifeRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
-        .setAllowInvalid(true)
-        .build();
-      custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
-
-      // N 欄 (第14欄): 顧客來源
-      const sourceRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
-        .setAllowInvalid(true)
-        .build();
-      custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
-
-      // P 欄 (第16欄): 黑名單標記
-      const blacklistRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
-        .setAllowInvalid(true)
-        .build();
-      custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
-    } catch (valErr) {
-      console.warn('建立顧客表下拉選單略過:', valErr);
-    }
-
-    // 3.1 會員動態歷程 Log (安全稽核流水帳：不可竄改之全生命週期動態軌跡)
-    const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
-    let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-    if (!logSheet) {
-      logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-      logSheet.appendRow(logHeaders);
-    }
-    logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
-    logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
-    logSheet.getRange("B:B").setNumberFormat('@');
-
-    // 🌟 自動遷移與校準既有訂單明細與顧客歸戶資料（徹底分離「會員真實姓名/電話」與「結帳收件人姓名/電話」）
-    try {
-      upgradeOrderAndCustomerSheets(ss);
-    } catch (migErr) {
-      console.warn('遷移訂單與顧客收件人欄位警告:', migErr);
-    }
-
-    // 4. 系統設定表 (自動補齊新欄位並強制更新 STORE_NAME 為 W.W.連線代購)
-    let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    const defaultSettings = [
-      ['ORDER_DEADLINE', '2026/10/05 23:59', '本次連線收單截止時間 (格式: YYYY/MM/DD HH:mm，逾期前台自動關單)'],
-      ['ALLOW_CHECKOUT', 'NO', '是否開放回國結帳通道 (YES: 開放買家前往結帳與選配送 / NO: 連線採購中尚未開放)'],
-      ['BANK_NAME', '822 中國信託商業銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
-      ['BANK_ACCOUNT_HOLDER', '陳O雯', '賣家帳戶戶名'],
-      ['BANK_ACCOUNT', "'4175-402-49273", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
-      ['LINEPAY_NAME', '粉絲團小編兼職小小幫手', 'LINE Pay 帳戶顯示名稱'],
-      ['LINEPAY_ACCOUNT', 'https://line.me/ti/p/IUqKCB7dRU', 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)'],
-      ['JKOPAY_NAME', 'Wen Wen Chen', '街口支付帳戶顯示名稱'],
-      ['JKOPAY_ACCOUNT', "'900459491", '街口支付帳號 (機構代碼396，支援一鍵複製)'],
-      ['FREE_SHIPPING_THRESHOLD', '3000', '7-11 賣貨便 / 全家 好賣+ 滿額免運門檻金額 (NT$)'],
-      ['SHIP_FEE_711_COD', '38', '7-11 超商貨到付款 (賣貨便) 未達門檻運費 (NT$)'],
-      ['SHIP_FEE_FAMI_COD', '35', '全家 超商貨到付款 (好賣+) 未達門檻運費 (NT$)'],
-      ['SHIP_FEE_POST_PREPAID', '80', '郵局純寄件 (需先匯款) 郵資 (NT$)'],
-      ['SHIP_FEE_POST_COD', '130', '郵局貨到付款郵資 (NT$)'],
-      ['SHIP_FEE_BLACKCAT', '100', '黑貓宅配到府 (需先匯款) 運費 (NT$)'],
-      ['STORE_NAME', 'W.W.連線代購', '商店名稱'],
-      ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明'],
-      ['ADMIN_LINE_UIDS', 'Uee7765ed3c1819cb94fd404cfab8553b', '管理者 LINE User ID 白名單 (多筆以逗號或換行分隔)'],
-      ['ADMIN_API_KEY', 'admin8888', '管理後台安全通行碼 (PIN 碼)，忘記時可直接在此欄位查看或修改'],
-      ['TELEGRAM_BOT_TOKEN', '', 'Telegram 機器人 Token (由 @BotFather 取得，留空則不推播)'],
-      ['TELEGRAM_CHAT_ID', '', 'Telegram 接收通報的 Chat ID (個人 ID 或群組 ID)'],
-      ['TELEGRAM_NOTIFY_PAGE_VIEWS', 'YES', '是否將進站與商品瀏覽通報傳送到 Telegram (YES/NO)'],
-      ['TELEGRAM_NOTIFY_ORDERS', 'YES', '是否將買家新下單/加單登記即時傳送到 Telegram (YES/NO)'],
-      ['TELEGRAM_NOTIFY_PAYMENTS', 'YES', '是否將買家回報匯款/出貨結帳即時傳送到 Telegram (YES/NO)']
-    ];
-
-    if (!settSheet) {
-      settSheet = ss.insertSheet(SHEET_NAMES.SETTINGS);
-      settSheet.appendRow(['設定項目', '設定值', '說明']);
-      settSheet.getRange(1, 1, 1, 3).setBackground('#d83b01').setFontColor('#ffffff').setFontWeight('bold');
-      defaultSettings.forEach(s => settSheet.appendRow(s));
-    } else {
-      // 既有表格：將缺少的新欄位補齊，並自動將 STORE_NAME 與最新收款資訊更新
-      const existingData = settSheet.getDataRange().getValues();
-      const existingKeys = new Set(existingData.slice(1).map(r => String(r[0]).trim()));
-      defaultSettings.forEach(s => {
-        if (!existingKeys.has(s[0])) {
-          settSheet.appendRow(s);
-        }
-      });
-
-      // 強制將 STORE_NAME 與最新收款帳號戶名同步更新
-      let foundStoreName = false;
-      for (let r = 1; r < existingData.length; r++) {
-        const key = String(existingData[r][0]).trim();
-        if (key === 'STORE_NAME') {
-          settSheet.getRange(r + 1, 2).setValue('W.W.連線代購');
-          foundStoreName = true;
-        } else if (key === 'FREE_SHIPPING_THRESHOLD') {
-          settSheet.getRange(r + 1, 2).setValue('3000');
-        } else if (key === 'SHIP_FEE_711_COD') {
-          settSheet.getRange(r + 1, 2).setValue('38');
-        } else if (key === 'SHIP_FEE_FAMI_COD') {
-          settSheet.getRange(r + 1, 2).setValue('35');
-        } else if (key === 'BANK_NAME') {
-          settSheet.getRange(r + 1, 2).setValue('822 中國信託商業銀行');
-        } else if (key === 'BANK_ACCOUNT_HOLDER') {
-          settSheet.getRange(r + 1, 2).setValue('陳O雯');
-        } else if (key === 'BANK_ACCOUNT') {
-          settSheet.getRange(r + 1, 2).setValue("'4175-402-49273");
-        } else if (key === 'LINEPAY_NAME') {
-          settSheet.getRange(r + 1, 2).setValue('粉絲團小編兼職小小幫手');
-        } else if (key === 'LINEPAY_ACCOUNT') {
-          settSheet.getRange(r + 1, 2).setValue('https://line.me/ti/p/IUqKCB7dRU');
-        } else if (key === 'JKOPAY_NAME') {
-          settSheet.getRange(r + 1, 2).setValue('Wen Wen Chen');
-        } else if (key === 'JKOPAY_ACCOUNT') {
-          settSheet.getRange(r + 1, 2).setValue("'900459491");
-        }
-      }
-      if (!foundStoreName) {
-        settSheet.appendRow(['STORE_NAME', 'W.W.連線代購', '商店名稱']);
-      }
-
-      // 自動檢查並移除舊版單一欄位 BANK_INFO 列
-      for (let r = existingData.length - 1; r >= 1; r--) {
-        const key = String(existingData[r][0] || '').trim();
-        if (key === 'BANK_INFO') {
-          settSheet.deleteRow(r + 1);
-        }
-      }
-    }
-    // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
-    settSheet.getRange("B:B").setNumberFormat('@');
-
-    // 5. 瀏覽統計工作表 (自動建立各頁面與商品人次統計)
-    let viewSheet = ss.getSheetByName(SHEET_NAMES.VIEWS);
-    const viewHeaders = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
-    if (!viewSheet) {
-      viewSheet = ss.insertSheet(SHEET_NAMES.VIEWS);
-      viewSheet.appendRow(viewHeaders);
-    } else {
-      viewSheet.getRange(1, 1, 1, viewHeaders.length).setValues([viewHeaders]);
-    }
-    viewSheet.getRange(1, 1, 1, viewHeaders.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
-    viewSheet.getRange("D:D").setNumberFormat('#,##0');
-    viewSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
-
-    // 3. 確保 Google Drive 商品圖片庫資料夾權限為「知道連結者皆可檢視」，子檔案自動繼承免逐檔授權
-    try {
-      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (e) {
-      Logger.log('Drive folder setSharing 提示：' + e.message);
-    }
-
-    return '工作表與系統設定更新升級完成！';
+  function jsonResponse(obj) {
+    return ContentService.createTextOutput(JSON.stringify(obj))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
-  /**
-  * 🌟 自動升級既有商品資料：將舊商品的成本備註拆解為獨立欄位 (P~T欄)，並將 L 欄成本價全面升級為連動公式
-  * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」，或直接執行 setupSpreadsheet()
+/**
+  * 格式化電話號碼為 Google 試算表純文字 (防止開頭 0 被自動轉為數字截斷)
   */
-  /**
+  function formatPhoneAsText(phone) {
+    if (phone === null || phone === undefined || phone === '') return '';
+    const clean = String(phone).trim();
+    if (!clean) return '';
+    if (clean.startsWith("'")) return clean;
+    return "'" + clean;
+  }
+/* ==================== 模組結束：00_Config.gs ==================== */
+
+
+/* ==================== 模組起點：01_Router.gs ==================== */
+/**
+ * ==============================================================================
+ * 【01_Router.gs】Web App HTTP 請求路由器 (doGet / doPost)
+ * ==============================================================================
+ * 說明：負責統一接收前端 fetch 請求並轉發給相應的 Service 模組處理。
+ * ==============================================================================
+ */
+
+/**
+  * 處理 GET 請求
+  * 支援 actions: 
+  * - getProducts (取得所有上架中商品)
+  * - getProductById (取得單一商品詳情)
+  * - getOrdersByUserId (取得客人的歷史訂單與待付款彙整)
+  * - getSettings (取得賣家收款帳號與運費規則)
+  */
+  function doGet(e) {
+    const action = (e && e.parameter && e.parameter.action) || 'getProducts';
+    const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid || e.parameter.adminUserId)) || '';
+    const reqAdminToken = (e && e.parameter && (e.parameter.adminToken || e.parameter.token || e.parameter.apiKey)) || '';
+    
+    try {
+      let result = {};
+      if (action === 'getProducts') {
+        // 買家前台商品大廳公開 API：僅回傳上架中商品，嚴格排除採購成本、匯率與毛利等商業機密
+        result = getProductsList(false, false);
+      } else if (action === 'getAllProducts') {
+        // 賣家後台管理中心專用：強制驗證管理者 LINE User ID 白名單與安全通行碼！
+        const isAdmin = checkIsAdmin(reqUserId, reqAdminToken);
+        if (!isAdmin) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getProductsList(true, true);
+          result.isAdmin = true;
+        }
+      } else if (action === 'verifyAdmin') {
+        // 提供管理中心前端門禁系統快速校驗當前 LINE 使用者身分與安全通行碼
+        const isAdmin = checkIsAdmin(reqUserId, reqAdminToken);
+        result = { success: isAdmin, isAdmin: isAdmin, userId: reqUserId };
+      } else if (action === 'getProductById') {
+        const pid = e.parameter.productId;
+        // 買家單品詳情頁公開 API：嚴格排除採購成本、匯率與毛利等商業機密
+        result = getProductDetail(pid);
+      } else if (action === 'getOrdersByUserId') {
+        const uid = e.parameter.userId;
+        result = getOrdersForUser(uid);
+      } else if (action === 'checkCustomer') {
+        const uid = e.parameter.userId;
+        result = checkCustomerExists(uid);
+      } else if (action === 'getSettings') {
+        result = getSystemSettings();
+      } else if (action === 'getViewStats') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getViewStats();
+        }
+      } else if (action === 'testTelegram') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          const testRes = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+          result = testRes;
+        }
+      } else if (action === 'recordPageView') {
+        result = handleRecordPageView({
+          page: e.parameter.page,
+          title: e.parameter.title,
+          productId: e.parameter.productId
+        });
+      } else if (action === 'getCustomerLogs') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getCustomerLogs(e.parameter.limit || 100);
+        }
+      } else if (action === 'getCustomerNotifyList') {
+        // 顧客結帳通知清單包含買家個資與消費，強制驗證管理者身分與安全通行碼
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getCustomerNotifyList();
+        }
+      } else if (action === 'getCheckoutParcels') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getCheckoutParcels();
+        }
+      } else if (action === 'getProcurementOrders') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = getProcurementOrders();
+        }
+      } else if (action === 'updateParcelStatus') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = handleUpdateParcelStatus({
+            checkoutId: e.parameter.checkoutId,
+            status: e.parameter.status,
+            trackingCode: e.parameter.trackingCode
+          });
+        }
+      } else if (action === 'recalculateCustomerStats') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = recalculateCustomerStats();
+        }
+      } else if (action === 'upgradeSheets' || action === 'upgradeOrderAndCustomerSheets') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = upgradeOrderAndCustomerSheets();
+        }
+      } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          result = { success: true, message: upgradeExistingProductsToFormula() };
+        }
+      } else if (action === 'clearTestData' || action === 'clearTestProducts') {
+        result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
+      } else {
+        result = { success: false, message: '未知的 action' };
+      }
+      return jsonResponse(result);
+    } catch (err) {
+      return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
+    }
+  }
+
+/**
+  * 處理 POST 請求
+  * 支援 actions:
+  * - createOrder (連線搶購登記下單)
+  * - checkoutOrders (出貨合併結帳：6大配送方式與收件資料)
+  * - reportPayment (客人回填匯款後五碼)
+  * - addProduct (賣家快速上架商品 - 需管理員白名單權限與安全通行碼)
+  * - updateProduct (賣家線上完整維護商品資料 - 需管理員白名單權限與安全通行碼)
+  * - batchUpdateProducts (批次上架/下架/修改分類 - 需管理員白名單權限與安全通行碼)
+  * - uploadImages (圖片上傳 Google Drive - 需管理員白名單權限與安全通行碼)
+  * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知 - 需管理員白名單權限與安全通行碼)
+  */
+  function doPost(e) {
+    try {
+      const postData = JSON.parse(e.postData.contents);
+      const action = postData.action;
+      const reqAdminId = (postData && (
+        postData.adminUserId ||
+        postData.userId ||
+        (postData.data && (postData.data.adminUserId || postData.data.userId))
+      )) || '';
+      const reqAdminToken = (postData && (
+        postData.adminToken ||
+        postData.token ||
+        postData.apiKey ||
+        (postData.data && (postData.data.adminToken || postData.data.token || postData.data.apiKey))
+      )) || '';
+
+      // 🛡️ 後台管理專屬寫入與統計操作：強制驗證管理員 LINE UID 白名單與安全通行碼
+      const adminProtectedActions = [
+        'addProduct',
+        'updateProduct',
+        'batchUpdateProducts',
+        'uploadImages',
+        'markCustomerNotified',
+        'updateParcelStatus',
+        'getViewStats',
+        'getCheckoutParcels',
+        'getProcurementOrders'
+      ];
+      if (adminProtectedActions.includes(action) && !checkIsAdmin(reqAdminId, reqAdminToken)) {
+        return jsonResponse({
+          success: false,
+          isAdmin: false,
+          message: '🚫 權限不足：管理員身分或安全通行碼 (PIN) 驗證失敗，系統已拒絕執行此後台操作！'
+        });
+      }
+
+      let result = {};
+      if (action === 'createOrder') {
+        result = handleCreateOrder(postData.data);
+      } else if (action === 'registerCustomer') {
+        result = handleRegisterCustomer(postData.data);
+      } else if (action === 'checkoutOrders') {
+        result = handleCheckoutOrders(postData.data);
+      } else if (action === 'confirmReceived') {
+        result = handleConfirmReceived(postData.data);
+      } else if (action === 'updateParcelStatus') {
+        result = handleUpdateParcelStatus(postData.data || postData);
+      } else if (action === 'getCheckoutParcels') {
+        result = getCheckoutParcels();
+      } else if (action === 'getProcurementOrders') {
+        result = getProcurementOrders();
+      } else if (action === 'reportPayment') {
+        result = handleReportPayment(postData.data);
+      } else if (action === 'addProduct') {
+        result = handleAddProduct(postData.data);
+      } else if (action === 'updateProduct') {
+        result = handleUpdateProduct(postData.data);
+      } else if (action === 'batchUpdateProducts') {
+        result = handleBatchUpdateProducts(postData.data);
+      } else if (action === 'uploadImages') {
+        result = handleUploadImages(postData.data);
+      } else if (action === 'markCustomerNotified') {
+        result = handleMarkCustomerNotified(postData);
+      } else if (action === 'recordPageView') {
+        result = handleRecordPageView(postData.data);
+      } else if (action === 'getViewStats') {
+        result = getViewStats();
+      } else if (action === 'getCustomerLogs') {
+        result = getCustomerLogs(postData.limit || 100);
+      } else if (action === 'upgradeSheets' || action === 'upgradeOrderAndCustomerSheets') {
+        result = { success: true, message: upgradeOrderAndCustomerSheets() };
+      } else if (action === 'clearTestData' || action === 'clearTestProducts') {
+        result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
+      } else {
+        result = { success: false, message: '未知的 action' };
+      }
+      return jsonResponse(result);
+    } catch (err) {
+      return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
+    }
+  }
+/* ==================== 模組結束：01_Router.gs ==================== */
+
+
+/* ==================== 模組起點：02_ProductService.gs ==================== */
+/**
+ * ==============================================================================
+ * 【02_ProductService.gs】商品管理服務模組 (CRUD & 成本計算)
+ * ==============================================================================
+ * 說明：專門處理商品列表取得、詳情、新增、編輯、上下架、多圖上傳與原幣成本計算。
+ * ==============================================================================
+ */
+
+/**
+  * 取得商品清單
+  * @param {boolean} includeAll - 是否包含已下架商品 (預設 false: 僅回傳上架中商品)
+  * @param {boolean} includeCost - 是否包含採購成本、匯率與利潤欄位 (預設 false: 嚴格禁止回傳商業機密)
+  */
+  function getProductsList(includeAll = false, includeCost = false) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (!sheet) return { success: false, message: '尚未初始化商品表' };
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const products = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const status = row[9];
+      if (includeAll || status === '上架中') {
+        let rawSpecs = [];
+        try {
+          rawSpecs = JSON.parse(row[6]);
+        } catch (e) {
+          rawSpecs = row[6] ? [row[6]] : [];
+        }
+
+        const basePrice = Number(row[4]) || 0;
+        const baseStock = Number(row[5]) || 0;
+        const isBaseUnlimited = baseStock >= 9999;
+
+        // 正規化規格陣列 (相容舊版純字串陣列 與 新版獨立定價庫存物件陣列)
+        let normalizedSpecs = [];
+        if (Array.isArray(rawSpecs)) {
+          normalizedSpecs = rawSpecs.map(s => {
+            if (s && typeof s === 'object') {
+              const sName = String(s.name || '').trim();
+              const sPrice = (s.price !== undefined && !isNaN(Number(s.price)) && Number(s.price) > 0) ? Number(s.price) : basePrice;
+              const sUnlimited = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
+              const sStock = sUnlimited ? 999999 : (Number(s.stock) || 0);
+              return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+            } else if (typeof s === 'string' && s.trim()) {
+              return { name: s.trim(), price: basePrice, stock: baseStock, isUnlimited: isBaseUnlimited };
+            }
+            return null;
+          }).filter(s => s && s.name);
+        }
+
+        // 解析所有圖片清單
+        let allImages = [];
+        try {
+          allImages = JSON.parse(row[13]);
+        } catch (e) {
+          allImages = row[7] ? String(row[7]).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean) : [];
+        }
+
+        const origPriceVal = row[3];
+        const hasOrigPrice = origPriceVal !== '' && origPriceVal !== null && !isNaN(Number(origPriceVal)) && Number(origPriceVal) > 0;
+
+        const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
+        const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
+
+        const prodItem = {
+          id: row[0],
+          name: row[1],
+          category: row[2],
+          originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
+          price: basePrice,
+          stock: baseStock,
+          specs: normalizedSpecs,
+          imageUrl: row[7] || (allImages[0] || ''),
+          imageUrls: allImages,
+          description: row[8],
+          status: status || '上架中',
+          deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定結單時間 (選填)
+          createdAt: createdAtStr,                             // 欄位 11 (K): 建立時間
+          updatedAt: updatedAtStr                              // 欄位 22 (V): 最後更新時間
+        };
+
+        // 🛡️ 商業機密嚴格保護：採購成本、匯率、稅金、重量與運費僅在賣家管理後台明確請求 (includeCost=true) 時才附加
+        // 前台買家公開 API (getProducts, getProductById) 絕對不包含任何成本欄位，防止客人窺探定價與利潤！
+        if (includeCost) {
+          prodItem.costPrice = Number(row[11]) || 0;
+          prodItem.costNote = row[12] || '';
+          prodItem.currency = row[15] || 'JPY';
+          prodItem.costPreTax = Number(row[16]) || 0;
+          prodItem.costTax = Number(row[17]) || 0;
+          prodItem.exchangeRate = Number(row[18]) || 0;
+          prodItem.weightG = Number(row[19]) || 0;
+          prodItem.shippingRate = Number(row[20]) || 240;
+        }
+
+        products.push(prodItem);
+      }
+    }
+
+    const settings = getSystemSettings().data || {};
+    return { success: true, data: products, settings: settings };
+  }
+
+/**
+  * 格式化結單時間字串 (相容 Date 物件與字串)
+  */
+  function formatDeadlineStr(val) {
+    if (!val) return '';
+    if (val instanceof Date) {
+      if (isNaN(val.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())} ${pad(val.getHours())}:${pad(val.getMinutes())}`;
+    }
+    return String(val).trim().replace(/\//g, '-');
+  }
+
+/**
+  * 取得單一商品詳情 (前台買家專用：嚴格禁止回傳任何採購成本與利潤資訊)
+  */
+  function getProductDetail(productId) {
+    const list = getProductsList(false, false);
+    if (!list.success) return list;
+    const prod = list.data.find(p => p.id === productId);
+    if (prod) {
+      return { success: true, data: prod };
+    }
+    return { success: false, message: '查無此商品或已下架' };
+  }
+
+/**
+  * 自動產生商品編號：
+  * 日本代購: J + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 J2609270001)
+  * 美國代購: U + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 U2610210001)
+  * 韓國代購: K + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 K2609270001)
+  * 台灣現貨: T + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 T2609270001)
+  */
+  function generateProductId(sheet, currency, now) {
+    const cur = String(currency || 'JPY').toUpperCase();
+    let prefixChar = 'J';
+    if (cur === 'USD' || cur.includes('美') || cur.includes('USA')) {
+      prefixChar = 'U';
+    } else if (cur === 'KRW' || cur.includes('韓') || cur.includes('KOR')) {
+      prefixChar = 'K';
+    } else if (cur === 'TWD' || cur.includes('台') || cur.includes('TW')) {
+      prefixChar = 'T';
+    } else {
+      prefixChar = 'J';
+    }
+    const datePart = Utilities.formatDate(now || new Date(), 'Asia/Taipei', 'yyMMdd');
+    const basePrefix = prefixChar + datePart; // 例如 J260927, U261021, K260927, T260927
+
+    let maxSeq = 0;
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        const existingId = String(data[i][0] || '').trim();
+        if (existingId.startsWith(basePrefix)) {
+          const suffix = existingId.substring(basePrefix.length);
+          const seqNum = parseInt(suffix, 10);
+          if (!isNaN(seqNum) && seqNum > maxSeq) {
+            maxSeq = seqNum;
+          }
+        }
+      }
+    }
+
+    const nextSeq = maxSeq + 1;
+    let seqStr = String(nextSeq);
+    while (seqStr.length < 4) {
+      seqStr = '0' + seqStr;
+    }
+    return basePrefix + seqStr;
+  }
+
+/**
+  * 賣家快速新增商品 (可由賣家後台網頁調用，使用 LockService 避免連續建立併發衝突)
+  */
+  function handleAddProduct(data) {
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(15000);
+    } catch (e) {
+      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
+    }
+
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+      if (!sheet) return { success: false, message: '商品表不存在' };
+
+      if (!data.name || !data.price) {
+        return { success: false, message: '商品名稱與價格為必填欄位！' };
+      }
+
+      const now = new Date();
+
+      // 判斷幣別 (優先取 data.currency，或從 costNote / name / category 判斷)
+      let cur = (data.currency || '').toUpperCase();
+      if (!cur) {
+        const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
+        if (hint.includes('USD') || hint.includes('美') || hint.includes('USA')) {
+          cur = 'USD';
+        } else if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
+          cur = 'KRW';
+        } else if (hint.includes('TWD') || hint.includes('台') || hint.includes('TW')) {
+          cur = 'TWD';
+        } else {
+          cur = 'JPY';
+        }
+      }
+
+      // 商品編號：若賣家有自訂則使用自訂，否則依「J/U/K/T + 西元年後2碼 + 日期 + 0001」自動跳號
+      const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
+
+      // 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
+      let specsArray = [];
+      const basePrice = Number(data.price) || 0;
+      let calculatedStock = 0;
+      let hasExplicitSpecs = false;
+
+      if (Array.isArray(data.specs)) {
+        specsArray = data.specs.map(item => {
+          if (item && typeof item === 'object') {
+            hasExplicitSpecs = true;
+            const sName = String(item.name || '').trim();
+            const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
+            const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
+            const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
+            if (!sUnlimited) calculatedStock += sStock;
+            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+          } else if (typeof item === 'string' && item.trim()) {
+            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+          }
+          return null;
+        }).filter(s => s && s.name);
+      } else if (typeof data.specs === 'string' && data.specs.trim()) {
+        specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
+          name: name,
+          price: basePrice,
+          stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+          isUnlimited: Boolean(data.isUnlimitedStock)
+        }));
+      }
+
+      // 圖片處理：支援多張圖片（第一張為主圖）
+      let imagesArray = [];
+      if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+        imagesArray = data.imageUrls;
+      } else if (data.imageUrl) {
+        imagesArray = data.imageUrl.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+      }
+      const mainImage = imagesArray[0] || data.imageUrl || '';
+
+      // 庫存名額：若有獨立規格庫存，且有任一規格為不限庫存則總庫存為 999999；否則為各規格加總
+      let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
+      if (hasExplicitSpecs && specsArray.length > 0) {
+        const anyUnlimited = specsArray.some(s => s.isUnlimited);
+        stockQty = anyUnlimited ? 999999 : calculatedStock;
+      }
+
+      const targetRow = sheet.getLastRow() + 1;
+
+      // 採購原幣、稅金、匯率與重量獨立分開登記 (嚴格以實際輸入資料為準，未輸入則保留空白)
+      if (data.currency) cur = String(data.currency).toUpperCase();
+      const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
+      const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
+      const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
+      const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
+
+      const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
+      const tax = hasTax ? Number(data.taxAmount) : '';
+      const rate = hasRate ? Number(data.exchangeRate) : '';
+      const weight = hasWeight ? Number(data.weightG) : '';
+      const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
+
+      // 成本價 (NT$)：精準分開四捨五入公式 ROUND((Q+R)*S) + ROUND((T/1000)*U)
+      let costCellVal = Number(data.costPrice) || 0;
+      if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
+        costCellVal = `=IF(OR(N(Q${targetRow})>0, N(T${targetRow})>0), ROUND((N(Q${targetRow}) + N(R${targetRow})) * N(S${targetRow})) + ROUND((N(T${targetRow}) / 1000) * IF(N(U${targetRow})>0, N(U${targetRow}), 240)), ${costCellVal})`;
+      }
+
+      sheet.appendRow([
+        pid,
+        data.name.trim(),
+        data.category || '連線好物',
+        (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
+        Number(data.price),
+        stockQty,
+        JSON.stringify(specsArray),
+        mainImage,
+        data.description || '',
+        '上架中',
+        now,
+        costCellVal,                 // 欄位 12 (L): 成本價 (NT$) -> 支援試算表公式連動
+        data.costNote || '',         // 欄位 13 (M): 採購備註說明
+        JSON.stringify(imagesArray), // 欄位 14 (N): 所有圖片清單
+        data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定結單時間
+        cur,                         // 欄位 16 (P): 採購幣別
+        preTax,                      // 欄位 17 (Q): 原幣稅前金額
+        tax,                         // 欄位 18 (R): 稅金 (原幣)
+        rate,                        // 欄位 19 (S): 採購匯率
+        weight,                      // 欄位 20 (T): 商品重量 (g)
+        shipRate,                    // 欄位 21 (U): 國際運費單價 (元/kg)
+        Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss') // 欄位 22 (V): 最後更新時間
+      ]);
+
+      SpreadsheetApp.flush();
+
+      return { 
+        success: true, 
+        message: '商品建檔成功！', 
+        productId: pid,
+        product: {
+          id: pid,
+          name: data.name.trim(),
+          category: data.category || '連線好物',
+          originalPrice: (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : 0,
+          price: Number(data.price),
+          stock: stockQty,
+          specs: specsArray,
+          imageUrl: mainImage,
+          imageUrls: imagesArray,
+          description: data.description || '',
+          status: '上架中',
+          costPrice: Number(data.costPrice) || 0,
+          costNote: data.costNote || '',
+          deadline: data.deadline ? String(data.deadline).trim() : ''
+        }
+      };
+    } catch (err) {
+      return { success: false, message: '商品建檔失敗：' + err.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+/**
+  * 賣家線上完整維護商品資料 (100% 全欄位對齊建檔表單，並更新最後更新時間)
+  */
+  function handleUpdateProduct(data) {
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(15000);
+    } catch (e) {
+      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
+    }
+
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+      if (!sheet) return { success: false, message: '商品表不存在' };
+
+      const pid = String(data.id || '').trim();
+      if (!pid) return { success: false, message: '缺少商品編號 (ID)' };
+
+      if (!data.name || data.price === undefined || data.price === '') {
+        return { success: false, message: '商品名稱與價格為必填欄位！' };
+      }
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return { success: false, message: '商品清單為空' };
+
+      // 尋找商品所在的列 (row)
+      const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      let rowIndex = -1;
+      for (let i = 0; i < idRange.length; i++) {
+        if (String(idRange[i][0]).trim() === pid) {
+          rowIndex = i + 2; // 試算表從第 2 列開始 (1-based)
+          break;
+        }
+      }
+
+      if (rowIndex === -1) {
+        return { success: false, message: `找不到商品編號：${pid}` };
+      }
+
+      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+
+      // 1. 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
+      let specsArray = [];
+      const basePrice = Number(data.price) || 0;
+      let calculatedStock = 0;
+      let hasExplicitSpecs = false;
+
+      if (Array.isArray(data.specs)) {
+        specsArray = data.specs.map(item => {
+          if (item && typeof item === 'object') {
+            hasExplicitSpecs = true;
+            const sName = String(item.name || '').trim();
+            const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
+            const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
+            const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
+            if (!sUnlimited) calculatedStock += sStock;
+            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+          } else if (typeof item === 'string' && item.trim()) {
+            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+          }
+          return null;
+        }).filter(s => s && s.name);
+      } else if (typeof data.specs === 'string' && data.specs.trim()) {
+        specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
+          name: name,
+          price: basePrice,
+          stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+          isUnlimited: Boolean(data.isUnlimitedStock)
+        }));
+      }
+
+      // 2. 圖片處理：支援多張圖片（第一張為主圖）
+      let imagesArray = [];
+      if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+        imagesArray = data.imageUrls.filter(Boolean);
+      } else if (data.imageUrl) {
+        imagesArray = String(data.imageUrl).split(/[\n,]/).map(u => u.trim()).filter(Boolean);
+      }
+      const mainImage = imagesArray[0] || data.imageUrl || '';
+
+      // 3. 庫存名額計算
+      let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 0);
+      if (hasExplicitSpecs && specsArray.length > 0) {
+        const anyUnlimited = specsArray.some(s => s.isUnlimited);
+        stockQty = anyUnlimited ? 999999 : calculatedStock;
+      }
+
+      // 4. 成本與公式處理
+      let cur = (data.currency || 'JPY').toUpperCase();
+      const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
+      const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
+      const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
+      const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
+
+      const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
+      const tax = hasTax ? Number(data.taxAmount) : '';
+      const rate = hasRate ? Number(data.exchangeRate) : '';
+      const weight = hasWeight ? Number(data.weightG) : '';
+      const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
+
+      let costCellVal = Number(data.costPrice) || 0;
+      let costFormula = '';
+      if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
+        costFormula = `=IF(OR(N(Q${rowIndex})>0, N(T${rowIndex})>0), ROUND((N(Q${rowIndex}) + N(R${rowIndex})) * N(S${rowIndex})) + ROUND((N(T${rowIndex}) / 1000) * IF(N(U${rowIndex})>0, N(U${rowIndex}), 240)), ${costCellVal})`;
+      }
+
+      const statusVal = data.status === '已下架' ? '已下架' : '上架中';
+
+      // 確保欄位至少有 22 欄
+      if (sheet.getMaxColumns() < 22) {
+        sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
+      }
+
+      // 更新各欄位 (嚴格對齊 22 欄規格)
+      sheet.getRange(rowIndex, 2).setValue(String(data.name || '').trim()); // B: 商品名稱
+      sheet.getRange(rowIndex, 3).setValue(String(data.category || '連線好物').trim()); // C: 分類
+      sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
+      sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
+      sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
+      sheet.getRange(rowIndex, 7).setValue(JSON.stringify(specsArray)); // G: 規格清單(JSON)
+      sheet.getRange(rowIndex, 8).setValue(mainImage); // H: 封面主圖網址
+      sheet.getRange(rowIndex, 9).setValue(data.description || ''); // I: 商品描述
+      sheet.getRange(rowIndex, 10).setValue(statusVal); // J: 狀態
+      // K 欄 (建立時間) 保留原值不改動
+      if (costFormula) {
+        sheet.getRange(rowIndex, 12).setFormula(costFormula); // L: 成本價公式
+      } else {
+        sheet.getRange(rowIndex, 12).setValue(costCellVal);
+      }
+      sheet.getRange(rowIndex, 13).setValue(data.costNote || ''); // M: 採購備註說明
+      sheet.getRange(rowIndex, 14).setValue(JSON.stringify(imagesArray)); // N: 所有圖片清單
+      sheet.getRange(rowIndex, 15).setValue(data.deadline ? String(data.deadline).trim() : ''); // O: 指定結單時間
+      sheet.getRange(rowIndex, 16).setValue(cur); // P: 採購幣別
+      sheet.getRange(rowIndex, 17).setValue(preTax); // Q: 原幣稅前金額
+      sheet.getRange(rowIndex, 18).setValue(tax); // R: 稅金(原幣)
+      sheet.getRange(rowIndex, 19).setValue(rate); // S: 採購匯率
+      sheet.getRange(rowIndex, 20).setValue(weight); // T: 商品重量(g)
+      sheet.getRange(rowIndex, 21).setValue(shipRate); // U: 國際運費單價
+      sheet.getRange(rowIndex, 22).setValue(nowStr); // V: 最後更新時間
+
+      SpreadsheetApp.flush();
+
+      return {
+        success: true,
+        message: `商品 [${pid}] 更新成功！`,
+        productId: pid,
+        updatedAt: nowStr
+      };
+    } catch (err) {
+      return { success: false, message: '更新商品失敗：' + err.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+/**
+  * 批次更新商品 (批次上架、批次下架、批次修改分類)
+  * data: {
+  *   productIds: ['J2610...', 'J2610...'],
+  *   updateType: 'status' | 'category',
+  *   value: '上架中' | '已下架' | '新分類標籤'
+  * }
+  */
+  function handleBatchUpdateProducts(data) {
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(15000);
+    } catch (e) {
+      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
+    }
+
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+      if (!sheet) return { success: false, message: '商品表不存在' };
+
+      const pids = Array.isArray(data.productIds) ? data.productIds.map(id => String(id).trim()).filter(Boolean) : [];
+      if (pids.length === 0) return { success: false, message: '請至少選擇一件商品！' };
+
+      const updateType = data.updateType; // 'status' 或 'category'
+      const value = String(data.value || '').trim();
+
+      if (!updateType || !value) {
+        return { success: false, message: '缺少更新類型或更新數值' };
+      }
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return { success: false, message: '商品清單為空' };
+
+      if (sheet.getMaxColumns() < 22) {
+        sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
+      }
+
+      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+      const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+      let updatedCount = 0;
+      const targetCol = updateType === 'status' ? 10 : (updateType === 'category' ? 3 : 0);
+      if (targetCol === 0) return { success: false, message: '不支援的批次更新類型：' + updateType };
+
+      for (let i = 0; i < idRange.length; i++) {
+        const currentPid = String(idRange[i][0]).trim();
+        if (pids.includes(currentPid)) {
+          const row = i + 2;
+          sheet.getRange(row, targetCol).setValue(value);
+          sheet.getRange(row, 22).setValue(nowStr); // V欄: 最後更新時間
+          updatedCount++;
+        }
+      }
+
+      SpreadsheetApp.flush();
+
+      return {
+        success: true,
+        message: `成功批次更新 ${updatedCount} 件商品！`,
+        updatedCount: updatedCount,
+        updateType: updateType,
+        value: value,
+        updatedAt: nowStr
+      };
+    } catch (err) {
+      return { success: false, message: '批次更新失敗：' + err.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+/**
+  * 處理附件圖片上傳至 Google Drive (極速優化版：利用資料夾繼承權限，省去逐檔遠端授權延遲)
+  */
+  function handleUploadImages(data) {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+    try {
+      let folder;
+      try {
+        folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      } catch (e) {
+        const folderName = 'LINE代購_商品圖片庫';
+        const folders = DriveApp.getFoldersByName(folderName);
+        folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+        folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
+
+      const uploadedUrls = [];
+      const files = data.files || [];
+
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        let base64String = f.base64 || '';
+        if (base64String.indexOf(',') > -1) {
+          base64String = base64String.split(',')[1];
+        }
+        const decoded = Utilities.base64Decode(base64String);
+        const contentType = f.type || 'image/jpeg';
+        const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + Math.floor(Math.random() * 10000) + '_' + (i + 1) + '.jpg';
+
+        const blob = Utilities.newBlob(decoded, contentType, fileName);
+        const file = folder.createFile(blob);
+        const directUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+        uploadedUrls.push(directUrl);
+      }
+
+      return { success: true, urls: uploadedUrls };
+    } catch (err) {
+      return { success: false, message: '圖片上傳至 Google Drive 失敗：' + err.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+/**
+  * 測試並激活 Google Drive 權限（可在 GAS 編輯器上方下拉選單直接點「執行」測試）
+  */
+  function testDrivePermission() {
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    Logger.log('成功連接 Google Drive 資料夾：' + folder.getName());
+    return 'OK: ' + folder.getName();
+  }
+
+/**
   * 🌟 智慧修復與升級既有商品成本資料：
   * 1. 徹底解決 20 欄升級為 21 欄（新增稅金欄位）所造成的資料向左錯位問題（原本匯率 0.22 錯移到稅金、重量 200 錯移到匯率、運費 240 錯移到重量、運費單價為空）。
   * 2. 徹底消除 480102 天價異常錯誤（原公式將原幣 2400 乘上錯位重量 200）。
@@ -569,978 +1164,60 @@
     return `成功校正並修復 ${upgradedCount} 筆商品！欄位錯位已排除，稅金與匯率已還原，成本價公式已全面校準。`;
   }
 
-  /**
+/**
   * 🌟 一鍵修復商品成本與欄位錯位（供 Apps Script 介面選取執行的別名函式）
   */
   function repairProductCostData() {
     return upgradeExistingProductsToFormula();
   }
 
-  /**
-  * 🌟 確保【訂單明細】(24 欄) 與【顧客歸戶】(13 欄) 表頭與欄數已升級，若尚未升級則自動觸發無損升級與資料遷移
+/**
+  * 🛠️ 清除自動化測試商品（已啟用防誤觸保護）
   */
-  function ensureOrderAndCustomerSchema(ss, orderSheet, custSheet) {
-    try {
-      const activeSs = ss || SpreadsheetApp.getActiveSpreadsheet();
-      const oSheet = orderSheet || activeSs.getSheetByName(SHEET_NAMES.ORDERS);
-      const cSheet = custSheet || activeSs.getSheetByName(SHEET_NAMES.CUSTOMERS);
-      const lSheet = activeSs.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-
-      let needsUpgrade = false;
-      if (oSheet) {
-        const oCols = oSheet.getLastColumn();
-        if (oCols < 24) {
-          needsUpgrade = true;
-        } else {
-          const wHeader = String(oSheet.getRange(1, 23).getValue() || '').trim();
-          const nHeader = String(oSheet.getRange(1, 14).getValue() || '').trim();
-          if (wHeader !== '真實姓名' || nHeader !== '收件人電話') {
-            needsUpgrade = true;
-          }
-        }
-      }
-      if (cSheet && !needsUpgrade) {
-        const cCols = cSheet.getLastColumn();
-        if (cCols < 17) {
-          needsUpgrade = true;
-        } else {
-          const eHeader = String(cSheet.getRange(1, 5).getValue() || '').trim();
-          const fHeader = String(cSheet.getRange(1, 6).getValue() || '').trim();
-          const hHeader = String(cSheet.getRange(1, 8).getValue() || '').trim();
-          const iHeader = String(cSheet.getRange(1, 9).getValue() || '').trim();
-          if (eHeader !== '加入會員時間' || fHeader !== '最後進站時間' || !hHeader.includes('天數') || iHeader !== '商品與頁面瀏覽次數') {
-            needsUpgrade = true;
-          }
-        }
-      }
-      if (!lSheet) {
-        needsUpgrade = true;
-      }
-
-      if (needsUpgrade) {
-        upgradeOrderAndCustomerSheets(activeSs);
-      }
-    } catch (err) {
-      console.warn('自動檢查訂單與顧客表結構略過:', err);
-    }
-  }
-
-  /**
-  * 🌟 自動升級與校準【訂單明細】與【顧客歸戶】欄位結構，徹底分離「LINE 帳號登記真實姓名/電話」與「結帳收件人姓名/電話」
-  * 可直接在 Apps Script 編輯器選取此函式執行，或由 setupSpreadsheet() / API 自動觸發
-  */
-  function upgradeOrderAndCustomerSheets(targetSs) {
-    const ss = targetSs || SpreadsheetApp.getActiveSpreadsheet();
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-
-    const orderHeaders = [
-      '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
-      '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
-      '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
-      '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
-      '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
-    ];
-
-    const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
-
-    // 1. 確保【會員動態Log】安全稽核軌跡表存在
-    let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-    if (!logSheet) {
-      logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-      logSheet.appendRow(logHeaders);
-    }
-    logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
-    logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
-    logSheet.getRange("B:B").setNumberFormat('@');
-
-    // 2. 升級【訂單明細】為 24 欄
-    if (orderSheet) {
-      const maxOrderCols = orderSheet.getMaxColumns();
-      if (maxOrderCols < orderHeaders.length) {
-        orderSheet.insertColumnsAfter(maxOrderCols, orderHeaders.length - maxOrderCols);
-      }
-      orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
-      orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
-      orderSheet.getRange("N:N").setNumberFormat('@');
-      orderSheet.getRange("R:R").setNumberFormat('@');
-      orderSheet.getRange("U:U").setNumberFormat('@');
-      orderSheet.getRange("V:V").setNumberFormat('@');
-      orderSheet.getRange("X:X").setNumberFormat('@');
+  function clearTestProducts(safetyKey) {
+    // 🛡️ 強制防誤觸檢查
+    if (safetyKey !== 'CONFIRM_DELETE_PRODUCTS_2026') {
+      Logger.log('🚫【安全防護已啟動】拒絕執行！為防止商品資料遭誤刪，已阻止清除動作。');
+      return {
+        success: false,
+        message: '🚫【安全防護已啟動】拒絕執行！為保護商品庫，已阻止清除動作。'
+      };
     }
 
-    // 3. 升級【顧客歸戶】為 17 欄 (無損平滑資料遷移：進站天數、商品瀏覽次數、下拉選單)
-    const custHeaders = [
-      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-      '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
-      '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-    ];
-
-    if (custSheet) {
-      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
-      const custLastRow = custSheet.getLastRow();
-      const custLastCol = custSheet.getLastColumn();
-
-      let rawHeaders = [];
-      if (custLastCol > 0) {
-        rawHeaders = custSheet.getRange(1, 1, 1, custLastCol).getValues()[0].map(h => String(h || '').trim());
-      }
-
-      const isAlready17 = custLastCol >= 17 && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間' && rawHeaders[8] === '商品與頁面瀏覽次數';
-
-      if (!isAlready17 && custLastRow > 1) {
-        const is16Col = (custLastCol === 16 || rawHeaders.length === 16) && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間';
-        const oldValues = custSheet.getRange(2, 1, custLastRow - 1, custLastCol).getValues();
-        const migratedRows = [];
-
-        if (is16Col) {
-          // 從 16 欄升級至 17 欄：在第 8 欄 (進站累計次數) 後方插入「商品與頁面瀏覽次數」
-          for (let r = 0; r < oldValues.length; r++) {
-            const row = oldValues[r];
-            const uid = String(row[0] || '').trim();
-            if (!uid) continue;
-            const visitDays = Number(row[7]) || 1;
-            const pageViews = Math.max(visitDays, Number(row[8]) > 0 ? Number(row[8]) : visitDays);
-            migratedRows.push([
-              row[0], row[1], row[2], formatPhoneAsText(row[3]), row[4],
-              row[5], row[6], visitDays, pageViews,
-              Number(row[8]) || 0,   // 歷史訂單數
-              Number(row[9]) || 0,   // 總消費金額
-              row[10] || '一般會員', // 會員等級
-              row[11] || '🟢 活躍',  // 顧客生命狀態
-              row[12] || '',         // 顧客來源
-              row[13] || '',         // 常用超商取件門市
-              row[14] || '正常',     // 黑名單標記
-              row[15] || ''          // 賣家管理備註/標籤
-            ]);
-          }
-        } else {
-          // 從舊版 13 欄無損遷移至 17 欄全新架構
-          const idxUid = rawHeaders.indexOf('LINE_User_ID');
-          const idxNick = rawHeaders.indexOf('最新暱稱');
-          const idxRealName = rawHeaders.indexOf('真實姓名');
-          const idxPhone = rawHeaders.indexOf('電話');
-          const idxOldAddr = rawHeaders.indexOf('常用寄送地址');
-          const idxOrderCount = rawHeaders.indexOf('歷史訂單數');
-          const idxSpend = rawHeaders.indexOf('總消費金額');
-          const idxFirstBuy = rawHeaders.indexOf('首購日期');
-          const idxLastOrder = rawHeaders.indexOf('最後下單日期');
-          const idxBlacklist = rawHeaders.indexOf('黑名單標記');
-          const idxSource = rawHeaders.indexOf('顧客來源');
-          const idxRecipName = rawHeaders.indexOf('最近收件人姓名');
-          const idxRecipPhone = rawHeaders.indexOf('最近收件人電話');
-
-          for (let r = 0; r < oldValues.length; r++) {
-            const row = oldValues[r];
-            const uid = idxUid !== -1 ? String(row[idxUid] || '').trim() : String(row[0] || '').trim();
-            if (!uid) continue;
-
-            const nick = idxNick !== -1 ? String(row[idxNick] || '').trim() : String(row[1] || '').trim();
-            const realName = idxRealName !== -1 ? String(row[idxRealName] || '').trim() : String(row[2] || '').trim();
-            const phone = idxPhone !== -1 ? formatPhoneAsText(row[idxPhone]) : formatPhoneAsText(row[3]);
-            const firstBuy = idxFirstBuy !== -1 ? row[idxFirstBuy] : '';
-            const lastOrder = idxLastOrder !== -1 ? row[idxLastOrder] : '';
-            const joinedAt = firstBuy || lastOrder || nowStr;
-            const lastVisitAt = lastOrder || firstBuy || nowStr;
-            const lastViewed = '';
-            const orderCount = idxOrderCount !== -1 ? (Number(row[idxOrderCount]) || 0) : (Number(row[5]) || 0);
-            const spend = idxSpend !== -1 ? (Number(row[idxSpend]) || 0) : (Number(row[6]) || 0);
-            const visitDays = Math.max(1, orderCount > 0 ? orderCount : 1);
-            const pageViews = Math.max(visitDays, orderCount > 0 ? orderCount * 3 : 1);
-            const tier = spend >= 10000 ? 'VVIP' : (spend >= 3000 ? 'VIP' : '一般會員');
-            const lifeStatus = '🟢 活躍';
-            const source = idxSource !== -1 ? String(row[idxSource] || '') : (String(row[10] || ''));
-            const oldAddr = idxOldAddr !== -1 ? String(row[idxOldAddr] || '') : (String(row[4] || ''));
-            const recipName = idxRecipName !== -1 ? String(row[idxRecipName] || '') : (String(row[11] || ''));
-            const recipPhone = idxRecipPhone !== -1 ? String(row[idxRecipPhone] || '') : (String(row[12] || ''));
-            const defaultStore = oldAddr || (recipName ? `${recipName} ${recipPhone}`.trim() : '');
-            const blacklist = idxBlacklist !== -1 ? (String(row[idxBlacklist] || '正常')) : '正常';
-            const notes = '';
-
-            migratedRows.push([
-              uid, nick, realName, phone, joinedAt, lastVisitAt, lastViewed, visitDays, pageViews,
-              orderCount, spend, tier, lifeStatus, source, defaultStore, blacklist, notes
-            ]);
-          }
-        }
-
-        custSheet.clearContents();
-        const curCols = custSheet.getMaxColumns();
-        if (curCols < custHeaders.length) {
-          custSheet.insertColumnsAfter(curCols, custHeaders.length - curCols);
-        }
-        custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
-        if (migratedRows.length > 0) {
-          custSheet.getRange(2, 1, migratedRows.length, custHeaders.length).setValues(migratedRows);
-        }
-      } else {
-        const curCols = custSheet.getMaxColumns();
-        if (curCols < custHeaders.length) {
-          custSheet.insertColumnsAfter(curCols, custHeaders.length - curCols);
-        }
-        custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
-      }
-
-      custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
-      custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式
-      custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
-      custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
-      custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數
-      custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數
-      custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
-      custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
-
-      // 建立下拉選單驗證
-      try {
-        const tierRule = SpreadsheetApp.newDataValidation()
-          .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
-          .setAllowInvalid(true).build();
-        custSheet.getRange("L2:L2000").setDataValidation(tierRule);
-
-        const lifeRule = SpreadsheetApp.newDataValidation()
-          .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
-          .setAllowInvalid(true).build();
-        custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
-
-        const sourceRule = SpreadsheetApp.newDataValidation()
-          .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
-          .setAllowInvalid(true).build();
-        custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
-
-        const blacklistRule = SpreadsheetApp.newDataValidation()
-          .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
-          .setAllowInvalid(true).build();
-        custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
-      } catch (valErr) {
-        console.warn('建立下拉選單略過:', valErr);
-      }
-    }
-
-    if (!orderSheet || !custSheet) {
-      return '表頭升級完成';
-    }
-
-    const custLastRow = custSheet.getLastRow();
-    const orderLastRow = orderSheet.getLastRow();
-
-    // 讀取顧客表資料，建立 uid -> 會員真實姓名與電話映射
-    const custMap = {};
-    let custValues = [];
-    if (custLastRow > 1) {
-      custValues = custSheet.getRange(2, 1, custLastRow - 1, 17).getValues();
-      for (let c = 0; c < custValues.length; c++) {
-        const uid = String(custValues[c][0] || '').trim();
-        if (uid) {
-          custMap[uid] = {
-            rowIdx: c,
-            realName: String(custValues[c][2] || '').trim(),
-            phone: String(custValues[c][3] || '').trim(),
-            defaultStore: String(custValues[c][14] || '').trim()
-          };
-        }
-      }
-    }
-
-    // 記錄每位顧客最近一次「已結帳」的包裹收件人資訊與未結帳時的會員本人姓名
-    const latestCheckoutRecipByUid = {};
-    const inferredMemberByUid = {};
-
-    if (orderLastRow > 1) {
-      const orderRange = orderSheet.getRange(2, 1, orderLastRow - 1, 24);
-      const orderValues = orderRange.getValues();
-      let orderModified = false;
-
-      for (let i = 0; i < orderValues.length; i++) {
-        const row = orderValues[i];
-        const uid = String(row[2] || '').trim();
-        const colRecipName = String(row[12] || '').trim();  // M 欄 (13): 收件人姓名
-        const colRecipPhone = String(row[13] || '').trim(); // N 欄 (14): 收件人電話
-        const colDelivery = String(row[14] || '').trim();   // O 欄 (15): 取件方式與地址
-        const payStatus = String(row[16] || '').trim();     // Q 欄 (17): 付款狀態
-        const shipStatus = String(row[18] || '').trim();    // S 欄 (19): 採購/出貨狀態
-        const checkoutId = String(row[21] || '').trim();    // V 欄 (22): 結帳編號
-        let colMemberName = String(row[22] || '').trim();   // W 欄 (23): 真實姓名 (訂購會員)
-        let colMemberPhone = String(row[23] || '').trim();  // X 欄 (24): 會員電話 (訂購會員)
-
-        const isCheckedOut = Boolean(checkoutId) ||
-                            shipStatus.includes('已完成結帳') ||
-                            shipStatus.includes('出貨') ||
-                            shipStatus.includes('完成取貨') ||
-                            payStatus.includes('待付款') ||
-                            payStatus.includes('貨到付款') ||
-                            payStatus.includes('對帳') ||
-                            (Boolean(colDelivery) && colDelivery !== '[待出貨結帳填寫]');
-
-        if (!isCheckedOut) {
-          if (!colMemberName && colRecipName) {
-            colMemberName = colRecipName;
-            row[22] = colMemberName;
-            orderModified = true;
-          }
-          if (!colMemberPhone && colRecipPhone) {
-            colMemberPhone = colRecipPhone;
-            row[23] = formatPhoneAsText(colMemberPhone);
-            orderModified = true;
-          }
-          if (colRecipName !== '' || colRecipPhone !== '') {
-            row[12] = '';
-            row[13] = '';
-            orderModified = true;
-          }
-          if (uid && (colMemberName || colMemberPhone)) {
-            inferredMemberByUid[uid] = {
-              realName: colMemberName,
-              phone: colMemberPhone
-            };
-          }
-        } else {
-          if (colRecipPhone && !String(row[13]).startsWith("'")) {
-            row[13] = formatPhoneAsText(colRecipPhone);
-            orderModified = true;
-          }
-          if (uid && (colRecipName || colRecipPhone)) {
-            latestCheckoutRecipByUid[uid] = {
-              recipientName: colRecipName,
-              recipientPhone: colRecipPhone,
-              deliveryAddress: (colDelivery && colDelivery !== '[待出貨結帳填寫]') ? colDelivery : ''
-            };
-          }
-        }
-
-        // 🌟 將【顧客歸戶】中的會員本人「真實姓名 (C欄)」與「電話 (D欄)」權威同步至【訂單明細】W 欄與 X 欄
-        const custInfo = uid ? custMap[uid] : null;
-        if (custInfo) {
-          if (custInfo.realName && colMemberName !== custInfo.realName) {
-            row[22] = custInfo.realName;
-            colMemberName = custInfo.realName;
-            orderModified = true;
-          }
-          if (custInfo.phone) {
-            const formattedCustPhone = formatPhoneAsText(custInfo.phone);
-            if (String(row[23] || '').replace(/^'/, '').trim() !== custInfo.phone.replace(/^'/, '').trim()) {
-              row[23] = formattedCustPhone;
-              colMemberPhone = custInfo.phone;
-              orderModified = true;
-            }
-          }
-        } else if (colMemberPhone && !String(row[23]).startsWith("'")) {
-          row[23] = formatPhoneAsText(colMemberPhone);
-          orderModified = true;
-        }
-      }
-
-      if (orderModified) {
-        orderRange.setValues(orderValues);
-        orderSheet.getRange("N:N").setNumberFormat('@');
-        orderSheet.getRange("X:X").setNumberFormat('@');
-      }
-    }
-
-    // 4. 將已結帳包裹之門市/地址回填至【顧客歸戶】常用超商取件門市 (第 15 欄 O)
-    if (custLastRow > 1 && custValues.length > 0) {
-      let custModified = false;
-      for (let c = 0; c < custValues.length; c++) {
-        const uid = String(custValues[c][0] || '').trim();
-        if (!uid) continue;
-
-        const latestRecip = latestCheckoutRecipByUid[uid];
-        if (latestRecip && latestRecip.deliveryAddress) {
-          if (!String(custValues[c][14] || '').trim()) {
-            custValues[c][14] = latestRecip.deliveryAddress; // 第 15 欄 (O): 常用超商取件門市
-            custModified = true;
-          }
-        }
-
-        // 若顧客歸戶 C/D 欄為空，且有未結帳訂單推導出的會員姓名電話，則補齊
-        const inferred = inferredMemberByUid[uid];
-        if (inferred) {
-          if (!String(custValues[c][2] || '').trim() && inferred.realName) {
-            custValues[c][2] = inferred.realName;
-            custModified = true;
-          }
-          if (!String(custValues[c][3] || '').trim() && inferred.phone) {
-            custValues[c][3] = formatPhoneAsText(inferred.phone);
-            custModified = true;
-          }
-        }
-        if (custValues[c][3] && !String(custValues[c][3]).startsWith("'")) {
-          custValues[c][3] = formatPhoneAsText(custValues[c][3]);
-          custModified = true;
-        }
-      }
-
-      if (custModified) {
-        custSheet.getRange(2, 1, custValues.length, 17).setValues(custValues);
-        custSheet.getRange("D:D").setNumberFormat('@');
-      }
-    }
-
-    // 5. 寫入升級成功安全 Log
-    logCustomerActivity('SYSTEM', '系統維護', '🔄 結構升級', '成功升級【顧客歸戶】為 17 欄全新架構 (含進站累計天數、商品瀏覽次數與下拉選單)，並建立【會員動態Log】安全稽核軌跡表', 'upgradeOrderAndCustomerSheets', 'GAS Server');
-
-    SpreadsheetApp.flush();
-    return '✅ 已完成【訂單明細】(24欄)、【顧客歸戶】(17欄升級) 與【會員動態Log】安全歷程表建立！';
-  }
-
-
-  /**
-  * 📝 記錄會員安全與動態歷程 Log (安全稽核流水帳)
-  * @param {string} userId - LINE User ID
-  * @param {string} displayName - 姓名或暱稱
-  * @param {string} eventType - 事件類型 (如 '🎉 首次加入會員', '👀 進站逛店', '🛍️ 送出訂單', '💳 完成結帳', '✏️ 資料變更')
-  * @param {string} details - 詳細描述
-  * @param {string} page - 頁面或管道
-  * @param {string} device - 裝置與瀏覽器
-  */
-  function logCustomerActivity(userId, displayName, eventType, details, page, device) {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-      const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
-
-      if (!logSheet) {
-        logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-        logSheet.appendRow(logHeaders);
-        logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
-        logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
-        logSheet.getRange("B:B").setNumberFormat('@');
-      }
-
-      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
-      logSheet.appendRow([
-        nowStr,
-        String(userId || 'GUEST'),
-        String(displayName || '訪客'),
-        String(eventType || '動態記錄'),
-        String(details || ''),
-        String(page || ''),
-        String(device || '行動裝置/電腦')
-      ]);
-    } catch (err) {
-      console.warn('寫入會員動態 Log 略過:', err);
-    }
-  }
-
-  /**
-  * 查詢會員動態安全 Log (依時間倒序回傳最新記錄，供管理者後台查看)
-  */
-  function getCustomerLogs(limit = 100) {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
-      if (!logSheet) {
-        return { success: true, logs: [], count: 0 };
-      }
-      const data = logSheet.getDataRange().getValues();
-      if (data.length <= 1) {
-        return { success: true, logs: [], count: 0 };
-      }
-      const logs = [];
-      const maxRows = Math.min(Number(limit) || 100, data.length - 1);
-      for (let r = data.length - 1; r >= data.length - maxRows; r--) {
-        logs.push({
-          timestamp: data[r][0] instanceof Date ? Utilities.formatDate(data[r][0], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[r][0]),
-          userId: data[r][1],
-          displayName: data[r][2],
-          eventType: data[r][3],
-          details: data[r][4],
-          page: data[r][5],
-          device: data[r][6]
-        });
-      }
-      return { success: true, logs: logs, count: logs.length };
-    } catch (err) {
-      return { success: false, message: '讀取會員動態 Log 失敗: ' + err.toString() };
-    }
-  }
-
-  /**
-  * 🌟 試算表即時編輯觸發器 (Simple Trigger)：
-  * 當賣家在【顧客歸戶】手動修改 C 欄「真實姓名」或 D 欄「電話」時（例如修正被舊版覆蓋的會員真實姓名），
-  * 自動即時將最新的會員真實姓名與電話同步至【訂單明細】該會員所有訂單的第 23 欄 (W: 真實姓名) 與第 24 欄 (X: 會員電話)，
-  * 且完全保留第 13/14 欄 (M/N: 結帳收件人姓名與電話) 不受影響！
-  */
-  function onEdit(e) {
-    try {
-      if (!e || !e.range) return;
-      const sheet = e.range.getSheet();
-      if (!sheet || sheet.getName() !== SHEET_NAMES.CUSTOMERS) return;
-
-      const row = e.range.getRow();
-      const col = e.range.getColumn();
-      const numCols = e.range.getNumColumns();
-      if (row <= 1) return;
-
-      // 檢查是否編輯了第 3 欄 (C: 真實姓名) 或 第 4 欄 (D: 電話)
-      const touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
-      if (!touchesNameOrPhone) return;
-
-      const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
-      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-      if (!orderSheet) return;
-
-      ensureOrderAndCustomerSchema(ss, orderSheet, sheet);
-
-      const numRows = e.range.getNumRows();
-      const custRows = sheet.getRange(row, 1, numRows, 4).getValues();
-      const updatesByUid = {};
-
-      for (let r = 0; r < custRows.length; r++) {
-        const uid = String(custRows[r][0] || '').trim();
-        const realName = String(custRows[r][2] || '').trim();
-        const phone = String(custRows[r][3] || '').trim();
-        if (uid) {
-          updatesByUid[uid] = { realName: realName, phone: phone };
-        }
-      }
-
-      const orderLastRow = orderSheet.getLastRow();
-      if (orderLastRow <= 1) return;
-
-      const orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
-      for (let i = 0; i < orderData.length; i++) {
-        const oUid = String(orderData[i][2] || '').trim();
-        if (oUid && updatesByUid[oUid]) {
-          const targetRow = i + 2;
-          const u = updatesByUid[oUid];
-          if (u.realName) {
-            orderSheet.getRange(targetRow, 23).setValue(u.realName); // W 欄: 訂購會員真實姓名
-          }
-          if (u.phone) {
-            orderSheet.getRange(targetRow, 24).setValue(formatPhoneAsText(u.phone)); // X 欄: 訂購會員電話
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('onEdit 同步會員真實姓名略過:', err);
-    }
-  }
-
-  /**
-  * 一鍵清空【訂單明細】與【顧客歸戶】所有資料（自動保留第 1 列標題列）
-  * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」
-  */
-  function clearOrdersAndCustomers() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. 清空訂單明細（保留第 1 列標題列）
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    if (orderSheet) {
-      const lastRow = orderSheet.getLastRow();
-      if (lastRow > 1) {
-        orderSheet.deleteRows(2, lastRow - 1);
-        console.log(`已清空【${SHEET_NAMES.ORDERS}】共 ${lastRow - 1} 筆資料`);
-      } else {
-        console.log(`【${SHEET_NAMES.ORDERS}】目前已無訂單資料`);
-      }
-    }
-
-    // 2. 清空顧客歸戶（保留第 1 列標題列）
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (custSheet) {
-      const lastRow = custSheet.getLastRow();
-      if (lastRow > 1) {
-        custSheet.deleteRows(2, lastRow - 1);
-        console.log(`已清空【${SHEET_NAMES.CUSTOMERS}】共 ${lastRow - 1} 筆資料`);
-      } else {
-        console.log(`【${SHEET_NAMES.CUSTOMERS}】目前已無顧客資料`);
-      }
-    }
-
-    return '✅ 已成功清空【訂單明細】與【顧客歸戶】所有資料！';
-  }
-
-  /**
-  * 處理 GET 請求
-  * 支援 actions: 
-  * - getProducts (取得所有上架中商品)
-  * - getProductById (取得單一商品詳情)
-  * - getOrdersByUserId (取得客人的歷史訂單與待付款彙整)
-  * - getSettings (取得賣家收款帳號與運費規則)
-  */
-  function doGet(e) {
-    const action = (e && e.parameter && e.parameter.action) || 'getProducts';
-    const reqUserId = (e && e.parameter && (e.parameter.userId || e.parameter.uid || e.parameter.adminUserId)) || '';
-    const reqAdminToken = (e && e.parameter && (e.parameter.adminToken || e.parameter.token || e.parameter.apiKey)) || '';
-    
-    try {
-      let result = {};
-      if (action === 'getProducts') {
-        // 買家前台商品大廳公開 API：僅回傳上架中商品，嚴格排除採購成本、匯率與毛利等商業機密
-        result = getProductsList(false, false);
-      } else if (action === 'getAllProducts') {
-        // 賣家後台管理中心專用：強制驗證管理者 LINE User ID 白名單與安全通行碼！
-        const isAdmin = checkIsAdmin(reqUserId, reqAdminToken);
-        if (!isAdmin) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getProductsList(true, true);
-          result.isAdmin = true;
-        }
-      } else if (action === 'verifyAdmin') {
-        // 提供管理中心前端門禁系統快速校驗當前 LINE 使用者身分與安全通行碼
-        const isAdmin = checkIsAdmin(reqUserId, reqAdminToken);
-        result = { success: isAdmin, isAdmin: isAdmin, userId: reqUserId };
-      } else if (action === 'getProductById') {
-        const pid = e.parameter.productId;
-        // 買家單品詳情頁公開 API：嚴格排除採購成本、匯率與毛利等商業機密
-        result = getProductDetail(pid);
-      } else if (action === 'getOrdersByUserId') {
-        const uid = e.parameter.userId;
-        result = getOrdersForUser(uid);
-      } else if (action === 'checkCustomer') {
-        const uid = e.parameter.userId;
-        result = checkCustomerExists(uid);
-      } else if (action === 'getSettings') {
-        result = getSystemSettings();
-      } else if (action === 'getViewStats') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getViewStats();
-        }
-      } else if (action === 'testTelegram') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          const testRes = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
-          result = testRes;
-        }
-      } else if (action === 'recordPageView') {
-        result = handleRecordPageView({
-          page: e.parameter.page,
-          title: e.parameter.title,
-          productId: e.parameter.productId
-        });
-      } else if (action === 'getCustomerLogs') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getCustomerLogs(e.parameter.limit || 100);
-        }
-      } else if (action === 'getCustomerNotifyList') {
-        // 顧客結帳通知清單包含買家個資與消費，強制驗證管理者身分與安全通行碼
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getCustomerNotifyList();
-        }
-      } else if (action === 'getCheckoutParcels') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getCheckoutParcels();
-        }
-      } else if (action === 'getProcurementOrders') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = getProcurementOrders();
-        }
-      } else if (action === 'updateParcelStatus') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = handleUpdateParcelStatus({
-            checkoutId: e.parameter.checkoutId,
-            status: e.parameter.status,
-            trackingCode: e.parameter.trackingCode
-          });
-        }
-      } else if (action === 'recalculateCustomerStats') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = recalculateCustomerStats();
-        }
-      } else if (action === 'upgradeSheets' || action === 'upgradeOrderAndCustomerSheets') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = upgradeOrderAndCustomerSheets();
-        }
-      } else if (action === 'repairProductCostData' || action === 'upgradeCostData') {
-        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
-          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
-        } else {
-          result = { success: true, message: upgradeExistingProductsToFormula() };
-        }
-      } else if (action === 'clearTestData' || action === 'clearTestProducts') {
-        result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
-      } else {
-        result = { success: false, message: '未知的 action' };
-      }
-      return jsonResponse(result);
-    } catch (err) {
-      return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
-    }
-  }
-
-  /**
-  * 處理 POST 請求
-  * 支援 actions:
-  * - createOrder (連線搶購登記下單)
-  * - checkoutOrders (出貨合併結帳：6大配送方式與收件資料)
-  * - reportPayment (客人回填匯款後五碼)
-  * - addProduct (賣家快速上架商品 - 需管理員白名單權限與安全通行碼)
-  * - updateProduct (賣家線上完整維護商品資料 - 需管理員白名單權限與安全通行碼)
-  * - batchUpdateProducts (批次上架/下架/修改分類 - 需管理員白名單權限與安全通行碼)
-  * - uploadImages (圖片上傳 Google Drive - 需管理員白名單權限與安全通行碼)
-  * - markCustomerNotified (標記顧客名下訂單已發送1對1結帳通知 - 需管理員白名單權限與安全通行碼)
-  */
-  function doPost(e) {
-    try {
-      const postData = JSON.parse(e.postData.contents);
-      const action = postData.action;
-      const reqAdminId = (postData && (
-        postData.adminUserId ||
-        postData.userId ||
-        (postData.data && (postData.data.adminUserId || postData.data.userId))
-      )) || '';
-      const reqAdminToken = (postData && (
-        postData.adminToken ||
-        postData.token ||
-        postData.apiKey ||
-        (postData.data && (postData.data.adminToken || postData.data.token || postData.data.apiKey))
-      )) || '';
-
-      // 🛡️ 後台管理專屬寫入與統計操作：強制驗證管理員 LINE UID 白名單與安全通行碼
-      const adminProtectedActions = [
-        'addProduct',
-        'updateProduct',
-        'batchUpdateProducts',
-        'uploadImages',
-        'markCustomerNotified',
-        'updateParcelStatus',
-        'getViewStats',
-        'getCheckoutParcels',
-        'getProcurementOrders'
-      ];
-      if (adminProtectedActions.includes(action) && !checkIsAdmin(reqAdminId, reqAdminToken)) {
-        return jsonResponse({
-          success: false,
-          isAdmin: false,
-          message: '🚫 權限不足：管理員身分或安全通行碼 (PIN) 驗證失敗，系統已拒絕執行此後台操作！'
-        });
-      }
-
-      let result = {};
-      if (action === 'createOrder') {
-        result = handleCreateOrder(postData.data);
-      } else if (action === 'registerCustomer') {
-        result = handleRegisterCustomer(postData.data);
-      } else if (action === 'checkoutOrders') {
-        result = handleCheckoutOrders(postData.data);
-      } else if (action === 'confirmReceived') {
-        result = handleConfirmReceived(postData.data);
-      } else if (action === 'updateParcelStatus') {
-        result = handleUpdateParcelStatus(postData.data || postData);
-      } else if (action === 'getCheckoutParcels') {
-        result = getCheckoutParcels();
-      } else if (action === 'getProcurementOrders') {
-        result = getProcurementOrders();
-      } else if (action === 'reportPayment') {
-        result = handleReportPayment(postData.data);
-      } else if (action === 'addProduct') {
-        result = handleAddProduct(postData.data);
-      } else if (action === 'updateProduct') {
-        result = handleUpdateProduct(postData.data);
-      } else if (action === 'batchUpdateProducts') {
-        result = handleBatchUpdateProducts(postData.data);
-      } else if (action === 'uploadImages') {
-        result = handleUploadImages(postData.data);
-      } else if (action === 'markCustomerNotified') {
-        result = handleMarkCustomerNotified(postData);
-      } else if (action === 'recordPageView') {
-        result = handleRecordPageView(postData.data);
-      } else if (action === 'getViewStats') {
-        result = getViewStats();
-      } else if (action === 'getCustomerLogs') {
-        result = getCustomerLogs(postData.limit || 100);
-      } else if (action === 'upgradeSheets' || action === 'upgradeOrderAndCustomerSheets') {
-        result = { success: true, message: upgradeOrderAndCustomerSheets() };
-      } else if (action === 'clearTestData' || action === 'clearTestProducts') {
-        result = { success: false, message: '🚫 系統已啟用防誤觸保護：為防止訂單與顧客資料遭誤刪，此 API 已永久停用！' };
-      } else {
-        result = { success: false, message: '未知的 action' };
-      }
-      return jsonResponse(result);
-    } catch (err) {
-      return jsonResponse({ success: false, message: err.toString(), error: err.toString() });
-    }
-  }
-
-  /**
-  * 取得商品清單
-  * @param {boolean} includeAll - 是否包含已下架商品 (預設 false: 僅回傳上架中商品)
-  * @param {boolean} includeCost - 是否包含採購成本、匯率與利潤欄位 (預設 false: 嚴格禁止回傳商業機密)
-  */
-  function getProductsList(includeAll = false, includeCost = false) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-    if (!sheet) return { success: false, message: '尚未初始化商品表' };
+    if (!sheet) return { success: false, message: '商品表不存在' };
 
     const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const products = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      const status = row[9];
-      if (includeAll || status === '上架中') {
-        let rawSpecs = [];
-        try {
-          rawSpecs = JSON.parse(row[6]);
-        } catch (e) {
-          rawSpecs = row[6] ? [row[6]] : [];
-        }
-
-        const basePrice = Number(row[4]) || 0;
-        const baseStock = Number(row[5]) || 0;
-        const isBaseUnlimited = baseStock >= 9999;
-
-        // 正規化規格陣列 (相容舊版純字串陣列 與 新版獨立定價庫存物件陣列)
-        let normalizedSpecs = [];
-        if (Array.isArray(rawSpecs)) {
-          normalizedSpecs = rawSpecs.map(s => {
-            if (s && typeof s === 'object') {
-              const sName = String(s.name || '').trim();
-              const sPrice = (s.price !== undefined && !isNaN(Number(s.price)) && Number(s.price) > 0) ? Number(s.price) : basePrice;
-              const sUnlimited = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
-              const sStock = sUnlimited ? 999999 : (Number(s.stock) || 0);
-              return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
-            } else if (typeof s === 'string' && s.trim()) {
-              return { name: s.trim(), price: basePrice, stock: baseStock, isUnlimited: isBaseUnlimited };
-            }
-            return null;
-          }).filter(s => s && s.name);
-        }
-
-        // 解析所有圖片清單
-        let allImages = [];
-        try {
-          allImages = JSON.parse(row[13]);
-        } catch (e) {
-          allImages = row[7] ? String(row[7]).split(/[;；,\n]/).map(s => s.trim()).filter(Boolean) : [];
-        }
-
-        const origPriceVal = row[3];
-        const hasOrigPrice = origPriceVal !== '' && origPriceVal !== null && !isNaN(Number(origPriceVal)) && Number(origPriceVal) > 0;
-
-        const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
-        const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
-
-        const prodItem = {
-          id: row[0],
-          name: row[1],
-          category: row[2],
-          originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
-          price: basePrice,
-          stock: baseStock,
-          specs: normalizedSpecs,
-          imageUrl: row[7] || (allImages[0] || ''),
-          imageUrls: allImages,
-          description: row[8],
-          status: status || '上架中',
-          deadline: row[14] ? formatDeadlineStr(row[14]) : '', // 欄位 15: 各商品指定結單時間 (選填)
-          createdAt: createdAtStr,                             // 欄位 11 (K): 建立時間
-          updatedAt: updatedAtStr                              // 欄位 22 (V): 最後更新時間
-        };
-
-        // 🛡️ 商業機密嚴格保護：採購成本、匯率、稅金、重量與運費僅在賣家管理後台明確請求 (includeCost=true) 時才附加
-        // 前台買家公開 API (getProducts, getProductById) 絕對不包含任何成本欄位，防止客人窺探定價與利潤！
-        if (includeCost) {
-          prodItem.costPrice = Number(row[11]) || 0;
-          prodItem.costNote = row[12] || '';
-          prodItem.currency = row[15] || 'JPY';
-          prodItem.costPreTax = Number(row[16]) || 0;
-          prodItem.costTax = Number(row[17]) || 0;
-          prodItem.exchangeRate = Number(row[18]) || 0;
-          prodItem.weightG = Number(row[19]) || 0;
-          prodItem.shippingRate = Number(row[20]) || 240;
-        }
-
-        products.push(prodItem);
+    let deletedCount = 0;
+    for (let i = data.length - 1; i >= 1; i--) {
+      const pName = String(data[i][1] || '');
+      const pCat = String(data[i][2] || '');
+      if (pName.includes('測試') || pCat === '測試' || pName.startsWith('自動連續測試') || pName.startsWith('即時測試') || pName.startsWith('商品1') || pName.startsWith('商品2') || pName.startsWith('商品3') || pName.startsWith('商品4') || pName.startsWith('商品5')) {
+        sheet.deleteRow(i + 1);
+        deletedCount++;
       }
     }
 
-    const settings = getSystemSettings().data || {};
-    return { success: true, data: products, settings: settings };
+    return {
+      success: true,
+      message: `✅ 已清除 ${deletedCount} 筆測試商品！`,
+      deletedCount: deletedCount
+    };
   }
+/* ==================== 模組結束：02_ProductService.gs ==================== */
 
-  /**
-  * 格式化結單時間字串 (相容 Date 物件與字串)
-  */
-  function formatDeadlineStr(val) {
-    if (!val) return '';
-    if (val instanceof Date) {
-      if (isNaN(val.getTime())) return '';
-      const pad = n => String(n).padStart(2, '0');
-      return `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())} ${pad(val.getHours())}:${pad(val.getMinutes())}`;
-    }
-    return String(val).trim().replace(/\//g, '-');
-  }
 
-  /**
-  * 取得單一商品詳情 (前台買家專用：嚴格禁止回傳任何採購成本與利潤資訊)
-  */
-  function getProductDetail(productId) {
-    const list = getProductsList(false, false);
-    if (!list.success) return list;
-    const prod = list.data.find(p => p.id === productId);
-    if (prod) {
-      return { success: true, data: prod };
-    }
-    return { success: false, message: '查無此商品或已下架' };
-  }
+/* ==================== 模組起點：03_OrderService.gs ==================== */
+/**
+ * ==============================================================================
+ * 【03_OrderService.gs】訂單管理與出貨服務模組 (Order & Procurement)
+ * ==============================================================================
+ * 說明：專門處理買家下單保留、加單合併、結帳出貨、匯款回報、採購作業站與包裹狀態。
+ * ==============================================================================
+ */
 
-  /**
-  * 檢查是否為已建檔之老顧客
-  */
-  function checkCustomerExists(userId) {
-    if (!userId) return { success: false, exists: false };
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (!custSheet) return { success: true, exists: false };
-
-    // 確保 13 欄結構支援最近收件人姓名與電話
-    ensureOrderAndCustomerSchema(ss, null, custSheet);
-
-    const data = custSheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        return {
-          success: true,
-          exists: true,
-          profile: {
-            userId: data[i][0],
-            userName: data[i][1],
-            realName: data[i][2],
-            phone: data[i][3],
-            joinedAt: data[i][4] instanceof Date ? Utilities.formatDate(data[i][4], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][4] || ''),
-            lastVisitAt: data[i][5] instanceof Date ? Utilities.formatDate(data[i][5], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][5] || ''),
-            lastViewed: data[i][6] || '',
-            visitDays: Number(data[i][7]) || 1,
-            visitCount: Number(data[i][7]) || 1, // 相容舊版名稱
-            pageViews: Number(data[i][8]) || 1,
-            orderCount: Number(data[i][9]) || 0,
-            totalSpend: Number(data[i][10]) || 0,
-            memberTier: data[i][11] || '一般會員',
-            lifeStatus: data[i][12] || '🟢 活躍',
-            source: data[i][13] || '',
-            defaultAddress: data[i][14] || '',
-            isBlacklisted: data[i][15] || '正常',
-            notes: data[i][16] || '',
-            lastRecipientName: data[i][2] || '',
-            lastRecipientPhone: data[i][3] || ''
-          }
-        };
-      }
-    }
-    return { success: true, exists: false };
-  }
-
-  /**
+/**
   * 1. 連線搶購下單處理（極速登記：不需填地址與運費，防超賣排隊鎖）
   */
   function handleCreateOrder(orderData) {
@@ -1862,7 +1539,7 @@
     }
   }
 
-  /**
+/**
   * 2. 回國出貨合併結帳處理（計算 6 大配送方式運費、統一寫入收件人與地址）
   */
   function handleCheckoutOrders(checkoutData) {
@@ -2141,310 +1818,7 @@
     };
   }
 
-  /**
-  * 更新或建立顧客檔案歸戶
-  * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源', '最近收件人姓名', '最近收件人電話']
-  */
-  function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      if (!custSheet) {
-        custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-        if (!custSheet) {
-          custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
-          custSheet.appendRow([
-            'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-            '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
-            '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-          ]);
-          custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
-          custSheet.getRange("D:D").setNumberFormat('@');
-        }
-      }
-
-      ensureOrderAndCustomerSchema(ss, null, custSheet);
-
-      const nowStr = now instanceof Date ? Utilities.formatDate(now, 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
-      const userId = orderData.userId || 'LINE_GUEST';
-      const userName = orderData.userName || '訪客';
-      const realName = (orderData.realName || '').trim();
-      const phone = formatPhoneAsText(orderData.phone);
-      const source = (orderData.source || '').trim();
-      const prodName = orderData.productName || '';
-      const buyQty = Number(orderData.quantity) || 1;
-      const data = custSheet.getDataRange().getValues();
-      let found = false;
-
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === userId) {
-          found = true;
-          const row = i + 1;
-          if (userName) custSheet.getRange(row, 2).setValue(userName);
-          if (realName && (!data[i][2] || String(data[i][2]).trim() === '')) {
-            custSheet.getRange(row, 3).setValue(realName);
-          }
-          if (phone && (!data[i][3] || String(data[i][3]).trim() === '')) {
-            custSheet.getRange(row, 4).setValue(phone);
-          }
-          // Col 6: 最後進站時間
-          custSheet.getRange(row, 6).setValue(nowStr);
-          // Col 7: 最後瀏覽商品/頁面
-          if (prodName) {
-            custSheet.getRange(row, 7).setValue(prodName);
-          }
-          
-          const currentOrders = Number(data[i][9]) || 0;
-          const currentSpend = Number(data[i][10]) || 0;
-          const newOrders = currentOrders + 1;
-          const newSpend = currentSpend + (Number(totalAmount) || 0);
-
-          // Col 10: 歷史訂單數, Col 11: 總消費金額
-          custSheet.getRange(row, 10).setValue(newOrders);
-          custSheet.getRange(row, 11).setValue(newSpend);
-
-          // Col 12: 會員等級自動試算 (尊重手動指定之「批發夥伴」；累積3000=VIP, 10000=VVIP)
-          const currentTier = String(data[i][11] || '一般會員').trim();
-          let autoTier = currentTier;
-          if (currentTier !== '批發夥伴') {
-            if (newSpend >= 10000) {
-              autoTier = 'VVIP';
-            } else if (newSpend >= 3000) {
-              autoTier = (currentTier === 'VVIP' ? 'VVIP' : 'VIP');
-            }
-          }
-          if (autoTier !== currentTier) {
-            custSheet.getRange(row, 12).setValue(autoTier);
-          }
-
-          // Col 13: 顧客生命狀態 (活躍)
-          custSheet.getRange(row, 13).setValue('🟢 活躍');
-
-          // Col 14: 顧客來源
-          if (source && (!data[i][13] || data[i][13] === '')) {
-            custSheet.getRange(row, 14).setValue(source);
-          }
-          break;
-        }
-      }
-
-      if (!found) {
-        custSheet.appendRow([
-          userId,
-          userName,
-          realName,
-          phone,
-          nowStr,       // 加入會員時間
-          nowStr,       // 最後進站時間
-          prodName,     // 最後瀏覽商品
-          1,            // 進站累計天數
-          1,            // 商品與頁面瀏覽次數
-          1,            // 歷史訂單數
-          Number(totalAmount) || 0, // 總消費金額
-          '一般會員',    // 會員等級
-          '🟢 活躍',     // 顧客生命狀態
-          source,       // 顧客來源
-          '',           // 常用超商取件門市
-          '正常',       // 黑名單標記
-          ''            // 賣家管理備註/標籤
-        ]);
-      }
-
-      // 寫入送出訂單安全稽核 Log
-      logCustomerActivity(
-        userId,
-        realName ? `${realName} (${userName})` : userName,
-        '🛍️ 送出訂單',
-        `下單商品: ${prodName || '未具名商品'}${buyQty > 1 ? ' x' + buyQty : ''}，金額 NT$ ${Number(totalAmount) || 0}`,
-        'product.html',
-        orderData.device || ''
-      );
-    } catch (err) {
-      console.error('更新顧客歸戶失敗 (不影響訂單建立): ' + err.toString());
-    }
-  }
-
-  /**
-  * 更新結帳時之最近收件人資訊與常用寄送地址
-  * 嚴格只更新第 5 欄(E: 常用寄送地址)、第 12 欄(L: 最近收件人姓名)、第 13 欄(M: 最近收件人電話)
-  * 絕不覆蓋第 3 欄 (C: 真實姓名) 或第 4 欄 (D: 電話)！
-  */
-  function updateCustomerRecipientInfo(custSheet, userId, recipientName, recipientPhone, deliveryInfo) {
-    try {
-      if (!custSheet) return;
-      const cleanPhone = formatPhoneAsText(recipientPhone);
-      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
-      const data = custSheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === userId) {
-          const row = i + 1;
-          // 第 15 欄 (O): 常用超商取件門市
-          if (deliveryInfo) custSheet.getRange(row, 15).setValue(deliveryInfo);
-          // 第 6 欄 (F): 最後進站時間
-          custSheet.getRange(row, 6).setValue(nowStr);
-
-          // 防呆：若該顧客 C欄(真實姓名) 或 D欄(電話) 原本完全空白，則順道補齊
-          const currentRealName = String(data[i][2] || '').trim();
-          const currentPhone = String(data[i][3] || '').trim();
-          if (!currentRealName && recipientName) {
-            custSheet.getRange(row, 3).setValue(recipientName);
-          }
-          if (!currentPhone && cleanPhone) {
-            custSheet.getRange(row, 4).setValue(cleanPhone);
-          }
-          break;
-        }
-      }
-
-      // 寫入完成結帳安全稽核 Log
-      logCustomerActivity(
-        userId,
-        recipientName || '結帳買家',
-        '💳 完成結帳',
-        `收件人: ${recipientName || '未指定'} (${cleanPhone || ''})，取件門市/地址: ${deliveryInfo || ''}`,
-        'my-orders.html',
-        ''
-      );
-    } catch (err) {
-      console.error('更新收件人資訊失敗: ' + err.toString());
-    }
-  }
-
-  /**
-  * 相容舊函式命名：轉向呼叫 updateCustomerRecipientInfo
-  */
-  function updateCustomerAddress(custSheet, userId, name, phone) {
-    updateCustomerRecipientInfo(custSheet, userId, name, phone, '');
-  }
-
-  /**
-  * 🔄 一鍵重新計算並同步【顧客歸戶】的所有統計數據
-  * 根據【訂單明細】最新資料，自動為每位顧客精準重算：
-  * - 歷史訂單數 (第 6 欄)
-  * - 總消費金額 (第 7 欄)
-  * - 首購日期 (第 8 欄)
-  * - 最後下單日期 (第 9 欄)
-  * 支援「LINE_User_ID」與「手機號碼」雙重智慧歸戶比對！
-  */
-  function recalculateCustomerStats() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    
-    if (!orderSheet || !custSheet) {
-      return { success: false, message: '找不到訂單或顧客工作表' };
-    }
-
-    // 自動執行欄位升級與資料同步 (將顧客表的真實姓名回寫至訂單表第 23 欄 W)
-    ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
-    upgradeOrderAndCustomerSheets(ss);
-
-    const orderData = orderSheet.getDataRange().getValues();
-    const custData = custSheet.getDataRange().getValues();
-    if (custData.length <= 1) {
-      return { success: true, message: '顧客表無資料' };
-    }
-
-    // 1. 建立顧客映射表 (以 userId 為主 key，同時支援手機號碼比對)
-    const statsMap = {};
-    const phoneToUidMap = {};
-
-    for (let c = 1; c < custData.length; c++) {
-      const uid = String(custData[c][0] || '').trim();
-      const phone = String(custData[c][3] || '').replace(/[-\s]/g, '').trim();
-      if (uid) {
-        statsMap[uid] = {
-          orderCount: 0,
-          totalSpend: 0,
-          firstDate: null,
-          lastDate: null
-        };
-        if (phone) phoneToUidMap[phone] = uid;
-      }
-    }
-
-    // 2. 遍歷所有訂單進行統計累加
-    for (let o = 1; o < orderData.length; o++) {
-      const row = orderData[o];
-      let uid = String(row[2] || '').trim(); // 第 3 欄 LINE_User_ID
-      // 優先以第 24 欄 (X: 會員電話) 比對，其次以第 14 欄 (N: 收件人電話)
-      const memberPhone = String(row[23] || '').replace(/[-\s]/g, '').trim();
-      const recipientPhone = String(row[13] || '').replace(/[-\s]/g, '').trim();
-      const phone = memberPhone || recipientPhone;
-      const rawDate = row[1]; // 第 2 欄 下單時間
-      const orderTime = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
-      const amount = Number(row[11]) || Number(row[9]) || 0; // 第 12 欄總金額或第 10 欄商品小計
-
-      // 若 uid 未在顧客表直接對應，但手機號碼能對應，則智慧歸戶
-      if (!statsMap[uid] && phone && phoneToUidMap[phone]) {
-        uid = phoneToUidMap[phone];
-      }
-
-      if (statsMap[uid]) {
-        statsMap[uid].orderCount += 1;
-        statsMap[uid].totalSpend += amount;
-
-        if (orderTime && !isNaN(orderTime.getTime())) {
-          if (!statsMap[uid].firstDate || orderTime < statsMap[uid].firstDate) {
-            statsMap[uid].firstDate = orderTime;
-          }
-          if (!statsMap[uid].lastDate || orderTime > statsMap[uid].lastDate) {
-            statsMap[uid].lastDate = orderTime;
-          }
-        }
-      }
-    }
-
-    // 3. 寫回【顧客歸戶】工作表 (17 欄規格)
-    let updatedCount = 0;
-    for (let c = 1; c < custData.length; c++) {
-      const uid = String(custData[c][0] || '').trim();
-      const stat = statsMap[uid];
-      if (stat) {
-        const row = c + 1;
-        // Col 10: 歷史訂單數, Col 11: 總消費金額
-        custSheet.getRange(row, 10).setValue(stat.orderCount);
-        custSheet.getRange(row, 11).setValue(stat.totalSpend);
-
-        // Col 12: 會員等級自動試算 (尊重批發夥伴；>=10000=VVIP, >=3000=VIP)
-        const curTier = String(custData[c][11] || '一般會員').trim();
-        let tier = curTier;
-        if (curTier !== '批發夥伴') {
-          if (stat.totalSpend >= 10000) tier = 'VVIP';
-          else if (stat.totalSpend >= 3000) tier = (curTier === 'VVIP' ? 'VVIP' : 'VIP');
-          else tier = '一般會員';
-        }
-        custSheet.getRange(row, 12).setValue(tier);
-
-        // Col 5: 加入會員時間 (若原本空白且有首購紀錄則回補)
-        if (stat.firstDate && !custData[c][4]) custSheet.getRange(row, 5).setValue(stat.firstDate);
-        // Col 6: 最後進站時間 (若原本空白且有最後單紀錄則回補)
-        if (stat.lastDate && !custData[c][5]) custSheet.getRange(row, 6).setValue(stat.lastDate);
-        updatedCount++;
-      }
-    }
-
-    logCustomerActivity('SYSTEM', '系統維護', '📊 重新統計會員數據', `已重新統計並同步 ${updatedCount} 位會員之歷史訂單與消費金額`, 'recalculateCustomerStats', 'GAS Server');
-
-    Logger.log(`✅ 已完成 ${updatedCount} 位顧客之歷史訂單數據重新整理！`);
-    return {
-      success: true,
-      message: `✅ 已重新統計並同步 ${updatedCount} 位顧客的歷史訂單與消費金額！`,
-      updatedCount: updatedCount
-    };
-  }
-
-  /**
-  * 格式化電話號碼為 Google 試算表純文字 (防止開頭 0 被自動轉為數字截斷)
-  */
-  function formatPhoneAsText(phone) {
-    if (phone === null || phone === undefined || phone === '') return '';
-    const clean = String(phone).trim();
-    if (!clean) return '';
-    if (clean.startsWith("'")) return clean;
-    return "'" + clean;
-  }
-
-  /**
+/**
   * 3. 客人回報匯款資料（支援匯款方式：LinePay、街口支付、中國信託轉帳、轉帳時間與後五碼）
   * 送出後將狀態更新為「對帳中，待出貨」
   */
@@ -2537,7 +1911,7 @@
     return { success: false, message: '查無符合條件的待付款訂單' };
   }
 
-  /**
+/**
   * 4. 買家確認完成取貨（將狀態改為「已完成取貨」，正式歸檔至歷史訂單）
   */
   function handleConfirmReceived(data) {
@@ -2590,7 +1964,7 @@
     return { success: false, message: '查無符合條件的配送中訂單' };
   }
 
-  /**
+/**
   * 5. 查詢使用者的訂單清單（區分待出貨結帳/配送中商品與歷史訂單，附帶顧客資訊、系統設定、包裹追蹤碼與結帳單號）
   */
   function getOrdersForUser(userId) {
@@ -2746,1642 +2120,20 @@
     };
   }
 
-  /**
-  * 首次填寫聯絡資料彈窗時，立即正式建立/更新顧客檔案歸戶至試算表
-  */
-  function handleRegisterCustomer(data) {
-    if (!data) return { success: false, message: '缺少資料' };
-    let userId = String(data.userId || '').trim();
-    const userName = data.userName || 'LINE 會員';
-    const realName = (data.realName || '').trim();
-    const rawPhone = data.phone ? String(data.phone).trim() : '';
-    const cleanPhone = rawPhone.replace(/[-\s]/g, '');
-    const phone = formatPhoneAsText(rawPhone);
-    const source = (data.source || '').trim();
-
-    if (!realName || !rawPhone) {
-      return { success: false, message: '真實姓名與電話為必填' };
+function formatDeliveryText(raw) {
+      if (!raw) return '';
+      let text = String(raw).trim();
+      text = text.replace(/\[711_COD\]/gi, '[7-11 超商取貨付款]');
+      text = text.replace(/\[FAMI_COD\]/gi, '[全家 超商取貨付款]');
+      text = text.replace(/\[POST_COD\]/gi, '[郵局貨到付款]');
+      text = text.replace(/\[711_PREPAID\]/gi, '[7-11 超商純取貨]');
+      text = text.replace(/\[FAMI_PREPAID\]/gi, '[全家 超商純取貨]');
+      text = text.replace(/\[POST_PREPAID\]/gi, '[郵局純寄件]');
+      text = text.replace(/\[BLACKCAT_PREPAID\]/gi, '[黑貓宅配到府]');
+      return text;
     }
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (!custSheet) {
-      custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
-      custSheet.appendRow([
-        'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-        '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
-        '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-      ]);
-      custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
-      custSheet.getRange("D:D").setNumberFormat('@');
-    }
-
-    ensureOrderAndCustomerSchema(ss, null, custSheet);
-
-    const now = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
-    const values = custSheet.getDataRange().getValues();
-    let found = false;
-
-    const isRealLineId = userId && !userId.startsWith('GUEST_') && userId !== 'TEST_USER_999' && userId !== 'LINE_GUEST';
-
-    for (let i = 1; i < values.length; i++) {
-      const rowUid = String(values[i][0] || '').trim();
-      const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
-
-      const isMatched = (rowUid === userId) || (isRealLineId && rowPhone === cleanPhone && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999'));
-
-      if (isMatched) {
-        found = true;
-        const row = i + 1;
-        if (isRealLineId && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999')) {
-          custSheet.getRange(row, 1).setValue(userId);
-        }
-        if (userName) custSheet.getRange(row, 2).setValue(userName);
-        custSheet.getRange(row, 3).setValue(realName);
-        custSheet.getRange(row, 4).setValue(phone);
-        // Col 6: 最後進站時間
-        custSheet.getRange(row, 6).setValue(now);
-        // Col 14: 顧客來源
-        if (source) custSheet.getRange(row, 14).setValue(source);
-
-        // 寫入更新資料安全 Log
-        logCustomerActivity(
-          userId,
-          `${realName} (${userName})`,
-          '✏️ 更新會員資料',
-          `更新真實姓名: ${realName}, 電話: ${phone}, 來源: ${source || '未指定'}`,
-          data.page || '個人資料/VIP守門牆',
-          data.device || ''
-        );
-        break;
-      }
-    }
-
-    if (!found && (!isRealLineId) && cleanPhone) {
-      for (let i = 1; i < values.length; i++) {
-        const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
-        const rowUid = String(values[i][0] || '').trim();
-        if (rowPhone === cleanPhone && rowUid && !rowUid.startsWith('GUEST_') && rowUid !== 'TEST_USER_999') {
-          userId = rowUid;
-          found = true;
-          const row = i + 1;
-          if (userName) custSheet.getRange(row, 2).setValue(userName);
-          custSheet.getRange(row, 3).setValue(realName);
-          custSheet.getRange(row, 6).setValue(now);
-          if (source) custSheet.getRange(row, 14).setValue(source);
-
-          logCustomerActivity(
-            userId,
-            `${realName} (${userName})`,
-            '✏️ 更新會員資料',
-            `繼承帳號更新真實姓名: ${realName}, 電話: ${phone}`,
-            data.page || '個人資料/VIP守門牆',
-            data.device || ''
-          );
-          break;
-        }
-      }
-    }
-
-    if (!found) {
-      custSheet.appendRow([
-        userId,
-        userName,
-        realName,
-        phone,
-        now,                    // Col 5: 加入會員時間
-        now,                    // Col 6: 最後進站時間
-        data.page || 'VIP守門牆', // Col 7: 最後瀏覽頁面
-        1,                      // Col 8: 進站累計天數
-        1,                      // Col 9: 商品與頁面瀏覽次數
-        0,                      // Col 10: 歷史訂單數
-        0,                      // Col 11: 總消費金額
-        '一般會員',              // Col 12: 會員等級
-        '🟢 活躍',               // Col 13: 顧客生命狀態
-        source || 'LINE 好友',   // Col 14: 顧客來源
-        '',                     // Col 15: 常用超商取件門市
-        '正常',                 // Col 16: 黑名單標記
-        ''                      // Col 17: 賣家管理備註/標籤
-      ]);
-
-      // 寫入加入會員安全 Log
-      logCustomerActivity(
-        userId,
-        `${realName} (${userName})`,
-        '🎉 首次加入會員',
-        `註冊真實姓名: ${realName}, 電話: ${phone}, 來源: ${source || 'LINE 好友'}`,
-        data.page || 'VIP守門牆',
-        data.device || ''
-      );
-    }
-
-    // 同步會員本人真實姓名與電話回寫至該買家現有訂單之 W 欄 (col 23) 與 X 欄 (col 24)
-    try {
-      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-      if (orderSheet) {
-        ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
-        const orderValues = orderSheet.getDataRange().getValues();
-        for (let o = 1; o < orderValues.length; o++) {
-          if (String(orderValues[o][2] || '').trim() === userId) {
-            orderSheet.getRange(o + 1, 23).setValue(realName);
-            orderSheet.getRange(o + 1, 24).setValue(phone);
-          }
-        }
-      }
-    } catch (syncErr) {
-      console.warn('同步訂單 W/X 欄警告:', syncErr);
-    }
-
-    return {
-      success: true,
-      message: '✅ 顧客資料已成功建立歸戶！',
-      profile: {
-        userId: userId,
-        userName: userName,
-        realName: realName,
-        phone: rawPhone,
-        source: source,
-        joinedAt: now,
-        lastVisitAt: now,
-        memberTier: '一般會員',
-        lifeStatus: '🟢 活躍'
-      }
-    };
-  }
-
-  /**
-  * 取得完整系統設定 (僅供後端 GAS 內部安全呼叫，包含金鑰與通行碼)
-  */
-  function getRawSystemSettingsInternal() {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-      if (!sheet) return {};
-
-      const rows = sheet.getDataRange().getValues();
-      const settings = {};
-      for (let i = 1; i < rows.length; i++) {
-        const key = String(rows[i][0] || '').trim();
-        const val = rows[i][1];
-        if (key) {
-          settings[key] = (val !== undefined && val !== null) ? String(val).trim() : '';
-        }
-      }
-      return settings;
-    } catch (e) {
-      console.warn('getRawSystemSettingsInternal 執行失敗:', e);
-      return {};
-    }
-  }
-
-  /**
-  * 取得系統設定 (前台買家/公開查詢 API，嚴格排除敏感密鑰)
-  */
-  function getSystemSettings() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    if (!sheet) return { success: false, message: '設定表不存在' };
-
-    const rows = sheet.getDataRange().getValues();
-    const settings = {};
-
-    for (let i = 1; i < rows.length; i++) {
-      const key = rows[i][0];
-      const val = rows[i][1];
-      if (key) {
-        const trimKey = String(key).trim();
-        // 🛡️ 嚴格排除後台管理員白名單 UID、安全通行碼 (PIN) 與 Telegram 機密金鑰，禁止透過公開 API 外洩
-        if (trimKey === 'ADMIN_LINE_UIDS' || trimKey === 'ADMIN_API_KEY' || trimKey === 'TELEGRAM_BOT_TOKEN' || trimKey === 'TELEGRAM_CHAT_ID') continue;
-        if (key === 'ORDER_DEADLINE' && val) {
-          settings[key] = formatDeadlineStr(val);
-        } else {
-          settings[key] = val;
-        }
-      }
-    }
-
-    // 向下相容相容性處理：若舊試算表只有單一 BANK_INFO，自動拆解為銀行名、帳號與戶名
-    if (settings.BANK_INFO && (!settings.BANK_NAME || !settings.BANK_ACCOUNT)) {
-      const info = String(settings.BANK_INFO);
-      if (!settings.BANK_NAME) {
-        const bankMatch = info.match(/^([^\s]+(?:\s+[^\s]+)?)/);
-        settings.BANK_NAME = bankMatch ? bankMatch[1] : '822 中國信託商業銀行';
-      }
-      if (!settings.BANK_ACCOUNT) {
-        const accMatch = info.match(/帳號[:：\s]*([0-9-]+)/);
-        settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '4175-402-49273';
-      }
-      if (!settings.BANK_ACCOUNT_HOLDER) {
-        const holderMatch = info.match(/戶名[:：\s]*([^\s]+)/);
-        settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '陳O雯';
-      }
-    }
-
-    // 檢查試算表既有設定列並自動校正回寫 Google 試算表 (並刪除舊版 BANK_INFO 列)
-    try {
-      for (let i = rows.length - 1; i >= 1; i--) {
-        const key = String(rows[i][0] || '').trim();
-        const val = String(rows[i][1] || '').trim();
-        if (key === 'BANK_INFO') {
-          sheet.deleteRow(i + 1);
-        } else if (key === 'BANK_ACCOUNT_HOLDER' && (val === '陳小美' || !val)) {
-          sheet.getRange(i + 1, 2).setValue('陳O雯');
-          settings.BANK_ACCOUNT_HOLDER = '陳O雯';
-        } else if (key === 'BANK_ACCOUNT' && (!val || val.includes('123-4567') || val.includes('0123-4567') || val.includes('12345-6789'))) {
-          sheet.getRange(i + 1, 2).setValue("'4175-402-49273");
-          settings.BANK_ACCOUNT = '4175-402-49273';
-        }
-      }
-    } catch (err) {
-      console.warn('自動校正試算表失敗(可能無寫入權限):', err);
-    }
-
-    // 3種付款方式預設值保障與舊測試假帳號自動校正 (中國信託、LINE Pay、街口支付)
-    if (!settings.BANK_NAME) settings.BANK_NAME = '822 中國信託商業銀行';
-    if (!settings.BANK_ACCOUNT_HOLDER || settings.BANK_ACCOUNT_HOLDER === '陳小美') settings.BANK_ACCOUNT_HOLDER = '陳O雯';
-    if (!settings.BANK_ACCOUNT || 
-        settings.BANK_ACCOUNT.includes('123-4567') || 
-        settings.BANK_ACCOUNT.includes('0123-4567') || 
-        settings.BANK_ACCOUNT.includes('12345-6789')) {
-      settings.BANK_ACCOUNT = '4175-402-49273';
-    }
-    if (!settings.LINEPAY_NAME) settings.LINEPAY_NAME = '粉絲團小編兼職小小幫手';
-    if (!settings.LINEPAY_ACCOUNT) settings.LINEPAY_ACCOUNT = 'https://line.me/ti/p/IUqKCB7dRU';
-    if (!settings.JKOPAY_NAME) settings.JKOPAY_NAME = 'Wen Wen Chen';
-    if (!settings.JKOPAY_ACCOUNT) settings.JKOPAY_ACCOUNT = '900459491';
-
-    // 系統規則校正：超商純取貨 0 元免運，貨到付款滿 3,000 元免運
-    if (!settings.FREE_SHIPPING_THRESHOLD || Number(settings.FREE_SHIPPING_THRESHOLD) < 3000) {
-      settings.FREE_SHIPPING_THRESHOLD = '3000';
-    }
-    settings.SHIP_FEE_STORE_PREPAID = '0'; // 超商純取貨一律免運
-    if (!settings.SHIP_FEE_711_COD) settings.SHIP_FEE_711_COD = '38';
-    if (!settings.SHIP_FEE_FAMI_COD) settings.SHIP_FEE_FAMI_COD = '35';
-
-    return { success: true, data: settings };
-  }
-
-  /**
-  * 專門一鍵更新 Google 試算表【系統設定】中的 3 大收款帳戶資訊
-  * 可直接於 Apps Script 編輯器上方選擇此函式並點擊「執行」
-  */
-  function updatePaymentSettings() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    if (!settSheet) return '系統設定表不存在';
-
-    const paymentConfigs = {
-      'BANK_NAME': '822 中國信託商業銀行',
-      'BANK_ACCOUNT_HOLDER': '陳O雯',
-      'BANK_ACCOUNT': "'4175-402-49273",
-      'LINEPAY_NAME': '粉絲團小編兼職小小幫手',
-      'LINEPAY_ACCOUNT': 'https://line.me/ti/p/IUqKCB7dRU',
-      'JKOPAY_NAME': 'Wen Wen Chen',
-      'JKOPAY_ACCOUNT': "'900459491"
-    };
-
-    const data = settSheet.getDataRange().getValues();
-    const updatedKeys = new Set();
-
-    for (let r = 1; r < data.length; r++) {
-      const key = String(data[r][0] || '').trim();
-      if (paymentConfigs[key]) {
-        settSheet.getRange(r + 1, 2).setValue(paymentConfigs[key]);
-        updatedKeys.add(key);
-      }
-    }
-
-    // 若試算表中尚無該欄位則自動 append 補齊
-    const descriptions = {
-      'BANK_NAME': '賣家收款銀行與代碼 (顯示於匯款卡片)',
-      'BANK_ACCOUNT_HOLDER': '賣家帳戶戶名',
-      'BANK_ACCOUNT': '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)',
-      'LINEPAY_NAME': 'LINE Pay 帳戶顯示名稱',
-      'LINEPAY_ACCOUNT': 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)',
-      'JKOPAY_NAME': '街口支付帳戶顯示名稱',
-      'JKOPAY_ACCOUNT': '街口支付帳號 (機構代碼396，支援一鍵複製)'
-    };
-
-    for (const [key, val] of Object.entries(paymentConfigs)) {
-      if (!updatedKeys.has(key)) {
-        settSheet.appendRow([key, val, descriptions[key] || '']);
-      }
-    }
-
-    // 自動檢查並移除舊版單一欄位 BANK_INFO 列
-    for (let r = data.length - 1; r >= 1; r--) {
-      const key = String(data[r][0] || '').trim();
-      if (key === 'BANK_INFO') {
-        settSheet.deleteRow(r + 1);
-      }
-    }
-
-    settSheet.getRange("B:B").setNumberFormat('@');
-    return 'Google Sheets 系統設定資料已成功更新，且舊版 BANK_INFO 列已自動移除！';
-  }
-
-  /**
-  * 自動產生商品編號：
-  * 日本代購: J + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 J2609270001)
-  * 美國代購: U + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 U2610210001)
-  * 韓國代購: K + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 K2609270001)
-  * 台灣現貨: T + 西元年後2碼 + 日期(MMdd) + 0001 起流水號 (如 T2609270001)
-  */
-  function generateProductId(sheet, currency, now) {
-    const cur = String(currency || 'JPY').toUpperCase();
-    let prefixChar = 'J';
-    if (cur === 'USD' || cur.includes('美') || cur.includes('USA')) {
-      prefixChar = 'U';
-    } else if (cur === 'KRW' || cur.includes('韓') || cur.includes('KOR')) {
-      prefixChar = 'K';
-    } else if (cur === 'TWD' || cur.includes('台') || cur.includes('TW')) {
-      prefixChar = 'T';
-    } else {
-      prefixChar = 'J';
-    }
-    const datePart = Utilities.formatDate(now || new Date(), 'Asia/Taipei', 'yyMMdd');
-    const basePrefix = prefixChar + datePart; // 例如 J260927, U261021, K260927, T260927
-
-    let maxSeq = 0;
-    if (sheet) {
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        const existingId = String(data[i][0] || '').trim();
-        if (existingId.startsWith(basePrefix)) {
-          const suffix = existingId.substring(basePrefix.length);
-          const seqNum = parseInt(suffix, 10);
-          if (!isNaN(seqNum) && seqNum > maxSeq) {
-            maxSeq = seqNum;
-          }
-        }
-      }
-    }
-
-    const nextSeq = maxSeq + 1;
-    let seqStr = String(nextSeq);
-    while (seqStr.length < 4) {
-      seqStr = '0' + seqStr;
-    }
-    return basePrefix + seqStr;
-  }
-
-  /**
-  * 賣家快速新增商品 (可由賣家後台網頁調用，使用 LockService 避免連續建立併發衝突)
-  */
-  function handleAddProduct(data) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(15000);
-    } catch (e) {
-      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
-    }
-
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-      if (!sheet) return { success: false, message: '商品表不存在' };
-
-      if (!data.name || !data.price) {
-        return { success: false, message: '商品名稱與價格為必填欄位！' };
-      }
-
-      const now = new Date();
-
-      // 判斷幣別 (優先取 data.currency，或從 costNote / name / category 判斷)
-      let cur = (data.currency || '').toUpperCase();
-      if (!cur) {
-        const hint = (data.name + ' ' + (data.costNote || '') + ' ' + (data.category || '')).toUpperCase();
-        if (hint.includes('USD') || hint.includes('美') || hint.includes('USA')) {
-          cur = 'USD';
-        } else if (hint.includes('KRW') || hint.includes('韓') || hint.includes('KOR')) {
-          cur = 'KRW';
-        } else if (hint.includes('TWD') || hint.includes('台') || hint.includes('TW')) {
-          cur = 'TWD';
-        } else {
-          cur = 'JPY';
-        }
-      }
-
-      // 商品編號：若賣家有自訂則使用自訂，否則依「J/U/K/T + 西元年後2碼 + 日期 + 0001」自動跳號
-      const pid = (data.id && String(data.id).trim()) || generateProductId(sheet, cur, now);
-
-      // 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
-      let specsArray = [];
-      const basePrice = Number(data.price) || 0;
-      let calculatedStock = 0;
-      let hasExplicitSpecs = false;
-
-      if (Array.isArray(data.specs)) {
-        specsArray = data.specs.map(item => {
-          if (item && typeof item === 'object') {
-            hasExplicitSpecs = true;
-            const sName = String(item.name || '').trim();
-            const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
-            const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
-            const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
-            if (!sUnlimited) calculatedStock += sStock;
-            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
-          } else if (typeof item === 'string' && item.trim()) {
-            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
-          }
-          return null;
-        }).filter(s => s && s.name);
-      } else if (typeof data.specs === 'string' && data.specs.trim()) {
-        specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
-          name: name,
-          price: basePrice,
-          stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
-          isUnlimited: Boolean(data.isUnlimitedStock)
-        }));
-      }
-
-      // 圖片處理：支援多張圖片（第一張為主圖）
-      let imagesArray = [];
-      if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-        imagesArray = data.imageUrls;
-      } else if (data.imageUrl) {
-        imagesArray = data.imageUrl.split(/[\n,]/).map(u => u.trim()).filter(Boolean);
-      }
-      const mainImage = imagesArray[0] || data.imageUrl || '';
-
-      // 庫存名額：若有獨立規格庫存，且有任一規格為不限庫存則總庫存為 999999；否則為各規格加總
-      let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10);
-      if (hasExplicitSpecs && specsArray.length > 0) {
-        const anyUnlimited = specsArray.some(s => s.isUnlimited);
-        stockQty = anyUnlimited ? 999999 : calculatedStock;
-      }
-
-      const targetRow = sheet.getLastRow() + 1;
-
-      // 採購原幣、稅金、匯率與重量獨立分開登記 (嚴格以實際輸入資料為準，未輸入則保留空白)
-      if (data.currency) cur = String(data.currency).toUpperCase();
-      const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
-      const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
-      const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
-      const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
-
-      const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
-      const tax = hasTax ? Number(data.taxAmount) : '';
-      const rate = hasRate ? Number(data.exchangeRate) : '';
-      const weight = hasWeight ? Number(data.weightG) : '';
-      const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
-
-      // 成本價 (NT$)：精準分開四捨五入公式 ROUND((Q+R)*S) + ROUND((T/1000)*U)
-      let costCellVal = Number(data.costPrice) || 0;
-      if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
-        costCellVal = `=IF(OR(N(Q${targetRow})>0, N(T${targetRow})>0), ROUND((N(Q${targetRow}) + N(R${targetRow})) * N(S${targetRow})) + ROUND((N(T${targetRow}) / 1000) * IF(N(U${targetRow})>0, N(U${targetRow}), 240)), ${costCellVal})`;
-      }
-
-      sheet.appendRow([
-        pid,
-        data.name.trim(),
-        data.category || '連線好物',
-        (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
-        Number(data.price),
-        stockQty,
-        JSON.stringify(specsArray),
-        mainImage,
-        data.description || '',
-        '上架中',
-        now,
-        costCellVal,                 // 欄位 12 (L): 成本價 (NT$) -> 支援試算表公式連動
-        data.costNote || '',         // 欄位 13 (M): 採購備註說明
-        JSON.stringify(imagesArray), // 欄位 14 (N): 所有圖片清單
-        data.deadline ? String(data.deadline).trim() : '', // 欄位 15 (O): 指定結單時間
-        cur,                         // 欄位 16 (P): 採購幣別
-        preTax,                      // 欄位 17 (Q): 原幣稅前金額
-        tax,                         // 欄位 18 (R): 稅金 (原幣)
-        rate,                        // 欄位 19 (S): 採購匯率
-        weight,                      // 欄位 20 (T): 商品重量 (g)
-        shipRate,                    // 欄位 21 (U): 國際運費單價 (元/kg)
-        Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss') // 欄位 22 (V): 最後更新時間
-      ]);
-
-      SpreadsheetApp.flush();
-
-      return { 
-        success: true, 
-        message: '商品建檔成功！', 
-        productId: pid,
-        product: {
-          id: pid,
-          name: data.name.trim(),
-          category: data.category || '連線好物',
-          originalPrice: (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : 0,
-          price: Number(data.price),
-          stock: stockQty,
-          specs: specsArray,
-          imageUrl: mainImage,
-          imageUrls: imagesArray,
-          description: data.description || '',
-          status: '上架中',
-          costPrice: Number(data.costPrice) || 0,
-          costNote: data.costNote || '',
-          deadline: data.deadline ? String(data.deadline).trim() : ''
-        }
-      };
-    } catch (err) {
-      return { success: false, message: '商品建檔失敗：' + err.toString() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-
-  /**
-  * 賣家線上完整維護商品資料 (100% 全欄位對齊建檔表單，並更新最後更新時間)
-  */
-  function handleUpdateProduct(data) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(15000);
-    } catch (e) {
-      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
-    }
-
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-      if (!sheet) return { success: false, message: '商品表不存在' };
-
-      const pid = String(data.id || '').trim();
-      if (!pid) return { success: false, message: '缺少商品編號 (ID)' };
-
-      if (!data.name || data.price === undefined || data.price === '') {
-        return { success: false, message: '商品名稱與價格為必填欄位！' };
-      }
-
-      const lastRow = sheet.getLastRow();
-      if (lastRow <= 1) return { success: false, message: '商品清單為空' };
-
-      // 尋找商品所在的列 (row)
-      const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-      let rowIndex = -1;
-      for (let i = 0; i < idRange.length; i++) {
-        if (String(idRange[i][0]).trim() === pid) {
-          rowIndex = i + 2; // 試算表從第 2 列開始 (1-based)
-          break;
-        }
-      }
-
-      if (rowIndex === -1) {
-        return { success: false, message: `找不到商品編號：${pid}` };
-      }
-
-      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
-
-      // 1. 規格處理 (支援獨立定價/庫存物件陣列、純字串陣列或逗號分隔字串)
-      let specsArray = [];
-      const basePrice = Number(data.price) || 0;
-      let calculatedStock = 0;
-      let hasExplicitSpecs = false;
-
-      if (Array.isArray(data.specs)) {
-        specsArray = data.specs.map(item => {
-          if (item && typeof item === 'object') {
-            hasExplicitSpecs = true;
-            const sName = String(item.name || '').trim();
-            const sPrice = (item.price !== undefined && !isNaN(Number(item.price)) && Number(item.price) > 0) ? Number(item.price) : basePrice;
-            const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
-            const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
-            if (!sUnlimited) calculatedStock += sStock;
-            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
-          } else if (typeof item === 'string' && item.trim()) {
-            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
-          }
-          return null;
-        }).filter(s => s && s.name);
-      } else if (typeof data.specs === 'string' && data.specs.trim()) {
-        specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
-          name: name,
-          price: basePrice,
-          stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
-          isUnlimited: Boolean(data.isUnlimitedStock)
-        }));
-      }
-
-      // 2. 圖片處理：支援多張圖片（第一張為主圖）
-      let imagesArray = [];
-      if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-        imagesArray = data.imageUrls.filter(Boolean);
-      } else if (data.imageUrl) {
-        imagesArray = String(data.imageUrl).split(/[\n,]/).map(u => u.trim()).filter(Boolean);
-      }
-      const mainImage = imagesArray[0] || data.imageUrl || '';
-
-      // 3. 庫存名額計算
-      let stockQty = data.isUnlimitedStock ? 999999 : (Number(data.stock) || 0);
-      if (hasExplicitSpecs && specsArray.length > 0) {
-        const anyUnlimited = specsArray.some(s => s.isUnlimited);
-        stockQty = anyUnlimited ? 999999 : calculatedStock;
-      }
-
-      // 4. 成本與公式處理
-      let cur = (data.currency || 'JPY').toUpperCase();
-      const hasPreTax = data.costPricePreTax !== undefined && data.costPricePreTax !== '' && !isNaN(Number(data.costPricePreTax));
-      const hasTax = data.taxAmount !== undefined && data.taxAmount !== '' && !isNaN(Number(data.taxAmount));
-      const hasRate = data.exchangeRate !== undefined && data.exchangeRate !== '' && !isNaN(Number(data.exchangeRate));
-      const hasWeight = data.weightG !== undefined && data.weightG !== '' && !isNaN(Number(data.weightG));
-
-      const preTax = hasPreTax ? Number(data.costPricePreTax) : '';
-      const tax = hasTax ? Number(data.taxAmount) : '';
-      const rate = hasRate ? Number(data.exchangeRate) : '';
-      const weight = hasWeight ? Number(data.weightG) : '';
-      const shipRate = (data.shippingRate !== undefined && data.shippingRate !== '') ? Number(data.shippingRate) : 240;
-
-      let costCellVal = Number(data.costPrice) || 0;
-      let costFormula = '';
-      if (Number(preTax) > 0 || Number(tax) > 0 || Number(weight) > 0) {
-        costFormula = `=IF(OR(N(Q${rowIndex})>0, N(T${rowIndex})>0), ROUND((N(Q${rowIndex}) + N(R${rowIndex})) * N(S${rowIndex})) + ROUND((N(T${rowIndex}) / 1000) * IF(N(U${rowIndex})>0, N(U${rowIndex}), 240)), ${costCellVal})`;
-      }
-
-      const statusVal = data.status === '已下架' ? '已下架' : '上架中';
-
-      // 確保欄位至少有 22 欄
-      if (sheet.getMaxColumns() < 22) {
-        sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
-      }
-
-      // 更新各欄位 (嚴格對齊 22 欄規格)
-      sheet.getRange(rowIndex, 2).setValue(String(data.name || '').trim()); // B: 商品名稱
-      sheet.getRange(rowIndex, 3).setValue(String(data.category || '連線好物').trim()); // C: 分類
-      sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
-      sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
-      sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
-      sheet.getRange(rowIndex, 7).setValue(JSON.stringify(specsArray)); // G: 規格清單(JSON)
-      sheet.getRange(rowIndex, 8).setValue(mainImage); // H: 封面主圖網址
-      sheet.getRange(rowIndex, 9).setValue(data.description || ''); // I: 商品描述
-      sheet.getRange(rowIndex, 10).setValue(statusVal); // J: 狀態
-      // K 欄 (建立時間) 保留原值不改動
-      if (costFormula) {
-        sheet.getRange(rowIndex, 12).setFormula(costFormula); // L: 成本價公式
-      } else {
-        sheet.getRange(rowIndex, 12).setValue(costCellVal);
-      }
-      sheet.getRange(rowIndex, 13).setValue(data.costNote || ''); // M: 採購備註說明
-      sheet.getRange(rowIndex, 14).setValue(JSON.stringify(imagesArray)); // N: 所有圖片清單
-      sheet.getRange(rowIndex, 15).setValue(data.deadline ? String(data.deadline).trim() : ''); // O: 指定結單時間
-      sheet.getRange(rowIndex, 16).setValue(cur); // P: 採購幣別
-      sheet.getRange(rowIndex, 17).setValue(preTax); // Q: 原幣稅前金額
-      sheet.getRange(rowIndex, 18).setValue(tax); // R: 稅金(原幣)
-      sheet.getRange(rowIndex, 19).setValue(rate); // S: 採購匯率
-      sheet.getRange(rowIndex, 20).setValue(weight); // T: 商品重量(g)
-      sheet.getRange(rowIndex, 21).setValue(shipRate); // U: 國際運費單價
-      sheet.getRange(rowIndex, 22).setValue(nowStr); // V: 最後更新時間
-
-      SpreadsheetApp.flush();
-
-      return {
-        success: true,
-        message: `商品 [${pid}] 更新成功！`,
-        productId: pid,
-        updatedAt: nowStr
-      };
-    } catch (err) {
-      return { success: false, message: '更新商品失敗：' + err.toString() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-
-  /**
-  * 批次更新商品 (批次上架、批次下架、批次修改分類)
-  * data: {
-  *   productIds: ['J2610...', 'J2610...'],
-  *   updateType: 'status' | 'category',
-  *   value: '上架中' | '已下架' | '新分類標籤'
-  * }
-  */
-  function handleBatchUpdateProducts(data) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(15000);
-    } catch (e) {
-      return { success: false, message: '系統忙碌中，請稍候重試 (Lock timeout)' };
-    }
-
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-      if (!sheet) return { success: false, message: '商品表不存在' };
-
-      const pids = Array.isArray(data.productIds) ? data.productIds.map(id => String(id).trim()).filter(Boolean) : [];
-      if (pids.length === 0) return { success: false, message: '請至少選擇一件商品！' };
-
-      const updateType = data.updateType; // 'status' 或 'category'
-      const value = String(data.value || '').trim();
-
-      if (!updateType || !value) {
-        return { success: false, message: '缺少更新類型或更新數值' };
-      }
-
-      const lastRow = sheet.getLastRow();
-      if (lastRow <= 1) return { success: false, message: '商品清單為空' };
-
-      if (sheet.getMaxColumns() < 22) {
-        sheet.insertColumnsAfter(sheet.getMaxColumns(), 22 - sheet.getMaxColumns());
-      }
-
-      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
-      const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-
-      let updatedCount = 0;
-      const targetCol = updateType === 'status' ? 10 : (updateType === 'category' ? 3 : 0);
-      if (targetCol === 0) return { success: false, message: '不支援的批次更新類型：' + updateType };
-
-      for (let i = 0; i < idRange.length; i++) {
-        const currentPid = String(idRange[i][0]).trim();
-        if (pids.includes(currentPid)) {
-          const row = i + 2;
-          sheet.getRange(row, targetCol).setValue(value);
-          sheet.getRange(row, 22).setValue(nowStr); // V欄: 最後更新時間
-          updatedCount++;
-        }
-      }
-
-      SpreadsheetApp.flush();
-
-      return {
-        success: true,
-        message: `成功批次更新 ${updatedCount} 件商品！`,
-        updatedCount: updatedCount,
-        updateType: updateType,
-        value: value,
-        updatedAt: nowStr
-      };
-    } catch (err) {
-      return { success: false, message: '批次更新失敗：' + err.toString() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-
-  /**
-  * 處理附件圖片上傳至 Google Drive (極速優化版：利用資料夾繼承權限，省去逐檔遠端授權延遲)
-  */
-  function handleUploadImages(data) {
-    const lock = LockService.getScriptLock();
-    lock.waitLock(15000);
-    try {
-      let folder;
-      try {
-        folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-      } catch (e) {
-        const folderName = 'LINE代購_商品圖片庫';
-        const folders = DriveApp.getFoldersByName(folderName);
-        folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-        folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      }
-
-      const uploadedUrls = [];
-      const files = data.files || [];
-
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        let base64String = f.base64 || '';
-        if (base64String.indexOf(',') > -1) {
-          base64String = base64String.split(',')[1];
-        }
-        const decoded = Utilities.base64Decode(base64String);
-        const contentType = f.type || 'image/jpeg';
-        const fileName = 'prod_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss') + '_' + Math.floor(Math.random() * 10000) + '_' + (i + 1) + '.jpg';
-
-        const blob = Utilities.newBlob(decoded, contentType, fileName);
-        const file = folder.createFile(blob);
-        const directUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
-        uploadedUrls.push(directUrl);
-      }
-
-      return { success: true, urls: uploadedUrls };
-    } catch (err) {
-      return { success: false, message: '圖片上傳至 Google Drive 失敗：' + err.toString() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-
-  /**
-  * 測試並激活 Google Drive 權限（可在 GAS 編輯器上方下拉選單直接點「執行」測試）
-  */
-  function testDrivePermission() {
-    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-    Logger.log('成功連接 Google Drive 資料夾：' + folder.getName());
-    return 'OK: ' + folder.getName();
-  }
-
-  /**
-  * 工具函式：輸出 JSON
-  */
-  function jsonResponse(obj) {
-    return ContentService.createTextOutput(JSON.stringify(obj))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  /**
-  * 🛠️ 清除測試資料管理函式（已啟用防誤觸保護）
-  * 說明：為避免在 Apps Script 編輯器誤按「執行」造成正式顧客與訂單被清空，
-  * 此函式強制要求輸入安全密鑰 safetyKey。未帶密鑰執行時會被直接攔截，絕不會動到試算表！
-  */
-  function clearTestOrdersData(safetyKey) {
-    // 🛡️ 強制防誤觸檢查：直接點選執行時 safetyKey 為 undefined，會被立即攔截
-    if (safetyKey !== 'CONFIRM_DELETE_ORDERS_2026') {
-      Logger.log('🚫【安全防護已啟動】拒絕執行！為防止正式顧客與訂單資料遭誤刪，此功能已永久上鎖。若在 Apps Script 編輯器誤按「執行」，資料絕不會被清空。');
-      return {
-        success: false,
-        message: '🚫【安全防護已啟動】拒絕執行！為保護真實顧客與訂單資料，已阻止清除動作。'
-      };
-    }
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let deletedOrdersCount = 0;
-    let deletedCustCount = 0;
-
-    // 1. 清除「訂單明細」測試訂單 (保留第 1 列表頭)
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    if (orderSheet) {
-      const lastRow = orderSheet.getLastRow();
-      if (lastRow > 1) {
-        deletedOrdersCount = lastRow - 1;
-        orderSheet.getRange(2, 1, lastRow - 1, orderSheet.getLastColumn()).clearContent();
-      }
-    }
-
-    // 2. 清除「顧客歸戶」測試資料 (保留第 1 列表頭)
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (custSheet) {
-      const lastRow = custSheet.getLastRow();
-      if (lastRow > 1) {
-        deletedCustCount = lastRow - 1;
-        custSheet.getRange(2, 1, lastRow - 1, custSheet.getLastColumn()).clearContent();
-      }
-    }
-
-    Logger.log(`✅ 清除完成！共清除 ${deletedOrdersCount} 筆訂單明細與 ${deletedCustCount} 筆顧客資料。已保留表頭與格式設定。`);
-    return {
-      success: true,
-      message: `✅ 測試資料已清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
-      deletedOrders: deletedOrdersCount,
-      deletedCustomers: deletedCustCount
-    };
-  }
-
-  /**
-  * 🛠️ 清除自動化測試商品（已啟用防誤觸保護）
-  */
-  function clearTestProducts(safetyKey) {
-    // 🛡️ 強制防誤觸檢查
-    if (safetyKey !== 'CONFIRM_DELETE_PRODUCTS_2026') {
-      Logger.log('🚫【安全防護已啟動】拒絕執行！為防止商品資料遭誤刪，已阻止清除動作。');
-      return {
-        success: false,
-        message: '🚫【安全防護已啟動】拒絕執行！為保護商品庫，已阻止清除動作。'
-      };
-    }
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-    if (!sheet) return { success: false, message: '商品表不存在' };
-
-    const data = sheet.getDataRange().getValues();
-    let deletedCount = 0;
-    for (let i = data.length - 1; i >= 1; i--) {
-      const pName = String(data[i][1] || '');
-      const pCat = String(data[i][2] || '');
-      if (pName.includes('測試') || pCat === '測試' || pName.startsWith('自動連續測試') || pName.startsWith('即時測試') || pName.startsWith('商品1') || pName.startsWith('商品2') || pName.startsWith('商品3') || pName.startsWith('商品4') || pName.startsWith('商品5')) {
-        sheet.deleteRow(i + 1);
-        deletedCount++;
-      }
-    }
-
-    return {
-      success: true,
-      message: `✅ 已清除 ${deletedCount} 筆測試商品！`,
-      deletedCount: deletedCount
-    };
-  }
-
-  /**
-  * 處理頁面與商品瀏覽人次累計 (使用 LockService 避免併發衝突)
-  */
-  function handleRecordPageView(data) {
-    if (!data || !data.page) {
-      return { success: false, message: '無效的頁面資料' };
-    }
-
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(10000);
-    } catch (e) {
-      return { success: false, message: '伺服器繁忙，略過本次統計' };
-    }
-
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
-      const headers = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
-
-      if (!sheet) {
-        sheet = ss.insertSheet(SHEET_NAMES.VIEWS || '瀏覽統計');
-        sheet.appendRow(headers);
-        sheet.getRange(1, 1, 1, headers.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
-        sheet.getRange("D:D").setNumberFormat('#,##0');
-        sheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
-      }
-
-      const pagePath = String(data.page || '').trim();
-      let pageTitle = String(data.title || pagePath).trim();
-      const productId = String(data.productId || '-').trim();
-
-      // 🛡️ 關鍵防護 1：若為商品且傳入通用未就緒標題（例如「連線代購即時訂購單」或「商品內頁」），自動反查商品表中的真實商品名稱
-      if (productId && productId !== '-') {
-        const isGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁' || !pageTitle;
-        if (isGeneric) {
-          const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-          if (prodSheet) {
-            const pValues = prodSheet.getDataRange().getValues();
-            for (let pIdx = 1; pIdx < pValues.length; pIdx++) {
-              if (String(pValues[pIdx][0] || '').trim() === productId) {
-                const actualName = String(pValues[pIdx][1] || '').trim();
-                if (actualName) {
-                  pageTitle = `【商品】${actualName}`;
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // 僅排除「賣家管理中心」，買家查單與商品瀏覽皆正常統計並寄發觸擊通報
-      const pLower = pagePath.toLowerCase();
-      if (pLower === 'admin-card-generator.html' || pageTitle.includes('賣家管理') || pageTitle.includes('發卡推播')) {
-        return { success: true, ignored: true, message: '管理中心不計入訪客觸擊' };
-      }
-
-      const now = new Date();
-
-      const range = sheet.getDataRange();
-      const values = range.getValues();
-      let targetRow = -1;
-      let currentViews = 0;
-      let existingRowTitle = '';
-
-      for (let r = 1; r < values.length; r++) {
-        const existingPath = String(values[r][1] || '').trim();
-        const existingPid = String(values[r][2] || '').trim();
-        
-        if (productId !== '-' && productId !== '') {
-          if (existingPid === productId || existingPath === pagePath) {
-            targetRow = r + 1;
-            existingRowTitle = String(values[r][0] || '').trim();
-            currentViews = Number(values[r][3]) || 0;
-            break;
-          }
-        } else {
-          if (existingPath === pagePath) {
-            targetRow = r + 1;
-            existingRowTitle = String(values[r][0] || '').trim();
-            currentViews = Number(values[r][3]) || 0;
-            break;
-          }
-        }
-      }
-
-      const newViews = currentViews + 1;
-
-      if (targetRow > 0) {
-        // 🛡️ 關鍵防護 2：嚴禁以「連線代購即時訂購單」覆蓋現有的真實商品名稱！
-        const isNewGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁';
-        const isExistingGood = existingRowTitle && !existingRowTitle.includes('連線代購即時訂購單') && existingRowTitle !== '商品內頁';
-
-        if (pageTitle && (!isExistingGood || !isNewGeneric)) {
-          sheet.getRange(targetRow, 1).setValue(pageTitle);
-        }
-        if (productId && productId !== '-') sheet.getRange(targetRow, 3).setValue(productId);
-        sheet.getRange(targetRow, 4).setValue(newViews);
-        sheet.getRange(targetRow, 5).setValue(now);
-      } else {
-        sheet.appendRow([pageTitle, pagePath, productId, 1, now]);
-      }
-
-      // 📧 即時發送【網址觸擊 / 進站通報】Email 通知給管理者 (wen.chen2407@gmail.com)
-      try {
-        sendPageViewAlertEmail({
-          pagePath: pagePath,
-          pageTitle: pageTitle,
-          productId: productId,
-          newViews: newViews,
-          userName: data.userName || '',
-          userId: data.userId || '',
-          device: data.device || '',
-          now: now
-        });
-      } catch (mailErr) {
-        console.warn('發送網址觸擊通知信略過:', mailErr);
-      }
-
-      return { success: true, page: pagePath, views: newViews };
-    } catch (err) {
-      return { success: false, message: err.toString() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-
-  // ==========================================
-  // 🚀 Telegram 機器人即時推播通知模組 (100% 永久免費、無發送上限、零干擾 Gmail)
-  // ==========================================
-
-  /**
-  * HTML 特殊符號轉義，防止 Telegram HTML 解析模式拋錯
-  */
-  function escapeHtmlText(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  /**
-  * 格式化訪客稱呼 (統稱「訪客稱呼」)
-  * 格式規範：LINE暱稱（真實名字/手機號碼）
-  * 若未登記真實資訊則僅顯示：LINE暱稱 (若無暱稱則顯示「訪客」)
-  */
-  function formatVisitorDisplayName(lineName, realName, phone) {
-    const lName = String(lineName || '').trim() || '訪客';
-    const rName = String(realName || '').trim();
-    const pNum = String(phone || '').replace(/[-\s]/g, '').trim();
-
-    const details = [];
-    if (rName) details.push(rName);
-    if (pNum) details.push(pNum);
-
-    if (details.length > 0) {
-      return `${lName}（${details.join('/')}）`;
-    }
-    return lName;
-  }
-
-  /**
-  * 依據 LINE User ID 反查顧客歸戶檔案 (取得 LINE 暱稱、真實姓名、手機)
-  */
-  function getCustomerProfileById(userId) {
-    if (!userId || String(userId).startsWith('GUEST_') || userId === 'LINE_GUEST' || userId === 'TEST_USER_999') {
-      return null;
-    }
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
-      if (!custSheet) return null;
-      const custData = custSheet.getDataRange().getValues();
-      for (let c = 1; c < custData.length; c++) {
-        if (String(custData[c][0] || '').trim() === String(userId).trim()) {
-          return {
-            lineName: String(custData[c][1] || '').trim(),
-            realName: String(custData[c][2] || '').trim(),
-            phone: String(custData[c][3] || '').trim()
-          };
-        }
-      }
-    } catch (err) {
-      console.warn('getCustomerProfileById 查詢失敗:', err);
-    }
-    return null;
-  }
-
-  /**
-  * 發送 Telegram 機器人即時推播訊息
-  * @param {string} text 訊息內容 (支援 HTML 排版: <b>, <i>, <code>, <a>)
-  */
-  function sendTelegramMessage(text) {
-    try {
-      const settings = getRawSystemSettingsInternal();
-      const token = settings.TELEGRAM_BOT_TOKEN;
-      const chatId = settings.TELEGRAM_CHAT_ID;
-
-      // 若尚未填寫 Token 或 Chat ID，則優雅靜默略過，不影響主業務運行
-      if (!token || !chatId) {
-        return { success: false, reason: '未設定 TELEGRAM_BOT_TOKEN 或 TELEGRAM_CHAT_ID' };
-      }
-
-      const url = `https://api.telegram.org/bot${token}/sendMessage`;
-      const payload = {
-        chat_id: String(chatId).trim(),
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      };
-
-      const options = {
-        method: 'post',
-        contentType: 'application/json',
-        payload: JSON.stringify(payload),
-        muteHttpExceptions: true
-      };
-
-      const response = UrlFetchApp.fetch(url, options);
-      const code = response.getResponseCode();
-      const resText = response.getContentText() || '{}';
-      const result = JSON.parse(resText);
-
-      if (code === 200 && result.ok) {
-        return { success: true };
-      } else {
-        console.warn('Telegram API 回傳異常:', code, resText);
-        return { success: false, error: result };
-      }
-    } catch (err) {
-      console.warn('sendTelegramMessage 執行失敗:', err);
-      return { success: false, error: err.toString() };
-    }
-  }
-
-  /**
-  * 🔔 發送【網址觸擊 / 訪客進站】即時 Telegram 通報至管理者
-  * 內建 60 秒 Cache 防灌訊保護機制，即時掌握每一位訪客動態
-  */
-  function sendPageViewAlertEmail(info) {
-    try {
-      const pagePath = info.pagePath || '';
-      const pageTitle = info.pageTitle || pagePath;
-      const productId = info.productId || '-';
-      const newViews = info.newViews || 1;
-      const userName = String(info.userName || '').trim();
-      const userId = String(info.userId || '').trim();
-      const now = info.now instanceof Date ? info.now : new Date();
-      const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
-
-      // 🔍 智慧身分反查與「進站即自動建立初階顧客歸戶卡」
-      let customerRealName = '';
-      let customerLineNick = '';
-      let customerPhone = '';
-      if (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999') {
-        try {
-          const ss = SpreadsheetApp.getActiveSpreadsheet();
-          let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
-          if (!custSheet) {
-            custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
-            custSheet.appendRow([
-              'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
-              '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
-              '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
-            ]);
-            custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
-            custSheet.getRange("D:D").setNumberFormat('@');
-          }
-
-          ensureOrderAndCustomerSchema(ss, null, custSheet);
-
-          const custData = custSheet.getDataRange().getValues();
-          let userFound = false;
-          for (let c = 1; c < custData.length; c++) {
-            if (String(custData[c][0]).trim() === userId) {
-              userFound = true;
-              customerLineNick = String(custData[c][1] || '').trim();
-              customerRealName = String(custData[c][2] || '').trim();
-              customerPhone = String(custData[c][3] || '').trim();
-              
-              // 若有最新 LINE 暱稱且試算表為空或不同，自動更新暱稱
-              if (userName && customerLineNick !== userName) {
-                custSheet.getRange(c + 1, 2).setValue(userName);
-                customerLineNick = userName;
-              }
-
-              // 🌟 1. 最後進站時間 (Col 6)
-              const prevVisitRaw = custData[c][5];
-              custSheet.getRange(c + 1, 6).setValue(nowStr);
-
-              // 🌟 2. 最後瀏覽商品/頁面 (Col 7)
-              custSheet.getRange(c + 1, 7).setValue(pageTitle);
-
-              // 🌟 3. 進站累計天數 (Col 8: 以日計算，當天重複造訪不累加)
-              let prevVisitDateStr = '';
-              if (prevVisitRaw instanceof Date) {
-                prevVisitDateStr = Utilities.formatDate(prevVisitRaw, 'Asia/Taipei', 'yyyy/MM/dd');
-              } else if (prevVisitRaw) {
-                prevVisitDateStr = String(prevVisitRaw).trim().substring(0, 10).replace(/-/g, '/');
-              }
-              const todayDateStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd');
-              if (prevVisitDateStr !== todayDateStr) {
-                const curVisitDays = Number(custData[c][7]) || 0;
-                custSheet.getRange(c + 1, 8).setValue(curVisitDays + 1);
-              }
-
-              // 🌟 4. 商品與頁面瀏覽次數 (Col 9: 每次點閱造訪皆累加 +1)
-              const curPageViews = Number(custData[c][8]) || 0;
-              custSheet.getRange(c + 1, 9).setValue(curPageViews + 1);
-
-              // 🌟 5. 顧客生命狀態 (Col 13: 活躍)
-              custSheet.getRange(c + 1, 13).setValue('🟢 活躍');
-              break;
-            }
-          }
-
-          // 🌟 核心功能：進站即自動建立初階顧客歸戶卡
-          // 若該真實 LINE 好友在試算表中完全無資料，第一時間自動建立初階檔案
-          if (!userFound && (userName || userId)) {
-            const defaultSource = 'LINE 好友/群組';
-            custSheet.appendRow([
-              userId,                 // Col 1: LINE_User_ID
-              userName || 'LINE 會員', // Col 2: 最新暱稱
-              '',                     // Col 3: 真實姓名 (待填寫)
-              '',                     // Col 4: 電話 (待填寫)
-              nowStr,                 // Col 5: 加入會員時間
-              nowStr,                 // Col 6: 最後進站時間
-              pageTitle,              // Col 7: 最後瀏覽商品/頁面
-              1,                      // Col 8: 進站累計天數 (以日計)
-              1,                      // Col 9: 商品與頁面瀏覽次數 (累計PV)
-              0,                      // Col 10: 歷史訂單數
-              0,                      // Col 11: 總消費金額
-              '一般會員',             // Col 12: 會員等級
-              '🟢 活躍',              // Col 13: 顧客生命狀態
-              defaultSource,          // Col 14: 顧客來源
-              '',                     // Col 15: 常用超商取件門市
-              '正常',                 // Col 16: 黑名單標記
-              ''                      // Col 17: 賣家管理備註/標籤
-            ]);
-            customerLineNick = userName || 'LINE 會員';
-          }
-
-          // 寫入進站逛店動態安全 Log
-          logCustomerActivity(
-            userId,
-            customerRealName ? `${customerRealName} (${customerLineNick})` : customerLineNick,
-            '👀 進站逛店',
-            `瀏覽: ${pageTitle}${productId !== '-' ? ' (' + productId + ')' : ''}`,
-            pagePath,
-            info.device || ''
-          );
-        } catch (custErr) {
-          console.warn('反查或自動建立初階顧客歸戶失敗:', custErr);
-        }
-      }
-
-      // 🌟 彙整訪客稱呼：嚴格遵循「LINE暱稱（真實名字/手機號碼）」規範
-      const lineNick = customerLineNick || userName;
-      const visitorDisplay = formatVisitorDisplayName(lineNick, customerRealName, customerPhone);
-
-      // 🛡️ 防短時間灌訊保護 (以頁面與訪客身分為 key，60 秒內不重複推播相同訪客點擊相同頁面)
-      const tgVisitorAlertCacheKey = userId || lineNick || 'anon';
-      const cacheKey = 'pv_tg_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(tgVisitorAlertCacheKey);
-      const cache = CacheService.getScriptCache();
-      if (cache.get(cacheKey)) {
-        return; // 60 秒冷卻略過
-      }
-      cache.put(cacheKey, '1', 60);
-
-      // 🔔 發送【訪客瀏覽通報】Telegram 通知
-      const rawSettings = getRawSystemSettingsInternal();
-      if (rawSettings.TELEGRAM_NOTIFY_PAGE_VIEWS !== 'NO') {
-        const prodPart = (productId && productId !== '-') ? `• <b>商品識別</b>：<code>${escapeHtmlText(productId)}</code>\n` : '';
-        const tgMsg = 
-          `👁️ <b>【訪客瀏覽通報】</b>\n` +
-          `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
-          `• <b>瀏覽頁面</b>：${escapeHtmlText(pageTitle)}\n` +
-          prodPart +
-          `• <b>累計次數</b>：第 ${newViews} 次點擊\n` +
-          `• <b>使用裝置</b>：${escapeHtmlText(info.device || '行動/電腦裝置')}\n` +
-          `• <b>進站時間</b>：${nowStr}`;
-
-        sendTelegramMessage(tgMsg);
-      }
-    } catch (err) {
-      console.warn('sendPageViewAlertNotification 執行失敗:', err);
-    }
-  }
-
-  /**
-  * 取得全站各頁面與商品瀏覽統計數據 (嚴格排除管理中心與訂單頁)
-  */
-  function getViewStats() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
-    if (!sheet) {
-      return { success: true, totalViews: 0, pages: [], topProducts: [] };
-    }
-
-    const values = sheet.getDataRange().getValues();
-    if (values.length <= 1) {
-      return { success: true, totalViews: 0, pages: [], topProducts: [] };
-    }
-
-    // 判斷是否為應排除的內部/個人頁面
-    function isExcludedPageView(path, title) {
-      const p = String(path || '').toLowerCase();
-      const t = String(title || '');
-      return p === 'admin-card-generator.html' || 
-            p === 'my-orders.html' || 
-            t.includes('賣家管理') || 
-            t.includes('買家訂購清單') || 
-            t.includes('合併結帳');
-    }
-
-    // 自動清理試算表中既有的管理中心與訂單頁面列 (從最後一列往上刪除避免行號偏移)
-    try {
-      for (let r = values.length - 1; r >= 1; r--) {
-        const title = String(values[r][0] || '').trim();
-        const path = String(values[r][1] || '').trim();
-        if (isExcludedPageView(path, title)) {
-          sheet.deleteRow(r + 1);
-        }
-      }
-    } catch (cleanErr) {
-      console.warn('清理排除頁面列失敗:', cleanErr);
-    }
-
-    // 先行載入商品清單以利標題自動校正與資訊豐富化 (圖片、價格)
-    const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
-    const productsMeta = {};
-    if (prodSheet) {
-      const prodData = prodSheet.getDataRange().getValues();
-      for (let r = 1; r < prodData.length; r++) {
-        const pid = String(prodData[r][0] || '').trim();
-        const pName = String(prodData[r][1] || '').trim();
-        const pImg = String(prodData[r][7] || '').trim();
-        const pPrice = Number(prodData[r][4]) || 0;
-        if (pid) {
-          productsMeta[pid] = { name: pName, imageUrl: pImg, price: pPrice };
-        }
-      }
-    }
-
-    const currentValues = sheet.getDataRange().getValues();
-
-    let totalViews = 0;
-    const pages = [];
-    const productViewsMap = {};
-
-    for (let r = 1; r < currentValues.length; r++) {
-      let title = String(currentValues[r][0] || '').trim();
-      const path = String(currentValues[r][1] || '').trim();
-      const pid = String(currentValues[r][2] || '').trim();
-      const views = Number(currentValues[r][3]) || 0;
-      const lastTime = currentValues[r][4] ? Utilities.formatDate(new Date(currentValues[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
-
-      if (isExcludedPageView(path, title)) continue;
-
-      // 🌟 自動校正並回寫試算表：若商品標題曾被暫存覆蓋成「連線代購即時訂購單」或「商品內頁」，自動換回商品真實名稱！
-      if (pid && pid !== '-') {
-        if (title.includes('連線代購即時訂購單') || title === '商品內頁' || !title) {
-          if (productsMeta[pid] && productsMeta[pid].name) {
-            title = `【商品】${productsMeta[pid].name}`;
-            try {
-              sheet.getRange(r + 1, 1).setValue(title);
-            } catch (healErr) {
-              console.warn('自動校正試算表標題失敗:', healErr);
-            }
-          }
-        }
-      }
-
-      totalViews += views;
-
-      const item = {
-        title: title,
-        path: path,
-        productId: pid,
-        views: views,
-        lastVisited: lastTime
-      };
-
-      pages.push(item);
-
-      if (pid && pid !== '-') {
-        productViewsMap[pid] = (productViewsMap[pid] || 0) + views;
-      }
-    }
-
-    pages.sort((a, b) => b.views - a.views);
-
-    const topProducts = [];
-    for (const pid in productViewsMap) {
-      const meta = productsMeta[pid] || {};
-      topProducts.push({
-        productId: pid,
-        name: meta.name || pid,
-        imageUrl: meta.imageUrl || '',
-        price: meta.price || 0,
-        views: productViewsMap[pid]
-      });
-    }
-    topProducts.sort((a, b) => b.views - a.views);
-
-    return {
-      success: true,
-      totalViews: totalViews,
-      pages: pages,
-      topProducts: topProducts
-    };
-  }
-
-  /**
-  * 查詢待發送 1 對 1 結帳通知的顧客清單 (0 額度消耗推播後端)
-  * 自動遍歷【訂單明細】與【顧客歸戶】，過濾出未結帳且採購確認的顧客名單
-  */
-  function getCustomerNotifyList() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
-    if (!orderSheet) {
-      return { success: false, message: '訂單工作表不存在' };
-    }
-
-    // 確保 24 欄與 13 欄結構
-    ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
-
-    const orderRows = orderSheet.getDataRange().getValues();
-    const custRows = custSheet ? custSheet.getDataRange().getValues() : [];
-
-    // 1. 建立顧客歸戶資料映射 (以 LINE_User_ID 為主 key，同時支援手機映射)
-    const customerInfoMap = {};
-    const phoneToCustomerMap = {};
-    for (let c = 1; c < custRows.length; c++) {
-      const uid = String(custRows[c][0] || '').trim();
-      const phone = String(custRows[c][3] || '').replace(/[-\s]/g, '').trim();
-      if (uid) {
-        const info = {
-          lineNick: String(custRows[c][1] || '').trim(),
-          realName: String(custRows[c][2] || '').trim(),
-          phone: String(custRows[c][3] || '').trim()
-        };
-        customerInfoMap[uid] = info;
-        if (phone) phoneToCustomerMap[phone] = info;
-      }
-    }
-
-    // 2. 歸組統計顧客未結帳訂單
-    const customerGroups = {};
-
-    for (let r = 1; r < orderRows.length; r++) {
-      const row = orderRows[r];
-      const userId = String(row[2] || '').trim();
-      if (!userId) continue;
-
-      const shipStatus = String(row[18] || '').trim();
-      const checkoutId = String(row[21] || '').trim();
-      const payStatus = String(row[16] || '').trim();
-      const processNote = String(row[19] || '').trim();
-
-      // 排除已結案、已完成取貨、已結帳或已付款完成者
-      if (checkoutId) continue;
-      if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
-      if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
-        continue;
-      }
-
-      // 判斷商品狀態
-      const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消');
-      const isSuccess = !isOut && (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('通知'));
-      const isRegistering = !isOut && !isSuccess;
-
-      const qty = Number(row[7]) || 1;
-      const unitPrice = Number(row[8]) || 0;
-      const subtotal = Number(row[9]) || (unitPrice * qty);
-      // 優先以會員登記電話 (X: col 24)，其次以收件人電話 (N: col 14)
-      const phone = String(row[23] || row[13] || '').replace(/[-\s]/g, '').trim();
-
-      if (!customerGroups[userId]) {
-        const profile = customerInfoMap[userId] || (phone && phoneToCustomerMap[phone]) || {};
-        // 姓名優先使用會員真實姓名 (row[22] W 欄或 profile.realName)，絕不以包裹收件人姓名 (row[12]) 混充會員姓名！
-        const memberDisplayName = profile.realName || String(row[22] || '').trim() || profile.lineNick || String(row[3] || '').trim() || '顧客';
-        const memberContactPhone = profile.phone || String(row[23] || '').trim() || String(row[13] || '').trim();
-
-        customerGroups[userId] = {
-          userId: userId,
-          name: memberDisplayName,
-          phone: memberContactPhone,
-          successCount: 0,
-          outOfStockCount: 0,
-          pendingCount: 0,
-          totalAmount: 0,
-          items: [],
-          lastNotifiedTime: null,
-          isNotified: false
-        };
-      }
-
-      const group = customerGroups[userId];
-
-      // 檢查處理備註是否有通知時間標記
-      if (processNote.includes('已發送1對1結帳通知')) {
-        group.isNotified = true;
-        const match = processNote.match(/已發送1對1結帳通知\s*\(([^)]+)\)/);
-        if (match) {
-          group.lastNotifiedTime = match[1];
-        }
-      }
-
-      group.items.push({
-        orderId: String(row[0] || '').trim(),
-        productId: String(row[4] || '').trim(),
-        productName: String(row[5] || '').trim(),
-        spec: String(row[6] || '').trim(),
-        quantity: qty,
-        unitPrice: unitPrice,
-        subtotal: subtotal,
-        status: isSuccess ? 'success' : (isOut ? 'out' : 'pending'),
-        shippingStatus: shipStatus
-      });
-
-      if (isSuccess) {
-        group.successCount += qty;
-        group.totalAmount += subtotal;
-      } else if (isOut) {
-        group.outOfStockCount += qty;
-      } else if (isRegistering) {
-        group.pendingCount += qty;
-      }
-    }
-
-    // 3. 過濾與分類顧客
-    const list = [];
-    Object.values(customerGroups).forEach(group => {
-      if (group.successCount === 0 && group.outOfStockCount > 0 && group.pendingCount === 0) {
-        group.type = 'all_out'; // 全數缺貨斷貨
-        list.push(group);
-      } else if (group.successCount > 0) {
-        group.type = 'checkout'; // 有採購成功品項，可結帳
-        list.push(group);
-      } else if (group.pendingCount > 0) {
-        group.type = 'pending'; // 尚有連線登記未確認商品
-        list.push(group);
-      }
-    });
-
-    // 4. 排序規則：採購成功總金額由大到小排序 (高客單價大單買家優先通知)
-    list.sort((a, b) => {
-      if (a.type === 'checkout' && b.type === 'checkout') {
-        return b.totalAmount - a.totalAmount;
-      }
-      if (a.type === 'checkout') return -1;
-      if (b.type === 'checkout') return 1;
-      return 0;
-    });
-
-    // 5. 彙整統計數據
-    const checkoutList = list.filter(c => c.type === 'checkout');
-    const stats = {
-      totalCheckoutCustomers: checkoutList.length,
-      totalSuccessItems: checkoutList.reduce((sum, c) => sum + c.successCount, 0),
-      totalPendingAmount: checkoutList.reduce((sum, c) => sum + c.totalAmount, 0)
-    };
-
-    return {
-      success: true,
-      stats: stats,
-      customers: list
-    };
-  }
-
-  /**
-  * 標記顧客名下所有當期未結帳訂單為「通知結帳」，並記錄通知發送時間
-  */
-  function handleMarkCustomerNotified(postData) {
-    const data = (postData && postData.data) || postData || {};
-    const userId = data.userId;
-    if (!userId) return { success: false, message: '缺少 userId' };
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
-    if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
-
-    const rows = orderSheet.getDataRange().getValues();
-    const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm');
-    let updatedCount = 0;
-
-    for (let r = 1; r < rows.length; r++) {
-      if (String(rows[r][2] || '').trim() === userId) {
-        const shipStatus = String(rows[r][18] || '').trim();
-        const checkoutId = String(rows[r][21] || '').trim();
-        if (!checkoutId && !shipStatus.includes('完成取貨') && !shipStatus.includes('結案')) {
-          const rowIndex = r + 1;
-          // 若狀態為採購成功，狀態更新為「通知結帳」
-          if (shipStatus === '採購成功' || shipStatus === '連線登記') {
-            orderSheet.getRange(rowIndex, 19).setValue('通知結帳');
-          }
-          // 追記備註
-          const oldNote = String(rows[r][19] || '').trim();
-          const notifyTag = `已發送1對1結帳通知 (${nowStr})`;
-          let newNote = oldNote;
-          if (oldNote.includes('已發送1對1結帳通知')) {
-            newNote = oldNote.replace(/已發送1對1結帳通知\s*\([^)]*\)/, notifyTag);
-          } else {
-            newNote = oldNote ? `${oldNote} ｜ ${notifyTag}` : notifyTag;
-          }
-          orderSheet.getRange(rowIndex, 20).setValue(newNote);
-          updatedCount++;
-        }
-      }
-    }
-
-    return {
-      success: true,
-      message: `已成功更新 ${updatedCount} 筆訂單備註為已通知`,
-      notifiedTime: nowStr
-    };
-  }
-
-  /**
+/**
   * 查詢已完成結帳出貨對帳包裹清單 (管理中心第 4 站真實後端)
   * 遍歷【訂單明細】，依結帳編號 (checkoutId, 第 22 欄) 分組為已結帳待出貨包裹
   */
@@ -4789,3 +2541,2686 @@ function testTelegramInEditor() {
   Logger.log(JSON.stringify(result));
   return result;
 }
+
+/**
+  * 查詢現場採購與顧客訂單配貨清單 (管理中心第 1 站與第 2 站獨立資料來源 API)
+  * 100% 依 Google Sheets【訂單明細】與【商品清單】驅動，包含所有「連線登記」、「採購中」、「待配貨」等品項
+  * 徹底解決「連線登記」未出現在現場採購總表或配貨清單的問題！
+  */
+  function getProcurementOrders() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (!orderSheet) {
+      return { success: false, message: '訂單工作表不存在' };
+    }
+
+    // 1. 建立商品圖文對照 Map
+    const prodMap = {};
+    if (prodSheet) {
+      const prodValues = prodSheet.getDataRange().getValues();
+      for (let p = 1; p < prodValues.length; p++) {
+        const pId = String(prodValues[p][0] || '').trim();
+        if (pId) {
+          let img = String(prodValues[p][7] || '').trim(); // H 欄: 封面主圖
+          if (!img || img.startsWith('[') || img.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(img);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                img = typeof parsed[0] === 'string' ? parsed[0] : (parsed[0].url || parsed[0].imageUrl || '');
+              }
+            } catch (e) { img = ''; }
+          }
+          if (!img) {
+            const allImgsRaw = String(prodValues[p][13] || '').trim(); // N 欄: 所有圖片
+            if (allImgsRaw.startsWith('[')) {
+              try {
+                const parsedAll = JSON.parse(allImgsRaw);
+                if (Array.isArray(parsedAll) && parsedAll.length > 0) {
+                  img = typeof parsedAll[0] === 'string' ? parsedAll[0] : (parsedAll[0].url || '');
+                }
+              } catch (e) {}
+            }
+          }
+          prodMap[pId] = {
+            name: String(prodValues[p][1] || '').trim(),
+            category: String(prodValues[p][2] || '').trim(),
+            price: Number(prodValues[p][4]) || 0,
+            imageUrl: img
+          };
+        }
+      }
+    }
+
+    // 2. 遍歷【訂單明細】所有未結案訂單
+    const orderRows = orderSheet.getDataRange().getValues();
+    const orders = [];
+    const procureGroupMap = {};
+
+    for (let r = 1; r < orderRows.length; r++) {
+      const row = orderRows[r];
+      const orderId = String(row[0] || '').trim();
+      if (!orderId) continue;
+
+      const shipStatus = String(row[18] || '').trim(); // S 欄: 採購出貨狀態
+      // 嚴格排除已完成取貨或已結案的歷史訂單
+      if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已取消')) {
+        continue;
+      }
+
+      const orderDate = row[1] instanceof Date ? Utilities.formatDate(row[1], 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : String(row[1] || '');
+      const userId = String(row[2] || '').trim();
+      const lineName = String(row[3] || '').trim();
+      const productId = String(row[4] || '').trim();
+      const productName = String(row[5] || '').trim();
+      const spec = String(row[6] || '').trim() || '單一規格';
+      const qty = Number(row[7]) || 1;
+      const unitPrice = Number(row[8]) || 0;
+      const subtotal = Number(row[9]) || (unitPrice * qty);
+      const recipientName = String(row[12] || '').trim() || String(row[22] || '').trim() || lineName || '顧客';
+      const recipientPhone = String(row[13] || '').trim() || String(row[23] || '').trim();
+      const note = String(row[15] || '').trim();
+      const payStatus = String(row[16] || '').trim();
+      const processNote = String(row[19] || '').trim();
+      const checkoutId = String(row[21] || '').trim();
+      const realName = String(row[22] || '').trim();
+      const memberPhone = String(row[23] || '').trim();
+
+      const prodInfo = prodMap[productId] || {};
+      const itemImg = prodInfo.imageUrl || '';
+
+      // 判斷該品項採購狀態標記
+      let itemStatus = 'pending'; // 預設連線登記 / 待採購
+      if (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('已採購') || shipStatus.includes('配貨中')) {
+        itemStatus = 'procured';
+      } else if (shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('買不到')) {
+        itemStatus = 'out_of_stock';
+      } else if (shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+        itemStatus = 'procured';
+      }
+
+      orders.push({
+        orderId: orderId,
+        orderDate: orderDate,
+        userId: userId,
+        lineName: lineName,
+        realName: realName,
+        name: recipientName,
+        phone: recipientPhone || memberPhone,
+        productId: productId,
+        productName: productName,
+        spec: spec,
+        quantity: qty,
+        unitPrice: unitPrice,
+        subtotal: subtotal,
+        shippingStatus: shipStatus || '連線登記',
+        payStatus: payStatus,
+        checkoutId: checkoutId,
+        note: note,
+        processNote: processNote,
+        imageUrl: itemImg,
+        status: itemStatus
+      });
+
+      // 匯總至 Station 1 現場採購總表
+      const groupKey = `${productId}__${spec}`;
+      if (!procureGroupMap[groupKey]) {
+        procureGroupMap[groupKey] = {
+          key: groupKey,
+          productId: productId,
+          productName: productName,
+          spec: spec,
+          unitPrice: unitPrice,
+          imageUrl: itemImg,
+          totalQty: 0,
+          procuredQty: 0,
+          outOfStockQty: 0,
+          pendingQty: 0,
+          buyerDetails: []
+        };
+      }
+
+      procureGroupMap[groupKey].totalQty += qty;
+      if (itemStatus === 'procured') {
+        procureGroupMap[groupKey].procuredQty += qty;
+      } else if (itemStatus === 'out_of_stock') {
+        procureGroupMap[groupKey].outOfStockQty += qty;
+      } else {
+        procureGroupMap[groupKey].pendingQty += qty;
+      }
+
+      procureGroupMap[groupKey].buyerDetails.push({
+        orderId: orderId,
+        buyerName: recipientName,
+        lineName: lineName,
+        qty: qty,
+        status: itemStatus,
+        shipStatus: shipStatus
+      });
+    }
+
+    const procureGroups = Object.values(procureGroupMap);
+
+    return {
+      success: true,
+      count: orders.length,
+      orders: orders,
+      procureGroups: procureGroups
+    };
+  }
+
+  /**
+  * 賣家管理者更新包裹與出貨狀態 (包含完成取貨點掉歸檔、還原待出貨、填寫寄件單號)
+  */
+  function handleUpdateParcelStatus(data) {
+    const checkoutId = String(data.checkoutId || '').trim();
+    const newStatus = String(data.status || '').trim(); // 例: '已完成取貨' 或 '已完成出貨' 或 '已完成結帳'
+    const trackingCode = String(data.trackingCode || '').trim();
+
+    if (!checkoutId) return { success: false, message: '缺少結帳單號 checkoutId' };
+    if (!newStatus) return { success: false, message: '缺少欲更新的狀態 status' };
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
+
+    const rows = orderSheet.getDataRange().getValues();
+    let updatedCount = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const rCheckoutId = String(rows[i][21] || '').trim(); // 第 22 欄 (V 欄)：結帳編號
+      if (rCheckoutId === checkoutId) {
+        // 第 19 欄 (S 欄)：採購出貨狀態
+        orderSheet.getRange(i + 1, 19).setValue(newStatus);
+        if (trackingCode) {
+          // 第 21 欄 (U 欄)：超商寄件單號 / 宅配託運單號
+          orderSheet.getRange(i + 1, 21).setValue(trackingCode);
+        }
+        updatedCount++;
+      }
+    }
+
+    return {
+      success: true,
+      message: `已成功將結帳單【${checkoutId}】(${updatedCount} 筆商品) 狀態更新為【${newStatus}】！`,
+      updatedCount: updatedCount,
+      checkoutId: checkoutId,
+      status: newStatus
+    };
+  }
+
+/**
+ * 試算表開啟時自動建立專屬操作選單 (支援試算表內一鍵點擊授權與測試)
+ */
+function onOpen() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('🤖 Telegram 連線設定')
+      .addItem('🚀 授權並測試 Telegram 連線', 'forceAuthAndTest')
+      .addToUi();
+  } catch (e) {}
+}
+
+/**
+ * 試算表選單專用：強制觸發授權並測試發送 Telegram 訊息
+ */
+function forceAuthAndTest() {
+  const result = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+  const ui = SpreadsheetApp.getUi();
+  if (result.success) {
+    ui.alert('🎉 授權與連線成功！', 'Telegram 機器人已連線成功！\n請打開您的手機或電腦版 Telegram 查看測試推播訊息！', ui.ButtonSet.OK);
+  } else {
+    ui.alert('⚠️ 尚未收到訊息', '請確認試算表【系統設定】中的 TELEGRAM_BOT_TOKEN 與 TELEGRAM_CHAT_ID 是否已填寫正確。\n詳細回應：' + JSON.stringify(result), ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * 強制觸發 Google 外部網路 (UrlFetchApp) 授權彈窗的專用函式 (不包 try-catch，強制 Google 彈出授權視窗)
+ */
+function forceAuth() {
+  UrlFetchApp.fetch('https://api.telegram.org');
+}
+
+/**
+ * 專供 Apps Script 編輯器手動執行「一鍵觸發授權」與「連線測試」的專屬函式
+ */
+function testTelegramInEditor() {
+  const result = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+  Logger.log(JSON.stringify(result));
+  return result;
+}
+
+/**
+  * 賣家管理者更新包裹與出貨狀態 (包含完成取貨點掉歸檔、還原待出貨、填寫寄件單號)
+  */
+  function handleUpdateParcelStatus(data) {
+    const checkoutId = String(data.checkoutId || '').trim();
+    const newStatus = String(data.status || '').trim(); // 例: '已完成取貨' 或 '已完成出貨' 或 '已完成結帳'
+    const trackingCode = String(data.trackingCode || '').trim();
+
+    if (!checkoutId) return { success: false, message: '缺少結帳單號 checkoutId' };
+    if (!newStatus) return { success: false, message: '缺少欲更新的狀態 status' };
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
+
+    const rows = orderSheet.getDataRange().getValues();
+    let updatedCount = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const rCheckoutId = String(rows[i][21] || '').trim(); // 第 22 欄 (V 欄)：結帳編號
+      if (rCheckoutId === checkoutId) {
+        // 第 19 欄 (S 欄)：採購出貨狀態
+        orderSheet.getRange(i + 1, 19).setValue(newStatus);
+        if (trackingCode) {
+          // 第 21 欄 (U 欄)：超商寄件單號 / 宅配託運單號
+          orderSheet.getRange(i + 1, 21).setValue(trackingCode);
+        }
+        updatedCount++;
+      }
+    }
+
+    return {
+      success: true,
+      message: `已成功將結帳單【${checkoutId}】(${updatedCount} 筆商品) 狀態更新為【${newStatus}】！`,
+      updatedCount: updatedCount,
+      checkoutId: checkoutId,
+      status: newStatus
+    };
+  }
+
+/**
+  * 🛠️ 清除測試資料管理函式（已啟用防誤觸保護）
+  * 說明：為避免在 Apps Script 編輯器誤按「執行」造成正式顧客與訂單被清空，
+  * 此函式強制要求輸入安全密鑰 safetyKey。未帶密鑰執行時會被直接攔截，絕不會動到試算表！
+  */
+  function clearTestOrdersData(safetyKey) {
+    // 🛡️ 強制防誤觸檢查：直接點選執行時 safetyKey 為 undefined，會被立即攔截
+    if (safetyKey !== 'CONFIRM_DELETE_ORDERS_2026') {
+      Logger.log('🚫【安全防護已啟動】拒絕執行！為防止正式顧客與訂單資料遭誤刪，此功能已永久上鎖。若在 Apps Script 編輯器誤按「執行」，資料絕不會被清空。');
+      return {
+        success: false,
+        message: '🚫【安全防護已啟動】拒絕執行！為保護真實顧客與訂單資料，已阻止清除動作。'
+      };
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let deletedOrdersCount = 0;
+    let deletedCustCount = 0;
+
+    // 1. 清除「訂單明細」測試訂單 (保留第 1 列表頭)
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (orderSheet) {
+      const lastRow = orderSheet.getLastRow();
+      if (lastRow > 1) {
+        deletedOrdersCount = lastRow - 1;
+        orderSheet.getRange(2, 1, lastRow - 1, orderSheet.getLastColumn()).clearContent();
+      }
+    }
+
+    // 2. 清除「顧客歸戶」測試資料 (保留第 1 列表頭)
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (custSheet) {
+      const lastRow = custSheet.getLastRow();
+      if (lastRow > 1) {
+        deletedCustCount = lastRow - 1;
+        custSheet.getRange(2, 1, lastRow - 1, custSheet.getLastColumn()).clearContent();
+      }
+    }
+
+    Logger.log(`✅ 清除完成！共清除 ${deletedOrdersCount} 筆訂單明細與 ${deletedCustCount} 筆顧客資料。已保留表頭與格式設定。`);
+    return {
+      success: true,
+      message: `✅ 測試資料已清除完畢！共清除 ${deletedOrdersCount} 筆訂單與 ${deletedCustCount} 筆顧客歸戶資料，已保留表頭結構與格式。`,
+      deletedOrders: deletedOrdersCount,
+      deletedCustomers: deletedCustCount
+    };
+  }
+
+/**
+  * 一鍵清空【訂單明細】與【顧客歸戶】所有資料（自動保留第 1 列標題列）
+  * 使用方式：在 Apps Script 編輯器上方選擇此函式並點擊「執行」
+  */
+  function clearOrdersAndCustomers() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. 清空訂單明細（保留第 1 列標題列）
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (orderSheet) {
+      const lastRow = orderSheet.getLastRow();
+      if (lastRow > 1) {
+        orderSheet.deleteRows(2, lastRow - 1);
+        console.log(`已清空【${SHEET_NAMES.ORDERS}】共 ${lastRow - 1} 筆資料`);
+      } else {
+        console.log(`【${SHEET_NAMES.ORDERS}】目前已無訂單資料`);
+      }
+    }
+
+    // 2. 清空顧客歸戶（保留第 1 列標題列）
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (custSheet) {
+      const lastRow = custSheet.getLastRow();
+      if (lastRow > 1) {
+        custSheet.deleteRows(2, lastRow - 1);
+        console.log(`已清空【${SHEET_NAMES.CUSTOMERS}】共 ${lastRow - 1} 筆資料`);
+      } else {
+        console.log(`【${SHEET_NAMES.CUSTOMERS}】目前已無顧客資料`);
+      }
+    }
+
+    return '✅ 已成功清空【訂單明細】與【顧客歸戶】所有資料！';
+  }
+/* ==================== 模組結束：03_OrderService.gs ==================== */
+
+
+/* ==================== 模組起點：04_CustomerService.gs ==================== */
+/**
+ * ==============================================================================
+ * 【04_CustomerService.gs】顧客歸戶與會員中心服務模組 (CRM & Profile)
+ * ==============================================================================
+ * 說明：專門處理顧客會員歸戶、收件個資自動維護、生命週期動態 Log 與 1對1結帳通報清單。
+ * ==============================================================================
+ */
+
+/**
+  * 檢查是否為已建檔之老顧客
+  */
+  function checkCustomerExists(userId) {
+    if (!userId) return { success: false, exists: false };
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (!custSheet) return { success: true, exists: false };
+
+    // 確保 13 欄結構支援最近收件人姓名與電話
+    ensureOrderAndCustomerSchema(ss, null, custSheet);
+
+    const data = custSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        return {
+          success: true,
+          exists: true,
+          profile: {
+            userId: data[i][0],
+            userName: data[i][1],
+            realName: data[i][2],
+            phone: data[i][3],
+            joinedAt: data[i][4] instanceof Date ? Utilities.formatDate(data[i][4], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][4] || ''),
+            lastVisitAt: data[i][5] instanceof Date ? Utilities.formatDate(data[i][5], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[i][5] || ''),
+            lastViewed: data[i][6] || '',
+            visitDays: Number(data[i][7]) || 1,
+            visitCount: Number(data[i][7]) || 1, // 相容舊版名稱
+            pageViews: Number(data[i][8]) || 1,
+            orderCount: Number(data[i][9]) || 0,
+            totalSpend: Number(data[i][10]) || 0,
+            memberTier: data[i][11] || '一般會員',
+            lifeStatus: data[i][12] || '🟢 活躍',
+            source: data[i][13] || '',
+            defaultAddress: data[i][14] || '',
+            isBlacklisted: data[i][15] || '正常',
+            notes: data[i][16] || '',
+            lastRecipientName: data[i][2] || '',
+            lastRecipientPhone: data[i][3] || ''
+          }
+        };
+      }
+    }
+    return { success: true, exists: false };
+  }
+
+/**
+  * 首次填寫聯絡資料彈窗時，立即正式建立/更新顧客檔案歸戶至試算表
+  */
+  function handleRegisterCustomer(data) {
+    if (!data) return { success: false, message: '缺少資料' };
+    let userId = String(data.userId || '').trim();
+    const userName = data.userName || 'LINE 會員';
+    const realName = (data.realName || '').trim();
+    const rawPhone = data.phone ? String(data.phone).trim() : '';
+    const cleanPhone = rawPhone.replace(/[-\s]/g, '');
+    const phone = formatPhoneAsText(rawPhone);
+    const source = (data.source || '').trim();
+
+    if (!realName || !rawPhone) {
+      return { success: false, message: '真實姓名與電話為必填' };
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (!custSheet) {
+      custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
+      custSheet.appendRow([
+        'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+        '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+        '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+      ]);
+      custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+      custSheet.getRange("D:D").setNumberFormat('@');
+    }
+
+    ensureOrderAndCustomerSchema(ss, null, custSheet);
+
+    const now = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+    const values = custSheet.getDataRange().getValues();
+    let found = false;
+
+    const isRealLineId = userId && !userId.startsWith('GUEST_') && userId !== 'TEST_USER_999' && userId !== 'LINE_GUEST';
+
+    for (let i = 1; i < values.length; i++) {
+      const rowUid = String(values[i][0] || '').trim();
+      const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
+
+      const isMatched = (rowUid === userId) || (isRealLineId && rowPhone === cleanPhone && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999'));
+
+      if (isMatched) {
+        found = true;
+        const row = i + 1;
+        if (isRealLineId && (rowUid.startsWith('GUEST_') || rowUid === 'TEST_USER_999')) {
+          custSheet.getRange(row, 1).setValue(userId);
+        }
+        if (userName) custSheet.getRange(row, 2).setValue(userName);
+        custSheet.getRange(row, 3).setValue(realName);
+        custSheet.getRange(row, 4).setValue(phone);
+        // Col 6: 最後進站時間
+        custSheet.getRange(row, 6).setValue(now);
+        // Col 14: 顧客來源
+        if (source) custSheet.getRange(row, 14).setValue(source);
+
+        // 寫入更新資料安全 Log
+        logCustomerActivity(
+          userId,
+          `${realName} (${userName})`,
+          '✏️ 更新會員資料',
+          `更新真實姓名: ${realName}, 電話: ${phone}, 來源: ${source || '未指定'}`,
+          data.page || '個人資料/VIP守門牆',
+          data.device || ''
+        );
+        break;
+      }
+    }
+
+    if (!found && (!isRealLineId) && cleanPhone) {
+      for (let i = 1; i < values.length; i++) {
+        const rowPhone = String(values[i][3] || '').replace(/[-\s]/g, '').trim();
+        const rowUid = String(values[i][0] || '').trim();
+        if (rowPhone === cleanPhone && rowUid && !rowUid.startsWith('GUEST_') && rowUid !== 'TEST_USER_999') {
+          userId = rowUid;
+          found = true;
+          const row = i + 1;
+          if (userName) custSheet.getRange(row, 2).setValue(userName);
+          custSheet.getRange(row, 3).setValue(realName);
+          custSheet.getRange(row, 6).setValue(now);
+          if (source) custSheet.getRange(row, 14).setValue(source);
+
+          logCustomerActivity(
+            userId,
+            `${realName} (${userName})`,
+            '✏️ 更新會員資料',
+            `繼承帳號更新真實姓名: ${realName}, 電話: ${phone}`,
+            data.page || '個人資料/VIP守門牆',
+            data.device || ''
+          );
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      custSheet.appendRow([
+        userId,
+        userName,
+        realName,
+        phone,
+        now,                    // Col 5: 加入會員時間
+        now,                    // Col 6: 最後進站時間
+        data.page || 'VIP守門牆', // Col 7: 最後瀏覽頁面
+        1,                      // Col 8: 進站累計天數
+        1,                      // Col 9: 商品與頁面瀏覽次數
+        0,                      // Col 10: 歷史訂單數
+        0,                      // Col 11: 總消費金額
+        '一般會員',              // Col 12: 會員等級
+        '🟢 活躍',               // Col 13: 顧客生命狀態
+        source || 'LINE 好友',   // Col 14: 顧客來源
+        '',                     // Col 15: 常用超商取件門市
+        '正常',                 // Col 16: 黑名單標記
+        ''                      // Col 17: 賣家管理備註/標籤
+      ]);
+
+      // 寫入加入會員安全 Log
+      logCustomerActivity(
+        userId,
+        `${realName} (${userName})`,
+        '🎉 首次加入會員',
+        `註冊真實姓名: ${realName}, 電話: ${phone}, 來源: ${source || 'LINE 好友'}`,
+        data.page || 'VIP守門牆',
+        data.device || ''
+      );
+    }
+
+    // 同步會員本人真實姓名與電話回寫至該買家現有訂單之 W 欄 (col 23) 與 X 欄 (col 24)
+    try {
+      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+      if (orderSheet) {
+        ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+        const orderValues = orderSheet.getDataRange().getValues();
+        for (let o = 1; o < orderValues.length; o++) {
+          if (String(orderValues[o][2] || '').trim() === userId) {
+            orderSheet.getRange(o + 1, 23).setValue(realName);
+            orderSheet.getRange(o + 1, 24).setValue(phone);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.warn('同步訂單 W/X 欄警告:', syncErr);
+    }
+
+    return {
+      success: true,
+      message: '✅ 顧客資料已成功建立歸戶！',
+      profile: {
+        userId: userId,
+        userName: userName,
+        realName: realName,
+        phone: rawPhone,
+        source: source,
+        joinedAt: now,
+        lastVisitAt: now,
+        memberTier: '一般會員',
+        lifeStatus: '🟢 活躍'
+      }
+    };
+  }
+
+/**
+  * 更新或建立顧客檔案歸戶
+  * 欄位: ['LINE_User_ID', '最新暱稱', '真實姓名', '電話', '常用寄送地址', '歷史訂單數', '總消費金額', '首購日期', '最後下單日期', '黑名單標記', '顧客來源', '最近收件人姓名', '最近收件人電話']
+  */
+  function updateCustomerProfile(custSheet, orderData, totalAmount, now) {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!custSheet) {
+        custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+        if (!custSheet) {
+          custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
+          custSheet.appendRow([
+            'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+            '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+            '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+          ]);
+          custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+          custSheet.getRange("D:D").setNumberFormat('@');
+        }
+      }
+
+      ensureOrderAndCustomerSchema(ss, null, custSheet);
+
+      const nowStr = now instanceof Date ? Utilities.formatDate(now, 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+      const userId = orderData.userId || 'LINE_GUEST';
+      const userName = orderData.userName || '訪客';
+      const realName = (orderData.realName || '').trim();
+      const phone = formatPhoneAsText(orderData.phone);
+      const source = (orderData.source || '').trim();
+      const prodName = orderData.productName || '';
+      const buyQty = Number(orderData.quantity) || 1;
+      const data = custSheet.getDataRange().getValues();
+      let found = false;
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          found = true;
+          const row = i + 1;
+          if (userName) custSheet.getRange(row, 2).setValue(userName);
+          if (realName && (!data[i][2] || String(data[i][2]).trim() === '')) {
+            custSheet.getRange(row, 3).setValue(realName);
+          }
+          if (phone && (!data[i][3] || String(data[i][3]).trim() === '')) {
+            custSheet.getRange(row, 4).setValue(phone);
+          }
+          // Col 6: 最後進站時間
+          custSheet.getRange(row, 6).setValue(nowStr);
+          // Col 7: 最後瀏覽商品/頁面
+          if (prodName) {
+            custSheet.getRange(row, 7).setValue(prodName);
+          }
+          
+          const currentOrders = Number(data[i][9]) || 0;
+          const currentSpend = Number(data[i][10]) || 0;
+          const newOrders = currentOrders + 1;
+          const newSpend = currentSpend + (Number(totalAmount) || 0);
+
+          // Col 10: 歷史訂單數, Col 11: 總消費金額
+          custSheet.getRange(row, 10).setValue(newOrders);
+          custSheet.getRange(row, 11).setValue(newSpend);
+
+          // Col 12: 會員等級自動試算 (尊重手動指定之「批發夥伴」；累積3000=VIP, 10000=VVIP)
+          const currentTier = String(data[i][11] || '一般會員').trim();
+          let autoTier = currentTier;
+          if (currentTier !== '批發夥伴') {
+            if (newSpend >= 10000) {
+              autoTier = 'VVIP';
+            } else if (newSpend >= 3000) {
+              autoTier = (currentTier === 'VVIP' ? 'VVIP' : 'VIP');
+            }
+          }
+          if (autoTier !== currentTier) {
+            custSheet.getRange(row, 12).setValue(autoTier);
+          }
+
+          // Col 13: 顧客生命狀態 (活躍)
+          custSheet.getRange(row, 13).setValue('🟢 活躍');
+
+          // Col 14: 顧客來源
+          if (source && (!data[i][13] || data[i][13] === '')) {
+            custSheet.getRange(row, 14).setValue(source);
+          }
+          break;
+        }
+      }
+
+      if (!found) {
+        custSheet.appendRow([
+          userId,
+          userName,
+          realName,
+          phone,
+          nowStr,       // 加入會員時間
+          nowStr,       // 最後進站時間
+          prodName,     // 最後瀏覽商品
+          1,            // 進站累計天數
+          1,            // 商品與頁面瀏覽次數
+          1,            // 歷史訂單數
+          Number(totalAmount) || 0, // 總消費金額
+          '一般會員',    // 會員等級
+          '🟢 活躍',     // 顧客生命狀態
+          source,       // 顧客來源
+          '',           // 常用超商取件門市
+          '正常',       // 黑名單標記
+          ''            // 賣家管理備註/標籤
+        ]);
+      }
+
+      // 寫入送出訂單安全稽核 Log
+      logCustomerActivity(
+        userId,
+        realName ? `${realName} (${userName})` : userName,
+        '🛍️ 送出訂單',
+        `下單商品: ${prodName || '未具名商品'}${buyQty > 1 ? ' x' + buyQty : ''}，金額 NT$ ${Number(totalAmount) || 0}`,
+        'product.html',
+        orderData.device || ''
+      );
+    } catch (err) {
+      console.error('更新顧客歸戶失敗 (不影響訂單建立): ' + err.toString());
+    }
+  }
+
+/**
+  * 更新結帳時之最近收件人資訊與常用寄送地址
+  * 嚴格只更新第 5 欄(E: 常用寄送地址)、第 12 欄(L: 最近收件人姓名)、第 13 欄(M: 最近收件人電話)
+  * 絕不覆蓋第 3 欄 (C: 真實姓名) 或第 4 欄 (D: 電話)！
+  */
+  function updateCustomerRecipientInfo(custSheet, userId, recipientName, recipientPhone, deliveryInfo) {
+    try {
+      if (!custSheet) return;
+      const cleanPhone = formatPhoneAsText(recipientPhone);
+      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+      const data = custSheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          const row = i + 1;
+          // 第 15 欄 (O): 常用超商取件門市
+          if (deliveryInfo) custSheet.getRange(row, 15).setValue(deliveryInfo);
+          // 第 6 欄 (F): 最後進站時間
+          custSheet.getRange(row, 6).setValue(nowStr);
+
+          // 防呆：若該顧客 C欄(真實姓名) 或 D欄(電話) 原本完全空白，則順道補齊
+          const currentRealName = String(data[i][2] || '').trim();
+          const currentPhone = String(data[i][3] || '').trim();
+          if (!currentRealName && recipientName) {
+            custSheet.getRange(row, 3).setValue(recipientName);
+          }
+          if (!currentPhone && cleanPhone) {
+            custSheet.getRange(row, 4).setValue(cleanPhone);
+          }
+          break;
+        }
+      }
+
+      // 寫入完成結帳安全稽核 Log
+      logCustomerActivity(
+        userId,
+        recipientName || '結帳買家',
+        '💳 完成結帳',
+        `收件人: ${recipientName || '未指定'} (${cleanPhone || ''})，取件門市/地址: ${deliveryInfo || ''}`,
+        'my-orders.html',
+        ''
+      );
+    } catch (err) {
+      console.error('更新收件人資訊失敗: ' + err.toString());
+    }
+  }
+
+/**
+  * 相容舊函式命名：轉向呼叫 updateCustomerRecipientInfo
+  */
+  function updateCustomerAddress(custSheet, userId, name, phone) {
+    updateCustomerRecipientInfo(custSheet, userId, name, phone, '');
+  }
+
+/**
+  * 🔄 一鍵重新計算並同步【顧客歸戶】的所有統計數據
+  * 根據【訂單明細】最新資料，自動為每位顧客精準重算：
+  * - 歷史訂單數 (第 6 欄)
+  * - 總消費金額 (第 7 欄)
+  * - 首購日期 (第 8 欄)
+  * - 最後下單日期 (第 9 欄)
+  * 支援「LINE_User_ID」與「手機號碼」雙重智慧歸戶比對！
+  */
+  function recalculateCustomerStats() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    
+    if (!orderSheet || !custSheet) {
+      return { success: false, message: '找不到訂單或顧客工作表' };
+    }
+
+    // 自動執行欄位升級與資料同步 (將顧客表的真實姓名回寫至訂單表第 23 欄 W)
+    ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+    upgradeOrderAndCustomerSheets(ss);
+
+    const orderData = orderSheet.getDataRange().getValues();
+    const custData = custSheet.getDataRange().getValues();
+    if (custData.length <= 1) {
+      return { success: true, message: '顧客表無資料' };
+    }
+
+    // 1. 建立顧客映射表 (以 userId 為主 key，同時支援手機號碼比對)
+    const statsMap = {};
+    const phoneToUidMap = {};
+
+    for (let c = 1; c < custData.length; c++) {
+      const uid = String(custData[c][0] || '').trim();
+      const phone = String(custData[c][3] || '').replace(/[-\s]/g, '').trim();
+      if (uid) {
+        statsMap[uid] = {
+          orderCount: 0,
+          totalSpend: 0,
+          firstDate: null,
+          lastDate: null
+        };
+        if (phone) phoneToUidMap[phone] = uid;
+      }
+    }
+
+    // 2. 遍歷所有訂單進行統計累加
+    for (let o = 1; o < orderData.length; o++) {
+      const row = orderData[o];
+      let uid = String(row[2] || '').trim(); // 第 3 欄 LINE_User_ID
+      // 優先以第 24 欄 (X: 會員電話) 比對，其次以第 14 欄 (N: 收件人電話)
+      const memberPhone = String(row[23] || '').replace(/[-\s]/g, '').trim();
+      const recipientPhone = String(row[13] || '').replace(/[-\s]/g, '').trim();
+      const phone = memberPhone || recipientPhone;
+      const rawDate = row[1]; // 第 2 欄 下單時間
+      const orderTime = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
+      const amount = Number(row[11]) || Number(row[9]) || 0; // 第 12 欄總金額或第 10 欄商品小計
+
+      // 若 uid 未在顧客表直接對應，但手機號碼能對應，則智慧歸戶
+      if (!statsMap[uid] && phone && phoneToUidMap[phone]) {
+        uid = phoneToUidMap[phone];
+      }
+
+      if (statsMap[uid]) {
+        statsMap[uid].orderCount += 1;
+        statsMap[uid].totalSpend += amount;
+
+        if (orderTime && !isNaN(orderTime.getTime())) {
+          if (!statsMap[uid].firstDate || orderTime < statsMap[uid].firstDate) {
+            statsMap[uid].firstDate = orderTime;
+          }
+          if (!statsMap[uid].lastDate || orderTime > statsMap[uid].lastDate) {
+            statsMap[uid].lastDate = orderTime;
+          }
+        }
+      }
+    }
+
+    // 3. 寫回【顧客歸戶】工作表 (17 欄規格)
+    let updatedCount = 0;
+    for (let c = 1; c < custData.length; c++) {
+      const uid = String(custData[c][0] || '').trim();
+      const stat = statsMap[uid];
+      if (stat) {
+        const row = c + 1;
+        // Col 10: 歷史訂單數, Col 11: 總消費金額
+        custSheet.getRange(row, 10).setValue(stat.orderCount);
+        custSheet.getRange(row, 11).setValue(stat.totalSpend);
+
+        // Col 12: 會員等級自動試算 (尊重批發夥伴；>=10000=VVIP, >=3000=VIP)
+        const curTier = String(custData[c][11] || '一般會員').trim();
+        let tier = curTier;
+        if (curTier !== '批發夥伴') {
+          if (stat.totalSpend >= 10000) tier = 'VVIP';
+          else if (stat.totalSpend >= 3000) tier = (curTier === 'VVIP' ? 'VVIP' : 'VIP');
+          else tier = '一般會員';
+        }
+        custSheet.getRange(row, 12).setValue(tier);
+
+        // Col 5: 加入會員時間 (若原本空白且有首購紀錄則回補)
+        if (stat.firstDate && !custData[c][4]) custSheet.getRange(row, 5).setValue(stat.firstDate);
+        // Col 6: 最後進站時間 (若原本空白且有最後單紀錄則回補)
+        if (stat.lastDate && !custData[c][5]) custSheet.getRange(row, 6).setValue(stat.lastDate);
+        updatedCount++;
+      }
+    }
+
+    logCustomerActivity('SYSTEM', '系統維護', '📊 重新統計會員數據', `已重新統計並同步 ${updatedCount} 位會員之歷史訂單與消費金額`, 'recalculateCustomerStats', 'GAS Server');
+
+    Logger.log(`✅ 已完成 ${updatedCount} 位顧客之歷史訂單數據重新整理！`);
+    return {
+      success: true,
+      message: `✅ 已重新統計並同步 ${updatedCount} 位顧客的歷史訂單與消費金額！`,
+      updatedCount: updatedCount
+    };
+  }
+
+/**
+  * 📝 記錄會員安全與動態歷程 Log (安全稽核流水帳)
+  * @param {string} userId - LINE User ID
+  * @param {string} displayName - 姓名或暱稱
+  * @param {string} eventType - 事件類型 (如 '🎉 首次加入會員', '👀 進站逛店', '🛍️ 送出訂單', '💳 完成結帳', '✏️ 資料變更')
+  * @param {string} details - 詳細描述
+  * @param {string} page - 頁面或管道
+  * @param {string} device - 裝置與瀏覽器
+  */
+  function logCustomerActivity(userId, displayName, eventType, details, page, device) {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+      const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
+
+      if (!logSheet) {
+        logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+        logSheet.appendRow(logHeaders);
+        logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
+        logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+        logSheet.getRange("B:B").setNumberFormat('@');
+      }
+
+      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+      logSheet.appendRow([
+        nowStr,
+        String(userId || 'GUEST'),
+        String(displayName || '訪客'),
+        String(eventType || '動態記錄'),
+        String(details || ''),
+        String(page || ''),
+        String(device || '行動裝置/電腦')
+      ]);
+    } catch (err) {
+      console.warn('寫入會員動態 Log 略過:', err);
+    }
+  }
+
+/**
+  * 查詢會員動態安全 Log (依時間倒序回傳最新記錄，供管理者後台查看)
+  */
+  function getCustomerLogs(limit = 100) {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+      if (!logSheet) {
+        return { success: true, logs: [], count: 0 };
+      }
+      const data = logSheet.getDataRange().getValues();
+      if (data.length <= 1) {
+        return { success: true, logs: [], count: 0 };
+      }
+      const logs = [];
+      const maxRows = Math.min(Number(limit) || 100, data.length - 1);
+      for (let r = data.length - 1; r >= data.length - maxRows; r--) {
+        logs.push({
+          timestamp: data[r][0] instanceof Date ? Utilities.formatDate(data[r][0], 'GMT+8', 'yyyy/MM/dd HH:mm:ss') : String(data[r][0]),
+          userId: data[r][1],
+          displayName: data[r][2],
+          eventType: data[r][3],
+          details: data[r][4],
+          page: data[r][5],
+          device: data[r][6]
+        });
+      }
+      return { success: true, logs: logs, count: logs.length };
+    } catch (err) {
+      return { success: false, message: '讀取會員動態 Log 失敗: ' + err.toString() };
+    }
+  }
+
+/**
+  * 查詢待發送 1 對 1 結帳通知的顧客清單 (0 額度消耗推播後端)
+  * 自動遍歷【訂單明細】與【顧客歸戶】，過濾出未結帳且採購確認的顧客名單
+  */
+  function getCustomerNotifyList() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (!orderSheet) {
+      return { success: false, message: '訂單工作表不存在' };
+    }
+
+    // 確保 24 欄與 13 欄結構
+    ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
+
+    const orderRows = orderSheet.getDataRange().getValues();
+    const custRows = custSheet ? custSheet.getDataRange().getValues() : [];
+
+    // 1. 建立顧客歸戶資料映射 (以 LINE_User_ID 為主 key，同時支援手機映射)
+    const customerInfoMap = {};
+    const phoneToCustomerMap = {};
+    for (let c = 1; c < custRows.length; c++) {
+      const uid = String(custRows[c][0] || '').trim();
+      const phone = String(custRows[c][3] || '').replace(/[-\s]/g, '').trim();
+      if (uid) {
+        const info = {
+          lineNick: String(custRows[c][1] || '').trim(),
+          realName: String(custRows[c][2] || '').trim(),
+          phone: String(custRows[c][3] || '').trim()
+        };
+        customerInfoMap[uid] = info;
+        if (phone) phoneToCustomerMap[phone] = info;
+      }
+    }
+
+    // 2. 歸組統計顧客未結帳訂單
+    const customerGroups = {};
+
+    for (let r = 1; r < orderRows.length; r++) {
+      const row = orderRows[r];
+      const userId = String(row[2] || '').trim();
+      if (!userId) continue;
+
+      const shipStatus = String(row[18] || '').trim();
+      const checkoutId = String(row[21] || '').trim();
+      const payStatus = String(row[16] || '').trim();
+      const processNote = String(row[19] || '').trim();
+
+      // 排除已結案、已完成取貨、已結帳或已付款完成者
+      if (checkoutId) continue;
+      if (payStatus === '已完成付款' || payStatus === '已付款待對帳') continue;
+      if (shipStatus.includes('完成取貨') || shipStatus.includes('結案') || shipStatus.includes('已完成結帳') || shipStatus.includes('出貨')) {
+        continue;
+      }
+
+      // 判斷商品狀態
+      const isOut = shipStatus.includes('缺貨') || shipStatus.includes('斷貨') || shipStatus.includes('取消');
+      const isSuccess = !isOut && (shipStatus.includes('成功') || shipStatus.includes('採買') || shipStatus.includes('通知'));
+      const isRegistering = !isOut && !isSuccess;
+
+      const qty = Number(row[7]) || 1;
+      const unitPrice = Number(row[8]) || 0;
+      const subtotal = Number(row[9]) || (unitPrice * qty);
+      // 優先以會員登記電話 (X: col 24)，其次以收件人電話 (N: col 14)
+      const phone = String(row[23] || row[13] || '').replace(/[-\s]/g, '').trim();
+
+      if (!customerGroups[userId]) {
+        const profile = customerInfoMap[userId] || (phone && phoneToCustomerMap[phone]) || {};
+        // 姓名優先使用會員真實姓名 (row[22] W 欄或 profile.realName)，絕不以包裹收件人姓名 (row[12]) 混充會員姓名！
+        const memberDisplayName = profile.realName || String(row[22] || '').trim() || profile.lineNick || String(row[3] || '').trim() || '顧客';
+        const memberContactPhone = profile.phone || String(row[23] || '').trim() || String(row[13] || '').trim();
+
+        customerGroups[userId] = {
+          userId: userId,
+          name: memberDisplayName,
+          phone: memberContactPhone,
+          successCount: 0,
+          outOfStockCount: 0,
+          pendingCount: 0,
+          totalAmount: 0,
+          items: [],
+          lastNotifiedTime: null,
+          isNotified: false
+        };
+      }
+
+      const group = customerGroups[userId];
+
+      // 檢查處理備註是否有通知時間標記
+      if (processNote.includes('已發送1對1結帳通知')) {
+        group.isNotified = true;
+        const match = processNote.match(/已發送1對1結帳通知\s*\(([^)]+)\)/);
+        if (match) {
+          group.lastNotifiedTime = match[1];
+        }
+      }
+
+      group.items.push({
+        orderId: String(row[0] || '').trim(),
+        productId: String(row[4] || '').trim(),
+        productName: String(row[5] || '').trim(),
+        spec: String(row[6] || '').trim(),
+        quantity: qty,
+        unitPrice: unitPrice,
+        subtotal: subtotal,
+        status: isSuccess ? 'success' : (isOut ? 'out' : 'pending'),
+        shippingStatus: shipStatus
+      });
+
+      if (isSuccess) {
+        group.successCount += qty;
+        group.totalAmount += subtotal;
+      } else if (isOut) {
+        group.outOfStockCount += qty;
+      } else if (isRegistering) {
+        group.pendingCount += qty;
+      }
+    }
+
+    // 3. 過濾與分類顧客
+    const list = [];
+    Object.values(customerGroups).forEach(group => {
+      if (group.successCount === 0 && group.outOfStockCount > 0 && group.pendingCount === 0) {
+        group.type = 'all_out'; // 全數缺貨斷貨
+        list.push(group);
+      } else if (group.successCount > 0) {
+        group.type = 'checkout'; // 有採購成功品項，可結帳
+        list.push(group);
+      } else if (group.pendingCount > 0) {
+        group.type = 'pending'; // 尚有連線登記未確認商品
+        list.push(group);
+      }
+    });
+
+    // 4. 排序規則：採購成功總金額由大到小排序 (高客單價大單買家優先通知)
+    list.sort((a, b) => {
+      if (a.type === 'checkout' && b.type === 'checkout') {
+        return b.totalAmount - a.totalAmount;
+      }
+      if (a.type === 'checkout') return -1;
+      if (b.type === 'checkout') return 1;
+      return 0;
+    });
+
+    // 5. 彙整統計數據
+    const checkoutList = list.filter(c => c.type === 'checkout');
+    const stats = {
+      totalCheckoutCustomers: checkoutList.length,
+      totalSuccessItems: checkoutList.reduce((sum, c) => sum + c.successCount, 0),
+      totalPendingAmount: checkoutList.reduce((sum, c) => sum + c.totalAmount, 0)
+    };
+
+    return {
+      success: true,
+      stats: stats,
+      customers: list
+    };
+  }
+
+/**
+  * 標記顧客名下所有當期未結帳訂單為「通知結帳」，並記錄通知發送時間
+  */
+  function handleMarkCustomerNotified(postData) {
+    const data = (postData && postData.data) || postData || {};
+    const userId = data.userId;
+    if (!userId) return { success: false, message: '缺少 userId' };
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    if (!orderSheet) return { success: false, message: '訂單工作表不存在' };
+
+    const rows = orderSheet.getDataRange().getValues();
+    const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm');
+    let updatedCount = 0;
+
+    for (let r = 1; r < rows.length; r++) {
+      if (String(rows[r][2] || '').trim() === userId) {
+        const shipStatus = String(rows[r][18] || '').trim();
+        const checkoutId = String(rows[r][21] || '').trim();
+        if (!checkoutId && !shipStatus.includes('完成取貨') && !shipStatus.includes('結案')) {
+          const rowIndex = r + 1;
+          // 若狀態為採購成功，狀態更新為「通知結帳」
+          if (shipStatus === '採購成功' || shipStatus === '連線登記') {
+            orderSheet.getRange(rowIndex, 19).setValue('通知結帳');
+          }
+          // 追記備註
+          const oldNote = String(rows[r][19] || '').trim();
+          const notifyTag = `已發送1對1結帳通知 (${nowStr})`;
+          let newNote = oldNote;
+          if (oldNote.includes('已發送1對1結帳通知')) {
+            newNote = oldNote.replace(/已發送1對1結帳通知\s*\([^)]*\)/, notifyTag);
+          } else {
+            newNote = oldNote ? `${oldNote} ｜ ${notifyTag}` : notifyTag;
+          }
+          orderSheet.getRange(rowIndex, 20).setValue(newNote);
+          updatedCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `已成功更新 ${updatedCount} 筆訂單備註為已通知`,
+      notifiedTime: nowStr
+    };
+  }
+
+/**
+  * 依據 LINE User ID 反查顧客歸戶檔案 (取得 LINE 暱稱、真實姓名、手機)
+  */
+  function getCustomerProfileById(userId) {
+    if (!userId || String(userId).startsWith('GUEST_') || userId === 'LINE_GUEST' || userId === 'TEST_USER_999') {
+      return null;
+    }
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+      if (!custSheet) return null;
+      const custData = custSheet.getDataRange().getValues();
+      for (let c = 1; c < custData.length; c++) {
+        if (String(custData[c][0] || '').trim() === String(userId).trim()) {
+          return {
+            lineName: String(custData[c][1] || '').trim(),
+            realName: String(custData[c][2] || '').trim(),
+            phone: String(custData[c][3] || '').trim()
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('getCustomerProfileById 查詢失敗:', err);
+    }
+    return null;
+  }
+/* ==================== 模組結束：04_CustomerService.gs ==================== */
+
+
+/* ==================== 模組起點：05_TelegramService.gs ==================== */
+/**
+ * ==============================================================================
+ * 【05_TelegramService.gs】Telegram 即時營運推播機器人模組
+ * ==============================================================================
+ * 說明：專門處理 Telegram 訊息排版 (HTML Mode)、訪客稱呼格式化、瀏覽點擊通報與連線測試。
+ * ==============================================================================
+ */
+
+/**
+  * HTML 特殊符號轉義，防止 Telegram HTML 解析模式拋錯
+  */
+  function escapeHtmlText(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+/**
+  * 格式化訪客稱呼 (統稱「訪客稱呼」)
+  * 格式規範：LINE暱稱（真實名字/手機號碼）
+  * 若未登記真實資訊則僅顯示：LINE暱稱 (若無暱稱則顯示「訪客」)
+  */
+  function formatVisitorDisplayName(lineName, realName, phone) {
+    const lName = String(lineName || '').trim() || '訪客';
+    const rName = String(realName || '').trim();
+    const pNum = String(phone || '').replace(/[-\s]/g, '').trim();
+
+    const details = [];
+    if (rName) details.push(rName);
+    if (pNum) details.push(pNum);
+
+    if (details.length > 0) {
+      return `${lName}（${details.join('/')}）`;
+    }
+    return lName;
+  }
+
+/**
+  * 發送 Telegram 機器人即時推播訊息
+  * @param {string} text 訊息內容 (支援 HTML 排版: <b>, <i>, <code>, <a>)
+  */
+  function sendTelegramMessage(text) {
+    try {
+      const settings = getRawSystemSettingsInternal();
+      const token = settings.TELEGRAM_BOT_TOKEN;
+      const chatId = settings.TELEGRAM_CHAT_ID;
+
+      // 若尚未填寫 Token 或 Chat ID，則優雅靜默略過，不影響主業務運行
+      if (!token || !chatId) {
+        return { success: false, reason: '未設定 TELEGRAM_BOT_TOKEN 或 TELEGRAM_CHAT_ID' };
+      }
+
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
+      const payload = {
+        chat_id: String(chatId).trim(),
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      };
+
+      const options = {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
+
+      const response = UrlFetchApp.fetch(url, options);
+      const code = response.getResponseCode();
+      const resText = response.getContentText() || '{}';
+      const result = JSON.parse(resText);
+
+      if (code === 200 && result.ok) {
+        return { success: true };
+      } else {
+        console.warn('Telegram API 回傳異常:', code, resText);
+        return { success: false, error: result };
+      }
+    } catch (err) {
+      console.warn('sendTelegramMessage 執行失敗:', err);
+      return { success: false, error: err.toString() };
+    }
+  }
+
+/**
+  * 🔔 發送【網址觸擊 / 訪客進站】即時 Telegram 通報至管理者
+  * 內建 60 秒 Cache 防灌訊保護機制，即時掌握每一位訪客動態
+  */
+  function sendPageViewAlertEmail(info) {
+    try {
+      const pagePath = info.pagePath || '';
+      const pageTitle = info.pageTitle || pagePath;
+      const productId = info.productId || '-';
+      const newViews = info.newViews || 1;
+      const userName = String(info.userName || '').trim();
+      const userId = String(info.userId || '').trim();
+      const now = info.now instanceof Date ? info.now : new Date();
+      const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+
+      // 🔍 智慧身分反查與「進站即自動建立初階顧客歸戶卡」
+      let customerRealName = '';
+      let customerLineNick = '';
+      let customerPhone = '';
+      if (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999') {
+        try {
+          const ss = SpreadsheetApp.getActiveSpreadsheet();
+          let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+          if (!custSheet) {
+            custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+            custSheet.appendRow([
+              'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+              '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+              '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+            ]);
+            custSheet.getRange(1, 1, 1, 17).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+            custSheet.getRange("D:D").setNumberFormat('@');
+          }
+
+          ensureOrderAndCustomerSchema(ss, null, custSheet);
+
+          const custData = custSheet.getDataRange().getValues();
+          let userFound = false;
+          for (let c = 1; c < custData.length; c++) {
+            if (String(custData[c][0]).trim() === userId) {
+              userFound = true;
+              customerLineNick = String(custData[c][1] || '').trim();
+              customerRealName = String(custData[c][2] || '').trim();
+              customerPhone = String(custData[c][3] || '').trim();
+              
+              // 若有最新 LINE 暱稱且試算表為空或不同，自動更新暱稱
+              if (userName && customerLineNick !== userName) {
+                custSheet.getRange(c + 1, 2).setValue(userName);
+                customerLineNick = userName;
+              }
+
+              // 🌟 1. 最後進站時間 (Col 6)
+              const prevVisitRaw = custData[c][5];
+              custSheet.getRange(c + 1, 6).setValue(nowStr);
+
+              // 🌟 2. 最後瀏覽商品/頁面 (Col 7)
+              custSheet.getRange(c + 1, 7).setValue(pageTitle);
+
+              // 🌟 3. 進站累計天數 (Col 8: 以日計算，當天重複造訪不累加)
+              let prevVisitDateStr = '';
+              if (prevVisitRaw instanceof Date) {
+                prevVisitDateStr = Utilities.formatDate(prevVisitRaw, 'Asia/Taipei', 'yyyy/MM/dd');
+              } else if (prevVisitRaw) {
+                prevVisitDateStr = String(prevVisitRaw).trim().substring(0, 10).replace(/-/g, '/');
+              }
+              const todayDateStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd');
+              if (prevVisitDateStr !== todayDateStr) {
+                const curVisitDays = Number(custData[c][7]) || 0;
+                custSheet.getRange(c + 1, 8).setValue(curVisitDays + 1);
+              }
+
+              // 🌟 4. 商品與頁面瀏覽次數 (Col 9: 每次點閱造訪皆累加 +1)
+              const curPageViews = Number(custData[c][8]) || 0;
+              custSheet.getRange(c + 1, 9).setValue(curPageViews + 1);
+
+              // 🌟 5. 顧客生命狀態 (Col 13: 活躍)
+              custSheet.getRange(c + 1, 13).setValue('🟢 活躍');
+              break;
+            }
+          }
+
+          // 🌟 核心功能：進站即自動建立初階顧客歸戶卡
+          // 若該真實 LINE 好友在試算表中完全無資料，第一時間自動建立初階檔案
+          if (!userFound && (userName || userId)) {
+            const defaultSource = 'LINE 好友/群組';
+            custSheet.appendRow([
+              userId,                 // Col 1: LINE_User_ID
+              userName || 'LINE 會員', // Col 2: 最新暱稱
+              '',                     // Col 3: 真實姓名 (待填寫)
+              '',                     // Col 4: 電話 (待填寫)
+              nowStr,                 // Col 5: 加入會員時間
+              nowStr,                 // Col 6: 最後進站時間
+              pageTitle,              // Col 7: 最後瀏覽商品/頁面
+              1,                      // Col 8: 進站累計天數 (以日計)
+              1,                      // Col 9: 商品與頁面瀏覽次數 (累計PV)
+              0,                      // Col 10: 歷史訂單數
+              0,                      // Col 11: 總消費金額
+              '一般會員',             // Col 12: 會員等級
+              '🟢 活躍',              // Col 13: 顧客生命狀態
+              defaultSource,          // Col 14: 顧客來源
+              '',                     // Col 15: 常用超商取件門市
+              '正常',                 // Col 16: 黑名單標記
+              ''                      // Col 17: 賣家管理備註/標籤
+            ]);
+            customerLineNick = userName || 'LINE 會員';
+          }
+
+          // 寫入進站逛店動態安全 Log
+          logCustomerActivity(
+            userId,
+            customerRealName ? `${customerRealName} (${customerLineNick})` : customerLineNick,
+            '👀 進站逛店',
+            `瀏覽: ${pageTitle}${productId !== '-' ? ' (' + productId + ')' : ''}`,
+            pagePath,
+            info.device || ''
+          );
+        } catch (custErr) {
+          console.warn('反查或自動建立初階顧客歸戶失敗:', custErr);
+        }
+      }
+
+      // 🌟 彙整訪客稱呼：嚴格遵循「LINE暱稱（真實名字/手機號碼）」規範
+      const lineNick = customerLineNick || userName;
+      const visitorDisplay = formatVisitorDisplayName(lineNick, customerRealName, customerPhone);
+
+      // 🛡️ 防短時間灌訊保護 (以頁面與訪客身分為 key，60 秒內不重複推播相同訪客點擊相同頁面)
+      const tgVisitorAlertCacheKey = userId || lineNick || 'anon';
+      const cacheKey = 'pv_tg_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(tgVisitorAlertCacheKey);
+      const cache = CacheService.getScriptCache();
+      if (cache.get(cacheKey)) {
+        return; // 60 秒冷卻略過
+      }
+      cache.put(cacheKey, '1', 60);
+
+      // 🔔 發送【訪客瀏覽通報】Telegram 通知
+      const rawSettings = getRawSystemSettingsInternal();
+      if (rawSettings.TELEGRAM_NOTIFY_PAGE_VIEWS !== 'NO') {
+        const prodPart = (productId && productId !== '-') ? `• <b>商品識別</b>：<code>${escapeHtmlText(productId)}</code>\n` : '';
+        const tgMsg = 
+          `👁️ <b>【訪客瀏覽通報】</b>\n` +
+          `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
+          `• <b>瀏覽頁面</b>：${escapeHtmlText(pageTitle)}\n` +
+          prodPart +
+          `• <b>累計次數</b>：第 ${newViews} 次點擊\n` +
+          `• <b>使用裝置</b>：${escapeHtmlText(info.device || '行動/電腦裝置')}\n` +
+          `• <b>進站時間</b>：${nowStr}`;
+
+        sendTelegramMessage(tgMsg);
+      }
+    } catch (err) {
+      console.warn('sendPageViewAlertNotification 執行失敗:', err);
+    }
+  }
+
+/**
+ * 試算表選單專用：強制觸發授權並測試發送 Telegram 訊息
+ */
+function forceAuthAndTest() {
+  const result = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+  const ui = SpreadsheetApp.getUi();
+  if (result.success) {
+    ui.alert('🎉 授權與連線成功！', 'Telegram 機器人已連線成功！\n請打開您的手機或電腦版 Telegram 查看測試推播訊息！', ui.ButtonSet.OK);
+  } else {
+    ui.alert('⚠️ 尚未收到訊息', '請確認試算表【系統設定】中的 TELEGRAM_BOT_TOKEN 與 TELEGRAM_CHAT_ID 是否已填寫正確。\n詳細回應：' + JSON.stringify(result), ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * 強制觸發 Google 外部網路 (UrlFetchApp) 授權彈窗的專用函式 (不包 try-catch，強制 Google 彈出授權視窗)
+ */
+function forceAuth() {
+  UrlFetchApp.fetch('https://api.telegram.org');
+}
+
+/**
+ * 專供 Apps Script 編輯器手動執行「一鍵觸發授權」與「連線測試」的專屬函式
+ */
+function testTelegramInEditor() {
+  const result = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+  Logger.log(JSON.stringify(result));
+  return result;
+}
+/* ==================== 模組結束：05_TelegramService.gs ==================== */
+
+
+/* ==================== 模組起點：06_SystemAdminService.gs ==================== */
+/**
+ * ==============================================================================
+ * 【06_SystemAdminService.gs】試算表結構維護與管理設定模組
+ * ==============================================================================
+ * 說明：專門處理試算表初始化 (setupSpreadsheet)、自動無損擴充欄位、系統設定讀取與瀏覽統計。
+ * ==============================================================================
+ */
+
+/**
+  * 試算表初次安裝設定與欄位升級：自動補齊成本價、重量備註與多圖欄位
+  * 可在 Apps Script 編輯器中直接執行此函式升級試算表結構
+  */
+  function setupSpreadsheet() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量、公式連動欄位與最後更新時間)
+    let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    const prodHeaders = [
+      '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
+      '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
+      '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定結單時間',
+      '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
+      '最後更新時間'
+    ];
+
+    if (!prodSheet) {
+      prodSheet = ss.insertSheet(SHEET_NAMES.PRODUCTS);
+      prodSheet.appendRow(prodHeaders);
+      prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
+      
+      // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
+      const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+      prodSheet.appendRow([
+        'J2609270001', '日本代購限定 輕量防潑水後背包', '親飛連線', 1880, 1450, 999999,
+        JSON.stringify(['米白色', '經典黑', '海軍藍']),
+        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
+        '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
+        '=IF(OR(N(Q2)>0, N(T2)>0), ROUND((N(Q2) + N(R2)) * N(S2)) + ROUND((N(T2) / 1000) * IF(N(U2)>0, N(U2), 240)), 850)', '日本專櫃進貨', JSON.stringify(['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80']),
+        '2026/10/10 23:59',
+        'JPY', 3000, 300, 0.22, 380, 240,
+        nowStr
+      ]);
+    } else {
+      // 既有表格：升級表頭為最新 22 欄規格
+      const curCols = prodSheet.getMaxColumns();
+      if (curCols < prodHeaders.length) {
+        prodSheet.insertColumnsAfter(curCols, prodHeaders.length - curCols);
+      }
+      prodSheet.getRange(1, 1, 1, prodHeaders.length).setValues([prodHeaders]);
+      prodSheet.getRange(1, 1, 1, prodHeaders.length).setBackground('#1e293b').setFontColor('#ffffff').setFontWeight('bold');
+      
+      // 🌟 一鍵同步升級：自動掃描既有商品，補齊獨立原幣/稅金/重量欄位與最後更新時間，並將成本價全面升級為連動公式
+      upgradeExistingProductsToFormula(prodSheet);
+    }
+    // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
+    prodSheet.getRange("O:O").setNumberFormat('@');
+
+    // 2. 訂單明細工作表 (升級為 24 欄規格：徹底分離 M/N 欄「結帳收件人姓名/電話」與 W/X 欄「LINE 會員真實姓名/電話」)
+    let orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    const orderHeaders = [
+      '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
+      '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
+      '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
+      '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
+      '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
+    ];
+    if (!orderSheet) {
+      orderSheet = ss.insertSheet(SHEET_NAMES.ORDERS);
+      orderSheet.appendRow(orderHeaders);
+    } else {
+      const curOrderCols = orderSheet.getMaxColumns();
+      if (curOrderCols < orderHeaders.length) {
+        orderSheet.insertColumnsAfter(curOrderCols, orderHeaders.length - curOrderCols);
+      }
+      orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
+    }
+    orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
+    orderSheet.getRange("N:N").setNumberFormat('@'); // 收件人電話純文字格式
+    orderSheet.getRange("R:R").setNumberFormat('@');
+    orderSheet.getRange("U:U").setNumberFormat('@'); // 包裹單號純文字格式防止開頭 0 丟失
+    orderSheet.getRange("V:V").setNumberFormat('@'); // 結帳編號 (Checkout_ID) 純文字格式
+    orderSheet.getRange("X:X").setNumberFormat('@'); // 會員電話純文字格式防止開頭 0 丟失
+
+    // 為 S 欄 (第19欄) 建立「採購/出貨狀態」快速下拉選單 (與系統全流程 100% 精準對齊)
+    try {
+      const validStatuses = [
+        '連線登記', 
+        '採購成功', 
+        '缺貨斷貨', 
+        '通知結帳', 
+        '已完成結帳', 
+        '已完成出貨', 
+        '已完成取貨'
+      ];
+      const statusRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(validStatuses, true)
+        .setAllowInvalid(true)
+        .build();
+      orderSheet.getRange("S2:S2000").setDataValidation(statusRule);
+
+      // 既有訂單中，若有舊版不一致的名稱，自動批次替換對齊
+      const orderData = orderSheet.getDataRange().getValues();
+      for (let r = 1; r < orderData.length; r++) {
+        const cur = String(orderData[r][18] || '').trim();
+        if (cur === '連線中待出貨' || cur === '連線登記中') {
+          orderSheet.getRange(r + 1, 19).setValue('連線登記');
+        } else if (cur === '已完成結帳待出貨' || cur === '對帳中，待出貨' || cur === '已結帳') {
+          orderSheet.getRange(r + 1, 19).setValue('已完成結帳');
+        } else if (cur.startsWith('已完成取貨')) {
+          orderSheet.getRange(r + 1, 19).setValue('已完成取貨');
+        }
+      }
+    } catch (e) {
+      console.warn('建立下拉選單略過:', e);
+    }
+
+    // 3. 顧客歸戶表 (升級為 17 欄規格：完整記錄會員動態、進站天數、商品頁面瀏覽次數、消費、選單設定)
+    const custHeaders = [
+      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+      '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+      '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+    ];
+    let custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+    if (!custSheet) {
+      custSheet = ss.insertSheet(SHEET_NAMES.CUSTOMERS);
+      custSheet.appendRow(custHeaders);
+    } else {
+      const curCustCols = custSheet.getMaxColumns();
+      if (curCustCols < custHeaders.length) {
+        custSheet.insertColumnsAfter(curCustCols, custHeaders.length - curCustCols);
+      }
+      custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
+    }
+    custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+    custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式防止開頭 0 丟失
+    custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
+    custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
+    custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數 (以日計)
+    custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數 (累計PV)
+    custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
+    custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
+
+    // 3.1 為【顧客歸戶】建立下拉選單 (會員等級、顧客生命狀態、顧客來源、黑名單標記)
+    try {
+      // L 欄 (第12欄): 會員等級
+      const tierRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
+        .setAllowInvalid(true)
+        .build();
+      custSheet.getRange("L2:L2000").setDataValidation(tierRule);
+
+      // M 欄 (第13欄): 顧客生命狀態
+      const lifeRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
+        .setAllowInvalid(true)
+        .build();
+      custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
+
+      // N 欄 (第14欄): 顧客來源
+      const sourceRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
+        .setAllowInvalid(true)
+        .build();
+      custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
+
+      // P 欄 (第16欄): 黑名單標記
+      const blacklistRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
+        .setAllowInvalid(true)
+        .build();
+      custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
+    } catch (valErr) {
+      console.warn('建立顧客表下拉選單略過:', valErr);
+    }
+
+    // 3.1 會員動態歷程 Log (安全稽核流水帳：不可竄改之全生命週期動態軌跡)
+    const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
+    let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+    if (!logSheet) {
+      logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+      logSheet.appendRow(logHeaders);
+    }
+    logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
+    logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+    logSheet.getRange("B:B").setNumberFormat('@');
+
+    // 🌟 自動遷移與校準既有訂單明細與顧客歸戶資料（徹底分離「會員真實姓名/電話」與「結帳收件人姓名/電話」）
+    try {
+      upgradeOrderAndCustomerSheets(ss);
+    } catch (migErr) {
+      console.warn('遷移訂單與顧客收件人欄位警告:', migErr);
+    }
+
+    // 4. 系統設定表 (自動補齊新欄位並強制更新 STORE_NAME 為 W.W.連線代購)
+    let settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    const defaultSettings = [
+      ['ORDER_DEADLINE', '2026/10/05 23:59', '本次連線收單截止時間 (格式: YYYY/MM/DD HH:mm，逾期前台自動關單)'],
+      ['ALLOW_CHECKOUT', 'NO', '是否開放回國結帳通道 (YES: 開放買家前往結帳與選配送 / NO: 連線採購中尚未開放)'],
+      ['BANK_NAME', '822 中國信託商業銀行', '賣家收款銀行與代碼 (顯示於匯款卡片)'],
+      ['BANK_ACCOUNT_HOLDER', '陳O雯', '賣家帳戶戶名'],
+      ['BANK_ACCOUNT', "'4175-402-49273", '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)'],
+      ['LINEPAY_NAME', '粉絲團小編兼職小小幫手', 'LINE Pay 帳戶顯示名稱'],
+      ['LINEPAY_ACCOUNT', 'https://line.me/ti/p/IUqKCB7dRU', 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)'],
+      ['JKOPAY_NAME', 'Wen Wen Chen', '街口支付帳戶顯示名稱'],
+      ['JKOPAY_ACCOUNT', "'900459491", '街口支付帳號 (機構代碼396，支援一鍵複製)'],
+      ['FREE_SHIPPING_THRESHOLD', '3000', '7-11 賣貨便 / 全家 好賣+ 滿額免運門檻金額 (NT$)'],
+      ['SHIP_FEE_711_COD', '38', '7-11 超商貨到付款 (賣貨便) 未達門檻運費 (NT$)'],
+      ['SHIP_FEE_FAMI_COD', '35', '全家 超商貨到付款 (好賣+) 未達門檻運費 (NT$)'],
+      ['SHIP_FEE_POST_PREPAID', '80', '郵局純寄件 (需先匯款) 郵資 (NT$)'],
+      ['SHIP_FEE_POST_COD', '130', '郵局貨到付款郵資 (NT$)'],
+      ['SHIP_FEE_BLACKCAT', '100', '黑貓宅配到府 (需先匯款) 運費 (NT$)'],
+      ['STORE_NAME', 'W.W.連線代購', '商店名稱'],
+      ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明'],
+      ['ADMIN_LINE_UIDS', 'Uee7765ed3c1819cb94fd404cfab8553b', '管理者 LINE User ID 白名單 (多筆以逗號或換行分隔)'],
+      ['ADMIN_API_KEY', 'admin8888', '管理後台安全通行碼 (PIN 碼)，忘記時可直接在此欄位查看或修改'],
+      ['TELEGRAM_BOT_TOKEN', '', 'Telegram 機器人 Token (由 @BotFather 取得，留空則不推播)'],
+      ['TELEGRAM_CHAT_ID', '', 'Telegram 接收通報的 Chat ID (個人 ID 或群組 ID)'],
+      ['TELEGRAM_NOTIFY_PAGE_VIEWS', 'YES', '是否將進站與商品瀏覽通報傳送到 Telegram (YES/NO)'],
+      ['TELEGRAM_NOTIFY_ORDERS', 'YES', '是否將買家新下單/加單登記即時傳送到 Telegram (YES/NO)'],
+      ['TELEGRAM_NOTIFY_PAYMENTS', 'YES', '是否將買家回報匯款/出貨結帳即時傳送到 Telegram (YES/NO)']
+    ];
+
+    if (!settSheet) {
+      settSheet = ss.insertSheet(SHEET_NAMES.SETTINGS);
+      settSheet.appendRow(['設定項目', '設定值', '說明']);
+      settSheet.getRange(1, 1, 1, 3).setBackground('#d83b01').setFontColor('#ffffff').setFontWeight('bold');
+      defaultSettings.forEach(s => settSheet.appendRow(s));
+    } else {
+      // 既有表格：將缺少的新欄位補齊，並自動將 STORE_NAME 與最新收款資訊更新
+      const existingData = settSheet.getDataRange().getValues();
+      const existingKeys = new Set(existingData.slice(1).map(r => String(r[0]).trim()));
+      defaultSettings.forEach(s => {
+        if (!existingKeys.has(s[0])) {
+          settSheet.appendRow(s);
+        }
+      });
+
+      // 強制將 STORE_NAME 與最新收款帳號戶名同步更新
+      let foundStoreName = false;
+      for (let r = 1; r < existingData.length; r++) {
+        const key = String(existingData[r][0]).trim();
+        if (key === 'STORE_NAME') {
+          settSheet.getRange(r + 1, 2).setValue('W.W.連線代購');
+          foundStoreName = true;
+        } else if (key === 'FREE_SHIPPING_THRESHOLD') {
+          settSheet.getRange(r + 1, 2).setValue('3000');
+        } else if (key === 'SHIP_FEE_711_COD') {
+          settSheet.getRange(r + 1, 2).setValue('38');
+        } else if (key === 'SHIP_FEE_FAMI_COD') {
+          settSheet.getRange(r + 1, 2).setValue('35');
+        } else if (key === 'BANK_NAME') {
+          settSheet.getRange(r + 1, 2).setValue('822 中國信託商業銀行');
+        } else if (key === 'BANK_ACCOUNT_HOLDER') {
+          settSheet.getRange(r + 1, 2).setValue('陳O雯');
+        } else if (key === 'BANK_ACCOUNT') {
+          settSheet.getRange(r + 1, 2).setValue("'4175-402-49273");
+        } else if (key === 'LINEPAY_NAME') {
+          settSheet.getRange(r + 1, 2).setValue('粉絲團小編兼職小小幫手');
+        } else if (key === 'LINEPAY_ACCOUNT') {
+          settSheet.getRange(r + 1, 2).setValue('https://line.me/ti/p/IUqKCB7dRU');
+        } else if (key === 'JKOPAY_NAME') {
+          settSheet.getRange(r + 1, 2).setValue('Wen Wen Chen');
+        } else if (key === 'JKOPAY_ACCOUNT') {
+          settSheet.getRange(r + 1, 2).setValue("'900459491");
+        }
+      }
+      if (!foundStoreName) {
+        settSheet.appendRow(['STORE_NAME', 'W.W.連線代購', '商店名稱']);
+      }
+
+      // 自動檢查並移除舊版單一欄位 BANK_INFO 列
+      for (let r = existingData.length - 1; r >= 1; r--) {
+        const key = String(existingData[r][0] || '').trim();
+        if (key === 'BANK_INFO') {
+          settSheet.deleteRow(r + 1);
+        }
+      }
+    }
+    // 將設定值欄位 (第2欄 B) 設為純文字格式，避免銀行帳號 0 被吃掉
+    settSheet.getRange("B:B").setNumberFormat('@');
+
+    // 5. 瀏覽統計工作表 (自動建立各頁面與商品人次統計)
+    let viewSheet = ss.getSheetByName(SHEET_NAMES.VIEWS);
+    const viewHeaders = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
+    if (!viewSheet) {
+      viewSheet = ss.insertSheet(SHEET_NAMES.VIEWS);
+      viewSheet.appendRow(viewHeaders);
+    } else {
+      viewSheet.getRange(1, 1, 1, viewHeaders.length).setValues([viewHeaders]);
+    }
+    viewSheet.getRange(1, 1, 1, viewHeaders.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
+    viewSheet.getRange("D:D").setNumberFormat('#,##0');
+    viewSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+
+    // 3. 確保 Google Drive 商品圖片庫資料夾權限為「知道連結者皆可檢視」，子檔案自動繼承免逐檔授權
+    try {
+      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (e) {
+      Logger.log('Drive folder setSharing 提示：' + e.message);
+    }
+
+    return '工作表與系統設定更新升級完成！';
+  }
+
+/**
+  * 🌟 確保【訂單明細】(24 欄) 與【顧客歸戶】(13 欄) 表頭與欄數已升級，若尚未升級則自動觸發無損升級與資料遷移
+  */
+  function ensureOrderAndCustomerSchema(ss, orderSheet, custSheet) {
+    try {
+      const activeSs = ss || SpreadsheetApp.getActiveSpreadsheet();
+      const oSheet = orderSheet || activeSs.getSheetByName(SHEET_NAMES.ORDERS);
+      const cSheet = custSheet || activeSs.getSheetByName(SHEET_NAMES.CUSTOMERS);
+      const lSheet = activeSs.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+
+      let needsUpgrade = false;
+      if (oSheet) {
+        const oCols = oSheet.getLastColumn();
+        if (oCols < 24) {
+          needsUpgrade = true;
+        } else {
+          const wHeader = String(oSheet.getRange(1, 23).getValue() || '').trim();
+          const nHeader = String(oSheet.getRange(1, 14).getValue() || '').trim();
+          if (wHeader !== '真實姓名' || nHeader !== '收件人電話') {
+            needsUpgrade = true;
+          }
+        }
+      }
+      if (cSheet && !needsUpgrade) {
+        const cCols = cSheet.getLastColumn();
+        if (cCols < 17) {
+          needsUpgrade = true;
+        } else {
+          const eHeader = String(cSheet.getRange(1, 5).getValue() || '').trim();
+          const fHeader = String(cSheet.getRange(1, 6).getValue() || '').trim();
+          const hHeader = String(cSheet.getRange(1, 8).getValue() || '').trim();
+          const iHeader = String(cSheet.getRange(1, 9).getValue() || '').trim();
+          if (eHeader !== '加入會員時間' || fHeader !== '最後進站時間' || !hHeader.includes('天數') || iHeader !== '商品與頁面瀏覽次數') {
+            needsUpgrade = true;
+          }
+        }
+      }
+      if (!lSheet) {
+        needsUpgrade = true;
+      }
+
+      if (needsUpgrade) {
+        upgradeOrderAndCustomerSheets(activeSs);
+      }
+    } catch (err) {
+      console.warn('自動檢查訂單與顧客表結構略過:', err);
+    }
+  }
+
+/**
+  * 🌟 自動升級與校準【訂單明細】與【顧客歸戶】欄位結構，徹底分離「LINE 帳號登記真實姓名/電話」與「結帳收件人姓名/電話」
+  * 可直接在 Apps Script 編輯器選取此函式執行，或由 setupSpreadsheet() / API 自動觸發
+  */
+  function upgradeOrderAndCustomerSheets(targetSs) {
+    const ss = targetSs || SpreadsheetApp.getActiveSpreadsheet();
+    const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS);
+
+    const orderHeaders = [
+      '訂單編號', '下單時間', 'LINE_User_ID', 'LINE暱稱', '商品編號', 
+      '商品名稱', '選購規格', '數量', '單價', '商品小計', '運費', 
+      '訂單總額', '收件人姓名', '收件人電話', '取件方式與地址', 
+      '買家備註', '付款狀態', '匯款後五碼', '採購/出貨狀態', '處理備註',
+      '包裹追蹤編號', '結帳編號', '真實姓名', '會員電話'
+    ];
+
+    const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
+
+    // 1. 確保【會員動態Log】安全稽核軌跡表存在
+    let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+    if (!logSheet) {
+      logSheet = ss.insertSheet(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+      logSheet.appendRow(logHeaders);
+    }
+    logSheet.getRange(1, 1, 1, logHeaders.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
+    logSheet.getRange("A:A").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+    logSheet.getRange("B:B").setNumberFormat('@');
+
+    // 2. 升級【訂單明細】為 24 欄
+    if (orderSheet) {
+      const maxOrderCols = orderSheet.getMaxColumns();
+      if (maxOrderCols < orderHeaders.length) {
+        orderSheet.insertColumnsAfter(maxOrderCols, orderHeaders.length - maxOrderCols);
+      }
+      orderSheet.getRange(1, 1, 1, orderHeaders.length).setValues([orderHeaders]);
+      orderSheet.getRange(1, 1, 1, orderHeaders.length).setBackground('#107c41').setFontColor('#ffffff').setFontWeight('bold');
+      orderSheet.getRange("N:N").setNumberFormat('@');
+      orderSheet.getRange("R:R").setNumberFormat('@');
+      orderSheet.getRange("U:U").setNumberFormat('@');
+      orderSheet.getRange("V:V").setNumberFormat('@');
+      orderSheet.getRange("X:X").setNumberFormat('@');
+    }
+
+    // 3. 升級【顧客歸戶】為 17 欄 (無損平滑資料遷移：進站天數、商品瀏覽次數、下拉選單)
+    const custHeaders = [
+      'LINE_User_ID', '最新暱稱', '真實姓名', '電話', '加入會員時間', 
+      '最後進站時間', '最後瀏覽商品/頁面', '進站累計天數', '商品與頁面瀏覽次數', '歷史訂單數', '總消費金額', 
+      '會員等級', '顧客生命狀態', '顧客來源', '常用超商取件門市', '黑名單標記', '賣家管理備註/標籤'
+    ];
+
+    if (custSheet) {
+      const nowStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyy/MM/dd HH:mm:ss');
+      const custLastRow = custSheet.getLastRow();
+      const custLastCol = custSheet.getLastColumn();
+
+      let rawHeaders = [];
+      if (custLastCol > 0) {
+        rawHeaders = custSheet.getRange(1, 1, 1, custLastCol).getValues()[0].map(h => String(h || '').trim());
+      }
+
+      const isAlready17 = custLastCol >= 17 && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間' && rawHeaders[8] === '商品與頁面瀏覽次數';
+
+      if (!isAlready17 && custLastRow > 1) {
+        const is16Col = (custLastCol === 16 || rawHeaders.length === 16) && rawHeaders[4] === '加入會員時間' && rawHeaders[5] === '最後進站時間';
+        const oldValues = custSheet.getRange(2, 1, custLastRow - 1, custLastCol).getValues();
+        const migratedRows = [];
+
+        if (is16Col) {
+          // 從 16 欄升級至 17 欄：在第 8 欄 (進站累計次數) 後方插入「商品與頁面瀏覽次數」
+          for (let r = 0; r < oldValues.length; r++) {
+            const row = oldValues[r];
+            const uid = String(row[0] || '').trim();
+            if (!uid) continue;
+            const visitDays = Number(row[7]) || 1;
+            const pageViews = Math.max(visitDays, Number(row[8]) > 0 ? Number(row[8]) : visitDays);
+            migratedRows.push([
+              row[0], row[1], row[2], formatPhoneAsText(row[3]), row[4],
+              row[5], row[6], visitDays, pageViews,
+              Number(row[8]) || 0,   // 歷史訂單數
+              Number(row[9]) || 0,   // 總消費金額
+              row[10] || '一般會員', // 會員等級
+              row[11] || '🟢 活躍',  // 顧客生命狀態
+              row[12] || '',         // 顧客來源
+              row[13] || '',         // 常用超商取件門市
+              row[14] || '正常',     // 黑名單標記
+              row[15] || ''          // 賣家管理備註/標籤
+            ]);
+          }
+        } else {
+          // 從舊版 13 欄無損遷移至 17 欄全新架構
+          const idxUid = rawHeaders.indexOf('LINE_User_ID');
+          const idxNick = rawHeaders.indexOf('最新暱稱');
+          const idxRealName = rawHeaders.indexOf('真實姓名');
+          const idxPhone = rawHeaders.indexOf('電話');
+          const idxOldAddr = rawHeaders.indexOf('常用寄送地址');
+          const idxOrderCount = rawHeaders.indexOf('歷史訂單數');
+          const idxSpend = rawHeaders.indexOf('總消費金額');
+          const idxFirstBuy = rawHeaders.indexOf('首購日期');
+          const idxLastOrder = rawHeaders.indexOf('最後下單日期');
+          const idxBlacklist = rawHeaders.indexOf('黑名單標記');
+          const idxSource = rawHeaders.indexOf('顧客來源');
+          const idxRecipName = rawHeaders.indexOf('最近收件人姓名');
+          const idxRecipPhone = rawHeaders.indexOf('最近收件人電話');
+
+          for (let r = 0; r < oldValues.length; r++) {
+            const row = oldValues[r];
+            const uid = idxUid !== -1 ? String(row[idxUid] || '').trim() : String(row[0] || '').trim();
+            if (!uid) continue;
+
+            const nick = idxNick !== -1 ? String(row[idxNick] || '').trim() : String(row[1] || '').trim();
+            const realName = idxRealName !== -1 ? String(row[idxRealName] || '').trim() : String(row[2] || '').trim();
+            const phone = idxPhone !== -1 ? formatPhoneAsText(row[idxPhone]) : formatPhoneAsText(row[3]);
+            const firstBuy = idxFirstBuy !== -1 ? row[idxFirstBuy] : '';
+            const lastOrder = idxLastOrder !== -1 ? row[idxLastOrder] : '';
+            const joinedAt = firstBuy || lastOrder || nowStr;
+            const lastVisitAt = lastOrder || firstBuy || nowStr;
+            const lastViewed = '';
+            const orderCount = idxOrderCount !== -1 ? (Number(row[idxOrderCount]) || 0) : (Number(row[5]) || 0);
+            const spend = idxSpend !== -1 ? (Number(row[idxSpend]) || 0) : (Number(row[6]) || 0);
+            const visitDays = Math.max(1, orderCount > 0 ? orderCount : 1);
+            const pageViews = Math.max(visitDays, orderCount > 0 ? orderCount * 3 : 1);
+            const tier = spend >= 10000 ? 'VVIP' : (spend >= 3000 ? 'VIP' : '一般會員');
+            const lifeStatus = '🟢 活躍';
+            const source = idxSource !== -1 ? String(row[idxSource] || '') : (String(row[10] || ''));
+            const oldAddr = idxOldAddr !== -1 ? String(row[idxOldAddr] || '') : (String(row[4] || ''));
+            const recipName = idxRecipName !== -1 ? String(row[idxRecipName] || '') : (String(row[11] || ''));
+            const recipPhone = idxRecipPhone !== -1 ? String(row[idxRecipPhone] || '') : (String(row[12] || ''));
+            const defaultStore = oldAddr || (recipName ? `${recipName} ${recipPhone}`.trim() : '');
+            const blacklist = idxBlacklist !== -1 ? (String(row[idxBlacklist] || '正常')) : '正常';
+            const notes = '';
+
+            migratedRows.push([
+              uid, nick, realName, phone, joinedAt, lastVisitAt, lastViewed, visitDays, pageViews,
+              orderCount, spend, tier, lifeStatus, source, defaultStore, blacklist, notes
+            ]);
+          }
+        }
+
+        custSheet.clearContents();
+        const curCols = custSheet.getMaxColumns();
+        if (curCols < custHeaders.length) {
+          custSheet.insertColumnsAfter(curCols, custHeaders.length - curCols);
+        }
+        custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
+        if (migratedRows.length > 0) {
+          custSheet.getRange(2, 1, migratedRows.length, custHeaders.length).setValues(migratedRows);
+        }
+      } else {
+        const curCols = custSheet.getMaxColumns();
+        if (curCols < custHeaders.length) {
+          custSheet.insertColumnsAfter(curCols, custHeaders.length - curCols);
+        }
+        custSheet.getRange(1, 1, 1, custHeaders.length).setValues([custHeaders]);
+      }
+
+      custSheet.getRange(1, 1, 1, custHeaders.length).setBackground('#334155').setFontColor('#ffffff').setFontWeight('bold');
+      custSheet.getRange("D:D").setNumberFormat('@'); // 電話純文字格式
+      custSheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 加入會員時間
+      custSheet.getRange("F:F").setNumberFormat('yyyy/MM/dd HH:mm:ss'); // 最後進站時間
+      custSheet.getRange("H:H").setNumberFormat('#,##0'); // 進站累計天數
+      custSheet.getRange("I:I").setNumberFormat('#,##0'); // 商品與頁面瀏覽次數
+      custSheet.getRange("J:J").setNumberFormat('#,##0'); // 歷史訂單數
+      custSheet.getRange("K:K").setNumberFormat('NT$ #,##0'); // 總消費金額
+
+      // 建立下拉選單驗證
+      try {
+        const tierRule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(['一般會員', 'VIP', 'VVIP', '批發夥伴'], true)
+          .setAllowInvalid(true).build();
+        custSheet.getRange("L2:L2000").setDataValidation(tierRule);
+
+        const lifeRule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(['🟢 活躍', '🟡 猶豫', '💤 沉睡'], true)
+          .setAllowInvalid(true).build();
+        custSheet.getRange("M2:M2000").setDataValidation(lifeRule);
+
+        const sourceRule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(['LINE 好友/群組', 'Facebook 社團/粉專', 'Instagram', '親友推薦', '其他'], true)
+          .setAllowInvalid(true).build();
+        custSheet.getRange("N2:N2000").setDataValidation(sourceRule);
+
+        const blacklistRule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(['正常', '棄單觀察', '黑名單拒絕往來'], true)
+          .setAllowInvalid(true).build();
+        custSheet.getRange("P2:P2000").setDataValidation(blacklistRule);
+      } catch (valErr) {
+        console.warn('建立下拉選單略過:', valErr);
+      }
+    }
+
+    if (!orderSheet || !custSheet) {
+      return '表頭升級完成';
+    }
+
+    const custLastRow = custSheet.getLastRow();
+    const orderLastRow = orderSheet.getLastRow();
+
+    // 讀取顧客表資料，建立 uid -> 會員真實姓名與電話映射
+    const custMap = {};
+    let custValues = [];
+    if (custLastRow > 1) {
+      custValues = custSheet.getRange(2, 1, custLastRow - 1, 17).getValues();
+      for (let c = 0; c < custValues.length; c++) {
+        const uid = String(custValues[c][0] || '').trim();
+        if (uid) {
+          custMap[uid] = {
+            rowIdx: c,
+            realName: String(custValues[c][2] || '').trim(),
+            phone: String(custValues[c][3] || '').trim(),
+            defaultStore: String(custValues[c][14] || '').trim()
+          };
+        }
+      }
+    }
+
+    // 記錄每位顧客最近一次「已結帳」的包裹收件人資訊與未結帳時的會員本人姓名
+    const latestCheckoutRecipByUid = {};
+    const inferredMemberByUid = {};
+
+    if (orderLastRow > 1) {
+      const orderRange = orderSheet.getRange(2, 1, orderLastRow - 1, 24);
+      const orderValues = orderRange.getValues();
+      let orderModified = false;
+
+      for (let i = 0; i < orderValues.length; i++) {
+        const row = orderValues[i];
+        const uid = String(row[2] || '').trim();
+        const colRecipName = String(row[12] || '').trim();  // M 欄 (13): 收件人姓名
+        const colRecipPhone = String(row[13] || '').trim(); // N 欄 (14): 收件人電話
+        const colDelivery = String(row[14] || '').trim();   // O 欄 (15): 取件方式與地址
+        const payStatus = String(row[16] || '').trim();     // Q 欄 (17): 付款狀態
+        const shipStatus = String(row[18] || '').trim();    // S 欄 (19): 採購/出貨狀態
+        const checkoutId = String(row[21] || '').trim();    // V 欄 (22): 結帳編號
+        let colMemberName = String(row[22] || '').trim();   // W 欄 (23): 真實姓名 (訂購會員)
+        let colMemberPhone = String(row[23] || '').trim();  // X 欄 (24): 會員電話 (訂購會員)
+
+        const isCheckedOut = Boolean(checkoutId) ||
+                            shipStatus.includes('已完成結帳') ||
+                            shipStatus.includes('出貨') ||
+                            shipStatus.includes('完成取貨') ||
+                            payStatus.includes('待付款') ||
+                            payStatus.includes('貨到付款') ||
+                            payStatus.includes('對帳') ||
+                            (Boolean(colDelivery) && colDelivery !== '[待出貨結帳填寫]');
+
+        if (!isCheckedOut) {
+          if (!colMemberName && colRecipName) {
+            colMemberName = colRecipName;
+            row[22] = colMemberName;
+            orderModified = true;
+          }
+          if (!colMemberPhone && colRecipPhone) {
+            colMemberPhone = colRecipPhone;
+            row[23] = formatPhoneAsText(colMemberPhone);
+            orderModified = true;
+          }
+          if (colRecipName !== '' || colRecipPhone !== '') {
+            row[12] = '';
+            row[13] = '';
+            orderModified = true;
+          }
+          if (uid && (colMemberName || colMemberPhone)) {
+            inferredMemberByUid[uid] = {
+              realName: colMemberName,
+              phone: colMemberPhone
+            };
+          }
+        } else {
+          if (colRecipPhone && !String(row[13]).startsWith("'")) {
+            row[13] = formatPhoneAsText(colRecipPhone);
+            orderModified = true;
+          }
+          if (uid && (colRecipName || colRecipPhone)) {
+            latestCheckoutRecipByUid[uid] = {
+              recipientName: colRecipName,
+              recipientPhone: colRecipPhone,
+              deliveryAddress: (colDelivery && colDelivery !== '[待出貨結帳填寫]') ? colDelivery : ''
+            };
+          }
+        }
+
+        // 🌟 將【顧客歸戶】中的會員本人「真實姓名 (C欄)」與「電話 (D欄)」權威同步至【訂單明細】W 欄與 X 欄
+        const custInfo = uid ? custMap[uid] : null;
+        if (custInfo) {
+          if (custInfo.realName && colMemberName !== custInfo.realName) {
+            row[22] = custInfo.realName;
+            colMemberName = custInfo.realName;
+            orderModified = true;
+          }
+          if (custInfo.phone) {
+            const formattedCustPhone = formatPhoneAsText(custInfo.phone);
+            if (String(row[23] || '').replace(/^'/, '').trim() !== custInfo.phone.replace(/^'/, '').trim()) {
+              row[23] = formattedCustPhone;
+              colMemberPhone = custInfo.phone;
+              orderModified = true;
+            }
+          }
+        } else if (colMemberPhone && !String(row[23]).startsWith("'")) {
+          row[23] = formatPhoneAsText(colMemberPhone);
+          orderModified = true;
+        }
+      }
+
+      if (orderModified) {
+        orderRange.setValues(orderValues);
+        orderSheet.getRange("N:N").setNumberFormat('@');
+        orderSheet.getRange("X:X").setNumberFormat('@');
+      }
+    }
+
+    // 4. 將已結帳包裹之門市/地址回填至【顧客歸戶】常用超商取件門市 (第 15 欄 O)
+    if (custLastRow > 1 && custValues.length > 0) {
+      let custModified = false;
+      for (let c = 0; c < custValues.length; c++) {
+        const uid = String(custValues[c][0] || '').trim();
+        if (!uid) continue;
+
+        const latestRecip = latestCheckoutRecipByUid[uid];
+        if (latestRecip && latestRecip.deliveryAddress) {
+          if (!String(custValues[c][14] || '').trim()) {
+            custValues[c][14] = latestRecip.deliveryAddress; // 第 15 欄 (O): 常用超商取件門市
+            custModified = true;
+          }
+        }
+
+        // 若顧客歸戶 C/D 欄為空，且有未結帳訂單推導出的會員姓名電話，則補齊
+        const inferred = inferredMemberByUid[uid];
+        if (inferred) {
+          if (!String(custValues[c][2] || '').trim() && inferred.realName) {
+            custValues[c][2] = inferred.realName;
+            custModified = true;
+          }
+          if (!String(custValues[c][3] || '').trim() && inferred.phone) {
+            custValues[c][3] = formatPhoneAsText(inferred.phone);
+            custModified = true;
+          }
+        }
+        if (custValues[c][3] && !String(custValues[c][3]).startsWith("'")) {
+          custValues[c][3] = formatPhoneAsText(custValues[c][3]);
+          custModified = true;
+        }
+      }
+
+      if (custModified) {
+        custSheet.getRange(2, 1, custValues.length, 17).setValues(custValues);
+        custSheet.getRange("D:D").setNumberFormat('@');
+      }
+    }
+
+    // 5. 寫入升級成功安全 Log
+    logCustomerActivity('SYSTEM', '系統維護', '🔄 結構升級', '成功升級【顧客歸戶】為 17 欄全新架構 (含進站累計天數、商品瀏覽次數與下拉選單)，並建立【會員動態Log】安全稽核軌跡表', 'upgradeOrderAndCustomerSheets', 'GAS Server');
+
+    SpreadsheetApp.flush();
+    return '✅ 已完成【訂單明細】(24欄)、【顧客歸戶】(17欄升級) 與【會員動態Log】安全歷程表建立！';
+  }
+
+/**
+  * 取得完整系統設定 (僅供後端 GAS 內部安全呼叫，包含金鑰與通行碼)
+  */
+  function getRawSystemSettingsInternal() {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+      if (!sheet) return {};
+
+      const rows = sheet.getDataRange().getValues();
+      const settings = {};
+      for (let i = 1; i < rows.length; i++) {
+        const key = String(rows[i][0] || '').trim();
+        const val = rows[i][1];
+        if (key) {
+          settings[key] = (val !== undefined && val !== null) ? String(val).trim() : '';
+        }
+      }
+      return settings;
+    } catch (e) {
+      console.warn('getRawSystemSettingsInternal 執行失敗:', e);
+      return {};
+    }
+  }
+
+/**
+  * 取得系統設定 (前台買家/公開查詢 API，嚴格排除敏感密鑰)
+  */
+  function getSystemSettings() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    if (!sheet) return { success: false, message: '設定表不存在' };
+
+    const rows = sheet.getDataRange().getValues();
+    const settings = {};
+
+    for (let i = 1; i < rows.length; i++) {
+      const key = rows[i][0];
+      const val = rows[i][1];
+      if (key) {
+        const trimKey = String(key).trim();
+        // 🛡️ 嚴格排除後台管理員白名單 UID、安全通行碼 (PIN) 與 Telegram 機密金鑰，禁止透過公開 API 外洩
+        if (trimKey === 'ADMIN_LINE_UIDS' || trimKey === 'ADMIN_API_KEY' || trimKey === 'TELEGRAM_BOT_TOKEN' || trimKey === 'TELEGRAM_CHAT_ID') continue;
+        if (key === 'ORDER_DEADLINE' && val) {
+          settings[key] = formatDeadlineStr(val);
+        } else {
+          settings[key] = val;
+        }
+      }
+    }
+
+    // 向下相容相容性處理：若舊試算表只有單一 BANK_INFO，自動拆解為銀行名、帳號與戶名
+    if (settings.BANK_INFO && (!settings.BANK_NAME || !settings.BANK_ACCOUNT)) {
+      const info = String(settings.BANK_INFO);
+      if (!settings.BANK_NAME) {
+        const bankMatch = info.match(/^([^\s]+(?:\s+[^\s]+)?)/);
+        settings.BANK_NAME = bankMatch ? bankMatch[1] : '822 中國信託商業銀行';
+      }
+      if (!settings.BANK_ACCOUNT) {
+        const accMatch = info.match(/帳號[:：\s]*([0-9-]+)/);
+        settings.BANK_ACCOUNT = accMatch ? accMatch[1] : '4175-402-49273';
+      }
+      if (!settings.BANK_ACCOUNT_HOLDER) {
+        const holderMatch = info.match(/戶名[:：\s]*([^\s]+)/);
+        settings.BANK_ACCOUNT_HOLDER = holderMatch ? holderMatch[1] : '陳O雯';
+      }
+    }
+
+    // 檢查試算表既有設定列並自動校正回寫 Google 試算表 (並刪除舊版 BANK_INFO 列)
+    try {
+      for (let i = rows.length - 1; i >= 1; i--) {
+        const key = String(rows[i][0] || '').trim();
+        const val = String(rows[i][1] || '').trim();
+        if (key === 'BANK_INFO') {
+          sheet.deleteRow(i + 1);
+        } else if (key === 'BANK_ACCOUNT_HOLDER' && (val === '陳小美' || !val)) {
+          sheet.getRange(i + 1, 2).setValue('陳O雯');
+          settings.BANK_ACCOUNT_HOLDER = '陳O雯';
+        } else if (key === 'BANK_ACCOUNT' && (!val || val.includes('123-4567') || val.includes('0123-4567') || val.includes('12345-6789'))) {
+          sheet.getRange(i + 1, 2).setValue("'4175-402-49273");
+          settings.BANK_ACCOUNT = '4175-402-49273';
+        }
+      }
+    } catch (err) {
+      console.warn('自動校正試算表失敗(可能無寫入權限):', err);
+    }
+
+    // 3種付款方式預設值保障與舊測試假帳號自動校正 (中國信託、LINE Pay、街口支付)
+    if (!settings.BANK_NAME) settings.BANK_NAME = '822 中國信託商業銀行';
+    if (!settings.BANK_ACCOUNT_HOLDER || settings.BANK_ACCOUNT_HOLDER === '陳小美') settings.BANK_ACCOUNT_HOLDER = '陳O雯';
+    if (!settings.BANK_ACCOUNT || 
+        settings.BANK_ACCOUNT.includes('123-4567') || 
+        settings.BANK_ACCOUNT.includes('0123-4567') || 
+        settings.BANK_ACCOUNT.includes('12345-6789')) {
+      settings.BANK_ACCOUNT = '4175-402-49273';
+    }
+    if (!settings.LINEPAY_NAME) settings.LINEPAY_NAME = '粉絲團小編兼職小小幫手';
+    if (!settings.LINEPAY_ACCOUNT) settings.LINEPAY_ACCOUNT = 'https://line.me/ti/p/IUqKCB7dRU';
+    if (!settings.JKOPAY_NAME) settings.JKOPAY_NAME = 'Wen Wen Chen';
+    if (!settings.JKOPAY_ACCOUNT) settings.JKOPAY_ACCOUNT = '900459491';
+
+    // 系統規則校正：超商純取貨 0 元免運，貨到付款滿 3,000 元免運
+    if (!settings.FREE_SHIPPING_THRESHOLD || Number(settings.FREE_SHIPPING_THRESHOLD) < 3000) {
+      settings.FREE_SHIPPING_THRESHOLD = '3000';
+    }
+    settings.SHIP_FEE_STORE_PREPAID = '0'; // 超商純取貨一律免運
+    if (!settings.SHIP_FEE_711_COD) settings.SHIP_FEE_711_COD = '38';
+    if (!settings.SHIP_FEE_FAMI_COD) settings.SHIP_FEE_FAMI_COD = '35';
+
+    return { success: true, data: settings };
+  }
+
+/**
+  * 專門一鍵更新 Google 試算表【系統設定】中的 3 大收款帳戶資訊
+  * 可直接於 Apps Script 編輯器上方選擇此函式並點擊「執行」
+  */
+  function updatePaymentSettings() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const settSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    if (!settSheet) return '系統設定表不存在';
+
+    const paymentConfigs = {
+      'BANK_NAME': '822 中國信託商業銀行',
+      'BANK_ACCOUNT_HOLDER': '陳O雯',
+      'BANK_ACCOUNT': "'4175-402-49273",
+      'LINEPAY_NAME': '粉絲團小編兼職小小幫手',
+      'LINEPAY_ACCOUNT': 'https://line.me/ti/p/IUqKCB7dRU',
+      'JKOPAY_NAME': 'Wen Wen Chen',
+      'JKOPAY_ACCOUNT': "'900459491"
+    };
+
+    const data = settSheet.getDataRange().getValues();
+    const updatedKeys = new Set();
+
+    for (let r = 1; r < data.length; r++) {
+      const key = String(data[r][0] || '').trim();
+      if (paymentConfigs[key]) {
+        settSheet.getRange(r + 1, 2).setValue(paymentConfigs[key]);
+        updatedKeys.add(key);
+      }
+    }
+
+    // 若試算表中尚無該欄位則自動 append 補齊
+    const descriptions = {
+      'BANK_NAME': '賣家收款銀行與代碼 (顯示於匯款卡片)',
+      'BANK_ACCOUNT_HOLDER': '賣家帳戶戶名',
+      'BANK_ACCOUNT': '賣家匯款帳號 (支援一鍵複製，以單引號確保純文字)',
+      'LINEPAY_NAME': 'LINE Pay 帳戶顯示名稱',
+      'LINEPAY_ACCOUNT': 'LINE Pay 加好友轉帳連結 (點擊直達或掃碼)',
+      'JKOPAY_NAME': '街口支付帳戶顯示名稱',
+      'JKOPAY_ACCOUNT': '街口支付帳號 (機構代碼396，支援一鍵複製)'
+    };
+
+    for (const [key, val] of Object.entries(paymentConfigs)) {
+      if (!updatedKeys.has(key)) {
+        settSheet.appendRow([key, val, descriptions[key] || '']);
+      }
+    }
+
+    // 自動檢查並移除舊版單一欄位 BANK_INFO 列
+    for (let r = data.length - 1; r >= 1; r--) {
+      const key = String(data[r][0] || '').trim();
+      if (key === 'BANK_INFO') {
+        settSheet.deleteRow(r + 1);
+      }
+    }
+
+    settSheet.getRange("B:B").setNumberFormat('@');
+    return 'Google Sheets 系統設定資料已成功更新，且舊版 BANK_INFO 列已自動移除！';
+  }
+
+/**
+  * 處理頁面與商品瀏覽人次累計 (使用 LockService 避免併發衝突)
+  */
+  function handleRecordPageView(data) {
+    if (!data || !data.page) {
+      return { success: false, message: '無效的頁面資料' };
+    }
+
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(10000);
+    } catch (e) {
+      return { success: false, message: '伺服器繁忙，略過本次統計' };
+    }
+
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      let sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
+      const headers = ['頁面名稱', '頁面路徑/識別碼', '商品編號', '累計瀏覽次數', '最後瀏覽時間'];
+
+      if (!sheet) {
+        sheet = ss.insertSheet(SHEET_NAMES.VIEWS || '瀏覽統計');
+        sheet.appendRow(headers);
+        sheet.getRange(1, 1, 1, headers.length).setBackground('#4f46e5').setFontColor('#ffffff').setFontWeight('bold');
+        sheet.getRange("D:D").setNumberFormat('#,##0');
+        sheet.getRange("E:E").setNumberFormat('yyyy/MM/dd HH:mm:ss');
+      }
+
+      const pagePath = String(data.page || '').trim();
+      let pageTitle = String(data.title || pagePath).trim();
+      const productId = String(data.productId || '-').trim();
+
+      // 🛡️ 關鍵防護 1：若為商品且傳入通用未就緒標題（例如「連線代購即時訂購單」或「商品內頁」），自動反查商品表中的真實商品名稱
+      if (productId && productId !== '-') {
+        const isGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁' || !pageTitle;
+        if (isGeneric) {
+          const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+          if (prodSheet) {
+            const pValues = prodSheet.getDataRange().getValues();
+            for (let pIdx = 1; pIdx < pValues.length; pIdx++) {
+              if (String(pValues[pIdx][0] || '').trim() === productId) {
+                const actualName = String(pValues[pIdx][1] || '').trim();
+                if (actualName) {
+                  pageTitle = `【商品】${actualName}`;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 僅排除「賣家管理中心」，買家查單與商品瀏覽皆正常統計並寄發觸擊通報
+      const pLower = pagePath.toLowerCase();
+      if (pLower === 'admin-card-generator.html' || pageTitle.includes('賣家管理') || pageTitle.includes('發卡推播')) {
+        return { success: true, ignored: true, message: '管理中心不計入訪客觸擊' };
+      }
+
+      const now = new Date();
+
+      const range = sheet.getDataRange();
+      const values = range.getValues();
+      let targetRow = -1;
+      let currentViews = 0;
+      let existingRowTitle = '';
+
+      for (let r = 1; r < values.length; r++) {
+        const existingPath = String(values[r][1] || '').trim();
+        const existingPid = String(values[r][2] || '').trim();
+        
+        if (productId !== '-' && productId !== '') {
+          if (existingPid === productId || existingPath === pagePath) {
+            targetRow = r + 1;
+            existingRowTitle = String(values[r][0] || '').trim();
+            currentViews = Number(values[r][3]) || 0;
+            break;
+          }
+        } else {
+          if (existingPath === pagePath) {
+            targetRow = r + 1;
+            existingRowTitle = String(values[r][0] || '').trim();
+            currentViews = Number(values[r][3]) || 0;
+            break;
+          }
+        }
+      }
+
+      const newViews = currentViews + 1;
+
+      if (targetRow > 0) {
+        // 🛡️ 關鍵防護 2：嚴禁以「連線代購即時訂購單」覆蓋現有的真實商品名稱！
+        const isNewGeneric = pageTitle.includes('連線代購即時訂購單') || pageTitle === '商品內頁';
+        const isExistingGood = existingRowTitle && !existingRowTitle.includes('連線代購即時訂購單') && existingRowTitle !== '商品內頁';
+
+        if (pageTitle && (!isExistingGood || !isNewGeneric)) {
+          sheet.getRange(targetRow, 1).setValue(pageTitle);
+        }
+        if (productId && productId !== '-') sheet.getRange(targetRow, 3).setValue(productId);
+        sheet.getRange(targetRow, 4).setValue(newViews);
+        sheet.getRange(targetRow, 5).setValue(now);
+      } else {
+        sheet.appendRow([pageTitle, pagePath, productId, 1, now]);
+      }
+
+      // 📧 即時發送【網址觸擊 / 進站通報】Email 通知給管理者 (wen.chen2407@gmail.com)
+      try {
+        sendPageViewAlertEmail({
+          pagePath: pagePath,
+          pageTitle: pageTitle,
+          productId: productId,
+          newViews: newViews,
+          userName: data.userName || '',
+          userId: data.userId || '',
+          device: data.device || '',
+          now: now
+        });
+      } catch (mailErr) {
+        console.warn('發送網址觸擊通知信略過:', mailErr);
+      }
+
+      return { success: true, page: pagePath, views: newViews };
+    } catch (err) {
+      return { success: false, message: err.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
+/**
+  * 取得全站各頁面與商品瀏覽統計數據 (嚴格排除管理中心與訂單頁)
+  */
+  function getViewStats() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.VIEWS || '瀏覽統計');
+    if (!sheet) {
+      return { success: true, totalViews: 0, pages: [], topProducts: [] };
+    }
+
+    const values = sheet.getDataRange().getValues();
+    if (values.length <= 1) {
+      return { success: true, totalViews: 0, pages: [], topProducts: [] };
+    }
+
+    // 判斷是否為應排除的內部/個人頁面
+    function isExcludedPageView(path, title) {
+      const p = String(path || '').toLowerCase();
+      const t = String(title || '');
+      return p === 'admin-card-generator.html' || 
+            p === 'my-orders.html' || 
+            t.includes('賣家管理') || 
+            t.includes('買家訂購清單') || 
+            t.includes('合併結帳');
+    }
+
+    // 自動清理試算表中既有的管理中心與訂單頁面列 (從最後一列往上刪除避免行號偏移)
+    try {
+      for (let r = values.length - 1; r >= 1; r--) {
+        const title = String(values[r][0] || '').trim();
+        const path = String(values[r][1] || '').trim();
+        if (isExcludedPageView(path, title)) {
+          sheet.deleteRow(r + 1);
+        }
+      }
+    } catch (cleanErr) {
+      console.warn('清理排除頁面列失敗:', cleanErr);
+    }
+
+    // 先行載入商品清單以利標題自動校正與資訊豐富化 (圖片、價格)
+    const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    const productsMeta = {};
+    if (prodSheet) {
+      const prodData = prodSheet.getDataRange().getValues();
+      for (let r = 1; r < prodData.length; r++) {
+        const pid = String(prodData[r][0] || '').trim();
+        const pName = String(prodData[r][1] || '').trim();
+        const pImg = String(prodData[r][7] || '').trim();
+        const pPrice = Number(prodData[r][4]) || 0;
+        if (pid) {
+          productsMeta[pid] = { name: pName, imageUrl: pImg, price: pPrice };
+        }
+      }
+    }
+
+    const currentValues = sheet.getDataRange().getValues();
+
+    let totalViews = 0;
+    const pages = [];
+    const productViewsMap = {};
+
+    for (let r = 1; r < currentValues.length; r++) {
+      let title = String(currentValues[r][0] || '').trim();
+      const path = String(currentValues[r][1] || '').trim();
+      const pid = String(currentValues[r][2] || '').trim();
+      const views = Number(currentValues[r][3]) || 0;
+      const lastTime = currentValues[r][4] ? Utilities.formatDate(new Date(currentValues[r][4]), 'Asia/Taipei', 'yyyy/MM/dd HH:mm') : '';
+
+      if (isExcludedPageView(path, title)) continue;
+
+      // 🌟 自動校正並回寫試算表：若商品標題曾被暫存覆蓋成「連線代購即時訂購單」或「商品內頁」，自動換回商品真實名稱！
+      if (pid && pid !== '-') {
+        if (title.includes('連線代購即時訂購單') || title === '商品內頁' || !title) {
+          if (productsMeta[pid] && productsMeta[pid].name) {
+            title = `【商品】${productsMeta[pid].name}`;
+            try {
+              sheet.getRange(r + 1, 1).setValue(title);
+            } catch (healErr) {
+              console.warn('自動校正試算表標題失敗:', healErr);
+            }
+          }
+        }
+      }
+
+      totalViews += views;
+
+      const item = {
+        title: title,
+        path: path,
+        productId: pid,
+        views: views,
+        lastVisited: lastTime
+      };
+
+      pages.push(item);
+
+      if (pid && pid !== '-') {
+        productViewsMap[pid] = (productViewsMap[pid] || 0) + views;
+      }
+    }
+
+    pages.sort((a, b) => b.views - a.views);
+
+    const topProducts = [];
+    for (const pid in productViewsMap) {
+      const meta = productsMeta[pid] || {};
+      topProducts.push({
+        productId: pid,
+        name: meta.name || pid,
+        imageUrl: meta.imageUrl || '',
+        price: meta.price || 0,
+        views: productViewsMap[pid]
+      });
+    }
+    topProducts.sort((a, b) => b.views - a.views);
+
+    return {
+      success: true,
+      totalViews: totalViews,
+      pages: pages,
+      topProducts: topProducts
+    };
+  }
+
+// 判斷是否為應排除的內部/個人頁面
+    function isExcludedPageView(path, title) {
+      const p = String(path || '').toLowerCase();
+      const t = String(title || '');
+      return p === 'admin-card-generator.html' || 
+            p === 'my-orders.html' || 
+            t.includes('賣家管理') || 
+            t.includes('買家訂購清單') || 
+            t.includes('合併結帳');
+    }
+
+/**
+ * 試算表開啟時自動建立專屬操作選單 (支援試算表內一鍵點擊授權與測試)
+ */
+function onOpen() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('🤖 Telegram 連線設定')
+      .addItem('🚀 授權並測試 Telegram 連線', 'forceAuthAndTest')
+      .addToUi();
+  } catch (e) {}
+}
+
+/**
+  * 🌟 試算表即時編輯觸發器 (Simple Trigger)：
+  * 當賣家在【顧客歸戶】手動修改 C 欄「真實姓名」或 D 欄「電話」時（例如修正被舊版覆蓋的會員真實姓名），
+  * 自動即時將最新的會員真實姓名與電話同步至【訂單明細】該會員所有訂單的第 23 欄 (W: 真實姓名) 與第 24 欄 (X: 會員電話)，
+  * 且完全保留第 13/14 欄 (M/N: 結帳收件人姓名與電話) 不受影響！
+  */
+  function onEdit(e) {
+    try {
+      if (!e || !e.range) return;
+      const sheet = e.range.getSheet();
+      if (!sheet || sheet.getName() !== SHEET_NAMES.CUSTOMERS) return;
+
+      const row = e.range.getRow();
+      const col = e.range.getColumn();
+      const numCols = e.range.getNumColumns();
+      if (row <= 1) return;
+
+      // 檢查是否編輯了第 3 欄 (C: 真實姓名) 或 第 4 欄 (D: 電話)
+      const touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
+      if (!touchesNameOrPhone) return;
+
+      const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+      if (!orderSheet) return;
+
+      ensureOrderAndCustomerSchema(ss, orderSheet, sheet);
+
+      const numRows = e.range.getNumRows();
+      const custRows = sheet.getRange(row, 1, numRows, 4).getValues();
+      const updatesByUid = {};
+
+      for (let r = 0; r < custRows.length; r++) {
+        const uid = String(custRows[r][0] || '').trim();
+        const realName = String(custRows[r][2] || '').trim();
+        const phone = String(custRows[r][3] || '').trim();
+        if (uid) {
+          updatesByUid[uid] = { realName: realName, phone: phone };
+        }
+      }
+
+      const orderLastRow = orderSheet.getLastRow();
+      if (orderLastRow <= 1) return;
+
+      const orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
+      for (let i = 0; i < orderData.length; i++) {
+        const oUid = String(orderData[i][2] || '').trim();
+        if (oUid && updatesByUid[oUid]) {
+          const targetRow = i + 2;
+          const u = updatesByUid[oUid];
+          if (u.realName) {
+            orderSheet.getRange(targetRow, 23).setValue(u.realName); // W 欄: 訂購會員真實姓名
+          }
+          if (u.phone) {
+            orderSheet.getRange(targetRow, 24).setValue(formatPhoneAsText(u.phone)); // X 欄: 訂購會員電話
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('onEdit 同步會員真實姓名略過:', err);
+    }
+  }
+/* ==================== 模組結束：06_SystemAdminService.gs ==================== */
+
