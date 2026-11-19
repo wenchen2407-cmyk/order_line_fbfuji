@@ -300,6 +300,14 @@
       Logger.log('Drive folder setSharing 提示：' + e.message);
     }
 
+    try {
+      if (typeof setupDailyLogCleanerTrigger === 'function') {
+        setupDailyLogCleanerTrigger();
+      }
+    } catch (trigErr) {
+      console.warn('設置每日日誌清理排程略過:', trigErr);
+    }
+
     return '工作表與系統設定更新升級完成！';
   }
 
@@ -881,18 +889,11 @@
   }
 
 /**
-  * 處理頁面與商品瀏覽人次累計 (使用 LockService 避免併發衝突)
+  * 處理頁面與商品瀏覽人次累計 (非阻塞輕量寫入，絕不佔用全域排隊鎖，確保買家下單 100% 暢通)
   */
   function handleRecordPageView(data) {
     if (!data || !data.page) {
       return { success: false, message: '無效的頁面資料' };
-    }
-
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(10000);
-    } catch (e) {
-      return { success: false, message: '伺服器繁忙，略過本次統計' };
     }
 
     try {
@@ -1003,8 +1004,6 @@
       return { success: true, page: pagePath, views: newViews };
     } catch (err) {
       return { success: false, message: err.toString() };
-    } finally {
-      lock.releaseLock();
     }
   }
 
@@ -1144,13 +1143,15 @@
     }
 
 /**
- * 試算表開啟時自動建立專屬操作選單 (支援試算表內一鍵點擊授權與測試)
+ * 試算表開啟時自動建立專屬操作選單 (支援試算表內一鍵點擊授權與測試、手動清理日誌)
  */
 function onOpen() {
   try {
     const ui = SpreadsheetApp.getUi();
-    ui.createMenu('🤖 Telegram 連線設定')
+    ui.createMenu('🤖 系統管理與 Telegram')
       .addItem('🚀 授權並測試 Telegram 連線', 'forceAuthAndTest')
+      .addSeparator()
+      .addItem('🧹 手動清理過期會員日誌 (保留最新5000筆)', 'cleanOldCustomerLogs')
       .addToUi();
   } catch (e) {}
 }

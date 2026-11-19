@@ -518,6 +518,24 @@
   */
   function logCustomerActivity(userId, displayName, eventType, details, page, device) {
     try {
+      const eType = String(eventType || '動態記錄');
+
+      // 🛡️ 針對「進站逛店 / 瀏覽」事件引入 60 秒防刷保護，避免客人短時間重整連續洗版
+      if (eType.includes('進站') || eType.includes('瀏覽')) {
+        try {
+          const cache = CacheService.getScriptCache();
+          const cleanKey = `log_act_${String(userId || 'guest')}_${String(page || '')}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 80);
+          if (cache && cache.get(cleanKey)) {
+            return; // 60 秒內已記錄過相同訪客與頁面，跳過洗版
+          }
+          if (cache) {
+            cache.put(cleanKey, '1', 60);
+          }
+        } catch (cErr) {
+          // 快取異常不阻斷主流程
+        }
+      }
+
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       let logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
       const logHeaders = ['記錄時間', 'LINE_User_ID', '會員真實姓名/暱稱', '事件類型', '動態詳情', '來源頁面/管道', '裝置環境'];
@@ -535,7 +553,7 @@
         nowStr,
         String(userId || 'GUEST'),
         String(displayName || '訪客'),
-        String(eventType || '動態記錄'),
+        eType,
         String(details || ''),
         String(page || ''),
         String(device || '行動裝置/電腦')
@@ -544,6 +562,54 @@
       console.warn('寫入會員動態 Log 略過:', err);
     }
   }
+
+/**
+ * 🧹 自動修剪與維持【會員動態Log】健康行數（保留最新 5,000 筆）
+ * 可由每日半夜定時排程自動觸發，白天連線 0 延遲，半夜自動維護試算表健康長壽！
+ */
+function cleanOldCustomerLogs() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const logSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMER_LOGS || '會員動態Log');
+    if (!logSheet) return { success: true, message: '尚未建立會員動態Log工作表' };
+
+    const lastRow = logSheet.getLastRow();
+    const MAX_LOG_ROWS = 5000;   // 保留上限 5,000 筆
+    const BATCH_TRIM = 1000;     // 超標時一次清理最舊的 1,000 筆
+
+    if (lastRow > MAX_LOG_ROWS) {
+      const rowsToDelete = Math.min(BATCH_TRIM, lastRow - 1000);
+      // 第 1 列為表頭，從第 2 列開始刪除最舊的資料
+      logSheet.deleteRows(2, rowsToDelete);
+      console.log(`[自動維護] 已自動修剪 ${rowsToDelete} 筆歷史過期日誌，目前剩餘 ${logSheet.getLastRow() - 1} 筆記錄。`);
+      return { success: true, deleted: rowsToDelete, remaining: logSheet.getLastRow() - 1 };
+    }
+    return { success: true, message: `目前日誌共 ${lastRow - 1} 筆，未超過 ${MAX_LOG_ROWS} 上限，無需修剪。` };
+  } catch (err) {
+    console.warn('cleanOldCustomerLogs 執行失敗:', err);
+    return { success: false, error: err.toString() };
+  }
+}
+
+/**
+ * 自動建立每日凌晨 4 點清理過期日誌的定時排程
+ */
+function setupDailyLogCleanerTrigger() {
+  try {
+    const triggers = ScriptApp.getProjectTriggers();
+    const exists = triggers.some(t => t.getHandlerFunction() === 'cleanOldCustomerLogs');
+    if (!exists) {
+      ScriptApp.newTrigger('cleanOldCustomerLogs')
+        .timeBased()
+        .everyDays(1)
+        .atHour(4) // 每天凌晨 4 點 (離峰時段)
+        .create();
+      console.log('✅ 已成功建立每日凌晨 4 點自動清理過期日誌排程！');
+    }
+  } catch (e) {
+    console.warn('建立自動排程略過 (可能無權限或受限):', e);
+  }
+}
 
 /**
   * 查詢會員動態安全 Log (依時間倒序回傳最新記錄，供管理者後台查看)
