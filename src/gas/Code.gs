@@ -4750,6 +4750,31 @@
   }
 
 /**
+ * 試算表開啟時自動建立專屬操作選單 (支援試算表內一鍵點擊授權與測試)
+ */
+function onOpen() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('🤖 Telegram 連線設定')
+      .addItem('🚀 授權並測試 Telegram 連線', 'forceAuthAndTest')
+      .addToUi();
+  } catch (e) {}
+}
+
+/**
+ * 試算表選單專用：強制觸發授權並測試發送 Telegram 訊息
+ */
+function forceAuthAndTest() {
+  const result = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+  const ui = SpreadsheetApp.getUi();
+  if (result.success) {
+    ui.alert('🎉 授權與連線成功！', 'Telegram 機器人已連線成功！\n請打開您的手機或電腦版 Telegram 查看測試推播訊息！', ui.ButtonSet.OK);
+  } else {
+    ui.alert('⚠️ 尚未收到訊息', '請確認試算表【系統設定】中的 TELEGRAM_BOT_TOKEN 與 TELEGRAM_CHAT_ID 是否已填寫正確。\n詳細回應：' + JSON.stringify(result), ui.ButtonSet.OK);
+  }
+}
+
+/**
  * 強制觸發 Google 外部網路 (UrlFetchApp) 授權彈窗的專用函式 (不包 try-catch，強制 Google 彈出授權視窗)
  */
 function forceAuth() {
