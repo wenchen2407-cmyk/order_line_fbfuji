@@ -2910,7 +2910,32 @@ function handleRegisterCustomer(data) {
 }
 
 /**
- * 取得系統設定
+ * 取得完整系統設定 (僅供後端 GAS 內部安全呼叫，包含金鑰與通行碼)
+ */
+function getRawSystemSettingsInternal() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    if (!sheet) return {};
+
+    const rows = sheet.getDataRange().getValues();
+    const settings = {};
+    for (let i = 1; i < rows.length; i++) {
+      const key = String(rows[i][0] || '').trim();
+      const val = rows[i][1];
+      if (key) {
+        settings[key] = (val !== undefined && val !== null) ? String(val).trim() : '';
+      }
+    }
+    return settings;
+  } catch (e) {
+    console.warn('getRawSystemSettingsInternal 執行失敗:', e);
+    return {};
+  }
+}
+
+/**
+ * 取得系統設定 (前台買家/公開查詢 API，嚴格排除敏感密鑰)
  */
 function getSystemSettings() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2924,8 +2949,9 @@ function getSystemSettings() {
     const key = rows[i][0];
     const val = rows[i][1];
     if (key) {
-      // 🛡️ 嚴格排除後台管理員白名單 UID 與安全通行碼 (PIN)，禁止透過公開設定 API 外洩
-      if (String(key).trim() === 'ADMIN_LINE_UIDS' || String(key).trim() === 'ADMIN_API_KEY') continue;
+      const trimKey = String(key).trim();
+      // 🛡️ 嚴格排除後台管理員白名單 UID、安全通行碼 (PIN) 與 Telegram 機密金鑰，禁止透過公開 API 外洩
+      if (trimKey === 'ADMIN_LINE_UIDS' || trimKey === 'ADMIN_API_KEY' || trimKey === 'TELEGRAM_BOT_TOKEN' || trimKey === 'TELEGRAM_CHAT_ID') continue;
       if (key === 'ORDER_DEADLINE' && val) {
         settings[key] = formatDeadlineStr(val);
       } else {
@@ -3761,13 +3787,120 @@ function handleRecordPageView(data) {
   }
 }
 
+// ==========================================
+// 🚀 Telegram 機器人即時推播通知模組 (100% 永久免費、無發送上限、零干擾 Gmail)
+// ==========================================
+
 /**
- * 📧 發送【網址觸擊 / 訪客進站】即時 Email 通報至指定管理者信箱
- * 內建 5 分鐘 Cache 防刷信保護機制，保證即時通知且避免灌信
+ * HTML 特殊符號轉義，防止 Telegram HTML 解析模式拋錯
+ */
+function escapeHtmlText(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * 格式化訪客稱呼 (統稱「訪客稱呼」)
+ * 格式規範：LINE暱稱（真實名字/手機號碼）
+ * 若未登記真實資訊則僅顯示：LINE暱稱 (若無暱稱則顯示「訪客」)
+ */
+function formatVisitorDisplayName(lineName, realName, phone) {
+  const lName = String(lineName || '').trim() || '訪客';
+  const rName = String(realName || '').trim();
+  const pNum = String(phone || '').replace(/[-\s]/g, '').trim();
+
+  const details = [];
+  if (rName) details.push(rName);
+  if (pNum) details.push(pNum);
+
+  if (details.length > 0) {
+    return `${lName}（${details.join('/')}）`;
+  }
+  return lName;
+}
+
+/**
+ * 依據 LINE User ID 反查顧客歸戶檔案 (取得 LINE 暱稱、真實姓名、手機)
+ */
+function getCustomerProfileById(userId) {
+  if (!userId || String(userId).startsWith('GUEST_') || userId === 'LINE_GUEST' || userId === 'TEST_USER_999') {
+    return null;
+  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const custSheet = ss.getSheetByName(SHEET_NAMES.CUSTOMERS || '顧客歸戶');
+    if (!custSheet) return null;
+    const custData = custSheet.getDataRange().getValues();
+    for (let c = 1; c < custData.length; c++) {
+      if (String(custData[c][0] || '').trim() === String(userId).trim()) {
+        return {
+          lineName: String(custData[c][1] || '').trim(),
+          realName: String(custData[c][2] || '').trim(),
+          phone: String(custData[c][3] || '').trim()
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('getCustomerProfileById 查詢失敗:', err);
+  }
+  return null;
+}
+
+/**
+ * 發送 Telegram 機器人即時推播訊息
+ * @param {string} text 訊息內容 (支援 HTML 排版: <b>, <i>, <code>, <a>)
+ */
+function sendTelegramMessage(text) {
+  try {
+    const settings = getRawSystemSettingsInternal();
+    const token = settings.TELEGRAM_BOT_TOKEN;
+    const chatId = settings.TELEGRAM_CHAT_ID;
+
+    // 若尚未填寫 Token 或 Chat ID，則優雅靜默略過，不影響主業務運行
+    if (!token || !chatId) {
+      return { success: false, reason: '未設定 TELEGRAM_BOT_TOKEN 或 TELEGRAM_CHAT_ID' };
+    }
+
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const payload = {
+      chat_id: String(chatId).trim(),
+      text: text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
+
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const code = response.getResponseCode();
+    const resText = response.getContentText() || '{}';
+    const result = JSON.parse(resText);
+
+    if (code === 200 && result.ok) {
+      return { success: true };
+    } else {
+      console.warn('Telegram API 回傳異常:', code, resText);
+      return { success: false, error: result };
+    }
+  } catch (err) {
+    console.warn('sendTelegramMessage 執行失敗:', err);
+    return { success: false, error: err.toString() };
+  }
+}
+
+/**
+ * 🔔 發送【網址觸擊 / 訪客進站】即時 Telegram 通報至管理者
+ * 內建 60 秒 Cache 防灌訊保護機制，即時掌握每一位訪客動態
  */
 function sendPageViewAlertEmail(info) {
-  if (!ADMIN_ALERT_EMAIL) return;
-
   try {
     const pagePath = info.pagePath || '';
     const pageTitle = info.pageTitle || pagePath;
@@ -3884,80 +4017,36 @@ function sendPageViewAlertEmail(info) {
       }
     }
 
-    // 彙整最終展示姓名：優先顯示「真實姓名 (LINE暱稱)」，次之為 LINE 暱稱
-    const effectiveName = customerRealName 
-      ? `${customerRealName}${customerLineNick ? ' (' + customerLineNick + ')' : ''}`
-      : (customerLineNick || userName);
+    // 🌟 彙整訪客稱呼：嚴格遵循「LINE暱稱（真實名字/手機號碼）」規範
+    const lineNick = customerLineNick || userName;
+    const visitorDisplay = formatVisitorDisplayName(lineNick, customerRealName, customerPhone);
 
-    // 🛡️ 防短時間灌信保護 (以頁面與訪客身分為 key，5分鐘內不重複寄發相同網址)
-    const visitorKey = userId || effectiveName || 'anon';
-    const cacheKey = 'pv_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(visitorKey);
+    // 🛡️ 防短時間灌訊保護 (以頁面與訪客身分為 key，60 秒內不重複推播相同訪客點擊相同頁面)
+    const visitorKey = userId || lineNick || 'anon';
+    const cacheKey = 'pv_tg_alert_' + encodeURIComponent(pagePath) + '_' + encodeURIComponent(visitorKey);
     const cache = CacheService.getScriptCache();
     if (cache.get(cacheKey)) {
-      // 5分鐘內已通知過，略過寄信
-      return;
+      return; // 60 秒冷卻略過
     }
-    // 寫入快取，鎖定 300 秒 (5 分鐘)
-    cache.put(cacheKey, '1', 300);
+    cache.put(cacheKey, '1', 60);
 
-    const isIdentified = Boolean(effectiveName || (userId && !userId.startsWith('GUEST_') && userId !== 'LINE_GUEST' && userId !== 'TEST_USER_999'));
-    const phoneNotice = customerPhone ? ` <span style="font-size:12px; color:#64748b; font-weight:normal;">(${customerPhone})</span>` : '';
-    const visitorDisplay = isIdentified 
-      ? (effectiveName ? `<b>${effectiveName}</b> (已連線 LINE 會員)${phoneNotice}` : `LINE 訪客 (${userId})`)
-      : '<span style="color:#64748b;">匿名 / 外部訪客 (點擊連結進入)</span>';
+    // 🔔 發送【訪客瀏覽通報】Telegram 通知
+    const rawSettings = getRawSystemSettingsInternal();
+    if (rawSettings.TELEGRAM_NOTIFY_PAGE_VIEWS !== 'NO') {
+      const prodPart = (productId && productId !== '-') ? `• <b>商品識別</b>：<code>${escapeHtmlText(productId)}</code>\n` : '';
+      const tgMsg = 
+        `👁️ <b>【訪客瀏覽通報】</b>\n` +
+        `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
+        `• <b>瀏覽頁面</b>：${escapeHtmlText(pageTitle)}\n` +
+        prodPart +
+        `• <b>累計次數</b>：第 ${newViews} 次點擊\n` +
+        `• <b>使用裝置</b>：${escapeHtmlText(info.device || '行動/電腦裝置')}\n` +
+        `• <b>進站時間</b>：${nowStr}`;
 
-    const emailSubject = isIdentified
-      ? `👀【訪客進站】LINE 好友「${effectiveName || '會員'}」點開了：${pageTitle}`
-      : `🌐【網址觸擊】有人點開了：${pageTitle} (累計第 ${newViews} 次點擊)`;
-
-    const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-        <div style="background: linear-gradient(135deg, #06c755 0%, #059b43 100%); color: #ffffff; padding: 22px 24px;">
-          <div style="font-size: 13px; font-weight: 700; opacity: 0.9; letter-spacing: 0.5px;">W.W. 連線代購 • 即時網址觸擊通報</div>
-          <div style="font-size: 18px; font-weight: 900; margin-top: 6px; line-height: 1.4;">${emailSubject}</div>
-        </div>
-        <div style="padding: 24px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; width: 110px; font-weight: 600;">📱 觸擊頁面：</td>
-              <td style="padding: 10px 0; color: #0f172a; font-weight: 800; font-size: 15px;">${pageTitle}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">🔗 頁面路徑：</td>
-              <td style="padding: 10px 0; color: #3b82f6; font-family: monospace; font-size: 13px; word-break: break-all;">${pagePath}</td>
-            </tr>
-            ${productId && productId !== '-' ? `
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">📦 商品編號：</td>
-              <td style="padding: 10px 0; color: #0f172a; font-weight: 700;">${productId}</td>
-            </tr>` : ''}
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">👤 訪客身分：</td>
-              <td style="padding: 10px 0; color: #0f172a;">${visitorDisplay}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">📈 累計觸擊：</td>
-              <td style="padding: 10px 0; color: #e11d48; font-weight: 900; font-size: 16px;">第 ${newViews} 次點擊</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px 0; color: #64748b; font-weight: 600;">⏰ 點擊時間：</td>
-              <td style="padding: 10px 0; color: #334155; font-weight: 600;">${nowStr}</td>
-            </tr>
-          </table>
-          <div style="margin-top: 22px; padding-top: 16px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
-            此信件由 Google Apps Script 後端系統於訪客載入網頁時自動發送 • 5分鐘防刷信冷卻保護
-          </div>
-        </div>
-      </div>
-    `;
-
-    MailApp.sendEmail({
-      to: ADMIN_ALERT_EMAIL,
-      subject: emailSubject,
-      htmlBody: htmlBody
-    });
+      sendTelegramMessage(tgMsg);
+    }
   } catch (err) {
-    console.warn('MailApp 發送失敗:', err);
+    console.warn('sendPageViewAlertNotification 執行失敗:', err);
   }
 }
 
