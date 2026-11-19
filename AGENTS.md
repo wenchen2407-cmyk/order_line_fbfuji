@@ -30,20 +30,38 @@
 - **前端 JavaScript 物件 Key**（例如：`purchaseStatus`）
 - **資料格式與預設值**（例如：字串、數字、或需標記 `@` 純文字防開頭 0 遺失）
 
-### 步驟 2：後端 Code.gs 與試算表升級
-- 更新 `src/gas/Code.gs` 中的 `setupSpreadsheet()` 表頭常數（`prodHeaders` / `orderHeaders` / `custHeaders`）。
-- 確保包含無損自動擴充欄位的邏輯（`insertColumnsAfter`）。
-- 讀取資料行時，改以「表頭名稱動態查找索引（`indexOf`）」，嚴禁寫死容易跑位的數字索引。
-- 補齊 `doGet` / `doPost` 的 API 處理動作。
+### 步驟 2：後端模組化維護與自動編譯打包 (Modular Backend & Build)
+- **嚴禁直接手動修改整包 `src/gas/Code.gs`**，必須至 `src/gas/modules/` 修改對應的子模組：
+  - `00_Config.gs`：系統常數、白名單與共用工具。
+  - `01_Router.gs`：Web App 路由 (`doGet` / `doPost`)。
+  - `02_ProductService.gs`：商品管理（CRUD、多圖、原幣成本公式）。
+  - `03_OrderService.gs`：訂單保留、加單合併、結帳出貨、採購作業站。
+  - `04_CustomerService.gs`：顧客歸戶、會員動態 Log、1對1結帳通報名單。
+  - `05_TelegramService.gs`：Telegram 即時推播、HTML 排版、訪客稱呼比對。
+  - `06_SystemAdminService.gs`：試算表結構 (`setupSpreadsheet`)、無損擴充與系統設定。
+- 確保包含無損自動擴充欄位的邏輯（`insertColumnsAfter`），讀取資料以「表頭名稱動態查找索引（`indexOf`）」，嚴禁寫死數字索引。
+- 修改完成後，**必須執行自動編譯檢驗腳本**：
+  ```bash
+  node scripts/build-gas.js
+  ```
+  確保 100% 通過 V8 / Node.js 語法檢測，並自動生成最新的 `src/gas/Code.gs`。
 
 ### 步驟 3：前端正式程式碼整合
 - 將新介面功能合併到指定的正式前端檔案中。
 - **嚴禁在正式功能中保留寫死的 `let mockOrders = [...]` 假資料**，必須正式接上 `fetch(GAS_API_URL)`。
 - 實作「載入中（Loading）」、「錯誤提示」與「操作成功回饋（Toast）」。
 
-### 步驟 4：主動提供 GAS 部署發布指引
-修改完畢後，AI 必須提醒使用者發布 Web App：
-> 進入 Google Apps Script ➔ 點擊「部署」➔「管理部署作業」➔ 編輯 ➔ 版本選「新版本」➔「部署」。
+### 步驟 4：主動提供標準 GAS 部署發布指引 (每次修改後必須完整提供)
+任何涉及後端邏輯或試算表結構更動時，**AI 必須在每次回覆中明確附上標準兩步驟部署操作指引**，引導使用者完成雲端同步：
+> **🛠️ 後端部署與更新必要操作（超簡單兩步驟）：**
+> 1. **複製最新程式碼**：
+>    - 打開本機 `src/gas/Code.gs`，按 `Ctrl + A` (`Cmd + A`) 全選複製。
+>    - 切換至 Google Apps Script 編輯器，點選 `程式碼.gs`，全選貼上覆蓋並儲存 (`Ctrl + S` / `Cmd + S`)。
+> 2. **發布 Web App「新版本」**：
+>    - 點擊右上角藍色按鈕「部署」➔「管理部署作業」。
+>    - 點擊右側 ✏️ 鉛筆圖示（編輯）。
+>    - 在「版本」下拉選單中，務必選擇「**新版本**」 (New version)。
+>    - 點擊右下角「**部署**」完成更新！
 
 ### 步驟 5：端到端閉環驗收測試
 引導使用者驗證：
