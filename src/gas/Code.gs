@@ -279,7 +279,12 @@ function setupSpreadsheet() {
     ['STORE_NAME', 'W.W.連線代購', '商店名稱'],
     ['COD_MART_NOTICE', '整理完畢後，賣家將於群組或私訊發送專屬賣貨便/好賣+賣場連結供您下單出貨！', '賣貨便/好賣+ 提示說明'],
     ['ADMIN_LINE_UIDS', 'Uee7765ed3c1819cb94fd404cfab8553b', '管理者 LINE User ID 白名單 (多筆以逗號或換行分隔)'],
-    ['ADMIN_API_KEY', 'admin8888', '管理後台安全通行碼 (PIN 碼)，忘記時可直接在此欄位查看或修改']
+    ['ADMIN_API_KEY', 'admin8888', '管理後台安全通行碼 (PIN 碼)，忘記時可直接在此欄位查看或修改'],
+    ['TELEGRAM_BOT_TOKEN', '', 'Telegram 機器人 Token (由 @BotFather 取得，留空則不推播)'],
+    ['TELEGRAM_CHAT_ID', '', 'Telegram 接收通報的 Chat ID (個人 ID 或群組 ID)'],
+    ['TELEGRAM_NOTIFY_PAGE_VIEWS', 'YES', '是否將進站與商品瀏覽通報傳送到 Telegram (YES/NO)'],
+    ['TELEGRAM_NOTIFY_ORDERS', 'YES', '是否將買家新下單/加單登記即時傳送到 Telegram (YES/NO)'],
+    ['TELEGRAM_NOTIFY_PAYMENTS', 'YES', '是否將買家回報匯款/出貨結帳即時傳送到 Telegram (YES/NO)']
   ];
 
   if (!settSheet) {
@@ -1194,6 +1199,13 @@ function doGet(e) {
       } else {
         result = getViewStats();
       }
+    } else if (action === 'testTelegram') {
+      if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+        result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+      } else {
+        const testRes = sendTelegramMessage('🔔 <b>【連線系統測試】</b>\n恭喜！您的 Telegram 機器人已成功與 Google Apps Script 建立即時連線！\n• <b>訪客稱呼</b>：系統管理員\n• <b>連線時間</b>：' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss'));
+        result = testRes;
+      }
     } else if (action === 'recordPageView') {
       result = handleRecordPageView({
         page: e.parameter.page,
@@ -1799,6 +1811,38 @@ function handleCreateOrder(orderData) {
       console.error('更新顧客歸戶失敗 (不影響訂單建立):', custErr);
     }
 
+    // 🔔 即時發送【買家下單登記 / 加單】Telegram 通知 (稱謂統稱「訪客稱呼」)
+    try {
+      const rawSettings = getRawSystemSettingsInternal();
+      if (rawSettings.TELEGRAM_NOTIFY_ORDERS !== 'NO') {
+        let vLineName = orderData.userName || '';
+        let vRealName = orderData.realName || '';
+        let vPhone = orderData.phone || '';
+        if (!vRealName || !vPhone) {
+          const profile = getCustomerProfileById(targetUserId || orderData.userId);
+          if (profile) {
+            if (!vLineName) vLineName = profile.lineName;
+            if (!vRealName) vRealName = profile.realName;
+            if (!vPhone) vPhone = profile.phone;
+          }
+        }
+        const visitorDisplay = formatVisitorDisplayName(vLineName, vRealName, vPhone);
+        const timeFormatted = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+        const orderMsg = 
+          `🛍️ <b>【買家下單登記】</b>\n` +
+          `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
+          `• <b>登記商品</b>：${escapeHtmlText(targetProduct[1])}\n` +
+          `• <b>選購規格</b>：${escapeHtmlText(orderData.spec || '單一規格')}\n` +
+          `• <b>登記數量</b>：${finalQty} 件 (${isMerged ? '加單合併累加' : '新登記保留'})\n` +
+          `• <b>商品金額</b>：NT$ ${finalSubtotal.toLocaleString()}\n` +
+          `• <b>訂單編號</b>：<code>${finalOrderId}</code>\n` +
+          `• <b>登記時間</b>：${timeFormatted}`;
+        sendTelegramMessage(orderMsg);
+      }
+    } catch (tgErr) {
+      console.warn('發送新訂單 Telegram 通知略過:', tgErr);
+    }
+
     return {
       success: true,
       message: isMerged 
@@ -2046,6 +2090,40 @@ function handleCheckoutOrders(checkoutData) {
   // 更新顧客歸戶 (更新最近包裹收件人姓名/電話與常用地址，嚴格不覆蓋會員真實姓名與會員電話)
   if (custSheet) {
     updateCustomerRecipientInfo(custSheet, userId, checkoutData.recipientName, checkoutData.recipientPhone, deliveryInfo);
+  }
+
+  // 🔔 即時發送【買家完成出貨結帳】Telegram 通知 (稱謂統稱「訪客稱呼」)
+  try {
+    const rawSettings = getRawSystemSettingsInternal();
+    if (rawSettings.TELEGRAM_NOTIFY_PAYMENTS !== 'NO') {
+      let vLineName = checkoutData.userName || '';
+      let vRealName = checkoutData.recipientName || memberRealName || '';
+      let vPhone = checkoutData.recipientPhone || memberPhone || '';
+      if (!vRealName || !vPhone) {
+        const profile = getCustomerProfileById(userId);
+        if (profile) {
+          if (!vLineName) vLineName = profile.lineName;
+          if (!vRealName) vRealName = profile.realName;
+          if (!vPhone) vPhone = profile.phone;
+        }
+      }
+      const visitorDisplay = formatVisitorDisplayName(vLineName, vRealName, vPhone);
+      const timeFormatted = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+      const checkoutMsg = 
+        `🛒 <b>【買家完成出貨結帳】</b>\n` +
+        `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
+        `• <b>結帳編號</b>：<code>${checkoutId}</code>\n` +
+        `• <b>配送方式</b>：${escapeHtmlText(checkoutData.shippingMethodName || method)}\n` +
+        `• <b>採購商品</b>：共 ${successfulIndices.length} 件\n` +
+        `• <b>結帳總額</b>：NT$ ${finalTotalAmount.toLocaleString()} (含運 NT$ ${shippingFee})\n` +
+        `• <b>收件姓名</b>：${escapeHtmlText(checkoutData.recipientName || '')}\n` +
+        `• <b>收件電話</b>：${escapeHtmlText(checkoutData.recipientPhone || '')}\n` +
+        `• <b>收件門市/地址</b>：${escapeHtmlText(deliveryInfo)}\n` +
+        `• <b>結帳時間</b>：${timeFormatted}`;
+      sendTelegramMessage(checkoutMsg);
+    }
+  } catch (tgErr) {
+    console.warn('發送出貨結帳 Telegram 通知略過:', tgErr);
   }
 
   return {
@@ -2418,6 +2496,38 @@ function handleReportPayment(data) {
     } catch (e) {
       console.warn('記錄回報匯款 Log 失敗:', e);
     }
+
+    // 🔔 即時發送【買家匯款回報】Telegram 通知 (稱謂統稱「訪客稱呼」)
+    try {
+      const rawSettings = getRawSystemSettingsInternal();
+      if (rawSettings.TELEGRAM_NOTIFY_PAYMENTS !== 'NO') {
+        let vLineName = data.userName || '';
+        let vRealName = data.realName || '';
+        let vPhone = data.phone || '';
+        if (!vRealName || !vPhone) {
+          const profile = getCustomerProfileById(data.userId);
+          if (profile) {
+            if (!vLineName) vLineName = profile.lineName;
+            if (!vRealName) vRealName = profile.realName;
+            if (!vPhone) vPhone = profile.phone;
+          }
+        }
+        const visitorDisplay = formatVisitorDisplayName(vLineName, vRealName, vPhone);
+        const nowFormatted = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+        const payMsg = 
+          `💳 <b>【買家匯款回報】</b>\n` +
+          `• <b>訪客稱呼</b>：${escapeHtmlText(visitorDisplay)}\n` +
+          `• <b>付款方式</b>：${escapeHtmlText(payMethod)}\n` +
+          `• <b>匯款後五碼</b>：${lastFive ? '<code>' + escapeHtmlText(String(data.lastFiveDigits).trim()) + '</code>' : '(未填寫)'}\n` +
+          `• <b>轉帳時間</b>：${escapeHtmlText(transferTime)}\n` +
+          (data.note ? `• <b>買家備註</b>：${escapeHtmlText(data.note)}\n` : '') +
+          `• <b>回報時間</b>：${nowFormatted}`;
+        sendTelegramMessage(payMsg);
+      }
+    } catch (tgErr) {
+      console.warn('發送匯款回報 Telegram 通知略過:', tgErr);
+    }
+
     return { 
       success: true, 
       message: `🎉 已成功送出匯款回報！方式：${payMethod}，狀態已更新為「對帳中，待出貨」，小幫手確認入帳後將立即安排出貨！` 
