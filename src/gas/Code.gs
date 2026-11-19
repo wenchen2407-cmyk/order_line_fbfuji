@@ -4750,6 +4750,13 @@
   }
 
 /**
+ * 強制觸發 Google 外部網路 (UrlFetchApp) 授權彈窗的專用函式 (不包 try-catch，強制 Google 彈出授權視窗)
+ */
+function forceAuth() {
+  UrlFetchApp.fetch('https://api.telegram.org');
+}
+
+/**
  * 專供 Apps Script 編輯器手動執行「一鍵觸發授權」與「連線測試」的專屬函式
  */
 function testTelegramInEditor() {
