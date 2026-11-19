@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/19 下午10:42:57 (Asia/Taipei)
+ * 打包時間：2026/11/20 上午12:24:15 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -3115,6 +3115,17 @@ function setupDailyLogCleanerTrigger() {
   } catch (e) {
     console.warn('建立自動排程略過 (可能無權限或受限):', e);
   }
+}
+
+/**
+ * 🧪 在 Apps Script 編輯器手動快速測試日誌修剪回傳值
+ * 使用方式：在上方函式下拉選單中選取 testClean，點擊「執行」，下方執行紀錄面板即可直接看到回傳物件！
+ */
+function testClean() {
+  const result = cleanOldCustomerLogs();
+  Logger.log(result);
+  console.log(result);
+  return result;
 }
 
 /**

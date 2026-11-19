@@ -612,6 +612,17 @@ function setupDailyLogCleanerTrigger() {
 }
 
 /**
+ * 🧪 在 Apps Script 編輯器手動快速測試日誌修剪回傳值
+ * 使用方式：在上方函式下拉選單中選取 testClean，點擊「執行」，下方執行紀錄面板即可直接看到回傳物件！
+ */
+function testClean() {
+  const result = cleanOldCustomerLogs();
+  Logger.log(result);
+  console.log(result);
+  return result;
+}
+
+/**
   * 查詢會員動態安全 Log (依時間倒序回傳最新記錄，供管理者後台查看)
   */
   function getCustomerLogs(limit = 100) {
