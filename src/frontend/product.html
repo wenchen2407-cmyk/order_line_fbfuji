@@ -772,6 +772,7 @@
         <div class="vip-form-group">
           <label class="vip-label">您是從哪裡得知本賣場？ <span style="color: #ef4444;">*</span></label>
           <select id="vipSource" class="vip-input" style="background: #fff; cursor: pointer;">
+            <option value="">-- 請選擇得知管道 --</option>
             <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
             <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
             <option value="Instagram">📸 Instagram (IG)</option>
@@ -903,6 +904,7 @@
       <div class="form-group">
         <label class="form-label">您是從哪裡得知本賣場？ *</label>
         <select id="regSource" class="form-input" style="background: #fff; cursor: pointer;">
+          <option value="">-- 請選擇得知管道 --</option>
           <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
           <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
           <option value="Instagram">📸 Instagram (IG)</option>
@@ -1712,7 +1714,7 @@
       if (detectedSource) {
         sessionStorage.setItem('store_visitor_source', detectedSource);
       }
-      return sessionStorage.getItem('store_visitor_source') || 'Facebook 社團/粉專';
+      return sessionStorage.getItem('store_visitor_source') || '';
     }
 
     function loadSavedCustomerInfo() {
@@ -1739,9 +1741,8 @@
       if (rName) rName.value = '';
       if (rPhone) rPhone.value = '';
       document.getElementById('regLineName').value = currentUser.displayName || '';
-      const defaultSrc = detectAndSaveVisitorSource();
       const regSrc = document.getElementById('regSource');
-      if (regSrc) regSrc.value = defaultSrc;
+      if (regSrc) regSrc.value = '';
       isSubmittingFromButton = false;
       document.getElementById('firstTimeProfileModal').classList.add('active');
     }
@@ -1766,18 +1767,23 @@
       const isForceReset = urlParams.get('reset') === '1' || urlParams.get('new') === '1' || urlParams.get('clear') === '1';
       if (isForceReset) {
         localStorage.removeItem('line_order_customer_profile');
+        localStorage.removeItem('line_order_is_admin');
         const rName = document.getElementById('regRealName');
         const rPhone = document.getElementById('regPhone');
         if (rName) rName.value = '';
         if (rPhone) rPhone.value = '';
+        const vName = document.getElementById('vipRealName');
+        const vPhone = document.getElementById('vipPhone');
+        if (vName) vName.value = '';
+        if (vPhone) vPhone.value = '';
       }
 
-      // 初始化來源下拉選單預設值
-      const defaultSrc = (getSavedCustomerProfile() && getSavedCustomerProfile().source) || detectAndSaveVisitorSource();
+      // 初始化來源下拉選單預設值 (強制預設「請選擇」，若老客有儲存過則顯示儲存值)
+      const savedSrc = (getSavedCustomerProfile() && getSavedCustomerProfile().source) || '';
       const vipSrc = document.getElementById('vipSource');
-      if (vipSrc && defaultSrc) vipSrc.value = defaultSrc;
+      if (vipSrc) vipSrc.value = savedSrc;
       const regSrc = document.getElementById('regSource');
-      if (regSrc && defaultSrc) regSrc.value = defaultSrc;
+      if (regSrc) regSrc.value = savedSrc;
 
       const isVerified = !isForceReset && isLocallyVerifiedMember();
 
@@ -1858,7 +1864,12 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
-      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim() || 'Facebook 社團/粉專';
+      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim();
+      if (!source) {
+        alert('請選擇您是從哪裡得知本賣場！');
+        if (document.getElementById('vipSource')) document.getElementById('vipSource').focus();
+        return;
+      }
       const profile = {
         userId: currentUser.userId,
         userName: lineName,
@@ -1958,7 +1969,12 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
-      const source = (document.getElementById('regSource') ? document.getElementById('regSource').value : '').trim() || 'Facebook 社團/粉專';
+      const source = (document.getElementById('regSource') ? document.getElementById('regSource').value : '').trim();
+      if (!source) {
+        alert('請選擇您是從哪裡得知本賣場！');
+        if (document.getElementById('regSource')) document.getElementById('regSource').focus();
+        return;
+      }
       const profile = {
         userId: currentUser.userId,
         userName: lineName,

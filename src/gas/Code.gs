@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/20 上午12:24:15 (Asia/Taipei)
+ * 打包時間：2026/11/20 上午9:52:59 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -2670,7 +2670,7 @@ function formatDeliveryText(raw) {
         0,                      // Col 11: 總消費金額
         '一般會員',              // Col 12: 會員等級
         '🟢 活躍',               // Col 13: 顧客生命狀態
-        source || 'LINE 好友',   // Col 14: 顧客來源
+        source || '未指定',      // Col 14: 顧客來源
         '',                     // Col 15: 常用超商取件門市
         '正常',                 // Col 16: 黑名單標記
         ''                      // Col 17: 賣家管理備註/標籤

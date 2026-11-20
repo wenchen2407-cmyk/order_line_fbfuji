@@ -732,6 +732,7 @@
         <div class="vip-form-group">
           <label class="vip-label">您是從哪裡得知本賣場？ <span style="color: #ef4444;">*</span></label>
           <select id="vipSource" class="vip-input" style="background: #fff; cursor: pointer;">
+            <option value="">-- 請選擇得知管道 --</option>
             <option value="Facebook 社團/粉專">📘 Facebook 臉書社團 / 粉專</option>
             <option value="LINE 好友/群組">🟢 LINE 好友推薦 / 群組 / 官方帳號</option>
             <option value="Instagram">📸 Instagram (IG)</option>
@@ -889,7 +890,7 @@
       if (detectedSource) {
         sessionStorage.setItem('store_visitor_source', detectedSource);
       }
-      return sessionStorage.getItem('store_visitor_source') || 'Facebook 社團/粉專';
+      return sessionStorage.getItem('store_visitor_source') || '';
     }
 
     // ⚡ 0 毫秒會員身分檢查：老客秒通，管理員免受限，新客即刻防護
@@ -908,20 +909,34 @@
     function checkVipGateOnLoad() {
       const overlay = document.getElementById('vipGateOverlay');
 
-      // 初始化來源下拉選單預設值
-      let defaultSrc = detectAndSaveVisitorSource();
+      // 支援網址參數強制重設新客模式 (?reset=1 或 ?new=1 或 ?clear=1) 方便賣家測試
+      const urlParams = new URLSearchParams(window.location.search);
+      const isForceReset = urlParams.get('reset') === '1' || urlParams.get('new') === '1' || urlParams.get('clear') === '1';
+      if (isForceReset) {
+        localStorage.removeItem('line_order_customer_profile');
+        localStorage.removeItem('line_order_is_admin');
+        const rName = document.getElementById('vipRealName');
+        const rPhone = document.getElementById('vipPhone');
+        if (rName) rName.value = '';
+        if (rPhone) rPhone.value = '';
+      }
+
+      // 初始化來源下拉選單預設值 (強制預設「請選擇」，若老客有歷史資料且選單有該值才回顯)
+      let savedSrc = '';
       try {
-        const raw = localStorage.getItem('line_order_customer_profile');
-        if (raw) {
-          const p = JSON.parse(raw);
-          if (p && p.source) defaultSrc = p.source;
+        if (!isForceReset) {
+          const raw = localStorage.getItem('line_order_customer_profile');
+          if (raw) {
+            const p = JSON.parse(raw);
+            if (p && p.source) savedSrc = p.source;
+          }
         }
       } catch (e) {}
 
       const vipSrc = document.getElementById('vipSource');
-      if (vipSrc && defaultSrc) vipSrc.value = defaultSrc;
+      if (vipSrc) vipSrc.value = savedSrc || '';
 
-      if (isLocallyVerifiedMember()) {
+      if (!isForceReset && isLocallyVerifiedMember()) {
         if (overlay) overlay.style.display = 'none';
       } else {
         if (overlay) overlay.style.display = 'flex';
@@ -970,7 +985,12 @@
       }
 
       const cleanPhone = phone.replace(/[-\s]/g, '');
-      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim() || 'Facebook 社團/粉專';
+      const source = (document.getElementById('vipSource') ? document.getElementById('vipSource').value : '').trim();
+      if (!source) {
+        alert('請選擇您是從哪裡得知本賣場！');
+        if (document.getElementById('vipSource')) document.getElementById('vipSource').focus();
+        return;
+      }
       const profile = {
         userId: currentUserId || (isLocal ? 'LOCAL_DEV_USER' : ''),
         userName: lineName,
