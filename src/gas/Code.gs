@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/20 上午9:52:59 (Asia/Taipei)
+ * 打包時間：2026/11/21 上午1:20:11 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -964,9 +964,18 @@
   * 測試並激活 Google Drive 權限（可在 GAS 編輯器上方下拉選單直接點「執行」測試）
   */
   function testDrivePermission() {
-    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-    Logger.log('成功連接 Google Drive 資料夾：' + folder.getName());
-    return 'OK: ' + folder.getName();
+    try {
+      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      Logger.log('✅ 成功連接指定之 Google Drive 資料夾：' + folder.getName());
+      return 'OK: ' + folder.getName();
+    } catch (e) {
+      const folderName = 'LINE代購_商品圖片庫';
+      const folders = DriveApp.getFoldersByName(folderName);
+      const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      Logger.log('✅ 已成功授權 Google Drive，並自動連結/建立「' + folderName + '」資料夾！(ID: ' + folder.getId() + ')');
+      return 'OK (Auto Folder): ' + folder.getName();
+    }
   }
 
 /**
@@ -4837,46 +4846,46 @@ function onOpen() {
   function onEdit(e) {
     try {
       if (!e || !e.range) return;
-      const sheet = e.range.getSheet();
+      var sheet = e.range.getSheet();
       if (!sheet || sheet.getName() !== SHEET_NAMES.CUSTOMERS) return;
 
-      const row = e.range.getRow();
-      const col = e.range.getColumn();
-      const numCols = e.range.getNumColumns();
+      var row = e.range.getRow();
+      var col = e.range.getColumn();
+      var numCols = e.range.getNumColumns();
       if (row <= 1) return;
 
       // 檢查是否編輯了第 3 欄 (C: 真實姓名) 或 第 4 欄 (D: 電話)
-      const touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
+      var touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
       if (!touchesNameOrPhone) return;
 
-      const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
-      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+      var ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+      var orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
       if (!orderSheet) return;
 
       ensureOrderAndCustomerSchema(ss, orderSheet, sheet);
 
-      const numRows = e.range.getNumRows();
-      const custRows = sheet.getRange(row, 1, numRows, 4).getValues();
-      const updatesByUid = {};
+      var numRows = e.range.getNumRows();
+      var custRows = sheet.getRange(row, 1, numRows, 4).getValues();
+      var updatesByUid = {};
 
-      for (let r = 0; r < custRows.length; r++) {
-        const uid = String(custRows[r][0] || '').trim();
-        const realName = String(custRows[r][2] || '').trim();
-        const phone = String(custRows[r][3] || '').trim();
+      for (var r = 0; r < custRows.length; r++) {
+        var uid = String(custRows[r][0] || '').trim();
+        var realName = String(custRows[r][2] || '').trim();
+        var phone = String(custRows[r][3] || '').trim();
         if (uid) {
           updatesByUid[uid] = { realName: realName, phone: phone };
         }
       }
 
-      const orderLastRow = orderSheet.getLastRow();
+      var orderLastRow = orderSheet.getLastRow();
       if (orderLastRow <= 1) return;
 
-      const orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
-      for (let i = 0; i < orderData.length; i++) {
-        const oUid = String(orderData[i][2] || '').trim();
+      var orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
+      for (var i = 0; i < orderData.length; i++) {
+        var oUid = String(orderData[i][2] || '').trim();
         if (oUid && updatesByUid[oUid]) {
-          const targetRow = i + 2;
-          const u = updatesByUid[oUid];
+          var targetRow = i + 2;
+          var u = updatesByUid[oUid];
           if (u.realName) {
             orderSheet.getRange(targetRow, 23).setValue(u.realName); // W 欄: 訂購會員真實姓名
           }

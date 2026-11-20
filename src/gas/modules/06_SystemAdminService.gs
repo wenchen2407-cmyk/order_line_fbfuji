@@ -1165,46 +1165,46 @@ function onOpen() {
   function onEdit(e) {
     try {
       if (!e || !e.range) return;
-      const sheet = e.range.getSheet();
+      var sheet = e.range.getSheet();
       if (!sheet || sheet.getName() !== SHEET_NAMES.CUSTOMERS) return;
 
-      const row = e.range.getRow();
-      const col = e.range.getColumn();
-      const numCols = e.range.getNumColumns();
+      var row = e.range.getRow();
+      var col = e.range.getColumn();
+      var numCols = e.range.getNumColumns();
       if (row <= 1) return;
 
       // 檢查是否編輯了第 3 欄 (C: 真實姓名) 或 第 4 欄 (D: 電話)
-      const touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
+      var touchesNameOrPhone = (col <= 4 && (col + numCols - 1) >= 3);
       if (!touchesNameOrPhone) return;
 
-      const ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
-      const orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
+      var ss = e.source || SpreadsheetApp.getActiveSpreadsheet();
+      var orderSheet = ss.getSheetByName(SHEET_NAMES.ORDERS);
       if (!orderSheet) return;
 
       ensureOrderAndCustomerSchema(ss, orderSheet, sheet);
 
-      const numRows = e.range.getNumRows();
-      const custRows = sheet.getRange(row, 1, numRows, 4).getValues();
-      const updatesByUid = {};
+      var numRows = e.range.getNumRows();
+      var custRows = sheet.getRange(row, 1, numRows, 4).getValues();
+      var updatesByUid = {};
 
-      for (let r = 0; r < custRows.length; r++) {
-        const uid = String(custRows[r][0] || '').trim();
-        const realName = String(custRows[r][2] || '').trim();
-        const phone = String(custRows[r][3] || '').trim();
+      for (var r = 0; r < custRows.length; r++) {
+        var uid = String(custRows[r][0] || '').trim();
+        var realName = String(custRows[r][2] || '').trim();
+        var phone = String(custRows[r][3] || '').trim();
         if (uid) {
           updatesByUid[uid] = { realName: realName, phone: phone };
         }
       }
 
-      const orderLastRow = orderSheet.getLastRow();
+      var orderLastRow = orderSheet.getLastRow();
       if (orderLastRow <= 1) return;
 
-      const orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
-      for (let i = 0; i < orderData.length; i++) {
-        const oUid = String(orderData[i][2] || '').trim();
+      var orderData = orderSheet.getRange(2, 1, orderLastRow - 1, 24).getValues();
+      for (var i = 0; i < orderData.length; i++) {
+        var oUid = String(orderData[i][2] || '').trim();
         if (oUid && updatesByUid[oUid]) {
-          const targetRow = i + 2;
-          const u = updatesByUid[oUid];
+          var targetRow = i + 2;
+          var u = updatesByUid[oUid];
           if (u.realName) {
             orderSheet.getRange(targetRow, 23).setValue(u.realName); // W 欄: 訂購會員真實姓名
           }

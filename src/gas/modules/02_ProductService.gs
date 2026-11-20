@@ -613,9 +613,18 @@
   * 測試並激活 Google Drive 權限（可在 GAS 編輯器上方下拉選單直接點「執行」測試）
   */
   function testDrivePermission() {
-    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-    Logger.log('成功連接 Google Drive 資料夾：' + folder.getName());
-    return 'OK: ' + folder.getName();
+    try {
+      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      Logger.log('✅ 成功連接指定之 Google Drive 資料夾：' + folder.getName());
+      return 'OK: ' + folder.getName();
+    } catch (e) {
+      const folderName = 'LINE代購_商品圖片庫';
+      const folders = DriveApp.getFoldersByName(folderName);
+      const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      Logger.log('✅ 已成功授權 Google Drive，並自動連結/建立「' + folderName + '」資料夾！(ID: ' + folder.getId() + ')');
+      return 'OK (Auto Folder): ' + folder.getName();
+    }
   }
 
 /**
