@@ -83,7 +83,7 @@ async function runBackendModulesChecks() {
   // 2. 02_ProductService.gs
   const prodService = fs.readFileSync(path.join(ROOT_DIR, 'src/gas/modules/02_ProductService.gs'), 'utf8');
   assert(prodService.includes('supplyMode: supplyMode'), '02_ProductService.gs getProductsList 輸出 supplyMode 屬性');
-  assert(prodService.includes('category: rawCategory || \'✈️ 親飛連線\''), '02_ProductService.gs 預設 category 設為 ✈️ 親飛連線');
+  assert(prodService.includes('normCategory = \'✈️ 親飛連線\''), '02_ProductService.gs 包含三軌正規化輸出 ✈️ 親飛連線');
 
   // 3. Code.gs 打包檔
   const codeGs = fs.readFileSync(path.join(ROOT_DIR, 'src/gas/Code.gs'), 'utf8');

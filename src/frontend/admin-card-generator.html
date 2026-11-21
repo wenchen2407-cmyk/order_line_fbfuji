@@ -3222,9 +3222,9 @@
           <div class="form-group">
             <label class="form-label">供應模式 (三軌模式) *</label>
             <div class="category-pills-row" id="editCategoryPillsRow">
-              <button type="button" class="cat-pill-btn active" onclick="selectEditCategory(this, '✈️ 親飛連線')">✈️ 親飛連線</button>
-              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '⚡ 現貨')">⚡ 現貨</button>
-              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '📦 預購')">📦 預購</button>
+              <button type="button" class="cat-pill-btn active" data-mode="✈️ 親飛連線" onclick="selectEditCategory(this, '✈️ 親飛連線')">✈️ 親飛連線</button>
+              <button type="button" class="cat-pill-btn" data-mode="⚡ 現貨" onclick="selectEditCategory(this, '⚡ 現貨')">⚡ 現貨</button>
+              <button type="button" class="cat-pill-btn" data-mode="📦 預購" onclick="selectEditCategory(this, '📦 預購')">📦 預購</button>
             </div>
             <input type="hidden" id="editProdCategory" value="✈️ 親飛連線">
           </div>
@@ -6300,7 +6300,16 @@
               <div style="min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">
                   <span style="font-family:'Outfit', monospace; font-size:11.5px; font-weight:800; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px;">#${escapeHtml(p.id)}</span>
-                  <span style="font-size:11px; background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(p.category || '連線好物')}</span>
+                  ${(() => {
+                    const cStr = String(p.supplyMode || p.category || '');
+                    if (cStr.includes('現貨')) {
+                      return '<span style="font-size:11px; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:2px 6px; border-radius:4px; font-weight:700;">⚡ 現貨</span>';
+                    } else if (cStr.includes('預購')) {
+                      return '<span style="font-size:11px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:2px 6px; border-radius:4px; font-weight:700;">📦 預購</span>';
+                    } else {
+                      return '<span style="font-size:11px; background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-weight:700;">✈️ 親飛連線</span>';
+                    }
+                  })()}
                   ${p.status === '上架中'
             ? '<span style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">🟢 上架中</span>'
             : '<span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:700;">⚪️ 已下架</span>'}
@@ -6748,32 +6757,32 @@
       if (document.getElementById('editProdId')) document.getElementById('editProdId').value = prod.id;
       if (document.getElementById('editModalProdIdBadge')) document.getElementById('editModalProdIdBadge').textContent = '#' + prod.id;
 
-      // 活動分類標籤膠囊設定
-      const catVal = prod.category || '📦 預購';
-      if (document.getElementById('editProdCategory')) document.getElementById('editProdCategory').value = catVal;
-      let matchedCat = false;
+      // 供應模式 (三軌模式) 標籤膠囊高亮與值設定
+      const rawCat = String(prod.supplyMode || prod.category || '').trim();
+      let targetMode = '✈️ 親飛連線';
+      if (rawCat.includes('現貨')) {
+        targetMode = '⚡ 現貨';
+      } else if (rawCat.includes('預購')) {
+        targetMode = '📦 預購';
+      } else {
+        targetMode = '✈️ 親飛連線';
+      }
+
+      if (document.getElementById('editProdCategory')) {
+        document.getElementById('editProdCategory').value = targetMode;
+      }
+
+      // 精確高亮對應三軌膠囊按鈕 (絕不產生額外孤立按鈕)
       document.querySelectorAll('#editCategoryPillsRow .cat-pill-btn').forEach(b => {
-        const text = b.textContent.trim();
-        const rawText = text.replace(/^[^\s]+\s*/, '');
-        const cleanCat = catVal.replace(/^[^\s]+\s*/, '');
-        if (text === catVal || rawText === cleanCat || text.includes(cleanCat)) {
+        const modeAttr = b.getAttribute('data-mode') || b.textContent.trim();
+        if (modeAttr === targetMode || (targetMode.includes('現貨') && modeAttr.includes('現貨')) ||
+            (targetMode.includes('預購') && modeAttr.includes('預購')) ||
+            (targetMode.includes('連線') && modeAttr.includes('連線'))) {
           b.classList.add('active');
-          matchedCat = true;
         } else {
           b.classList.remove('active');
         }
       });
-      if (!matchedCat) {
-        const pillsRow = document.getElementById('editCategoryPillsRow');
-        if (pillsRow) {
-          const customBtn = document.createElement('button');
-          customBtn.type = 'button';
-          customBtn.className = 'cat-pill-btn active';
-          customBtn.textContent = catVal;
-          customBtn.onclick = function () { selectEditCategory(this, catVal); };
-          pillsRow.appendChild(customBtn);
-        }
-      }
 
       if (document.getElementById('editProdStatus')) document.getElementById('editProdStatus').value = prod.status || '上架中';
       if (document.getElementById('editProdName')) document.getElementById('editProdName').value = prod.name || '';
@@ -7440,6 +7449,7 @@
               ...manageAllProducts[targetIndex],
               name: name,
               category: category,
+              supplyMode: category.includes('現貨') ? '現貨' : (category.includes('預購') ? '預購' : '連線'),
               price: Number(price),
               originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
               status: status,
