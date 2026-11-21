@@ -528,78 +528,6 @@
       color: #ffffff !important;
     }
 
-    /* 三軌供應模式切換膠囊 (Sticky Mode Tabs) */
-    .supply-mode-tabs-wrap {
-      margin: 8px 0 2px 0;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .supply-mode-tabs-wrap::-webkit-scrollbar {
-      display: none;
-    }
-    .supply-mode-tabs {
-      display: flex;
-      gap: 6px;
-      padding: 2px 0 4px 0;
-      white-space: nowrap;
-      min-width: max-content;
-    }
-    .mode-tab-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #f8fafc;
-      color: #475569;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-      user-select: none;
-    }
-    .mode-tab-btn:hover {
-      background: #f1f5f9;
-      color: #0f172a;
-    }
-    .mode-tab-btn.active {
-      background: #0f172a;
-      color: #ffffff;
-      border-color: #0f172a;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
-    }
-    .mode-tab-btn[data-mode="現貨"].active {
-      background: #059669;
-      border-color: #059669;
-      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
-    }
-    .mode-tab-btn[data-mode="預購"].active {
-      background: #2563eb;
-      border-color: #2563eb;
-      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-    }
-    .mode-tab-btn[data-mode="連線"].active {
-      background: #d97706;
-      border-color: #d97706;
-      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
-    }
-    .tab-count {
-      display: inline-block;
-      font-size: 10.5px;
-      font-weight: 800;
-      padding: 1px 6px;
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.08);
-      color: inherit;
-    }
-    .mode-tab-btn.active .tab-count {
-      background: rgba(255, 255, 255, 0.25);
-      color: #ffffff;
-    }
-
     .card-body {
       padding: 10px 12px 12px;
       display: flex;
@@ -866,24 +794,6 @@
       <input type="text" id="searchInput" class="search-input" placeholder="搜尋商品名稱、編號 (如 J2609270001)..." oninput="handleSearch()">
       <button type="button" id="btnClearSearch" class="search-clear" onclick="clearSearch()">✕</button>
     </div>
-
-    <!-- 三軌供應模式切換膠囊 (Sticky Mode Tabs) -->
-    <div class="supply-mode-tabs-wrap">
-      <div class="supply-mode-tabs">
-        <button type="button" class="mode-tab-btn active" data-mode="ALL" onclick="switchSupplyMode('ALL')">
-          全部 <span class="tab-count" id="countModeAll">0</span>
-        </button>
-        <button type="button" class="mode-tab-btn" data-mode="現貨" onclick="switchSupplyMode('現貨')">
-          ⚡ 現貨專區 <span class="tab-count" id="countModeStock">0</span>
-        </button>
-        <button type="button" class="mode-tab-btn" data-mode="預購" onclick="switchSupplyMode('預購')">
-          📦 預購好物 <span class="tab-count" id="countModePre">0</span>
-        </button>
-        <button type="button" class="mode-tab-btn" data-mode="連線" onclick="switchSupplyMode('連線')">
-          ✈️ 檔期連線 <span class="tab-count" id="countModeLive">0</span>
-        </button>
-      </div>
-    </div>
   </header>
 
   <!-- 主內容區 -->
@@ -958,22 +868,11 @@
     };
 
     let allProducts = [];
-    let currentSupplyMode = 'ALL';
     let currentCategory = 'ALL';
     let searchKeyword = '';
     let currentUserId = '';
     const PAGE_SIZE = 25;
     let currentPage = 1;
-
-    // 切換三軌供應模式 (全部 / 現貨 / 預購 / 連線)
-    function switchSupplyMode(mode) {
-      currentSupplyMode = mode || 'ALL';
-      document.querySelectorAll('.mode-tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-mode') === currentSupplyMode);
-      });
-      currentPage = 1;
-      renderProductList();
-    }
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('liff.state')) {
@@ -1632,26 +1531,10 @@
       let countStock = 0;
       let countPre = 0;
       let countLive = 0;
-      allProducts.forEach(p => {
-        const cat = String(p.category || p.supplyMode || '').toLowerCase();
-        if (cat.includes('現貨')) countStock++;
-        else if (cat.includes('預購')) countPre++;
-        else countLive++;
-      });
-
-      if (document.getElementById('countModeAll')) document.getElementById('countModeAll').textContent = countAll;
-      if (document.getElementById('countModeStock')) document.getElementById('countModeStock').textContent = countStock;
-      if (document.getElementById('countModePre')) document.getElementById('countModePre').textContent = countPre;
-      if (document.getElementById('countModeLive')) document.getElementById('countModeLive').textContent = countLive;
-
-      // 依供應模式與關鍵字篩選 (名稱、編號、分類備註)
+      // 依關鍵字篩選 (名稱、編號、分類備註)
       const filtered = allProducts.filter(p => {
-        const cat = String(p.category || p.supplyMode || '').toLowerCase();
-        if (currentSupplyMode === '現貨' && !cat.includes('現貨')) return false;
-        if (currentSupplyMode === '預購' && !cat.includes('預購')) return false;
-        if (currentSupplyMode === '連線' && (cat.includes('現貨') || cat.includes('預購'))) return false;
-
         if (!searchKeyword) return true;
+        const cat = String(p.category || p.supplyMode || '').toLowerCase();
         const nameMatch = (p.name || '').toLowerCase().includes(searchKeyword);
         const idMatch = (p.id || '').toLowerCase().includes(searchKeyword);
         const catMatch = cat.includes(searchKeyword);
@@ -1772,7 +1655,7 @@
 
         const catRaw = String(prod.category || prod.supplyMode || '').trim();
         let badgeClass = 'badge-live';
-        let badgeText = '✈️ 連線';
+        let badgeText = '✈️ 親飛連線';
         if (catRaw.includes('現貨')) {
           badgeClass = 'badge-instock';
           badgeText = '⚡ 現貨';
@@ -1781,7 +1664,7 @@
           badgeText = '📦 預購';
         } else {
           badgeClass = 'badge-live';
-          badgeText = '✈️ 連線';
+          badgeText = '✈️ 親飛連線';
         }
 
         if (isThisProdExpired) {

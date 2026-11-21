@@ -79,7 +79,7 @@
         const prodItem = {
           id: row[0],
           name: row[1],
-          category: rawCategory || '✈️ 連線',
+          category: rawCategory || '✈️ 親飛連線',
           supplyMode: supplyMode,
           originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
           price: basePrice,

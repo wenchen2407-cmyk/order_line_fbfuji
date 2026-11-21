@@ -58,7 +58,7 @@
     // 1.1 為【商品清單】C 欄建立「供應模式」下拉選單 (現貨 / 預購 / 連線)
     try {
       const modeRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['⚡ 現貨', '📦 預購', '✈️ 連線', '現貨', '預購', '連線'], true)
+        .requireValueInList(['✈️ 親飛連線', '⚡ 現貨', '📦 預購', '✈️ 連線', '親飛連線', '現貨', '預購', '連線'], true)
         .setAllowInvalid(true)
         .build();
       prodSheet.getRange("C2:C2000").setDataValidation(modeRule);

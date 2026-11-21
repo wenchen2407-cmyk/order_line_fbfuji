@@ -1539,13 +1539,13 @@
         catElem.className = 'product-tag';
         if (mode === '現貨') {
           catElem.classList.add('tag-instock');
-          catElem.textContent = '⚡ 現貨供應';
+          catElem.textContent = '⚡ 現貨';
         } else if (mode === '預購') {
           catElem.classList.add('tag-preorder');
-          catElem.textContent = '📦 預購選品';
+          catElem.textContent = '📦 預購';
         } else {
           catElem.classList.add('tag-live');
-          catElem.textContent = '✈️ 檔期連線';
+          catElem.textContent = '✈️ 親飛連線';
         }
       }
 
@@ -1557,17 +1557,17 @@
           shipBanner.style.background = '#ecfdf5';
           shipBanner.style.color = '#065f46';
           shipBanner.style.border = '1px solid #a7f3d0';
-          shipBanner.innerHTML = '<span>⚡</span><div><b>現貨供應</b>：付款完成後 24-48 小時內火速包裝出貨！</div>';
+          shipBanner.innerHTML = '<div>⚡ 本商品為現貨庫存。</div>';
         } else if (mode === '預購') {
           shipBanner.style.background = '#eff6ff';
           shipBanner.style.color = '#1e40af';
           shipBanner.style.border = '1px solid #bfdbfe';
-          shipBanner.innerHTML = '<span>📦</span><div><b>專櫃預購</b>：下單後約需 7-14 個工作天抵台寄出。</div>';
+          shipBanner.innerHTML = '<div>📦 本商品為預購登記，預計下訂後 7-14 個工作天作業處理時間，以實際到貨時間為主。</div>';
         } else {
           shipBanner.style.background = '#fffbeb';
           shipBanner.style.color = '#92400e';
           shipBanner.style.border = '1px solid #fde68a';
-          shipBanner.innerHTML = '<span>✈️</span><div><b>親飛連線</b>：現場限量搶購，預計回國後依序包裝統一出貨。</div>';
+          shipBanner.innerHTML = '<div>✈️ 本商品為連線，採購完成後回國統一寄出。</div>';
         }
       }
       

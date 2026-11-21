@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/21 下午8:49:03 (Asia/Taipei)
+ * 打包時間：2026/11/21 下午9:48:58 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -430,7 +430,7 @@
         const prodItem = {
           id: row[0],
           name: row[1],
-          category: rawCategory || '✈️ 連線',
+          category: rawCategory || '✈️ 親飛連線',
           supplyMode: supplyMode,
           originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
           price: basePrice,
@@ -3781,7 +3781,7 @@ function testTelegramInEditor() {
     // 1.1 為【商品清單】C 欄建立「供應模式」下拉選單 (現貨 / 預購 / 連線)
     try {
       const modeRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['⚡ 現貨', '📦 預購', '✈️ 連線', '現貨', '預購', '連線'], true)
+        .requireValueInList(['✈️ 親飛連線', '⚡ 現貨', '📦 預購', '✈️ 連線', '親飛連線', '現貨', '預購', '連線'], true)
         .setAllowInvalid(true)
         .build();
       prodSheet.getRange("C2:C2000").setDataValidation(modeRule);
