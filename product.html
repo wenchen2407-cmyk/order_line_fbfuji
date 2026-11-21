@@ -1,21 +1,26 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>連線代購即時訂購單</title>
   <!-- Google Fonts & LINE LIFF SDK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@400;600;700&display=swap"
+    rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
     :root {
-      --primary: #06c755; /* LINE Green */
+      --primary: #06c755;
+      /* LINE Green */
       --primary-dark: #059b43;
       --accent: #ff4757;
       --bg-color: #f8fafc;
@@ -28,14 +33,17 @@
       --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     }
 
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
+    html,
+    body {
       overflow-x: clip;
       position: relative;
       width: 100%;
@@ -65,7 +73,9 @@
     }
 
     /* 防止 iOS 聚焦輸入框時自動縮放造成溢出 */
-    .form-input, .form-textarea, select {
+    .form-input,
+    .form-textarea,
+    select {
       font-size: 16px !important;
     }
 
@@ -206,11 +216,13 @@
       color: #059669 !important;
       border: 1px solid #a7f3d0;
     }
+
     .product-tag.tag-preorder {
       background: #eff6ff !important;
       color: #2563eb !important;
       border: 1px solid #bfdbfe;
     }
+
     .product-tag.tag-live {
       background: #fffbeb !important;
       color: #d97706 !important;
@@ -375,7 +387,8 @@
       font-weight: 700;
     }
 
-    .form-input, .form-textarea {
+    .form-input,
+    .form-textarea {
       width: 100%;
       padding: 12px 14px;
       border: 1px solid var(--border-color);
@@ -386,7 +399,8 @@
       transition: border-color 0.2s, background 0.2s;
     }
 
-    .form-input:focus, .form-textarea:focus {
+    .form-input:focus,
+    .form-textarea:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
@@ -534,13 +548,20 @@
       border-radius: 20px;
       padding: 24px;
       text-align: center;
-      box-shadow: 0 20px 30px rgba(0,0,0,0.15);
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
       animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes popIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
     .success-icon {
@@ -565,6 +586,7 @@
       text-align: left;
       font-size: 13px;
     }
+
     /* 收單截止動態倒數晶片 (完整年月日時間 + 倒數) */
     .deadline-banner {
       display: flex;
@@ -580,12 +602,14 @@
       margin-bottom: 12px;
       box-shadow: 0 1px 3px rgba(225, 29, 72, 0.06);
     }
+
     .deadline-banner.expired {
       background: #f1f5f9;
       border-color: #cbd5e1;
       color: #64748b;
       box-shadow: none;
     }
+
     /* 彈跳成功按鈕組 (左右高度、字體、圓角完美對齊) */
     .modal-btn-action {
       flex: 1;
@@ -604,21 +628,25 @@
       line-height: 1.3;
       white-space: nowrap;
     }
+
     .modal-btn-secondary {
       background: #f1f5f9;
       color: #334155;
       border: 1.5px solid #cbd5e1;
     }
+
     .modal-btn-secondary:active {
       background: #e2e8f0;
       transform: scale(0.97);
     }
+
     .modal-btn-primary {
       background: var(--primary);
       color: #ffffff;
       border: 1.5px solid var(--primary);
       box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
     }
+
     .modal-btn-primary:active {
       background: var(--primary-dark);
       border-color: var(--primary-dark);
@@ -640,10 +668,12 @@
       opacity: 1;
       transition: opacity 0.35s ease, visibility 0.35s ease;
     }
+
     .vip-gate-overlay.unlocking {
       opacity: 0;
       pointer-events: none;
     }
+
     .vip-gate-card {
       width: 100%;
       max-width: 420px;
@@ -655,15 +685,25 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       animation: vipPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
     @keyframes vipPop {
-      0% { transform: scale(0.92); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
+      0% {
+        transform: scale(0.92);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
+
     .vip-badge-crown {
       font-size: 38px;
       margin-bottom: 6px;
       filter: drop-shadow(0 2px 8px rgba(234, 179, 8, 0.3));
     }
+
     .vip-tag {
       display: inline-block;
       background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
@@ -676,12 +716,14 @@
       letter-spacing: 0.5px;
       margin-bottom: 10px;
     }
+
     .vip-title {
       font-size: 19px;
       font-weight: 900;
       color: #0f172a;
       margin-bottom: 8px;
     }
+
     .vip-subtitle {
       font-size: 13px;
       color: #64748b;
@@ -693,12 +735,15 @@
       border-radius: 12px;
       border: 1px solid #e2e8f0;
     }
+
     .vip-form {
       text-align: left;
     }
+
     .vip-form-group {
       margin-bottom: 14px;
     }
+
     .vip-label {
       display: block;
       font-size: 13px;
@@ -706,9 +751,11 @@
       color: #334155;
       margin-bottom: 5px;
     }
+
     .vip-input-wrap {
       position: relative;
     }
+
     .vip-input {
       width: 100%;
       padding: 12px 14px;
@@ -722,10 +769,12 @@
       box-sizing: border-box;
       font-family: inherit;
     }
+
     .vip-input:focus {
       border-color: #06c755;
       box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.15);
     }
+
     .vip-verified-badge {
       position: absolute;
       right: 12px;
@@ -738,6 +787,7 @@
       padding: 2px 8px;
       border-radius: 6px;
     }
+
     .btn-vip-unlock {
       width: 100%;
       padding: 14px;
@@ -752,14 +802,17 @@
       transition: all 0.2s;
       margin-top: 6px;
     }
+
     .btn-vip-unlock:active {
       transform: scale(0.98);
     }
+
     .btn-vip-unlock:disabled {
       background: #94a3b8;
       box-shadow: none;
       cursor: not-allowed;
     }
+
     .vip-notice {
       font-size: 11.5px;
       color: #94a3b8;
@@ -768,6 +821,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- 👑 VIP 會員全螢幕毛玻璃守門牆 -->
@@ -785,7 +839,8 @@
         <div class="vip-form-group">
           <label class="vip-label">LINE 顯示暱稱</label>
           <div class="vip-input-wrap">
-            <input type="text" id="vipLineName" class="vip-input" readonly placeholder="連線驗證中..." style="background: #f8fafc;">
+            <input type="text" id="vipLineName" class="vip-input" readonly placeholder="連線驗證中..."
+              style="background: #f8fafc;">
             <span class="vip-verified-badge" id="vipVerifiedBadge">🟢 已連線</span>
           </div>
         </div>
@@ -820,10 +875,12 @@
   <div class="container">
     <!-- 頂部快速導航 Bar (返回更多商品 / 訂購清單) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
-      <a href="index.html?v=20261118_v1" id="linkBackToCatalog" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <a href="index.html?v=20261118_v1" id="linkBackToCatalog"
+        style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         🛍️ 更多商品
       </a>
-      <a href="my-orders.html?v=20261118_v1" id="linkToMyOrders" onclick="handleGoToOrders(event)" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <a href="my-orders.html?v=20261118_v1" id="linkToMyOrders" onclick="handleGoToOrders(event)"
+        style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 7px 14px; border-radius: 20px; text-decoration: none; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         📦 訂購清單
       </a>
     </div>
@@ -847,13 +904,16 @@
       <div class="product-details">
         <!-- 倒數收單晶片 (顯示年月日時間與倒數，完全置左對齊) -->
         <div id="deadlineBanner" class="deadline-banner" style="display: none;">
-          <div style="display: flex; flex-direction: column; width: 100%; gap: 4px; align-items: flex-start; text-align: left;">
-            <div id="deadlineTopRow" style="display: flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 800; line-height: 1.4; text-align: left;">
+          <div
+            style="display: flex; flex-direction: column; width: 100%; gap: 4px; align-items: flex-start; text-align: left;">
+            <div id="deadlineTopRow"
+              style="display: flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 800; line-height: 1.4; text-align: left;">
               <span id="deadlineIcon">⏰</span>
               <span id="deadlineLabel">收單截止時間：</span>
               <span id="deadlineExactTime" style="color: #be123c;"></span>
             </div>
-            <div id="deadlineText" style="font-size: 12.5px; font-weight: 600; opacity: 0.95; line-height: 1.4; text-align: left;"></div>
+            <div id="deadlineText"
+              style="font-size: 12.5px; font-weight: 600; opacity: 0.95; line-height: 1.4; text-align: left;"></div>
           </div>
         </div>
 
@@ -891,7 +951,8 @@
       </div>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12.5px; color: #475569; line-height: 1.75;">
+    <div
+      style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 24px; font-size: 12.5px; color: #475569; line-height: 1.75;">
       <div style="font-weight: 800; color: #0f172a; margin-bottom: 8px; font-size: 13.5px;">✈️ 連線代購必讀</div>
       <div style="margin-bottom: 6px;">• 🚫 <b>下單即確定購買，不可取消或刪改</b>，下單前請確認規格、數量。</div>
       <div style="margin-bottom: 6px;">• ⚡ <b>依下單順序配貨</b>，若遇缺貨將主動變更狀態。</div>
@@ -915,7 +976,8 @@
   <!-- 首次登記基本資料彈跳視窗 (新客只需填寫一次) -->
   <div class="modal-overlay" id="firstTimeProfileModal">
     <div class="modal-content" style="text-align: left;">
-      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">首次使用，請建立聯絡資料</h2>
+      <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 6px; text-align: center; color: #0f172a;">
+        首次使用，請建立聯絡資料</h2>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 16px; text-align: center;">僅需填寫一次</p>
 
       <div class="form-group">
@@ -942,8 +1004,11 @@
         </select>
       </div>
 
-      <button type="button" class="btn-submit" id="btnConfirmProfile" style="width: 100%; margin-top: 10px;" onclick="confirmProfileAndSubmit()">確認送出</button>
-      <button type="button" style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;" onclick="closeProfileModal()">取消</button>
+      <button type="button" class="btn-submit" id="btnConfirmProfile" style="width: 100%; margin-top: 10px;"
+        onclick="confirmProfileAndSubmit()">確認送出</button>
+      <button type="button"
+        style="width: 100%; background: none; border: none; color: #94a3b8; font-size: 13px; margin-top: 10px; cursor: pointer;"
+        onclick="closeProfileModal()">取消</button>
     </div>
   </div>
 
@@ -953,21 +1018,24 @@
       <div class="success-icon">🎉</div>
       <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;" id="modalSuccessTitle">登記成功！</h2>
 
-      <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
+      <div
+        style="background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; border: 1px dashed var(--border-color);">
         <div style="margin-bottom: 4px;">商品品名：<b id="modalProdName">-</b></div>
         <div style="margin-bottom: 4px;">預約規格：<span id="modalSpec">-</span></div>
         <div style="margin-bottom: 4px; display: flex; justify-content: space-between; align-items: flex-start;">
           <span>預約數量：</span>
           <span id="modalQty" style="font-weight: 700; text-align: right;">-</span>
         </div>
-        <div style="margin-top: 6px; color: var(--accent); font-weight: 700; display: flex; justify-content: space-between;">
+        <div
+          style="margin-top: 6px; color: var(--accent); font-weight: 700; display: flex; justify-content: space-between;">
           <span>小計金額：</span>
           <span id="modalSubtotal">NT$ 0</span>
         </div>
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button type="button" class="modal-btn-action modal-btn-secondary" onclick="continueShopping()">🛍️ 繼續挑選</button>
+        <button type="button" class="modal-btn-action modal-btn-secondary" onclick="continueShopping()">🛍️
+          繼續挑選</button>
         <button type="button" class="modal-btn-action modal-btn-primary" onclick="goToMyOrders()">📦 查看訂購清單</button>
       </div>
     </div>
@@ -979,9 +1047,9 @@
     const TEST_GAS_URL = 'https://script.google.com/macros/s/AKfycbzHdEBRN4OsqvXECkypDGvt_NHOjlAxet_9KP3LeaBJgzRlt478i-qhwDl7WmxcdGch/exec';
 
     const IS_LOCAL_DEV = window.location.hostname === 'localhost' ||
-                         window.location.hostname === '127.0.0.1' ||
-                         window.location.protocol === 'file:' ||
-                         !window.location.hostname;
+      window.location.hostname === '127.0.0.1' ||
+      window.location.protocol === 'file:' ||
+      !window.location.hostname;
 
     // 支援網址參數 ?env=prod 或 ?env=test 強制指定環境，預設本機連測試庫、線上連正式庫
     const _envParam = (new URLSearchParams(window.location.search)).get('env');
@@ -1022,7 +1090,7 @@
             if (p.userId) currentUser.userId = p.userId;
             if (p.displayName) currentUser.displayName = p.displayName;
             if (p.pictureUrl) currentUser.pictureUrl = p.pictureUrl;
-          } catch (e) {}
+          } catch (e) { }
         }
 
         // 觸擊追蹤：記錄點擊查單連結
@@ -1058,7 +1126,7 @@
                 try {
                   sessionStorage.setItem('liff_user_profile', profStr);
                   localStorage.setItem('liff_user_profile', profStr);
-                } catch (e) {}
+                } catch (e) { }
               }
             }
           } catch (e) {
@@ -1083,7 +1151,7 @@
             currentUser.pictureUrl = p.pictureUrl;
             document.getElementById('userAvatar').src = p.pictureUrl;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // 0. 嘗試從大廳快取中瞬間預先呈現商品詳情 (0 毫秒秒開商品)
@@ -1115,7 +1183,7 @@
             }
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 1. 初始化 LINE LIFF
@@ -1159,7 +1227,7 @@
             });
             sessionStorage.setItem('liff_user_profile', profStr);
             localStorage.setItem('liff_user_profile', profStr);
-          } catch (e) {}
+          } catch (e) { }
 
           // 🌟 關鍵補發：取得真實 LINE 身分後，立即觸發具名進站通報
           triggerProductPageView(true);
@@ -1205,7 +1273,7 @@
       if (!str || !String(str).trim()) return null;
       let s = String(str).trim();
       s = s.replace(/年|月/g, '-').replace(/日/g, ' ').replace(/\//g, '-').replace(/\s+/g, ' ').trim();
-      
+
       const shortMatch = s.match(/^(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
       if (shortMatch) {
         const currentYear = new Date().getFullYear();
@@ -1339,7 +1407,7 @@
     async function fetchProductData() {
       try {
         let apiUrl = `${CONFIG.GAS_API_URL}?action=getProductById&productId=${targetProductId}`;
-        
+
         // 若尚未設定 GAS URL 則使用展示用假資料
         if (!CONFIG.GAS_API_URL || CONFIG.GAS_API_URL === 'YOUR_GAS_EXEC_URL_HERE') {
           currentProduct = {
@@ -1363,7 +1431,7 @@
             if (settJson.success && settJson.data) {
               globalDeadline = settJson.data.ORDER_DEADLINE;
             }
-          } catch (e) {}
+          } catch (e) { }
 
           const res = await fetch(apiUrl);
           const json = await res.json();
@@ -1458,9 +1526,9 @@
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload),
             keepalive: true
-          }).catch(() => {});
+          }).catch(() => { });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 3. 渲染商品 UI (含多圖相簿、無損全圖顯示、原價隱藏邏輯)
@@ -1570,7 +1638,7 @@
           shipBanner.innerHTML = '<div>✈️ 本商品為連線，採購完成後回國統一寄出。</div>';
         }
       }
-      
+
       const priceNum = Number(currentProduct.price) || 0;
       const origPriceNum = Number(currentProduct.originalPrice) || 0;
       document.getElementById('productPrice').textContent = `NT$ ${priceNum.toLocaleString()}`;
@@ -1585,13 +1653,13 @@
       }
 
       const rawDesc = currentProduct.description || '';
-      const cleanDesc = (typeof rawDesc === 'string') 
-        ? rawDesc.replace(/\\n/g, '\n').replace(/\\r/g, '').trim() 
+      const cleanDesc = (typeof rawDesc === 'string')
+        ? rawDesc.replace(/\\n/g, '\n').replace(/\\r/g, '').trim()
         : String(rawDesc || '').trim();
       const descElem = document.getElementById('productDesc');
       descElem.textContent = cleanDesc;
       descElem.style.display = cleanDesc ? 'block' : 'none';
-      
+
       const stockNum = Number(currentProduct.stock) || 0;
       const stockElem = document.getElementById('productStock');
       if (stockNum >= 9999 || stockNum <= 0) {
@@ -1626,10 +1694,10 @@
       // 渲染規格按鈕 (支援個別價格、個別庫存與售罄禁用)
       const specContainer = document.getElementById('specList');
       specContainer.innerHTML = '';
-      
+
       const rawSpecs = (currentProduct.specs && currentProduct.specs.length > 0) ? currentProduct.specs : ['單一規格'];
       const normalizedSpecs = rawSpecs.map(s => normalizeSpecItem(s, priceNum, stockNum));
-      
+
       let initialSpecObj = null;
       let initialBtn = null;
 
@@ -1637,7 +1705,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'spec-btn';
-        
+
         const isSoldOut = (!specObj.isUnlimited && specObj.stock <= 0);
         let btnText = specObj.name;
         if (isSoldOut) {
@@ -1745,10 +1813,10 @@
       };
 
       document.getElementById('btnPlus').onclick = () => {
-        const maxStock = (selectedSpecObj && !selectedSpecObj.isUnlimited) 
-          ? selectedSpecObj.stock 
+        const maxStock = (selectedSpecObj && !selectedSpecObj.isUnlimited)
+          ? selectedSpecObj.stock
           : (currentProduct && currentProduct.stock >= 9999 ? 9999 : (currentProduct ? currentProduct.stock : 9999));
-        
+
         if (currentQty < maxStock) {
           currentQty++;
           document.getElementById('inputQty').value = currentQty;
@@ -2208,7 +2276,7 @@
     function showSuccessModal(prodName, spec, qty, subtotal, isMerged, totalQty) {
       document.getElementById('modalProdName').textContent = prodName;
       document.getElementById('modalSpec').textContent = spec;
-      
+
       const titleElem = document.getElementById('modalSuccessTitle');
       const qtyElem = document.getElementById('modalQty');
 
@@ -2280,7 +2348,7 @@
             if (!name && p.displayName) name = p.displayName;
             if (!avatar && p.pictureUrl) avatar = p.pictureUrl;
           }
-        } catch (err) {}
+        } catch (err) { }
       }
 
       if (uid) params.set('uid', uid);
@@ -2294,4 +2362,5 @@
     }
   </script>
 </body>
+
 </html>
