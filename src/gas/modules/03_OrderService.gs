@@ -828,11 +828,30 @@
       }
     }
 
+    // 建立商品供應模式速查字典
+    const prodModeMap = {};
+    const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (prodSheet) {
+      const pData = prodSheet.getDataRange().getValues();
+      for (let p = 1; p < pData.length; p++) {
+        const pid = String(pData[p][0] || '').trim();
+        const cat = String(pData[p][2] || '').trim();
+        if (pid) {
+          let mode = '連線';
+          if (cat.includes('現貨')) mode = '現貨';
+          else if (cat.includes('預購')) mode = '預購';
+          else mode = '連線';
+          prodModeMap[pid] = { category: cat || '✈️ 連線', supplyMode: mode };
+        }
+      }
+    }
+
     let needOrderSheetSync = false;
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (String(row[2] || '').trim() === userId) {
+        const pInfo = prodModeMap[row[4]] || { category: '✈️ 連線', supplyMode: '連線' };
         const orderRealName = String(row[22] || '').trim();
         const orderMemberPhone = String(row[23] || '').trim();
 
@@ -877,7 +896,9 @@
           shippingStatus: row[18],
           processNote: row[19] || '',
           trackingNumber: String(row[20] || '').trim(), // 第 21 欄 U 欄：包裹追蹤編號
-          checkoutId: String(row[21] || '').trim()       // 第 22 欄 V 欄：結帳編號 (Checkout_ID)
+          checkoutId: String(row[21] || '').trim(),       // 第 22 欄 V 欄：結帳編號 (Checkout_ID)
+          category: pInfo.category,                      // 供應模式/分類
+          supplyMode: pInfo.supplyMode                   // 標準供應模式 (現貨 / 預購 / 連線)
         };
 
         const shipStatus = String(row[18] || '').trim();

@@ -51,26 +51,30 @@
 - **嚴禁在正式功能中保留寫死的 `let mockOrders = [...]` 假資料**，必須正式接上 `fetch(GAS_API_URL)`。
 - 實作「載入中（Loading）」、「錯誤提示」與「操作成功回饋（Toast）」。
 
-### 步驟 4：測試機先行部署與自動化驗測閘門 (Test-First Gate)
-- **嚴禁在未經測試機驗測前直接部署至正式機！**
-- 任何涉及後端與核心前端之更動，**第一優先必須先在【測試專用環境】完成部署與驗測**：
-  1. 將編譯後程式碼部署至【測試專用 Google Apps Script】（綁定獨立之【測試專用試算表】）。
-  2. 執行自動化測試腳本（例如 `node scripts/test-high-frequency-logs.js` 等 API / 併發測試）。
-  3. 執行電腦端（1440px）與手機端（375px / 390px，防橫向溢出、100dvh、44px 熱區）響應式與無報錯自檢。
-  4. **出具「測試機自動化驗測成績單」**：必須 100% 標註通過（PASS），方可進入正式機發布。
+### 步驟 4：測試機先行部署與全自動化驗測閘門 (Automated Test Gate)
+- **AI 全自動化執行，嚴禁要求使用者手動開啟終端機或手動複製貼上！**
+- 任何涉及後端與前端之更動，**AI 必須直接在背景全自動執行**：
+  1. 自動打包編譯：`node scripts/build-gas.js`。
+  2. 自動切換並推送至【測試機】：`cp .clasp.test.json .clasp.json && clasp push -f`。
+  3. 自動執行測試腳本：`node scripts/test-high-frequency-logs.js` 等驗測程式。
+  4. 雙端響應式與無報錯自檢（375px/390px 手機 vs 1440px 電腦）。
+  5. 出具「測試機自動化驗測成績單」（必須 100% PASS）。
 
-### 步驟 5：正式機部署發布指引 (測試通過後放行)
-當測試機自動化驗測 100% PASS 後，**AI 必須明確提供標準兩步驟正式部署指引**，引導使用者將驗測無誤的代碼同步至正式環境：
-> **🚀 正式機 (Production) 部署操作指引（測試通過後執行）：**
-> 1. **複製最新通過驗測之程式碼**：
->    - 打開本機 `src/gas/Code.gs`，按 `Ctrl + A` (`Cmd + A`) 全選複製。
->    - 切換至【正式營運 Google Apps Script 編輯器】，點選 `程式碼.gs`，全選貼上覆蓋並儲存 (`Ctrl + S` / `Cmd + S`)。
-> 2. **發布 Web App「新版本」**：
->    - 點擊右上角藍色按鈕「部署」➔「管理部署作業」。
->    - 點擊右側 ✏️ 鉛筆圖示（編輯）。
->    - 在「版本」下拉選單中，務必選擇「**新版本**」 (New version)。
->    - 點擊右下角「**部署**」完成正式機上線！
-> 3. **前端發布**：將變更推送到 GitHub main 分支以更新 GitHub Pages。
+### 步驟 5：正式機全自動一鍵部署與發布 (Automated Production Release)
+當測試機自動化驗測 100% PASS 後，**AI 直接自動執行全套上線作業**：
+1. **自動切換並推送至【正式機】**：
+   ```bash
+   cp .clasp.prod.json .clasp.json && clasp push -f
+   ```
+2. **自動發布正式機 Web App 新版本**：
+   ```bash
+   clasp deploy --description "版本更新說明"
+   ```
+3. **自動推送前端代碼更新 GitHub Pages**：
+   ```bash
+   git add . && git commit -m "更新說明" && git push origin main
+   ```
+4. **回報正式上線完成**：向使用者展示發布版本號與線上巡檢結果，使用者完全無需碰觸終端機！
 
 ### 步驟 6：正式環境生產線上巡檢 (Production Smoke Test)
 完成正式發布後，進行輕量線上巡檢：

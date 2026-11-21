@@ -2316,18 +2316,16 @@
                     style="width: 100%;">
                 </div>
                 <div style="flex: 1 1 auto; min-width: 0;">
-                  <label class="form-label">活動分類標籤 *</label>
+                  <label class="form-label">供應模式 (三軌模式) *</label>
                   <div class="category-pills-row">
-                    <button type="button" class="cat-pill-btn active" data-cat="預購"
-                      onclick="selectCreateCategory(this, '預購')">📦 預購</button>
-                    <button type="button" class="cat-pill-btn" data-cat="現貨"
-                      onclick="selectCreateCategory(this, '現貨')">⚡ 現貨</button>
-                    <button type="button" class="cat-pill-btn" data-cat="親飛連線"
-                      onclick="selectCreateCategory(this, '親飛連線')">✈️ 親飛連線</button>
-                    <button type="button" class="cat-pill-btn" data-cat="每週採購"
-                      onclick="selectCreateCategory(this, '每週採購')">🗓️ 每週採購</button>
+                    <button type="button" class="cat-pill-btn active" data-cat="✈️ 連線"
+                      onclick="selectCreateCategory(this, '✈️ 連線')">✈️ 連線</button>
+                    <button type="button" class="cat-pill-btn" data-cat="⚡ 現貨"
+                      onclick="selectCreateCategory(this, '⚡ 現貨')">⚡ 現貨</button>
+                    <button type="button" class="cat-pill-btn" data-cat="📦 預購"
+                      onclick="selectCreateCategory(this, '📦 預購')">📦 預購</button>
                   </div>
-                  <input type="hidden" id="newProdCategory" value="預購">
+                  <input type="hidden" id="newProdCategory" value="✈️ 連線">
                 </div>
               </div>
 
@@ -3222,16 +3220,13 @@
 
         <div class="row-2">
           <div class="form-group">
-            <label class="form-label">活動分類標籤 *</label>
+            <label class="form-label">供應模式 (三軌模式) *</label>
             <div class="category-pills-row" id="editCategoryPillsRow">
-              <button type="button" class="cat-pill-btn active" onclick="selectEditCategory(this, '📦 預購')">📦
-                預購</button>
+              <button type="button" class="cat-pill-btn active" onclick="selectEditCategory(this, '✈️ 連線')">✈️ 連線</button>
               <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '⚡ 現貨')">⚡ 現貨</button>
-              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '✈️ 親飛連線')">✈️ 親飛連線</button>
-              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '🗓️ 每週採購')">🗓️
-                每週採購</button>
+              <button type="button" class="cat-pill-btn" onclick="selectEditCategory(this, '📦 預購')">📦 預購</button>
             </div>
-            <input type="hidden" id="editProdCategory" value="📦 預購">
+            <input type="hidden" id="editProdCategory" value="✈️ 連線">
           </div>
           <div class="form-group">
             <label class="form-label">商品上下架狀態 *</label>

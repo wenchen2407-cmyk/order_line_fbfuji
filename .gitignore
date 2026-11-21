@@ -8,3 +8,9 @@ prototypes/
 *preview*.html
 .DS_Store
 
+# clasp 設定檔（包含本機與個人 Script ID，不推上 GitHub）
+.clasp.json
+.clasp.test.json
+.clasp.prod.json
+
+

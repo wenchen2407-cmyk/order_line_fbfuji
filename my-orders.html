@@ -2518,9 +2518,19 @@
           badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         }
 
+        const catRaw = String(item.supplyMode || item.category || '').trim();
+        let modeBadge = '';
+        if (catRaw.includes('現貨')) {
+          modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">⚡現貨</span>`;
+        } else if (catRaw.includes('預購')) {
+          modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">📦預購</span>`;
+        } else {
+          modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">✈️連線</span>`;
+        }
+
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-            <div style="font-weight:800; font-size:14.5px; color:#1e293b; flex:1; line-height:1.4;">${item.productName || '連線好物'}</div>
+            <div style="font-weight:800; font-size:14.5px; color:#1e293b; flex:1; line-height:1.4;">${modeBadge}${item.productName || '連線好物'}</div>
             ${badgeHtml}
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--text-muted); background:#f8fafc; padding:7px 10px; border-radius:8px;">
@@ -2690,12 +2700,22 @@
                         String(it.shippingStatus || '').includes('斷貨') || 
                         String(it.shippingStatus || '').includes('取消') ||
                         String(it.paymentStatus || '').includes('免付款');
+          const itCat = String(it.supplyMode || it.category || '').trim();
+          let itModeBadge = '';
+          if (itCat.includes('現貨')) {
+            itModeBadge = `<span style="display:inline-block; font-size:10px; font-weight:800; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:1px 5px; border-radius:4px; margin-right:4px;">⚡現貨</span>`;
+          } else if (itCat.includes('預購')) {
+            itModeBadge = `<span style="display:inline-block; font-size:10px; font-weight:800; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:1px 5px; border-radius:4px; margin-right:4px;">📦預購</span>`;
+          } else {
+            itModeBadge = `<span style="display:inline-block; font-size:10px; font-weight:800; background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:1px 5px; border-radius:4px; margin-right:4px;">✈️連線</span>`;
+          }
+
           if (isOut) {
             return `
               <div style="display:flex; justify-content:space-between; align-items:center; background:#fef2f2; padding:8px 10px; border-radius:8px; border:1px solid #fecdd3; font-size:12px;">
                 <div>
                   <span style="color:#ef4444; font-weight:700;">✕ 缺貨</span>
-                  <span style="color:#64748b; margin-left:4px; text-decoration:line-through;">${it.productName || '商品'} (${it.spec || '標準'})</span>
+                  <span style="color:#64748b; margin-left:4px; text-decoration:line-through;">${itModeBadge}${it.productName || '商品'} (${it.spec || '標準'})</span>
                 </div>
                 <span style="color:#94a3b8; font-weight:700;">NT$ 0</span>
               </div>
@@ -2705,6 +2725,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:8px; border:1px solid #f1f5f9; font-size:12px;">
               <div>
                 <span style="color:#16a34a; font-weight:800;">✓</span>
+                ${itModeBadge}
                 <b style="color:#1e293b; margin-left:3px;">${it.productName || '連線好物'}</b>
                 <span style="color:#64748b; font-size:11px; margin-left:4px;">${it.spec || '標準'} × ${it.quantity || 1}</span>
               </div>

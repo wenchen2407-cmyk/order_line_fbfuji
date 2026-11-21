@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/21 上午1:20:11 (Asia/Taipei)
+ * 打包時間：2026/11/21 下午8:49:03 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -417,10 +417,21 @@
         const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
         const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
 
+        const rawCategory = String(row[2] || '').trim();
+        let supplyMode = '連線';
+        if (rawCategory.includes('現貨')) {
+          supplyMode = '現貨';
+        } else if (rawCategory.includes('預購')) {
+          supplyMode = '預購';
+        } else {
+          supplyMode = '連線';
+        }
+
         const prodItem = {
           id: row[0],
           name: row[1],
-          category: row[2],
+          category: rawCategory || '✈️ 連線',
+          supplyMode: supplyMode,
           originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
           price: basePrice,
           stock: baseStock,
@@ -633,10 +644,16 @@
         costCellVal = `=IF(OR(N(Q${targetRow})>0, N(T${targetRow})>0), ROUND((N(Q${targetRow}) + N(R${targetRow})) * N(S${targetRow})) + ROUND((N(T${targetRow}) / 1000) * IF(N(U${targetRow})>0, N(U${targetRow}), 240)), ${costCellVal})`;
       }
 
+      // 供應模式 (優先取 supplyMode，次取 category，預設為 '✈️ 連線')
+      let chosenMode = String(data.supplyMode || data.category || '✈️ 連線').trim();
+      if (chosenMode === '現貨') chosenMode = '⚡ 現貨';
+      else if (chosenMode === '預購') chosenMode = '📦 預購';
+      else if (chosenMode === '連線') chosenMode = '✈️ 連線';
+
       sheet.appendRow([
         pid,
         data.name.trim(),
-        data.category || '連線好物',
+        chosenMode,
         (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
         Number(data.price),
         stockQty,
@@ -804,7 +821,11 @@
 
       // 更新各欄位 (嚴格對齊 22 欄規格)
       sheet.getRange(rowIndex, 2).setValue(String(data.name || '').trim()); // B: 商品名稱
-      sheet.getRange(rowIndex, 3).setValue(String(data.category || '連線好物').trim()); // C: 分類
+      let updateMode = String(data.supplyMode || data.category || '✈️ 連線').trim();
+      if (updateMode === '現貨') updateMode = '⚡ 現貨';
+      else if (updateMode === '預購') updateMode = '📦 預購';
+      else if (updateMode === '連線') updateMode = '✈️ 連線';
+      sheet.getRange(rowIndex, 3).setValue(updateMode); // C: 供應模式 (現貨/預購/連線)
       sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
       sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
       sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
@@ -886,7 +907,7 @@
       const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
 
       let updatedCount = 0;
-      const targetCol = updateType === 'status' ? 10 : (updateType === 'category' ? 3 : 0);
+      const targetCol = updateType === 'status' ? 10 : ((updateType === 'category' || updateType === 'supplyMode') ? 3 : 0);
       if (targetCol === 0) return { success: false, message: '不支援的批次更新類型：' + updateType };
 
       for (let i = 0; i < idRange.length; i++) {
@@ -2048,11 +2069,30 @@
       }
     }
 
+    // 建立商品供應模式速查字典
+    const prodModeMap = {};
+    const prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
+    if (prodSheet) {
+      const pData = prodSheet.getDataRange().getValues();
+      for (let p = 1; p < pData.length; p++) {
+        const pid = String(pData[p][0] || '').trim();
+        const cat = String(pData[p][2] || '').trim();
+        if (pid) {
+          let mode = '連線';
+          if (cat.includes('現貨')) mode = '現貨';
+          else if (cat.includes('預購')) mode = '預購';
+          else mode = '連線';
+          prodModeMap[pid] = { category: cat || '✈️ 連線', supplyMode: mode };
+        }
+      }
+    }
+
     let needOrderSheetSync = false;
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (String(row[2] || '').trim() === userId) {
+        const pInfo = prodModeMap[row[4]] || { category: '✈️ 連線', supplyMode: '連線' };
         const orderRealName = String(row[22] || '').trim();
         const orderMemberPhone = String(row[23] || '').trim();
 
@@ -2097,7 +2137,9 @@
           shippingStatus: row[18],
           processNote: row[19] || '',
           trackingNumber: String(row[20] || '').trim(), // 第 21 欄 U 欄：包裹追蹤編號
-          checkoutId: String(row[21] || '').trim()       // 第 22 欄 V 欄：結帳編號 (Checkout_ID)
+          checkoutId: String(row[21] || '').trim(),       // 第 22 欄 V 欄：結帳編號 (Checkout_ID)
+          category: pInfo.category,                      // 供應模式/分類
+          supplyMode: pInfo.supplyMode                   // 標準供應模式 (現貨 / 預購 / 連線)
         };
 
         const shipStatus = String(row[18] || '').trim();
@@ -3697,7 +3739,7 @@ function testTelegramInEditor() {
     // 1. 商品清單工作表 (升級支援原幣稅前金額、稅金、匯率、重量、公式連動欄位與最後更新時間)
     let prodSheet = ss.getSheetByName(SHEET_NAMES.PRODUCTS);
     const prodHeaders = [
-      '商品編號', '商品名稱', '分類', '專櫃原價', '連線代購價', '現貨庫存', 
+      '商品編號', '商品名稱', '供應模式', '專櫃原價', '連線代購價', '現貨庫存', 
       '規格清單(JSON)', '封面主圖網址', '商品描述', '狀態', '建立時間',
       '成本價(NT$)', '採購備註說明', '所有圖片清單(JSON)', '指定結單時間',
       '採購幣別', '原幣稅前金額', '稅金(原幣)', '採購匯率', '商品重量(g)', '國際運費(元/kg)',
@@ -3712,7 +3754,7 @@ function testTelegramInEditor() {
       // 加入範例資料 (成本價採用精確分開四捨五入公式連動：ROUND((Q2+R2)*S2) + ROUND((T2/1000)*U2))
       const nowStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
       prodSheet.appendRow([
-        'J2609270001', '日本代購限定 輕量防潑水後背包', '親飛連線', 1880, 1450, 999999,
+        'J2609270001', '日本代購限定 輕量防潑水後背包', '✈️ 連線', 1880, 1450, 999999,
         JSON.stringify(['米白色', '經典黑', '海軍藍']),
         'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
         '日本專櫃直購，輕盈大容量，防潑水尼龍材質！', '上架中', new Date(),
@@ -3722,7 +3764,7 @@ function testTelegramInEditor() {
         nowStr
       ]);
     } else {
-      // 既有表格：升級表頭為最新 22 欄規格
+      // 既有表格：升級表頭為最新 22 欄規格 (C 欄直接改為「供應模式」)
       const curCols = prodSheet.getMaxColumns();
       if (curCols < prodHeaders.length) {
         prodSheet.insertColumnsAfter(curCols, prodHeaders.length - curCols);
@@ -3734,6 +3776,18 @@ function testTelegramInEditor() {
       upgradeExistingProductsToFormula(prodSheet);
     }
     // 將 O 欄 (第15欄) 設為純文字格式，避免日期被 Excel/Sheets 自動轉換失真
+    prodSheet.getRange("O:O").setNumberFormat('@');
+
+    // 1.1 為【商品清單】C 欄建立「供應模式」下拉選單 (現貨 / 預購 / 連線)
+    try {
+      const modeRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['⚡ 現貨', '📦 預購', '✈️ 連線', '現貨', '預購', '連線'], true)
+        .setAllowInvalid(true)
+        .build();
+      prodSheet.getRange("C2:C2000").setDataValidation(modeRule);
+    } catch (e) {
+      console.warn('建立商品清單供應模式下拉選單略過:', e);
+    }
     prodSheet.getRange("O:O").setNumberFormat('@');
 
     // 2. 訂單明細工作表 (升級為 24 欄規格：徹底分離 M/N 欄「結帳收件人姓名/電話」與 W/X 欄「LINE 會員真實姓名/電話」)

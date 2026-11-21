@@ -201,6 +201,34 @@
       margin-bottom: 8px;
     }
 
+    .product-tag.tag-instock {
+      background: #ecfdf5 !important;
+      color: #059669 !important;
+      border: 1px solid #a7f3d0;
+    }
+    .product-tag.tag-preorder {
+      background: #eff6ff !important;
+      color: #2563eb !important;
+      border: 1px solid #bfdbfe;
+    }
+    .product-tag.tag-live {
+      background: #fffbeb !important;
+      color: #d97706 !important;
+      border: 1px solid #fde68a;
+    }
+
+    .shipping-expectation-banner {
+      margin: 12px 0 6px 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .product-title {
       font-size: 18px;
       font-weight: 700;
@@ -835,6 +863,7 @@
           <span class="current-price" id="productPrice">NT$ ---</span>
           <span class="original-price" id="originalPrice" style="display: none;">NT$ ---</span>
         </div>
+        <div id="shippingExpectationBanner" class="shipping-expectation-banner" style="display: none;"></div>
         <p id="productDesc" class="product-desc" style="display: none;"></p>
       </div>
     </div>
@@ -1207,10 +1236,7 @@
         isDeadlineExpired = false;
         banner.classList.remove('expired');
         if (submitBtn && submitBtn.textContent.includes('截止')) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
-          submitBtn.style.cursor = 'pointer';
+          refreshSubmitButton();
         }
         return;
       }
@@ -1234,7 +1260,7 @@
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.textContent = '🚫 已截止登記';
+          submitBtn.textContent = '🚫 已截止收單';
           submitBtn.style.background = '#94a3b8';
           submitBtn.style.cursor = 'not-allowed';
         }
@@ -1262,11 +1288,50 @@
         textElem.textContent = `⏳ 距離截止剩餘：${timeStr}`;
 
         if (submitBtn && submitBtn.textContent.includes('截止')) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
-          submitBtn.style.cursor = 'pointer';
+          refreshSubmitButton();
         }
+      }
+    }
+
+    // 依商品供應模式 (現貨 / 預購 / 連線) 與庫存/結單狀態動態刷新下單按鈕文案與樣式
+    function refreshSubmitButton() {
+      const submitBtn = document.getElementById('btnSubmitOrder');
+      if (!submitBtn) return;
+
+      if (isDeadlineExpired) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '🚫 已截止收單';
+        submitBtn.style.background = '#94a3b8';
+        submitBtn.style.cursor = 'not-allowed';
+        return;
+      }
+
+      if (selectedSpecObj && !selectedSpecObj.isUnlimited && selectedSpecObj.stock <= 0) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '此規格已售完';
+        submitBtn.style.background = '#94a3b8';
+        submitBtn.style.cursor = 'not-allowed';
+        return;
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.style.cursor = 'pointer';
+
+      const catRaw = String((currentProduct && (currentProduct.category || currentProduct.supplyMode)) || '').trim();
+      let mode = '連線';
+      if (catRaw.includes('現貨')) mode = '現貨';
+      else if (catRaw.includes('預購')) mode = '預購';
+      else mode = '連線';
+
+      if (mode === '現貨') {
+        submitBtn.textContent = '⚡ 立即搶購現貨 (24-48h 快速寄出)';
+        submitBtn.style.background = '#059669';
+      } else if (mode === '預購') {
+        submitBtn.textContent = '📦 登記預購 (預計 7-14 工作天抵台)';
+        submitBtn.style.background = '#2563eb';
+      } else {
+        submitBtn.textContent = '🚀 連線搶購登記 (回國統一寄出)';
+        submitBtn.style.background = '#06c755';
       }
     }
 
@@ -1463,11 +1528,47 @@
 
       document.getElementById('productTitle').textContent = currentProduct.name;
       const catElem = document.getElementById('productCategory');
-      if (currentProduct.category) {
-        catElem.textContent = currentProduct.category;
+      const catRaw = String(currentProduct.category || currentProduct.supplyMode || '').trim();
+      let mode = '連線';
+      if (catRaw.includes('現貨')) mode = '現貨';
+      else if (catRaw.includes('預購')) mode = '預購';
+      else mode = '連線';
+
+      if (catElem) {
         catElem.style.display = 'inline-block';
-      } else {
-        catElem.style.display = 'none';
+        catElem.className = 'product-tag';
+        if (mode === '現貨') {
+          catElem.classList.add('tag-instock');
+          catElem.textContent = '⚡ 現貨供應';
+        } else if (mode === '預購') {
+          catElem.classList.add('tag-preorder');
+          catElem.textContent = '📦 預購選品';
+        } else {
+          catElem.classList.add('tag-live');
+          catElem.textContent = '✈️ 檔期連線';
+        }
+      }
+
+      // 出貨時間說明區塊 (降低買家催單期待)
+      const shipBanner = document.getElementById('shippingExpectationBanner');
+      if (shipBanner) {
+        shipBanner.style.display = 'flex';
+        if (mode === '現貨') {
+          shipBanner.style.background = '#ecfdf5';
+          shipBanner.style.color = '#065f46';
+          shipBanner.style.border = '1px solid #a7f3d0';
+          shipBanner.innerHTML = '<span>⚡</span><div><b>現貨供應</b>：付款完成後 24-48 小時內火速包裝出貨！</div>';
+        } else if (mode === '預購') {
+          shipBanner.style.background = '#eff6ff';
+          shipBanner.style.color = '#1e40af';
+          shipBanner.style.border = '1px solid #bfdbfe';
+          shipBanner.innerHTML = '<span>📦</span><div><b>專櫃預購</b>：下單後約需 7-14 個工作天抵台寄出。</div>';
+        } else {
+          shipBanner.style.background = '#fffbeb';
+          shipBanner.style.color = '#92400e';
+          shipBanner.style.border = '1px solid #fde68a';
+          shipBanner.innerHTML = '<span>✈️</span><div><b>親飛連線</b>：現場限量搶購，預計回國後依序包裝統一出貨。</div>';
+        }
       }
       
       const priceNum = Number(currentProduct.price) || 0;
@@ -1607,13 +1708,12 @@
           submitBtn.disabled = true;
           submitBtn.textContent = '此規格已售完';
           submitBtn.style.background = '#94a3b8';
+          submitBtn.style.cursor = 'not-allowed';
         }
       } else if (specObj.isUnlimited || specObj.stock >= 9999) {
         stockElem.style.display = 'none';
         if (submitBtn && !isDeadlineExpired) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
+          refreshSubmitButton();
         }
       } else {
         stockElem.textContent = `剩餘現貨：${specObj.stock}`;
@@ -1621,9 +1721,7 @@
         stockElem.style.background = '#ecfdf5';
         stockElem.style.color = '#059669';
         if (submitBtn && !isDeadlineExpired) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '🚀 火速登記';
-          submitBtn.style.background = 'var(--primary)';
+          refreshSubmitButton();
         }
       }
 

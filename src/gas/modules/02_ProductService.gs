@@ -66,10 +66,21 @@
         const createdAtStr = row[10] ? formatDeadlineStr(row[10]) : '';
         const updatedAtStr = row[21] ? formatDeadlineStr(row[21]) : (createdAtStr || '');
 
+        const rawCategory = String(row[2] || '').trim();
+        let supplyMode = '連線';
+        if (rawCategory.includes('現貨')) {
+          supplyMode = '現貨';
+        } else if (rawCategory.includes('預購')) {
+          supplyMode = '預購';
+        } else {
+          supplyMode = '連線';
+        }
+
         const prodItem = {
           id: row[0],
           name: row[1],
-          category: row[2],
+          category: rawCategory || '✈️ 連線',
+          supplyMode: supplyMode,
           originalPrice: hasOrigPrice ? Number(origPriceVal) : 0,
           price: basePrice,
           stock: baseStock,
@@ -282,10 +293,16 @@
         costCellVal = `=IF(OR(N(Q${targetRow})>0, N(T${targetRow})>0), ROUND((N(Q${targetRow}) + N(R${targetRow})) * N(S${targetRow})) + ROUND((N(T${targetRow}) / 1000) * IF(N(U${targetRow})>0, N(U${targetRow}), 240)), ${costCellVal})`;
       }
 
+      // 供應模式 (優先取 supplyMode，次取 category，預設為 '✈️ 連線')
+      let chosenMode = String(data.supplyMode || data.category || '✈️ 連線').trim();
+      if (chosenMode === '現貨') chosenMode = '⚡ 現貨';
+      else if (chosenMode === '預購') chosenMode = '📦 預購';
+      else if (chosenMode === '連線') chosenMode = '✈️ 連線';
+
       sheet.appendRow([
         pid,
         data.name.trim(),
-        data.category || '連線好物',
+        chosenMode,
         (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
         Number(data.price),
         stockQty,
@@ -453,7 +470,11 @@
 
       // 更新各欄位 (嚴格對齊 22 欄規格)
       sheet.getRange(rowIndex, 2).setValue(String(data.name || '').trim()); // B: 商品名稱
-      sheet.getRange(rowIndex, 3).setValue(String(data.category || '連線好物').trim()); // C: 分類
+      let updateMode = String(data.supplyMode || data.category || '✈️ 連線').trim();
+      if (updateMode === '現貨') updateMode = '⚡ 現貨';
+      else if (updateMode === '預購') updateMode = '📦 預購';
+      else if (updateMode === '連線') updateMode = '✈️ 連線';
+      sheet.getRange(rowIndex, 3).setValue(updateMode); // C: 供應模式 (現貨/預購/連線)
       sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
       sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
       sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
@@ -535,7 +556,7 @@
       const idRange = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
 
       let updatedCount = 0;
-      const targetCol = updateType === 'status' ? 10 : (updateType === 'category' ? 3 : 0);
+      const targetCol = updateType === 'status' ? 10 : ((updateType === 'category' || updateType === 'supplyMode') ? 3 : 0);
       if (targetCol === 0) return { success: false, message: '不支援的批次更新類型：' + updateType };
 
       for (let i = 0; i < idRange.length; i++) {
