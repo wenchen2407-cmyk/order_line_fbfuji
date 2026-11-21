@@ -93,6 +93,13 @@
         } else {
           result = getProcurementOrders();
         }
+      } else if (action === 'setupSpreadsheet') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          const msg = setupSpreadsheet();
+          result = { success: true, message: msg };
+        }
       } else if (action === 'updateParcelStatus') {
         if (!checkIsAdmin(reqUserId, reqAdminToken)) {
           result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };

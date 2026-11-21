@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/21 下午9:48:58 (Asia/Taipei)
+ * 打包時間：2026/11/21 下午10:03:44 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -212,6 +212,13 @@
           result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
         } else {
           result = getProcurementOrders();
+        }
+      } else if (action === 'setupSpreadsheet') {
+        if (!checkIsAdmin(reqUserId, reqAdminToken)) {
+          result = { success: false, message: '🔒 存取遭拒：管理者權限或安全通行碼驗證失敗！', isAdmin: false };
+        } else {
+          const msg = setupSpreadsheet();
+          result = { success: true, message: msg };
         }
       } else if (action === 'updateParcelStatus') {
         if (!checkIsAdmin(reqUserId, reqAdminToken)) {
