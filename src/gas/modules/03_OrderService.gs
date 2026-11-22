@@ -61,8 +61,15 @@
 
       const targetSpec = String(orderData.spec || '單一規格').trim();
       let specsList = [];
+      let specsContainer = null;
       try {
-        specsList = JSON.parse(targetProduct[6]);
+        const parsed = JSON.parse(targetProduct[6]);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.variants) {
+          specsContainer = parsed;
+          specsList = parsed.variants;
+        } else if (Array.isArray(parsed)) {
+          specsList = parsed;
+        }
       } catch(e) {
         specsList = targetProduct[6] ? [targetProduct[6]] : [];
       }
@@ -110,7 +117,12 @@
         if (!isUnlimited) {
           targetSpecObj.stock = Math.max(0, sStock - buyQty);
           specsList[targetSpecIndex] = targetSpecObj;
-          prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsList));
+          if (specsContainer) {
+            specsContainer.variants = specsList;
+            prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsContainer));
+          } else {
+            prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsList));
+          }
         }
       }
 

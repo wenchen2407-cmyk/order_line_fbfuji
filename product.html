@@ -931,10 +931,32 @@
     <!-- 選購選項 -->
     <div class="form-section">
       <div class="section-title">選擇款式與數量</div>
-      <div class="form-group">
+      <div class="form-group" id="singleTierSpecGroup">
         <label class="form-label">規格款式</label>
         <div class="spec-pills" id="specList">
-          <!-- 動態生成規格 -->
+          <!-- 動態生成單層規格 -->
+        </div>
+      </div>
+
+      <!-- 雙層規格結構 (如：顏色 + 尺寸) -->
+      <div id="twoTierSpecGroup" style="display: none; flex-direction: column; gap: 14px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" id="labelDim1Title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>顏色</span>
+            <span id="selectedDim1Badge" style="font-size: 11.5px; color: var(--primary-dark); font-weight: 700; background: #eefbf3; padding: 2px 8px; border-radius: 6px;"></span>
+          </label>
+          <div class="spec-pills" id="dim1Pills"></div>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" id="labelDim2Title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>尺寸</span>
+            <span id="selectedDim2Badge" style="font-size: 11.5px; color: #2563eb; font-weight: 700; background: #eff6ff; padding: 2px 8px; border-radius: 6px;"></span>
+          </label>
+          <div class="spec-pills" id="dim2Pills"></div>
+        </div>
+        <div id="twoTierCombinationHint" style="font-size: 12.5px; color: #047857; background: #ecfdf5; padding: 8px 12px; border-radius: 10px; border: 1px solid #a7f3d0; font-weight: 700; display: flex; align-items: center; justify-content: space-between;">
+          <span id="twoTierSelectedText">已選規格：-</span>
+          <span id="twoTierStockText" style="font-size: 11.5px; color: #065f46;">庫存查詢中</span>
         </div>
       </div>
       <div class="form-group">
@@ -1691,6 +1713,46 @@
         };
       }
 
+      // 判斷是否為雙層規格
+      const isTwoTier = (currentProduct.specMode === 'two_tier') ||
+        (currentProduct.specDimensions && Array.isArray(currentProduct.specDimensions) && currentProduct.specDimensions.length >= 2) ||
+        (Array.isArray(currentProduct.specs) && currentProduct.specs.some(s => s && s.dim1 && s.dim2));
+
+      const singleTierGroup = document.getElementById('singleTierSpecGroup');
+      const twoTierGroup = document.getElementById('twoTierSpecGroup');
+
+      if (isTwoTier) {
+        if (singleTierGroup) singleTierGroup.style.display = 'none';
+        if (twoTierGroup) twoTierGroup.style.display = 'flex';
+        renderTwoTierSpecs(currentProduct, priceNum, stockNum);
+      } else {
+        if (singleTierGroup) singleTierGroup.style.display = 'block';
+        if (twoTierGroup) twoTierGroup.style.display = 'none';
+        renderSingleTierSpecs(currentProduct, priceNum, stockNum);
+      }
+    }
+
+    function renderSingleTierSpecs(currentProduct, priceNum, stockNum) {
+      // 規格資料標準化 Helper
+      function normalizeSpecItem(s, defaultPrice, defaultStock) {
+        if (typeof s === 'object' && s !== null) {
+          const isUnlim = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
+          return {
+            name: s.name || '單一規格',
+            price: Number(s.price) || defaultPrice,
+            stock: isUnlim ? 9999 : (Number(s.stock) || 0),
+            isUnlimited: isUnlim
+          };
+        }
+        const isUnlim = Boolean(Number(defaultStock) >= 9999);
+        return {
+          name: String(s || '單一規格'),
+          price: defaultPrice,
+          stock: isUnlim ? 9999 : (Number(defaultStock) || 0),
+          isUnlimited: isUnlim
+        };
+      }
+
       // 渲染規格按鈕 (支援個別價格、個別庫存與售罄禁用)
       const specContainer = document.getElementById('specList');
       specContainer.innerHTML = '';
@@ -1738,6 +1800,210 @@
       if (initialSpecObj && initialBtn) {
         selectSpec(initialSpecObj, initialBtn);
       }
+    }
+
+    let currentSelectedDim1 = null;
+    let currentSelectedDim2 = null;
+
+    function renderTwoTierSpecs(product, defaultPrice, defaultStock) {
+      const dim1Pills = document.getElementById('dim1Pills');
+      const dim2Pills = document.getElementById('dim2Pills');
+      const label1 = document.getElementById('labelDim1Title');
+      const label2 = document.getElementById('labelDim2Title');
+
+      if (!dim1Pills || !dim2Pills) return;
+      dim1Pills.innerHTML = '';
+      dim2Pills.innerHTML = '';
+
+      const dim1Meta = product.specDimensions?.[0] || { name: '顏色', values: [] };
+      const dim2Meta = product.specDimensions?.[1] || { name: '尺寸', values: [] };
+
+      const dim1Name = dim1Meta.name || '顏色';
+      const dim2Name = dim2Meta.name || '尺寸';
+
+      if (label1) label1.querySelector('span').textContent = dim1Name;
+      if (label2) label2.querySelector('span').textContent = dim2Name;
+
+      // 正規化 variants
+      const rawSpecs = (product.specs && product.specs.length > 0) ? product.specs : [];
+      const variants = rawSpecs.map(s => {
+        if (typeof s === 'object' && s) {
+          const isUnlim = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
+          return {
+            name: String(s.name || ''),
+            dim1: String(s.dim1 || '').trim(),
+            dim2: String(s.dim2 || '').trim(),
+            price: (s.price !== undefined && !isNaN(Number(s.price)) && Number(s.price) > 0) ? Number(s.price) : defaultPrice,
+            stock: isUnlim ? 9999 : (Number(s.stock) || 0),
+            isUnlimited: isUnlim
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      let vals1 = (dim1Meta.values && dim1Meta.values.length > 0)
+        ? [...dim1Meta.values]
+        : [...new Set(variants.map(v => v.dim1).filter(Boolean))];
+      let vals2 = (dim2Meta.values && dim2Meta.values.length > 0)
+        ? [...dim2Meta.values]
+        : [...new Set(variants.map(v => v.dim2).filter(Boolean))];
+
+      if (vals1.length === 0) vals1 = ['標準款'];
+      if (vals2.length === 0) vals2 = ['單一尺寸'];
+
+      // 預設挑選有庫存的組合
+      let initialV = variants.find(v => v.isUnlimited || v.stock > 0) || variants[0];
+      if (initialV) {
+        currentSelectedDim1 = initialV.dim1 || vals1[0];
+        currentSelectedDim2 = initialV.dim2 || vals2[0];
+      } else {
+        currentSelectedDim1 = vals1[0];
+        currentSelectedDim2 = vals2[0];
+      }
+
+      // 渲染第一層按鈕
+      vals1.forEach(v1 => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'spec-btn' + (v1 === currentSelectedDim1 ? ' active' : '');
+        btn.textContent = v1;
+
+        const v1Variants = variants.filter(v => (v.dim1 === v1 || v.name.includes(v1)));
+        const allSoldOut = v1Variants.length > 0 && v1Variants.every(v => !v.isUnlimited && v.stock <= 0);
+        if (allSoldOut) {
+          btn.classList.add('sold-out');
+          btn.textContent += ' (售完)';
+        }
+
+        btn.onclick = () => {
+          if (allSoldOut) {
+            alert(`【${v1}】所有尺寸目前已全數售罄囉！`);
+            return;
+          }
+          currentSelectedDim1 = v1;
+          document.querySelectorAll('#dim1Pills .spec-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const b1 = document.getElementById('selectedDim1Badge');
+          if (b1) b1.textContent = v1;
+
+          updateDim2Buttons(variants, vals2, defaultPrice);
+        };
+        dim1Pills.appendChild(btn);
+      });
+
+      const b1 = document.getElementById('selectedDim1Badge');
+      if (b1) b1.textContent = currentSelectedDim1;
+
+      updateDim2Buttons(variants, vals2, defaultPrice);
+    }
+
+    function updateDim2Buttons(variants, vals2, defaultPrice) {
+      const dim2Pills = document.getElementById('dim2Pills');
+      if (!dim2Pills) return;
+      dim2Pills.innerHTML = '';
+
+      let candidateVar = null;
+      let firstAvailableVal2 = null;
+
+      vals2.forEach(v2 => {
+        const targetV = variants.find(v =>
+          (v.dim1 === currentSelectedDim1 || v.name.includes(currentSelectedDim1)) &&
+          (v.dim2 === v2 || v.name.includes(v2))
+        );
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'spec-btn';
+
+        const isSoldOut = (!targetV || (!targetV.isUnlimited && targetV.stock <= 0));
+        let label = v2;
+        if (isSoldOut) {
+          btn.classList.add('sold-out');
+          label += ' (售完)';
+        } else {
+          if (!firstAvailableVal2) firstAvailableVal2 = v2;
+        }
+
+        btn.textContent = label;
+        btn.onclick = () => {
+          if (isSoldOut) {
+            alert(`【${currentSelectedDim1} / ${v2}】此尺寸目前已售完囉！敬請挑選其他款式～`);
+            return;
+          }
+          currentSelectedDim2 = v2;
+          applySelectedTwoTierVariant(targetV, btn);
+        };
+
+        dim2Pills.appendChild(btn);
+
+        if (v2 === currentSelectedDim2 && !isSoldOut) {
+          candidateVar = targetV;
+        }
+      });
+
+      if (!candidateVar && firstAvailableVal2) {
+        currentSelectedDim2 = firstAvailableVal2;
+        candidateVar = variants.find(v =>
+          (v.dim1 === currentSelectedDim1 || v.name.includes(currentSelectedDim1)) &&
+          (v.dim2 === currentSelectedDim2 || v.name.includes(currentSelectedDim2))
+        );
+      }
+
+      dim2Pills.querySelectorAll('.spec-btn').forEach(btn => {
+        if (btn.textContent.startsWith(currentSelectedDim2) && !btn.classList.contains('sold-out')) {
+          btn.classList.add('active');
+        }
+      });
+
+      if (candidateVar) {
+        applySelectedTwoTierVariant(candidateVar);
+      } else {
+        const fallbackV = variants.find(v => (v.dim1 === currentSelectedDim1)) || variants[0];
+        if (fallbackV) applySelectedTwoTierVariant(fallbackV);
+      }
+    }
+
+    function applySelectedTwoTierVariant(variantObj, targetBtn = null) {
+      if (!variantObj) return;
+      selectedSpecObj = variantObj;
+      selectedSpec = variantObj.name || `${variantObj.dim1} / ${variantObj.dim2}`;
+
+      if (targetBtn) {
+        document.querySelectorAll('#dim2Pills .spec-btn').forEach(b => b.classList.remove('active'));
+        targetBtn.classList.add('active');
+      }
+
+      const b2 = document.getElementById('selectedDim2Badge');
+      if (b2) b2.textContent = currentSelectedDim2;
+
+      const txtEl = document.getElementById('twoTierSelectedText');
+      if (txtEl) txtEl.textContent = `已選規格：${selectedSpec}`;
+
+      const stEl = document.getElementById('twoTierStockText');
+      if (stEl) {
+        stEl.textContent = variantObj.isUnlimited ? '現貨充足 (無限接單)' : `剩餘庫存：${variantObj.stock} 件`;
+        stEl.style.color = variantObj.stock <= 0 && !variantObj.isUnlimited ? '#ef4444' : '#065f46';
+      }
+
+      const specPrice = Number(variantObj.price) || (Number(currentProduct.price) || 0);
+      document.getElementById('productPrice').textContent = `NT$ ${specPrice.toLocaleString()}`;
+
+      const origPriceNum = Number(currentProduct.originalPrice) || 0;
+      const origPriceElem = document.getElementById('originalPrice');
+      if (origPriceNum > 0 && origPriceNum > specPrice) {
+        origPriceElem.textContent = `NT$ ${origPriceNum.toLocaleString()}`;
+        origPriceElem.style.display = 'inline';
+      } else {
+        origPriceElem.style.display = 'none';
+      }
+
+      const inputQty = document.getElementById('inputQty');
+      const maxStock = variantObj.isUnlimited ? 9999 : variantObj.stock;
+      if (currentQty > maxStock) {
+        currentQty = Math.max(1, maxStock);
+        if (inputQty) inputQty.value = currentQty;
+      }
+      updateTotal();
     }
 
     function selectSpec(specObj, btnElement) {

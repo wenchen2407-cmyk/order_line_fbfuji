@@ -2446,17 +2446,28 @@
               <div class="form-group"
                 style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
                 <div
-                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                   <label class="form-label"
                     style="font-weight: 800; color: #0f172a; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
                     <span>🏷️ 規格款式、個別售價與庫存數量</span>
                   </label>
-                  <label
-                    style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
-                    <input type="checkbox" id="advancedSpecModeCheck" style="width: 16px; height: 16px;"
-                      onchange="toggleSpecMode()">
-                    <span>啟用各規格「獨立價格」與「個別庫存」</span>
-                  </label>
+                  
+                  <!-- 三種規格模式切換按鈕組 -->
+                  <div style="display: flex; align-items: center; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 10px; font-size: 12px; font-weight: 700;">
+                    <button type="button" class="spec-tab-pill active" id="btnSpecModeSimple" onclick="setSpecMode('simple')"
+                      style="padding: 4px 10px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: #fff; color: #0f172a; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                      簡易單一
+                    </button>
+                    <button type="button" class="spec-tab-pill" id="btnSpecModeAdvanced" onclick="setSpecMode('advanced')"
+                      style="padding: 4px 10px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; font-weight: 700;">
+                      單層規格
+                    </button>
+                    <button type="button" class="spec-tab-pill" id="btnSpecModeTwoTier" onclick="setSpecMode('two_tier')"
+                      style="padding: 4px 12px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #047857; font-weight: 800;">
+                      ✨ 雙層規格 (推薦)
+                    </button>
+                  </div>
+                  <input type="checkbox" id="advancedSpecModeCheck" style="display: none;">
                 </div>
 
                 <!-- 模式 A：簡易規格模式 -->
@@ -2483,7 +2494,7 @@
                   </div>
                 </div>
 
-                <!-- 模式 B：進階規格表格模式 -->
+                <!-- 模式 B：進階單層規格表格模式 -->
                 <div id="advancedSpecBox" style="display: none;">
                   <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
                     💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方的連線代購價，有價差時再修改即可。
@@ -2527,6 +2538,92 @@
                     </button>
                     <div id="specSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
                       📊 規格合計：0 種 ｜ 現貨庫存：0 件
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 模式 C：雙層規格矩陣模式 (如：顏色 + 尺寸) -->
+                <div id="twoTierSpecBox" style="display: none;">
+                  <div style="font-size: 12px; color: #047857; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-bottom: 12px; line-height: 1.5;">
+                    👗 <b>服飾與雙層規格神器</b>：設定兩層維度（例如「顏色」與「尺寸」），系統自動交叉產生所有 SKU 組合，支援一鍵批量定價與個別現貨微調！
+                  </div>
+
+                  <!-- 雙維度輸入卡片 -->
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                    <!-- 第一層維度 -->
+                    <div style="background: #fff; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 12.5px; font-weight: 800; color: #0f172a;">1️⃣ 第一層維度 (例：顏色)</span>
+                      </div>
+                      <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                        <input type="text" id="twoTierDim1Name" class="input-text" style="width: 90px; font-size: 12px; padding: 6px 8px; font-weight: 700;" value="顏色" placeholder="維度名稱">
+                        <input type="text" id="twoTierDim1Values" class="input-text" style="flex: 1; font-size: 12px; padding: 6px 8px;" placeholder="選項以逗號隔開 (例：經典黑, 米白, 卡其色)" value="經典黑, 米白" oninput="renderTwoTierMatrixFromInputs()">
+                      </div>
+                    </div>
+
+                    <!-- 第二層維度 -->
+                    <div style="background: #fff; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 12.5px; font-weight: 800; color: #0f172a;">2️⃣ 第二層維度 (例：尺寸)</span>
+                      </div>
+                      <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                        <input type="text" id="twoTierDim2Name" class="input-text" style="width: 90px; font-size: 12px; padding: 6px 8px; font-weight: 700;" value="尺寸" placeholder="維度名稱">
+                        <input type="text" id="twoTierDim2Values" class="input-text" style="flex: 1; font-size: 12px; padding: 6px 8px;" placeholder="選項以逗號隔開 (例：S, M, L, XL)" value="S, M, L" oninput="renderTwoTierMatrixFromInputs()">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 快速批次操作列 -->
+                  <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                      <span style="font-size: 11.5px; font-weight: 700; color: #475569;">⚡ 快速批次套用：</span>
+                      <button type="button" onclick="batchApplyTwoTierPrice()" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                        💵 套用主售價
+                      </button>
+                      <button type="button" onclick="batchApplyTwoTierStock(5)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                        📦 每款 5 件
+                      </button>
+                      <button type="button" onclick="batchApplyTwoTierStock(10)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                        📦 每款 10 件
+                      </button>
+                      <button type="button" onclick="batchApplyTwoTierUnlimited(true)" style="background: #eefbf3; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #047857;">
+                        ♾️ 全部不限庫存
+                      </button>
+                      <button type="button" onclick="batchApplyTwoTierUnlimited(false)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #475569;">
+                        🎯 全部設為限量
+                      </button>
+                    </div>
+                    <button type="button" onclick="renderTwoTierMatrixFromInputs(true)" style="background: #0f172a; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
+                      🔄 重新交叉生成
+                    </button>
+                  </div>
+
+                  <!-- 雙層規格表格 -->
+                  <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;" id="twoTierSpecTable">
+                      <thead>
+                        <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2;">
+                          <th style="padding: 8px 10px; font-weight: 700; width: 100px;" id="thDim1Name">顏色</th>
+                          <th style="padding: 8px 10px; font-weight: 700; width: 90px;" id="thDim2Name">尺寸</th>
+                          <th style="padding: 8px 10px; font-weight: 700;">規格組合名稱</th>
+                          <th style="padding: 8px 10px; font-weight: 700; width: 130px;">售價 (NT$)</th>
+                          <th style="padding: 8px 10px; font-weight: 700; width: 120px;">現貨庫存</th>
+                          <th style="padding: 8px 10px; font-weight: 700; width: 85px; text-align: center;">不限名額</th>
+                          <th style="padding: 8px 10px; font-weight: 700; width: 50px; text-align: center;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody id="twoTierSpecTableBody">
+                        <!-- 動態生成列 -->
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-size: 12px; color: #64748b;">
+                      💡 若某特定款式未生產（例如米白無 XL），可直接點擊該列右側的 🗑️ 刪除組合。
+                    </div>
+                    <div id="twoTierSpecSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
+                      📊 雙層組合合計：0 種 ｜ 現貨庫存：0 件
                     </div>
                   </div>
                 </div>
@@ -3353,16 +3450,27 @@
         <div class="form-group"
           style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
           <div
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
             <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0;">
               <span>🏷️ 規格款式、個別售價與庫存數量</span>
             </label>
-            <label
-              style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--primary-dark); background: #eefbf3; padding: 4px 10px; border-radius: 8px; border: 1px solid #bbf7d0;">
-              <input type="checkbox" id="editAdvancedSpecModeCheck" style="width: 16px; height: 16px;"
-                onchange="toggleEditSpecMode()">
-              <span>啟用各規格「獨立價格」與「個別庫存」</span>
-            </label>
+            
+            <!-- 三種規格模式切換按鈕組 -->
+            <div style="display: flex; align-items: center; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 10px; font-size: 12px; font-weight: 700;">
+              <button type="button" class="edit-spec-tab-pill active" id="btnEditSpecModeSimple" onclick="setEditSpecMode('simple')"
+                style="padding: 4px 10px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: #fff; color: #0f172a; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                簡易單一
+              </button>
+              <button type="button" class="edit-spec-tab-pill" id="btnEditSpecModeAdvanced" onclick="setEditSpecMode('advanced')"
+                style="padding: 4px 10px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; font-weight: 700;">
+                單層規格
+              </button>
+              <button type="button" class="edit-spec-tab-pill" id="btnEditSpecModeTwoTier" onclick="setEditSpecMode('two_tier')"
+                style="padding: 4px 12px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #047857; font-weight: 800;">
+                ✨ 雙層規格 (推薦)
+              </button>
+            </div>
+            <input type="checkbox" id="editAdvancedSpecModeCheck" style="display: none;">
           </div>
 
           <!-- 模式 A：簡易規格模式 -->
@@ -3388,7 +3496,7 @@
             </div>
           </div>
 
-          <!-- 模式 B：進階規格表格模式 -->
+          <!-- 模式 B：進階單層規格表格模式 -->
           <div id="editAdvancedSpecBox" style="display: none;">
             <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
               💡 每個規格可設定不同的售價與現貨數量。售價預設自動繼承上方售價，有價差時再修改即可。
@@ -3428,6 +3536,92 @@
                 <span>➕ 新增規格款式</span>
               </button>
               <div id="editSpecSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;"></div>
+            </div>
+          </div>
+
+          <!-- 模式 C：雙層規格矩陣模式 (如：顏色 + 尺寸) -->
+          <div id="editTwoTierSpecBox" style="display: none;">
+            <div style="font-size: 12px; color: #047857; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-bottom: 12px; line-height: 1.5;">
+              👗 <b>服飾與雙層規格神器</b>：設定兩層維度（例如「顏色」與「尺寸」），系統自動交叉產生所有 SKU 組合，支援一鍵批量定價與個別現貨微調！
+            </div>
+
+            <!-- 雙維度輸入卡片 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 12px;">
+              <!-- 第一層維度 -->
+              <div style="background: #fff; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 12.5px; font-weight: 800; color: #0f172a;">1️⃣ 第一層維度 (例：顏色)</span>
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                  <input type="text" id="editTwoTierDim1Name" class="input-text" style="width: 90px; font-size: 12px; padding: 6px 8px; font-weight: 700;" value="顏色" placeholder="維度名稱">
+                  <input type="text" id="editTwoTierDim1Values" class="input-text" style="flex: 1; font-size: 12px; padding: 6px 8px;" placeholder="選項以逗號隔開 (例：經典黑, 米白, 卡其色)" value="經典黑, 米白" oninput="renderEditTwoTierMatrixFromInputs()">
+                </div>
+              </div>
+
+              <!-- 第二層維度 -->
+              <div style="background: #fff; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 12.5px; font-weight: 800; color: #0f172a;">2️⃣ 第二層維度 (例：尺寸)</span>
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                  <input type="text" id="editTwoTierDim2Name" class="input-text" style="width: 90px; font-size: 12px; padding: 6px 8px; font-weight: 700;" value="尺寸" placeholder="維度名稱">
+                  <input type="text" id="editTwoTierDim2Values" class="input-text" style="flex: 1; font-size: 12px; padding: 6px 8px;" placeholder="選項以逗號隔開 (例：S, M, L, XL)" value="S, M, L" oninput="renderEditTwoTierMatrixFromInputs()">
+                </div>
+              </div>
+            </div>
+
+            <!-- 快速批次操作列 -->
+            <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;">
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                <span style="font-size: 11.5px; font-weight: 700; color: #475569;">⚡ 快速批次套用：</span>
+                <button type="button" onclick="batchApplyEditTwoTierPrice()" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                  💵 套用主售價
+                </button>
+                <button type="button" onclick="batchApplyEditTwoTierStock(5)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                  📦 每款 5 件
+                </button>
+                <button type="button" onclick="batchApplyEditTwoTierStock(10)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #0f172a;">
+                  📦 每款 10 件
+                </button>
+                <button type="button" onclick="batchApplyEditTwoTierUnlimited(true)" style="background: #eefbf3; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #047857;">
+                  ♾️ 全部不限庫存
+                </button>
+                <button type="button" onclick="batchApplyEditTwoTierUnlimited(false)" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; color: #475569;">
+                  🎯 全部設為限量
+                </button>
+              </div>
+              <button type="button" onclick="renderEditTwoTierMatrixFromInputs(true)" style="background: #0f172a; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
+                🔄 重新交叉生成
+              </button>
+            </div>
+
+            <!-- 雙層規格表格 -->
+            <div style="overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;" id="editTwoTierSpecTable">
+                <thead>
+                  <tr style="background: #f1f5f9; color: #475569; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2;">
+                    <th style="padding: 8px 10px; font-weight: 700; width: 100px;" id="editThDim1Name">顏色</th>
+                    <th style="padding: 8px 10px; font-weight: 700; width: 90px;" id="editThDim2Name">尺寸</th>
+                    <th style="padding: 8px 10px; font-weight: 700;">規格組合名稱</th>
+                    <th style="padding: 8px 10px; font-weight: 700; width: 130px;">售價 (NT$)</th>
+                    <th style="padding: 8px 10px; font-weight: 700; width: 120px;">現貨庫存</th>
+                    <th style="padding: 8px 10px; font-weight: 700; width: 85px; text-align: center;">不限名額</th>
+                    <th style="padding: 8px 10px; font-weight: 700; width: 50px; text-align: center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="editTwoTierSpecTableBody">
+                  <!-- 動態生成列 -->
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+              <div style="font-size: 12px; color: #64748b;">
+                💡 若某特定款式未生產（例如米白無 XL），可直接點擊該列右側的 🗑️ 刪除組合。
+              </div>
+              <div id="editTwoTierSpecSummaryText" style="font-size: 12px; color: #059669; font-weight: 700;">
+                📊 雙層組合合計：0 種 ｜ 現貨庫存：0 件
+              </div>
             </div>
           </div>
         </div>
@@ -5257,17 +5451,54 @@
       return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // 規格獨立定價與庫存管理
-    function toggleSpecMode() {
-      const isAdvanced = document.getElementById('advancedSpecModeCheck').checked;
-      document.getElementById('simpleSpecBox').style.display = isAdvanced ? 'none' : 'block';
-      document.getElementById('advancedSpecBox').style.display = isAdvanced ? 'block' : 'none';
+    // ===== 規格款式與多維度管理 (支援簡易、單層進階、雙層矩陣) =====
+    window.currentCreationSpecMode = 'simple';
 
-      if (isAdvanced) {
+    function setSpecMode(mode) {
+      window.currentCreationSpecMode = mode;
+      
+      const btnSimple = document.getElementById('btnSpecModeSimple');
+      const btnAdv = document.getElementById('btnSpecModeAdvanced');
+      const btnTwoTier = document.getElementById('btnSpecModeTwoTier');
+      const simpleBox = document.getElementById('simpleSpecBox');
+      const advBox = document.getElementById('advancedSpecBox');
+      const twoTierBox = document.getElementById('twoTierSpecBox');
+      const legacyCheck = document.getElementById('advancedSpecModeCheck');
+
+      if (legacyCheck) legacyCheck.checked = (mode !== 'simple');
+
+      [btnSimple, btnAdv, btnTwoTier].forEach(b => {
+        if (!b) return;
+        b.style.background = 'transparent';
+        b.style.color = '#64748b';
+        b.style.fontWeight = '700';
+        b.style.boxShadow = 'none';
+      });
+
+      if (mode === 'simple') {
+        if (btnSimple) {
+          btnSimple.style.background = '#fff';
+          btnSimple.style.color = '#0f172a';
+          btnSimple.style.fontWeight = '800';
+          btnSimple.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        if (simpleBox) simpleBox.style.display = 'block';
+        if (advBox) advBox.style.display = 'none';
+        if (twoTierBox) twoTierBox.style.display = 'none';
+      } else if (mode === 'advanced') {
+        if (btnAdv) {
+          btnAdv.style.background = '#fff';
+          btnAdv.style.color = '#0f172a';
+          btnAdv.style.fontWeight = '800';
+          btnAdv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        if (simpleBox) simpleBox.style.display = 'none';
+        if (advBox) advBox.style.display = 'block';
+        if (twoTierBox) twoTierBox.style.display = 'none';
+
         const tbody = document.getElementById('specTableBody');
-        if (tbody.children.length === 0) {
-          // 若原本簡單模式有文字，自動拆解轉入
-          const simpleSpecs = document.getElementById('newProdSpecs').value.trim();
+        if (tbody && tbody.children.length === 0) {
+          const simpleSpecs = document.getElementById('newProdSpecs')?.value.trim();
           if (simpleSpecs) {
             document.getElementById('batchSpecInput').value = simpleSpecs;
             batchAddSpecs();
@@ -5275,8 +5506,220 @@
             addSpecRow('單一規格');
           }
         }
+        updateSpecSummary();
+      } else if (mode === 'two_tier') {
+        if (btnTwoTier) {
+          btnTwoTier.style.background = '#fff';
+          btnTwoTier.style.color = '#047857';
+          btnTwoTier.style.fontWeight = '800';
+          btnTwoTier.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        if (simpleBox) simpleBox.style.display = 'none';
+        if (advBox) advBox.style.display = 'none';
+        if (twoTierBox) twoTierBox.style.display = 'block';
+
+        const tbody = document.getElementById('twoTierSpecTableBody');
+        if (tbody && tbody.children.length === 0) {
+          renderTwoTierMatrixFromInputs();
+        } else {
+          updateTwoTierSpecSummary();
+        }
       }
-      updateSpecSummary();
+
+      if (typeof updateCreateLivePreview === 'function') {
+        updateCreateLivePreview();
+      }
+    }
+
+    function toggleSpecMode() {
+      const isAdv = document.getElementById('advancedSpecModeCheck')?.checked;
+      setSpecMode(isAdv ? 'two_tier' : 'simple');
+    }
+
+    function renderTwoTierMatrixFromInputs(forceReset = false, initialVariants = null) {
+      const dim1Name = (document.getElementById('twoTierDim1Name')?.value || '顏色').trim();
+      const dim2Name = (document.getElementById('twoTierDim2Name')?.value || '尺寸').trim();
+      const rawDim1 = document.getElementById('twoTierDim1Values')?.value || '';
+      const rawDim2 = document.getElementById('twoTierDim2Values')?.value || '';
+
+      const th1 = document.getElementById('thDim1Name');
+      const th2 = document.getElementById('thDim2Name');
+      if (th1) th1.textContent = dim1Name;
+      if (th2) th2.textContent = dim2Name;
+
+      const vals1 = rawDim1.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      const vals2 = rawDim2.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+      const tbody = document.getElementById('twoTierSpecTableBody');
+      if (!tbody) return;
+
+      const existingData = {};
+      if (!forceReset && !initialVariants) {
+        tbody.querySelectorAll('tr').forEach(tr => {
+          const key = tr.getAttribute('data-dim1') + '|||' + tr.getAttribute('data-dim2');
+          existingData[key] = {
+            name: tr.querySelector('.two-tier-name-input')?.value,
+            price: tr.querySelector('.two-tier-price-input')?.value,
+            stock: tr.querySelector('.two-tier-stock-input')?.value,
+            isUnlimited: tr.querySelector('.two-tier-unlimited-check')?.checked
+          };
+        });
+      }
+
+      if (initialVariants && Array.isArray(initialVariants)) {
+        initialVariants.forEach(iv => {
+          if (iv) {
+            const key = (iv.dim1 || '') + '|||' + (iv.dim2 || '');
+            existingData[key] = {
+              name: iv.name,
+              price: iv.price,
+              stock: iv.stock,
+              isUnlimited: iv.isUnlimited
+            };
+          }
+        });
+      }
+
+      tbody.innerHTML = '';
+      const basePrice = Number(document.getElementById('newProdPrice')?.value) || 0;
+
+      vals1.forEach(v1 => {
+        vals2.forEach(v2 => {
+          const key = v1 + '|||' + v2;
+          const prev = existingData[key];
+
+          const rowName = prev?.name || `${v1} / ${v2}`;
+          const rowPrice = prev?.price !== undefined ? prev.price : basePrice;
+          const rowUnlimited = prev?.isUnlimited !== undefined ? Boolean(prev.isUnlimited) : true;
+          const rowStock = prev?.stock !== undefined ? prev.stock : (rowUnlimited ? '' : 10);
+
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-dim1', v1);
+          tr.setAttribute('data-dim2', v2);
+          tr.style.borderBottom = '1px solid #f1f5f9';
+
+          tr.innerHTML = `
+            <td style="padding: 6px 10px; font-weight: 700; color: #1e293b;">
+              <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; border: 1px solid #cbd5e1;">${escapeHtml(v1)}</span>
+            </td>
+            <td style="padding: 6px 10px; font-weight: 700; color: #1e293b;">
+              <span style="background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; border: 1px solid #bfdbfe;">${escapeHtml(v2)}</span>
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="text" class="input-text two-tier-name-input" value="${escapeHtml(rowName)}" style="padding: 5px 8px; font-size: 12px; width: 100%;" oninput="updateTwoTierSpecSummary()">
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="number" class="input-text two-tier-price-input" value="${rowPrice}" placeholder="售價" style="padding: 5px 8px; font-size: 12px; width: 100%;">
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="number" class="input-text two-tier-stock-input" value="${rowUnlimited ? '' : rowStock}" placeholder="數量" style="padding: 5px 8px; font-size: 12px; width: 100%; ${rowUnlimited ? 'display:none;' : ''}" oninput="updateTwoTierSpecSummary()">
+              <span class="two-tier-unlimited-label" style="font-size: 11.5px; color: #047857; font-weight: 700; ${rowUnlimited ? '' : 'display:none;'}">不限名額</span>
+            </td>
+            <td style="padding: 6px 10px; text-align: center;">
+              <input type="checkbox" class="two-tier-unlimited-check" ${rowUnlimited ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleTwoTierRowUnlimited(this)">
+            </td>
+            <td style="padding: 6px 10px; text-align: center;">
+              <button type="button" onclick="removeTwoTierRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 14px;" title="刪除此組合">🗑️</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      updateTwoTierSpecSummary();
+    }
+
+    function toggleTwoTierRowUnlimited(chk) {
+      const tr = chk.closest('tr');
+      const stockInput = tr.querySelector('.two-tier-stock-input');
+      const unLabel = tr.querySelector('.two-tier-unlimited-label');
+      if (chk.checked) {
+        stockInput.style.display = 'none';
+        unLabel.style.display = 'inline';
+      } else {
+        stockInput.style.display = 'block';
+        if (!stockInput.value) stockInput.value = '10';
+        unLabel.style.display = 'none';
+      }
+      updateTwoTierSpecSummary();
+    }
+
+    function removeTwoTierRow(btn) {
+      const tr = btn.closest('tr');
+      if (tr) tr.remove();
+      updateTwoTierSpecSummary();
+    }
+
+    function batchApplyTwoTierPrice() {
+      const mainPrice = Number(document.getElementById('newProdPrice')?.value) || 0;
+      if (mainPrice <= 0) {
+        alert('請先在上方輸入「連線代購價」！');
+        return;
+      }
+      document.querySelectorAll('#twoTierSpecTableBody .two-tier-price-input').forEach(inp => {
+        inp.value = mainPrice;
+      });
+      alert(`✅ 已將售價 NT$ ${mainPrice} 批次套用至所有規格組合！`);
+    }
+
+    function batchApplyTwoTierStock(qty) {
+      document.querySelectorAll('#twoTierSpecTableBody tr').forEach(tr => {
+        const chk = tr.querySelector('.two-tier-unlimited-check');
+        const stockInp = tr.querySelector('.two-tier-stock-input');
+        const unLabel = tr.querySelector('.two-tier-unlimited-label');
+        if (chk) chk.checked = false;
+        if (stockInp) {
+          stockInp.style.display = 'block';
+          stockInp.value = qty;
+        }
+        if (unLabel) unLabel.style.display = 'none';
+      });
+      updateTwoTierSpecSummary();
+    }
+
+    function batchApplyTwoTierUnlimited(isUnlim) {
+      document.querySelectorAll('#twoTierSpecTableBody tr').forEach(tr => {
+        const chk = tr.querySelector('.two-tier-unlimited-check');
+        const stockInp = tr.querySelector('.two-tier-stock-input');
+        const unLabel = tr.querySelector('.two-tier-unlimited-label');
+        if (chk) chk.checked = isUnlim;
+        if (isUnlim) {
+          if (stockInp) stockInp.style.display = 'none';
+          if (unLabel) unLabel.style.display = 'inline';
+        } else {
+          if (stockInp) {
+            stockInp.style.display = 'block';
+            if (!stockInp.value) stockInp.value = '10';
+          }
+          if (unLabel) unLabel.style.display = 'none';
+        }
+      });
+      updateTwoTierSpecSummary();
+    }
+
+    function updateTwoTierSpecSummary() {
+      const rows = document.querySelectorAll('#twoTierSpecTableBody tr');
+      let totalStock = 0;
+      let hasUnlimited = false;
+      let count = 0;
+
+      rows.forEach(r => {
+        count++;
+        const isUnlim = r.querySelector('.two-tier-unlimited-check')?.checked;
+        if (isUnlim) {
+          hasUnlimited = true;
+        } else {
+          totalStock += (Number(r.querySelector('.two-tier-stock-input')?.value) || 0);
+        }
+      });
+
+      const summaryElem = document.getElementById('twoTierSpecSummaryText');
+      if (summaryElem) {
+        summaryElem.textContent = `📊 雙層組合合計：${count} 種 ｜ 現貨庫存：${hasUnlimited ? (totalStock + ' 件 (部分不限)') : (totalStock + ' 件')}`;
+      }
+      if (typeof updateCreateLivePreview === 'function') {
+        updateCreateLivePreview();
+      }
     }
 
     function addSpecRow(name = '', price = '', stock = '', isUnlimited = null) {
@@ -5521,9 +5964,13 @@
         }
       }
 
-      const isAdv = document.getElementById('advancedSpecModeCheck')?.checked;
+      const specMode = window.currentCreationSpecMode || 'simple';
       let specNames = [];
-      if (isAdv) {
+      if (specMode === 'two_tier') {
+        document.querySelectorAll('#twoTierSpecTableBody .two-tier-name-input').forEach(inp => {
+          if (inp.value.trim()) specNames.push(inp.value.trim());
+        });
+      } else if (specMode === 'advanced') {
         document.querySelectorAll('#specTableBody .spec-name-input').forEach(inp => {
           if (inp.value.trim()) specNames.push(inp.value.trim());
         });
@@ -5865,12 +6312,53 @@
 
         saveBtn.textContent = '正在寫入商品資料庫...';
 
-        const isAdvancedSpec = document.getElementById('advancedSpecModeCheck').checked;
+        const currentSpecMode = window.currentCreationSpecMode || 'simple';
         let specsPayload = [];
+        let specDimensionsPayload = null;
         let calculatedTotalStock = 0;
         let hasUnlimitedSpec = false;
 
-        if (isAdvancedSpec) {
+        if (currentSpecMode === 'two_tier') {
+          const dim1Name = (document.getElementById('twoTierDim1Name')?.value || '顏色').trim();
+          const dim2Name = (document.getElementById('twoTierDim2Name')?.value || '尺寸').trim();
+          const rawDim1 = document.getElementById('twoTierDim1Values')?.value || '';
+          const rawDim2 = document.getElementById('twoTierDim2Values')?.value || '';
+          const vals1 = rawDim1.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+          const vals2 = rawDim2.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+          specDimensionsPayload = [
+            { name: dim1Name, values: vals1 },
+            { name: dim2Name, values: vals2 }
+          ];
+
+          const rows = document.querySelectorAll('#twoTierSpecTableBody tr');
+          rows.forEach(r => {
+            const d1 = r.getAttribute('data-dim1') || '';
+            const d2 = r.getAttribute('data-dim2') || '';
+            const sName = r.querySelector('.two-tier-name-input')?.value.trim() || `${d1} / ${d2}`;
+            const sPrice = Number(r.querySelector('.two-tier-price-input')?.value) || Number(price);
+            const sUn = r.querySelector('.two-tier-unlimited-check')?.checked;
+            const sStock = sUn ? 999999 : (Number(r.querySelector('.two-tier-stock-input')?.value) || 0);
+            if (sUn) hasUnlimitedSpec = true;
+            else calculatedTotalStock += sStock;
+
+            specsPayload.push({
+              name: sName,
+              dim1: d1,
+              dim2: d2,
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUn
+            });
+          });
+
+          if (specsPayload.length === 0) {
+            alert('啟用雙層規格時，請至少保留一個規格組合！');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存並同步至 Google 試算表';
+            return;
+          }
+        } else if (currentSpecMode === 'advanced') {
           const specRows = document.querySelectorAll('.spec-table-row');
           specRows.forEach(row => {
             const sName = row.querySelector('.spec-name-input').value.trim();
@@ -5896,12 +6384,14 @@
           }
         } else {
           specsPayload = specs;
+          hasUnlimitedSpec = isUnlimited;
+          calculatedTotalStock = stock;
         }
 
-        const finalStock = isAdvancedSpec
+        const finalStock = (currentSpecMode !== 'simple')
           ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock)
           : stock;
-        const finalIsUnlimited = isAdvancedSpec ? hasUnlimitedSpec : isUnlimited;
+        const finalIsUnlimited = (currentSpecMode !== 'simple') ? hasUnlimitedSpec : isUnlimited;
 
         const payload = {
           action: 'addProduct',
@@ -5922,6 +6412,8 @@
             originalPrice: (origPrice && Number(origPrice) > 0) ? Number(origPrice) : 0,
             stock: finalStock,
             isUnlimitedStock: finalIsUnlimited,
+            specMode: currentSpecMode,
+            specDimensions: specDimensionsPayload,
             specs: specsPayload,
             imageUrl: finalImageUrls[0] || '',
             imageUrls: finalImageUrls,
@@ -6807,19 +7299,28 @@
       calculateEditCost();
 
       // 規格模式判斷與資料填入
-      const specBoxSimple = document.getElementById('editSimpleSpecBox');
-      const specBoxAdv = document.getElementById('editAdvancedSpecBox');
-      const advCheck = document.getElementById('editAdvancedSpecModeCheck');
-      const tableBody = document.getElementById('editSpecTableBody');
-      if (tableBody) tableBody.innerHTML = '';
-
+      const isTwoTier = prod.specMode === 'two_tier' || (prod.specDimensions && prod.specDimensions.length >= 2) || (Array.isArray(prod.specs) && prod.specs.some(s => s && s.dim1 && s.dim2));
       const isAdvSpecs = Array.isArray(prod.specs) && prod.specs.some(s => typeof s === 'object' && s !== null);
 
-      if (isAdvSpecs) {
-        if (advCheck) advCheck.checked = true;
-        if (specBoxSimple) specBoxSimple.style.display = 'none';
-        if (specBoxAdv) specBoxAdv.style.display = 'block';
-
+      if (isTwoTier) {
+        setEditSpecMode('two_tier');
+        const dim1 = (prod.specDimensions && prod.specDimensions[0]) || { name: '顏色', values: [] };
+        const dim2 = (prod.specDimensions && prod.specDimensions[1]) || { name: '尺寸', values: [] };
+        if (document.getElementById('editTwoTierDim1Name')) document.getElementById('editTwoTierDim1Name').value = dim1.name || '顏色';
+        if (document.getElementById('editTwoTierDim1Values')) {
+          const vals1 = (dim1.values && dim1.values.length) ? dim1.values.join(', ') : [...new Set(prod.specs.map(s => s.dim1).filter(Boolean))].join(', ');
+          document.getElementById('editTwoTierDim1Values').value = vals1;
+        }
+        if (document.getElementById('editTwoTierDim2Name')) document.getElementById('editTwoTierDim2Name').value = dim2.name || '尺寸';
+        if (document.getElementById('editTwoTierDim2Values')) {
+          const vals2 = (dim2.values && dim2.values.length) ? dim2.values.join(', ') : [...new Set(prod.specs.map(s => s.dim2).filter(Boolean))].join(', ');
+          document.getElementById('editTwoTierDim2Values').value = vals2;
+        }
+        renderEditTwoTierMatrixFromInputs(false, prod.specs);
+      } else if (isAdvSpecs) {
+        setEditSpecMode('advanced');
+        const tableBody = document.getElementById('editSpecTableBody');
+        if (tableBody) tableBody.innerHTML = '';
         prod.specs.forEach(s => {
           if (typeof s === 'object' && s) {
             addEditSpecRow(s);
@@ -6828,10 +7329,7 @@
           }
         });
       } else {
-        if (advCheck) advCheck.checked = false;
-        if (specBoxSimple) specBoxSimple.style.display = 'block';
-        if (specBoxAdv) specBoxAdv.style.display = 'none';
-
+        setEditSpecMode('simple');
         let specsStr = '';
         if (Array.isArray(prod.specs)) {
           specsStr = prod.specs.map(s => (typeof s === 'object' && s) ? s.name : s).filter(Boolean).join(', ');
@@ -6977,14 +7475,51 @@
       alert(`✅ 成本價 NT$ ${totalCost} 試算完成！\n儲存商品後將自動更新至 Google 試算表。`);
     }
 
-    // 規格模式切換 (簡易 vs 進階獨立規格)
-    function toggleEditSpecMode() {
-      const isAdv = document.getElementById('editAdvancedSpecModeCheck').checked;
+    // ===== 編輯規格模式切換 (簡易 vs 單層進階 vs 雙層矩陣) =====
+    window.currentEditSpecMode = 'simple';
+
+    function setEditSpecMode(mode) {
+      window.currentEditSpecMode = mode;
+
+      const btnSimple = document.getElementById('btnEditSpecModeSimple');
+      const btnAdv = document.getElementById('btnEditSpecModeAdvanced');
+      const btnTwoTier = document.getElementById('btnEditSpecModeTwoTier');
       const simpleBox = document.getElementById('editSimpleSpecBox');
       const advBox = document.getElementById('editAdvancedSpecBox');
-      if (isAdv) {
+      const twoTierBox = document.getElementById('editTwoTierSpecBox');
+      const legacyCheck = document.getElementById('editAdvancedSpecModeCheck');
+
+      if (legacyCheck) legacyCheck.checked = (mode !== 'simple');
+
+      [btnSimple, btnAdv, btnTwoTier].forEach(b => {
+        if (!b) return;
+        b.style.background = 'transparent';
+        b.style.color = '#64748b';
+        b.style.fontWeight = '700';
+        b.style.boxShadow = 'none';
+      });
+
+      if (mode === 'simple') {
+        if (btnSimple) {
+          btnSimple.style.background = '#fff';
+          btnSimple.style.color = '#0f172a';
+          btnSimple.style.fontWeight = '800';
+          btnSimple.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        if (simpleBox) simpleBox.style.display = 'block';
+        if (advBox) advBox.style.display = 'none';
+        if (twoTierBox) twoTierBox.style.display = 'none';
+      } else if (mode === 'advanced') {
+        if (btnAdv) {
+          btnAdv.style.background = '#fff';
+          btnAdv.style.color = '#0f172a';
+          btnAdv.style.fontWeight = '800';
+          btnAdv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
         if (simpleBox) simpleBox.style.display = 'none';
         if (advBox) advBox.style.display = 'block';
+        if (twoTierBox) twoTierBox.style.display = 'none';
+
         const tbody = document.getElementById('editSpecTableBody');
         if (tbody && tbody.children.length === 0) {
           const simpleSpecs = (document.getElementById('editProdSpecs')?.value || '').split(/[,，]/).map(s => s.trim()).filter(Boolean);
@@ -6994,11 +7529,213 @@
             addEditSpecRow();
           }
         }
-      } else {
-        if (simpleBox) simpleBox.style.display = 'block';
+        updateEditSpecSummary();
+      } else if (mode === 'two_tier') {
+        if (btnTwoTier) {
+          btnTwoTier.style.background = '#fff';
+          btnTwoTier.style.color = '#047857';
+          btnTwoTier.style.fontWeight = '800';
+          btnTwoTier.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        if (simpleBox) simpleBox.style.display = 'none';
         if (advBox) advBox.style.display = 'none';
+        if (twoTierBox) twoTierBox.style.display = 'block';
+
+        const tbody = document.getElementById('editTwoTierSpecTableBody');
+        if (tbody && tbody.children.length === 0) {
+          renderEditTwoTierMatrixFromInputs();
+        } else {
+          updateEditTwoTierSpecSummary();
+        }
       }
-      updateEditSpecSummary();
+    }
+
+    function toggleEditSpecMode() {
+      const isAdv = document.getElementById('editAdvancedSpecModeCheck')?.checked;
+      setEditSpecMode(isAdv ? 'two_tier' : 'simple');
+    }
+
+    function renderEditTwoTierMatrixFromInputs(forceReset = false, initialVariants = null) {
+      const dim1Name = (document.getElementById('editTwoTierDim1Name')?.value || '顏色').trim();
+      const dim2Name = (document.getElementById('editTwoTierDim2Name')?.value || '尺寸').trim();
+      const rawDim1 = document.getElementById('editTwoTierDim1Values')?.value || '';
+      const rawDim2 = document.getElementById('editTwoTierDim2Values')?.value || '';
+
+      const th1 = document.getElementById('editThDim1Name');
+      const th2 = document.getElementById('editThDim2Name');
+      if (th1) th1.textContent = dim1Name;
+      if (th2) th2.textContent = dim2Name;
+
+      const vals1 = rawDim1.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+      const vals2 = rawDim2.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+      const tbody = document.getElementById('editTwoTierSpecTableBody');
+      if (!tbody) return;
+
+      const existingData = {};
+      if (!forceReset && !initialVariants) {
+        tbody.querySelectorAll('tr').forEach(tr => {
+          const key = tr.getAttribute('data-dim1') + '|||' + tr.getAttribute('data-dim2');
+          existingData[key] = {
+            name: tr.querySelector('.edit-two-tier-name-input')?.value,
+            price: tr.querySelector('.edit-two-tier-price-input')?.value,
+            stock: tr.querySelector('.edit-two-tier-stock-input')?.value,
+            isUnlimited: tr.querySelector('.edit-two-tier-unlimited-check')?.checked
+          };
+        });
+      }
+
+      if (initialVariants && Array.isArray(initialVariants)) {
+        initialVariants.forEach(iv => {
+          if (iv) {
+            const key = (iv.dim1 || '') + '|||' + (iv.dim2 || '');
+            existingData[key] = {
+              name: iv.name,
+              price: iv.price,
+              stock: iv.stock,
+              isUnlimited: iv.isUnlimited
+            };
+          }
+        });
+      }
+
+      tbody.innerHTML = '';
+      const basePrice = Number(document.getElementById('editProdPrice')?.value) || 0;
+
+      vals1.forEach(v1 => {
+        vals2.forEach(v2 => {
+          const key = v1 + '|||' + v2;
+          const prev = existingData[key];
+
+          const rowName = prev?.name || `${v1} / ${v2}`;
+          const rowPrice = prev?.price !== undefined ? prev.price : basePrice;
+          const rowUnlimited = prev?.isUnlimited !== undefined ? Boolean(prev.isUnlimited) : true;
+          const rowStock = prev?.stock !== undefined ? prev.stock : (rowUnlimited ? '' : 10);
+
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-dim1', v1);
+          tr.setAttribute('data-dim2', v2);
+          tr.style.borderBottom = '1px solid var(--border)';
+
+          tr.innerHTML = `
+            <td style="padding: 6px 10px; font-weight: 700; color: #1e293b;">
+              <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; border: 1px solid #cbd5e1;">${escapeHtml(v1)}</span>
+            </td>
+            <td style="padding: 6px 10px; font-weight: 700; color: #1e293b;">
+              <span style="background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; border: 1px solid #bfdbfe;">${escapeHtml(v2)}</span>
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="text" class="input-text edit-two-tier-name-input" value="${escapeHtml(rowName)}" style="padding: 5px 8px; font-size: 12px; width: 100%;" oninput="updateEditTwoTierSpecSummary()">
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="number" class="input-text edit-two-tier-price-input" value="${rowPrice}" placeholder="售價" style="padding: 5px 8px; font-size: 12px; width: 100%;">
+            </td>
+            <td style="padding: 6px 10px;">
+              <input type="number" class="input-text edit-two-tier-stock-input" value="${rowUnlimited ? '' : rowStock}" placeholder="數量" style="padding: 5px 8px; font-size: 12px; width: 100%; ${rowUnlimited ? 'display:none;' : ''}" oninput="updateEditTwoTierSpecSummary()">
+              <span class="edit-two-tier-unlimited-label" style="font-size: 11.5px; color: #047857; font-weight: 700; ${rowUnlimited ? '' : 'display:none;'}">不限名額</span>
+            </td>
+            <td style="padding: 6px 10px; text-align: center;">
+              <input type="checkbox" class="edit-two-tier-unlimited-check" ${rowUnlimited ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleEditTwoTierRowUnlimited(this)">
+            </td>
+            <td style="padding: 6px 10px; text-align: center;">
+              <button type="button" onclick="removeEditTwoTierRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 14px;" title="刪除此組合">🗑️</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      updateEditTwoTierSpecSummary();
+    }
+
+    function toggleEditTwoTierRowUnlimited(chk) {
+      const tr = chk.closest('tr');
+      const stockInput = tr.querySelector('.edit-two-tier-stock-input');
+      const unLabel = tr.querySelector('.edit-two-tier-unlimited-label');
+      if (chk.checked) {
+        stockInput.style.display = 'none';
+        unLabel.style.display = 'inline';
+      } else {
+        stockInput.style.display = 'block';
+        if (!stockInput.value) stockInput.value = '10';
+        unLabel.style.display = 'none';
+      }
+      updateEditTwoTierSpecSummary();
+    }
+
+    function removeEditTwoTierRow(btn) {
+      const tr = btn.closest('tr');
+      if (tr) tr.remove();
+      updateEditTwoTierSpecSummary();
+    }
+
+    function batchApplyEditTwoTierPrice() {
+      const mainPrice = Number(document.getElementById('editProdPrice')?.value) || 0;
+      if (mainPrice <= 0) {
+        alert('請先在上方輸入「連線代購價」！');
+        return;
+      }
+      document.querySelectorAll('#editTwoTierSpecTableBody .edit-two-tier-price-input').forEach(inp => {
+        inp.value = mainPrice;
+      });
+      alert(`✅ 已將售價 NT$ ${mainPrice} 批次套用至所有規格組合！`);
+    }
+
+    function batchApplyEditTwoTierStock(qty) {
+      document.querySelectorAll('#editTwoTierSpecTableBody tr').forEach(tr => {
+        const chk = tr.querySelector('.edit-two-tier-unlimited-check');
+        const stockInp = tr.querySelector('.edit-two-tier-stock-input');
+        const unLabel = tr.querySelector('.edit-two-tier-unlimited-label');
+        if (chk) chk.checked = false;
+        if (stockInp) {
+          stockInp.style.display = 'block';
+          stockInp.value = qty;
+        }
+        if (unLabel) unLabel.style.display = 'none';
+      });
+      updateEditTwoTierSpecSummary();
+    }
+
+    function batchApplyEditTwoTierUnlimited(isUnlim) {
+      document.querySelectorAll('#editTwoTierSpecTableBody tr').forEach(tr => {
+        const chk = tr.querySelector('.edit-two-tier-unlimited-check');
+        const stockInp = tr.querySelector('.edit-two-tier-stock-input');
+        const unLabel = tr.querySelector('.edit-two-tier-unlimited-label');
+        if (chk) chk.checked = isUnlim;
+        if (isUnlim) {
+          if (stockInp) stockInp.style.display = 'none';
+          if (unLabel) unLabel.style.display = 'inline';
+        } else {
+          if (stockInp) {
+            stockInp.style.display = 'block';
+            if (!stockInp.value) stockInp.value = '10';
+          }
+          if (unLabel) unLabel.style.display = 'none';
+        }
+      });
+      updateEditTwoTierSpecSummary();
+    }
+
+    function updateEditTwoTierSpecSummary() {
+      const rows = document.querySelectorAll('#editTwoTierSpecTableBody tr');
+      let totalStock = 0;
+      let hasUnlimited = false;
+      let count = 0;
+
+      rows.forEach(r => {
+        count++;
+        const isUnlim = r.querySelector('.edit-two-tier-unlimited-check')?.checked;
+        if (isUnlim) {
+          hasUnlimited = true;
+        } else {
+          totalStock += (Number(r.querySelector('.edit-two-tier-stock-input')?.value) || 0);
+        }
+      });
+
+      const summaryElem = document.getElementById('editTwoTierSpecSummaryText');
+      if (summaryElem) {
+        summaryElem.textContent = `📊 雙層組合合計：${count} 種 ｜ 現貨庫存：${hasUnlimited ? (totalStock + ' 件 (部分不限)') : (totalStock + ' 件')}`;
+      }
     }
 
     // 簡易模式不限庫存開關
@@ -7352,12 +8089,53 @@
         }
 
         // 2. 規格與庫存處理
-        const isAdv = document.getElementById('editAdvancedSpecModeCheck').checked;
+        const currentEditSpecMode = window.currentEditSpecMode || 'simple';
         let specsPayload = [];
+        let specDimensionsPayload = null;
         let calculatedTotalStock = 0;
         let hasUnlimitedSpec = false;
 
-        if (isAdv) {
+        if (currentEditSpecMode === 'two_tier') {
+          const dim1Name = (document.getElementById('editTwoTierDim1Name')?.value || '顏色').trim();
+          const dim2Name = (document.getElementById('editTwoTierDim2Name')?.value || '尺寸').trim();
+          const rawDim1 = document.getElementById('editTwoTierDim1Values')?.value || '';
+          const rawDim2 = document.getElementById('editTwoTierDim2Values')?.value || '';
+          const vals1 = rawDim1.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+          const vals2 = rawDim2.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+          specDimensionsPayload = [
+            { name: dim1Name, values: vals1 },
+            { name: dim2Name, values: vals2 }
+          ];
+
+          const rows = document.querySelectorAll('#editTwoTierSpecTableBody tr');
+          rows.forEach(r => {
+            const d1 = r.getAttribute('data-dim1') || '';
+            const d2 = r.getAttribute('data-dim2') || '';
+            const sName = r.querySelector('.edit-two-tier-name-input')?.value.trim() || `${d1} / ${d2}`;
+            const sPrice = Number(r.querySelector('.edit-two-tier-price-input')?.value) || Number(price);
+            const sUn = r.querySelector('.edit-two-tier-unlimited-check')?.checked;
+            const sStock = sUn ? 999999 : (Number(r.querySelector('.edit-two-tier-stock-input')?.value) || 0);
+            if (sUn) hasUnlimitedSpec = true;
+            else calculatedTotalStock += sStock;
+
+            specsPayload.push({
+              name: sName,
+              dim1: d1,
+              dim2: d2,
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUn
+            });
+          });
+
+          if (specsPayload.length === 0) {
+            alert('啟用雙層規格時，請至少保留一個規格組合！');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 儲存修改並同步至 Google 試算表';
+            return;
+          }
+        } else if (currentEditSpecMode === 'advanced') {
           const rows = document.querySelectorAll('.edit-spec-table-row');
           rows.forEach(r => {
             const sName = r.querySelector('.edit-spec-name-input').value.trim();
@@ -7388,7 +8166,7 @@
           calculatedTotalStock = hasUnlimitedSpec ? 999999 : (Number(document.getElementById('editProdStock').value) || 10);
         }
 
-        const finalStock = isAdv
+        const finalStock = (currentEditSpecMode !== 'simple')
           ? (hasUnlimitedSpec ? 999999 : calculatedTotalStock)
           : calculatedTotalStock;
 
@@ -7418,6 +8196,8 @@
             status: status,
             stock: finalStock,
             isUnlimitedStock: hasUnlimitedSpec,
+            specMode: currentEditSpecMode,
+            specDimensions: specDimensionsPayload,
             specs: specsPayload,
             imageUrl: finalImages[0] || '',
             imageUrls: finalImages,

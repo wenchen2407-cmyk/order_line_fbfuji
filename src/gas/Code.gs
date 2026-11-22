@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/22 下午7:46:29 (Asia/Taipei)
+ * 打包時間：2026/11/22 下午10:12:22 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
@@ -383,8 +383,20 @@
       const status = row[9];
       if (includeAll || status === '上架中') {
         let rawSpecs = [];
+        let specDimensions = null;
+        let specMode = 'simple';
         try {
-          rawSpecs = JSON.parse(row[6]);
+          const parsed = JSON.parse(row[6]);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.variants) {
+            rawSpecs = parsed.variants;
+            specDimensions = parsed.dimensions || null;
+            specMode = parsed.mode || 'two_tier';
+          } else if (Array.isArray(parsed)) {
+            rawSpecs = parsed;
+            specMode = (rawSpecs.length > 0 && typeof rawSpecs[0] === 'object') ? 'advanced' : 'simple';
+          } else if (row[6]) {
+            rawSpecs = [row[6]];
+          }
         } catch (e) {
           rawSpecs = row[6] ? [row[6]] : [];
         }
@@ -393,7 +405,7 @@
         const baseStock = Number(row[5]) || 0;
         const isBaseUnlimited = baseStock >= 9999;
 
-        // 正規化規格陣列 (相容舊版純字串陣列 與 新版獨立定價庫存物件陣列)
+        // 正規化規格陣列 (相容舊版純字串陣列 與 新版獨立定價庫存物件陣列及雙層規格)
         let normalizedSpecs = [];
         if (Array.isArray(rawSpecs)) {
           normalizedSpecs = rawSpecs.map(s => {
@@ -402,9 +414,23 @@
               const sPrice = (s.price !== undefined && !isNaN(Number(s.price)) && Number(s.price) > 0) ? Number(s.price) : basePrice;
               const sUnlimited = Boolean(s.isUnlimited || Number(s.stock) >= 9999);
               const sStock = sUnlimited ? 999999 : (Number(s.stock) || 0);
-              return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+              return {
+                name: sName,
+                dim1: s.dim1 || '',
+                dim2: s.dim2 || '',
+                price: sPrice,
+                stock: sStock,
+                isUnlimited: sUnlimited
+              };
             } else if (typeof s === 'string' && s.trim()) {
-              return { name: s.trim(), price: basePrice, stock: baseStock, isUnlimited: isBaseUnlimited };
+              return {
+                name: s.trim(),
+                dim1: '',
+                dim2: '',
+                price: basePrice,
+                stock: isBaseUnlimited ? 999999 : baseStock,
+                isUnlimited: isBaseUnlimited
+              };
             }
             return null;
           }).filter(s => s && s.name);
@@ -448,6 +474,8 @@
           price: basePrice,
           stock: baseStock,
           specs: normalizedSpecs,
+          specDimensions: specDimensions,
+          specMode: specMode,
           imageUrl: row[7] || (allImages[0] || ''),
           imageUrls: allImages,
           description: row[8],
@@ -604,15 +632,31 @@
             const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
             const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
             if (!sUnlimited) calculatedStock += sStock;
-            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+            return {
+              name: sName,
+              dim1: item.dim1 || '',
+              dim2: item.dim2 || '',
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUnlimited
+            };
           } else if (typeof item === 'string' && item.trim()) {
-            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+            return {
+              name: item.trim(),
+              dim1: '',
+              dim2: '',
+              price: basePrice,
+              stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+              isUnlimited: Boolean(data.isUnlimitedStock)
+            };
           }
           return null;
         }).filter(s => s && s.name);
       } else if (typeof data.specs === 'string' && data.specs.trim()) {
         specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
           name: name,
+          dim1: '',
+          dim2: '',
           price: basePrice,
           stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
           isUnlimited: Boolean(data.isUnlimitedStock)
@@ -633,6 +677,15 @@
       if (hasExplicitSpecs && specsArray.length > 0) {
         const anyUnlimited = specsArray.some(s => s.isUnlimited);
         stockQty = anyUnlimited ? 999999 : calculatedStock;
+      }
+
+      let specsToStore = specsArray;
+      if (data.specMode === 'two_tier' || (data.specDimensions && Array.isArray(data.specDimensions) && data.specDimensions.length >= 2)) {
+        specsToStore = {
+          mode: 'two_tier',
+          dimensions: data.specDimensions,
+          variants: specsArray
+        };
       }
 
       const targetRow = sheet.getLastRow() + 1;
@@ -669,7 +722,7 @@
         (data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : '',
         Number(data.price),
         stockQty,
-        JSON.stringify(specsArray),
+        JSON.stringify(specsToStore),
         mainImage,
         data.description || '',
         '上架中',
@@ -701,6 +754,8 @@
           price: Number(data.price),
           stock: stockQty,
           specs: specsArray,
+          specDimensions: data.specDimensions || null,
+          specMode: data.specMode || 'simple',
           imageUrl: mainImage,
           imageUrls: imagesArray,
           description: data.description || '',
@@ -774,15 +829,31 @@
             const sUnlimited = Boolean(item.isUnlimited || Number(item.stock) >= 9999);
             const sStock = sUnlimited ? 999999 : (Number(item.stock) || 0);
             if (!sUnlimited) calculatedStock += sStock;
-            return { name: sName, price: sPrice, stock: sStock, isUnlimited: sUnlimited };
+            return {
+              name: sName,
+              dim1: item.dim1 || '',
+              dim2: item.dim2 || '',
+              price: sPrice,
+              stock: sStock,
+              isUnlimited: sUnlimited
+            };
           } else if (typeof item === 'string' && item.trim()) {
-            return { name: item.trim(), price: basePrice, stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10), isUnlimited: Boolean(data.isUnlimitedStock) };
+            return {
+              name: item.trim(),
+              dim1: '',
+              dim2: '',
+              price: basePrice,
+              stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
+              isUnlimited: Boolean(data.isUnlimitedStock)
+            };
           }
           return null;
         }).filter(s => s && s.name);
       } else if (typeof data.specs === 'string' && data.specs.trim()) {
         specsArray = data.specs.split(/[,，\n]/).map(s => s.trim()).filter(Boolean).map(name => ({
           name: name,
+          dim1: '',
+          dim2: '',
           price: basePrice,
           stock: data.isUnlimitedStock ? 999999 : (Number(data.stock) || 10),
           isUnlimited: Boolean(data.isUnlimitedStock)
@@ -803,6 +874,15 @@
       if (hasExplicitSpecs && specsArray.length > 0) {
         const anyUnlimited = specsArray.some(s => s.isUnlimited);
         stockQty = anyUnlimited ? 999999 : calculatedStock;
+      }
+
+      let specsToStore = specsArray;
+      if (data.specMode === 'two_tier' || (data.specDimensions && Array.isArray(data.specDimensions) && data.specDimensions.length >= 2)) {
+        specsToStore = {
+          mode: 'two_tier',
+          dimensions: data.specDimensions,
+          variants: specsArray
+        };
       }
 
       // 4. 成本與公式處理
@@ -841,7 +921,7 @@
       sheet.getRange(rowIndex, 4).setValue((data.originalPrice && Number(data.originalPrice) > 0) ? Number(data.originalPrice) : ''); // D: 專櫃原價
       sheet.getRange(rowIndex, 5).setValue(basePrice); // E: 連線代購價
       sheet.getRange(rowIndex, 6).setValue(stockQty); // F: 現貨庫存
-      sheet.getRange(rowIndex, 7).setValue(JSON.stringify(specsArray)); // G: 規格清單(JSON)
+      sheet.getRange(rowIndex, 7).setValue(JSON.stringify(specsToStore)); // G: 規格清單(JSON)
       sheet.getRange(rowIndex, 8).setValue(mainImage); // H: 封面主圖網址
       sheet.getRange(rowIndex, 9).setValue(data.description || ''); // I: 商品描述
       sheet.getRange(rowIndex, 10).setValue(statusVal); // J: 狀態
@@ -1314,8 +1394,15 @@
 
       const targetSpec = String(orderData.spec || '單一規格').trim();
       let specsList = [];
+      let specsContainer = null;
       try {
-        specsList = JSON.parse(targetProduct[6]);
+        const parsed = JSON.parse(targetProduct[6]);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.variants) {
+          specsContainer = parsed;
+          specsList = parsed.variants;
+        } else if (Array.isArray(parsed)) {
+          specsList = parsed;
+        }
       } catch(e) {
         specsList = targetProduct[6] ? [targetProduct[6]] : [];
       }
@@ -1363,7 +1450,12 @@
         if (!isUnlimited) {
           targetSpecObj.stock = Math.max(0, sStock - buyQty);
           specsList[targetSpecIndex] = targetSpecObj;
-          prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsList));
+          if (specsContainer) {
+            specsContainer.variants = specsList;
+            prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsContainer));
+          } else {
+            prodSheet.getRange(productRowIndex, 7).setValue(JSON.stringify(specsList));
+          }
         }
       }
 
