@@ -222,10 +222,23 @@
           orderSheet.getRange(existingOrderRow, 16).setValue(mergedNote);
         }
 
+        // 判斷商品供應模式 (現貨即時採購成功，無須等待現場連線登記)
+        const prodCategory = String(targetProduct[2] || '').trim();
+        const isSpotGoods = prodCategory.includes('現貨');
+
         // 在處理備註(T欄第20欄)自動標記加單紀錄，方便賣家清楚追蹤
-        const mergeLog = `[加單+${buyQty} (${timeFormatted})]`;
+        const spotTag = isSpotGoods ? '[⚡現貨]' : '';
+        const mergeLog = `[加單+${buyQty}${spotTag} (${timeFormatted})]`;
         const newProcessNote = existingProcessNote ? `${existingProcessNote} ${mergeLog}` : mergeLog;
         orderSheet.getRange(existingOrderRow, 20).setValue(newProcessNote);
+
+        // 若商品為現貨，確保訂單狀態為「採購成功」
+        if (isSpotGoods) {
+          const currentShipStatus = String(orderSheet.getRange(existingOrderRow, 19).getValue() || '').trim();
+          if (currentShipStatus === '連線登記' || !currentShipStatus) {
+            orderSheet.getRange(existingOrderRow, 19).setValue('採購成功');
+          }
+        }
 
       } else {
         // 🌟 新成立訂單
@@ -236,6 +249,12 @@
         finalSubtotal = unitPrice * buyQty;
         const shippingFee = 0; // 連線期間運費先設為 0，出貨結帳時統一合併計算
         const totalAmount = finalSubtotal;
+
+        // 判斷商品供應模式 (現貨即時採購成功，無須現場連線登記)
+        const prodCategory = String(targetProduct[2] || '').trim();
+        const isSpotGoods = prodCategory.includes('現貨');
+        const initialShipStatus = isSpotGoods ? '採購成功' : '連線登記';
+        const initialProcessNote = isSpotGoods ? '[⚡ 現貨即時鎖定]' : '';
 
         // 確保訂單表具備 24 欄結構 (M/N 欄保留給出貨結帳收件人，W/X 欄記錄會員真實身分)
         ensureOrderAndCustomerSchema(ss, orderSheet, custSheet);
@@ -259,8 +278,8 @@
           orderData.note || '',                      // 第 16 欄 (P: 訂單備註)
           '未結帳',                                   // 第 17 欄 (Q: 付款狀態)
           '',                                        // 第 18 欄 (R: 匯款後五碼)
-          '連線登記',                                 // 第 19 欄 (S: 訂單採購/出貨處理狀態)
-          '',                                        // 第 20 欄 (T: 處理備註)
+          initialShipStatus,                         // 第 19 欄 (S: 訂單採購/出貨處理狀態: 現貨直接採購成功)
+          initialProcessNote,                        // 第 20 欄 (T: 處理備註)
           '',                                        // 第 21 欄 (U: 包裹追蹤編號)
           '',                                        // 第 22 欄 (V: 結帳編號)
           orderData.realName || '',                  // 第 23 欄 (W: 真實姓名 - LINE帳號會員本人登記真實姓名)

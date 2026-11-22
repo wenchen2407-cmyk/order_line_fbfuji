@@ -2636,7 +2636,24 @@
         }
       });
 
-      // 3. 判定是否已經結單 (已過收單截止時間，或賣家在後台開放通知結帳)
+      // 3. 判定是否為「純現貨訂單」或「已結單」
+      const activeUncheckedOrders = pendingOrders.filter(it => {
+        const s = String(it.shippingStatus || '').trim();
+        const paySt = String(it.paymentStatus || '').trim();
+        const out = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消') || paySt.includes('免付款');
+        const checked = !out && (
+          Boolean(it.checkoutId) ||
+          s.includes('已完成結帳') || s.includes('出貨') || s.includes('寄出') ||
+          paySt.includes('待付款') || paySt.includes('貨到付款') || paySt.includes('對帳') || paySt === '已付款'
+        );
+        return !out && !checked;
+      });
+
+      const isAllSpotOrders = activeUncheckedOrders.length > 0 && activeUncheckedOrders.every(it => {
+        const cat = String(it.supplyMode || it.category || '').trim();
+        return cat.includes('現貨');
+      });
+
       let isCutoffExpired = false;
       const deadline = parseDeadline(systemSettings.ORDER_DEADLINE);
       if (deadline && new Date() >= deadline) {
@@ -2645,7 +2662,7 @@
       const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') ||
         urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1';
 
-      const isAfterCutoff = isCutoffExpired || isAllowCheckout;
+      const isAfterCutoff = isCutoffExpired || isAllowCheckout || isAllSpotOrders;
 
       // 顯示/隱藏連線登記中警示提示框
       // 🌟 嚴格規範：僅在「結單後」且尚有商品未確定採購結果時才呈現，連線採購期間正常隱藏！
@@ -2660,7 +2677,7 @@
 
       // 需求 1：③ 開放結帳(雙徽章) 後的訂購清單中無須顯示 [🛍️ 繼續挑選更多商品] 按鈕
       if (continueShoppingBtn) {
-        if (isAllowCheckout || hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems) {
+        if (isAllowCheckout || isAllSpotOrders || hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems) {
           continueShoppingBtn.style.display = 'none';
         } else {
           continueShoppingBtn.style.display = 'block';
@@ -2699,15 +2716,21 @@
         const card = document.createElement('div');
         card.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border-color); margin-bottom:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
 
-        // 徽章樣式邏輯 (嚴格遵循文字清單規範)
+        const catRaw = String(item.supplyMode || item.category || '').trim();
+        const isSpot = catRaw.includes('現貨');
+
+        // 徽章樣式邏輯 (嚴格遵循規範)
         let badgeHtml = '';
         if (isOut) {
           badgeHtml = `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
-        } else if (isRegistering) {
-          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         } else if (isCheckedOut) {
           // 狀態 5 (採購成功品項已送出結帳)：依規範統一標示 [已結帳]（藍紫底深藍字）
           badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:11.5px; font-weight:700;">已結帳</span>`;
+        } else if (isSpot) {
+          // ⚡ 現貨專屬徽章 (綠底白字，簡潔俐落)
+          badgeHtml = `<span class="status-badge" style="background:#059669; color:#ffffff; border:1px solid #059669; font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap;">⚡ 現貨</span>`;
+        } else if (isRegistering) {
+          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         } else if (isProcured) {
           // 只有在全部商品都確認完畢 (無登記中商品) 且系統開放結帳時，才顯示 [🛒 請結帳] 雙徽章
           if (isAllowCheckout && pendingRegisterCount === 0) {
@@ -2724,10 +2747,9 @@
           badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         }
 
-        const catRaw = String(item.supplyMode || item.category || '').trim();
         let modeBadge = '';
-        if (catRaw.includes('現貨')) {
-          modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">⚡現貨</span>`;
+        if (isSpot) {
+          modeBadge = ''; // 現貨右側已有「⚡ 現貨」綠底白字徽章，品名不再重複加 modeBadge 保持乾淨俐落
         } else if (catRaw.includes('預購')) {
           modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">📦預購</span>`;
         } else {
@@ -2761,7 +2783,11 @@
 
       const subtotalLabelText = document.getElementById('goodsSubtotalLabelText');
       if (subtotalLabelText) {
-        subtotalLabelText.textContent = isShowProcuredSubtotal ? '已採購商品合計' : '連線訂購商品合計';
+        if (isAllSpotOrders) {
+          subtotalLabelText.textContent = '現貨商品合計';
+        } else {
+          subtotalLabelText.textContent = isShowProcuredSubtotal ? '已採購商品合計' : '連線訂購商品合計';
+        }
       }
 
       const shipFeeRow = document.getElementById('checkoutShipFeeRow');
@@ -2822,10 +2848,23 @@
         if (totalRow) totalRow.style.display = 'none';
       }
 
-      // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳、且無任何「連線登記」商品時才點亮！)
+      // 結帳按鈕是否點亮 (開放結帳、或全部皆為現貨商品且無連線登記品項時點亮)
       const isAlreadyCheckedOut = hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems;
-      if (isAllowCheckout && hasSuccessfulItems && !isAlreadyCheckedOut && pendingRegisterCount === 0) {
+      const canCheckout = !isAlreadyCheckedOut && hasSuccessfulItems && pendingRegisterCount === 0 && (isAllowCheckout || isAllSpotOrders);
+
+      if (canCheckout) {
         checkoutBtn.style.display = 'block';
+        if (isAllSpotOrders) {
+          checkoutBtn.innerHTML = '⚡ 現貨結帳';
+          checkoutBtn.style.background = '#059669';
+          checkoutBtn.style.borderColor = '#059669';
+          checkoutBtn.style.color = '#ffffff';
+        } else {
+          checkoutBtn.innerHTML = '💳 前往結帳 👉';
+          checkoutBtn.style.background = '';
+          checkoutBtn.style.borderColor = '';
+          checkoutBtn.style.color = '';
+        }
       } else {
         checkoutBtn.style.display = 'none';
       }

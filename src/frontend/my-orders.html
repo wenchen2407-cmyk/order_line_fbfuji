@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>W.W.連線代購 ｜ 訂單查詢與合併結帳</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800;900&family=Outfit:wght@600;700;800&display=swap"
+    rel="stylesheet">
   <style>
     :root {
       --primary: #06c755;
@@ -26,14 +30,17 @@
       --radius: 16px;
     }
 
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
+    html,
+    body {
       overflow-x: clip;
       position: relative;
       width: 100%;
@@ -62,7 +69,11 @@
     }
 
     /* 防止 iOS 聚焦輸入框時視窗自動縮放 */
-    input[type="text"], input[type="tel"], input[type="number"], select, textarea {
+    input[type="text"],
+    input[type="tel"],
+    input[type="number"],
+    select,
+    textarea {
       font-size: 16px !important;
     }
 
@@ -78,6 +89,7 @@
       border: 1px solid var(--border-color);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
+
     .user-avatar {
       width: 44px;
       height: 44px;
@@ -87,7 +99,12 @@
       background: #e2e8f0;
       flex-shrink: 0;
     }
-    .user-meta { flex: 1; min-width: 0; }
+
+    .user-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
     .user-name {
       font-weight: 800;
       font-size: 15px;
@@ -95,11 +112,13 @@
       align-items: center;
       gap: 6px;
     }
+
     .user-sub {
       font-size: 12px;
       color: var(--text-muted);
       margin-top: 2px;
     }
+
     .btn-top-catalog {
       background: #eff6ff;
       color: var(--blue);
@@ -121,6 +140,7 @@
       margin-bottom: 14px;
       gap: 3px;
     }
+
     .tab-btn {
       flex: 1;
       padding: 9px;
@@ -137,11 +157,13 @@
       gap: 6px;
       transition: all 0.2s;
     }
+
     .tab-btn.active {
       background: #fff;
       color: var(--text-main);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
     }
+
     .badge-count {
       background: var(--accent);
       color: #fff;
@@ -160,6 +182,7 @@
       margin-bottom: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
     }
+
     .section-title {
       font-weight: 800;
       font-size: 14px;
@@ -180,11 +203,36 @@
       align-items: center;
       gap: 3px;
     }
-    .badge-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-    .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-    .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-    .badge-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+
+    .badge-pending {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .badge-purple {
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #e9d5ff;
+    }
+
+    .badge-info {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
 
     /* 包裹物流即時追蹤卡片 */
     .tracking-card {
@@ -195,12 +243,14 @@
       margin-bottom: 14px;
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
     }
+
     .tracking-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 10px;
     }
+
     .tracking-title {
       font-weight: 900;
       font-size: 15px;
@@ -209,6 +259,7 @@
       align-items: center;
       gap: 6px;
     }
+
     .tracking-body {
       background: rgba(255, 255, 255, 0.85);
       border-radius: 10px;
@@ -218,6 +269,7 @@
       border: 1px solid #dbeafe;
       margin-bottom: 12px;
     }
+
     .tracking-code {
       font-family: 'Outfit', sans-serif;
       font-weight: 800;
@@ -225,6 +277,7 @@
       color: #0f172a;
       letter-spacing: 1px;
     }
+
     .btn-track-online {
       display: inline-flex;
       align-items: center;
@@ -240,6 +293,7 @@
       width: 100%;
       box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
     }
+
     .btn-confirm-received {
       display: inline-flex;
       align-items: center;
@@ -274,9 +328,17 @@
       animation: pulseBtn 2s infinite;
       margin-top: 14px;
     }
+
     @keyframes pulseBtn {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.015); }
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.015);
+      }
     }
 
     /* 結帳抽屜/視窗 Modal */
@@ -290,7 +352,11 @@
       align-items: flex-end;
       justify-content: center;
     }
-    .checkout-modal.active { display: flex; }
+
+    .checkout-modal.active {
+      display: flex;
+    }
+
     .checkout-content {
       background: #fff;
       width: 100%;
@@ -302,9 +368,15 @@
       box-sizing: border-box;
       animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
     @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      from {
+        transform: translateY(100%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
     }
 
     .modal-title-bar {
@@ -315,7 +387,13 @@
       border-bottom: 1px solid var(--border-color);
       padding-bottom: 12px;
     }
-    .modal-title-bar h3 { font-size: 18px; font-weight: 900; color: #0f172a; }
+
+    .modal-title-bar h3 {
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
     .btn-close-modal {
       background: none;
       border: none;
@@ -337,11 +415,17 @@
       align-items: center;
       transition: all 0.15s;
     }
+
     .shipping-option.selected {
       border-color: var(--primary);
       background: #f0fdf4;
     }
-    .ship-name { font-weight: 700; font-size: 13.5px; }
+
+    .ship-name {
+      font-weight: 700;
+      font-size: 13.5px;
+    }
+
     .ship-fee {
       font-family: 'Outfit', sans-serif;
       font-weight: 800;
@@ -350,7 +434,11 @@
     }
 
     /* 表單元件 */
-    .form-group { margin-bottom: 12px; text-align: left; }
+    .form-group {
+      margin-bottom: 12px;
+      text-align: left;
+    }
+
     .form-label {
       display: block;
       font-size: 12px;
@@ -358,6 +446,7 @@
       color: #334155;
       margin-bottom: 6px;
     }
+
     .form-input {
       width: 100%;
       padding: 10px 12px;
@@ -367,7 +456,10 @@
       outline: none;
       background: #fff;
     }
-    .form-input:focus { border-color: var(--primary); }
+
+    .form-input:focus {
+      border-color: var(--primary);
+    }
 
     /* 匯款卡片 */
     .bank-box {
@@ -378,6 +470,7 @@
       margin: 14px 0;
       font-size: 13px;
     }
+
     .bank-account-num {
       font-family: 'Outfit', sans-serif;
       font-size: 18px;
@@ -389,6 +482,7 @@
       align-items: center;
       justify-content: space-between;
     }
+
     .btn-copy-acc {
       background: #e2e8f0;
       border: none;
@@ -401,23 +495,29 @@
     }
   </style>
 </head>
+
 <body>
 
   <div class="container">
 
     <!-- 頂部導航列 (品牌與連線狀態指示燈) -->
-    <div class="top-nav-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px 14px 4px;">
-      <div style="font-weight: 800; font-size: 16px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+    <div class="top-nav-bar"
+      style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px 14px 4px;">
+      <div
+        style="font-weight: 800; font-size: 16px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
         <span id="displayStoreName">✈️ W.W.連線代購</span>
       </div>
-      <div id="liveStatusBadge" style="font-size: 11px; font-weight: 700; color: #10b981; background: #eefbf3; padding: 4px 8px; border-radius: 20px; display: flex; align-items: center; gap: 5px;">
-        <span id="liveStatusDot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
+      <div id="liveStatusBadge"
+        style="font-size: 11px; font-weight: 700; color: #10b981; background: #eefbf3; padding: 4px 8px; border-radius: 20px; display: flex; align-items: center; gap: 5px;">
+        <span id="liveStatusDot"
+          style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
         <span id="liveStatusText">連線中</span>
       </div>
     </div>
 
     <!-- 管理員預覽顧客訂單提示列 -->
-    <div id="adminPreviewBanner" style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(37,99,235,0.06);">
+    <div id="adminPreviewBanner"
+      style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(37,99,235,0.06);">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 16px;">🛡️</span>
@@ -426,11 +526,13 @@
               管理員預覽顧客訂單模式
             </div>
             <div style="font-size: 11.5px; color: #3b82f6; margin-top: 1px;">
-              正在檢視顧客：<b id="previewCustomerName" style="color: #1e3a8a;">-</b>（UID: <span id="previewCustomerUid" style="font-family: monospace; font-size: 11px;">-</span>）
+              正在檢視顧客：<b id="previewCustomerName" style="color: #1e3a8a;">-</b>（UID: <span id="previewCustomerUid"
+                style="font-family: monospace; font-size: 11px;">-</span>）
             </div>
           </div>
         </div>
-        <span style="font-size: 11px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 6px; font-weight: 700;">唯讀預覽模式</span>
+        <span
+          style="font-size: 11px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 6px; font-weight: 700;">唯讀預覽模式</span>
       </div>
     </div>
 
@@ -440,7 +542,8 @@
       <div class="user-meta">
         <div class="user-name">
           <span id="displayUserName">LINE 買家</span>
-          <span style="font-size: 11px; font-weight: normal; color: #10b981; background: #eefbf3; padding: 2px 6px; border-radius: 4px;">連線貴賓</span>
+          <span
+            style="font-size: 11px; font-weight: normal; color: #10b981; background: #eefbf3; padding: 2px 6px; border-radius: 4px;">連線貴賓</span>
         </div>
         <div class="user-sub" id="displayUserSub">會員歸戶連線中...</div>
       </div>
@@ -449,21 +552,39 @@
       </a>
     </div>
 
-        <!-- 測試模式專屬快速切換工具列 (僅在 URL 帶有 demo 參數時顯示) -->
-    <div id="demoScenarioSwitcher" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-      <div style="font-weight: 800; font-size: 13px; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+    <!-- 測試模式專屬快速切換工具列 (僅在 URL 帶有 demo 參數時顯示) -->
+    <div id="demoScenarioSwitcher"
+      style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+      <div
+        style="font-weight: 800; font-size: 13px; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
         <span>🧪 結帳後版面快速切換驗測</span>
         <span style="font-size: 11px; color: #64748b; font-weight: normal;">(點擊一鍵即時切換狀態)</span>
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="demoBtnGroup">
-        <button type="button" onclick="switchDemoScenario('prepay_711')" id="demo_prepay_711" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳 1. 先匯款-超商純取</button>
-        <button type="button" onclick="switchDemoScenario('prepay_post')" id="demo_prepay_post" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳 2. 先匯款-郵局寄件</button>
-        <button type="button" onclick="switchDemoScenario('cod_711')" id="demo_cod_711" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦 3. 貨到付款-7-11</button>
-        <button type="button" onclick="switchDemoScenario('cod_fami')" id="demo_cod_fami" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦 4. 貨到付款-全家</button>
-        <button type="button" onclick="switchDemoScenario('audit')" id="demo_audit" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #6d28d9; font-weight: 700; cursor: pointer;">🔍 5. 回報對帳中</button>
-        <button type="button" onclick="switchDemoScenario('shipped')" id="demo_shipped" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; font-weight: 700; cursor: pointer;">🚚 6. 包裹配送中</button>
-        <button type="button" onclick="switchDemoScenario('history')" id="demo_history" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #e2e8f0; background: #f1f5f9; color: #475569; font-weight: 700; cursor: pointer;">📜 7. 歷史訂單</button>
-        <button type="button" onclick="switchDemoScenario('unpaid')" id="demo_unpaid" class="demo-tag" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; cursor: pointer;">🛍️ 8. 結帳前清單</button>
+        <button type="button" onclick="switchDemoScenario('prepay_711')" id="demo_prepay_711" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳
+          1. 先匯款-超商純取</button>
+        <button type="button" onclick="switchDemoScenario('prepay_post')" id="demo_prepay_post" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #b45309; font-weight: 700; cursor: pointer;">💳
+          2. 先匯款-郵局寄件</button>
+        <button type="button" onclick="switchDemoScenario('cod_711')" id="demo_cod_711" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦
+          3. 貨到付款-7-11</button>
+        <button type="button" onclick="switchDemoScenario('cod_fami')" id="demo_cod_fami" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-weight: 700; cursor: pointer;">📦
+          4. 貨到付款-全家</button>
+        <button type="button" onclick="switchDemoScenario('audit')" id="demo_audit" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #6d28d9; font-weight: 700; cursor: pointer;">🔍
+          5. 回報對帳中</button>
+        <button type="button" onclick="switchDemoScenario('shipped')" id="demo_shipped" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; font-weight: 700; cursor: pointer;">🚚
+          6. 包裹配送中</button>
+        <button type="button" onclick="switchDemoScenario('history')" id="demo_history" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #e2e8f0; background: #f1f5f9; color: #475569; font-weight: 700; cursor: pointer;">📜
+          7. 歷史訂單</button>
+        <button type="button" onclick="switchDemoScenario('unpaid')" id="demo_unpaid" class="demo-tag"
+          style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 700; cursor: pointer;">🛍️
+          8. 結帳前清單</button>
       </div>
     </div>
 
@@ -481,29 +602,38 @@
     <div id="tabCheckout" style="display: block;">
 
       <!-- A-1. 待付款提醒與回報匯款按鈕卡片 (待付款狀態時呈現) -->
-      <div id="pendingPaymentNoticeBox" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-          <div style="font-weight: 800; color: #b45309; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
+      <div id="pendingPaymentNoticeBox"
+        style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+          <div
+            style="font-weight: 800; color: #b45309; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
             💳 已結帳完成，待轉帳付款
           </div>
-          <a href="javascript:void(0)" onclick="togglePendingAccountsBox()" id="btnTogglePendingAccounts" style="font-size: 12.5px; color: #0284c7; text-decoration: underline; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+          <a href="javascript:void(0)" onclick="togglePendingAccountsBox()" id="btnTogglePendingAccounts"
+            style="font-size: 12.5px; color: #0284c7; text-decoration: underline; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
             🔗 賣家收款帳戶資訊
           </a>
         </div>
-        
+
         <div style="font-size: 12.5px; color: #78350f; line-height: 1.6; margin-bottom: 12px;">
           完成轉帳付款後，請點擊下方【💰 匯款/付款回報】填寫轉帳時間與帳號末五碼，待小幫手確認完成後將盡快為您安排出貨！
         </div>
 
         <!-- 點擊超連結展開的賣家收款帳戶資訊區塊 -->
-        <div id="pendingAccountsDropdown" style="display: none; margin-bottom: 14px; background: #fff; border-radius: 10px; border: 1px solid #fde68a; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-          <div style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div id="pendingAccountsDropdown"
+          style="display: none; margin-bottom: 14px; background: #fff; border-radius: 10px; border: 1px solid #fde68a; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div
+            style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <span>🏦 賣家收款帳戶資訊：</span>
-            <span onclick="togglePendingAccountsBox()" style="cursor: pointer; color: #94a3b8; font-size: 12px; padding: 2px 6px; background: #f1f5f9; border-radius: 4px;">✕ 收合</span>
+            <span onclick="togglePendingAccountsBox()"
+              style="cursor: pointer; color: #94a3b8; font-size: 12px; padding: 2px 6px; background: #f1f5f9; border-radius: 4px;">✕
+              收合</span>
           </div>
 
           <!-- 方式 1: 中國信託 -->
-          <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div
+            style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
             <div style="font-weight: 700; color: #0284c7; font-size: 13px; margin-bottom: 4px;">💳 中國信託銀行轉帳</div>
             <div style="font-size: 12px; color: #334155; line-height: 1.5;">
               銀行：<b id="pendingBankNameDisplay">822 中國信託商業銀行</b> ｜ 分行：<b>板新分行 (0417)</b><br>
@@ -512,30 +642,44 @@
             <div class="bank-account-num" style="margin-top: 6px;">
               <span id="pendingBankAccountDisplay">4175-402-49273</span>
               <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('pendingBankAccountDisplay', '中國信託')">📋 複製帳號</button>
-                <button type="button" onclick="togglePendingCtbcQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+                <button type="button" class="btn-copy-acc"
+                  onclick="copyPaymentAccount('pendingBankAccountDisplay', '中國信託')">📋 複製帳號</button>
+                <button type="button" onclick="togglePendingCtbcQr()"
+                  style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱
+                  QR Code</button>
               </div>
             </div>
-            <div id="pendingCtbcQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-              <img src="assets/ctbc-qrcode.jpg?v=20261118_v1" alt="中國信託 TWQR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳 (支援 TWQR 跨機構轉帳)</div>
+            <div id="pendingCtbcQrBox"
+              style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/ctbc-qrcode.jpg?v=20261118_v1" alt="中國信託 TWQR Code"
+                style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳
+                (支援 TWQR 跨機構轉帳)</div>
             </div>
           </div>
 
           <!-- 方式 2: LINE Pay -->
-          <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+          <div
+            style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
             <div style="font-weight: 700; color: #16a34a; font-size: 13px; margin-bottom: 4px;">🟢 LINE Pay 好友轉帳</div>
             <div style="font-size: 12px; color: #334155; line-height: 1.5; margin-bottom: 6px;">
               收款對象：<b id="pendingLinepayHolderDisplay">粉絲團小編兼職小小幫手</b><br>
               <span style="color: #64748b; font-size: 11px;">請先將小編加為 LINE 好友，再直接於 LINE 聊天室中 Pay (轉帳) 給小編！</span>
             </div>
             <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-              <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="pendingLinepayFriendLink" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 12px;">💬 點此前往加 LINE 好友</a>
-              <button type="button" onclick="togglePendingLinePayQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+              <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="pendingLinepayFriendLink"
+                style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 12px;">💬
+                點此前往加 LINE 好友</a>
+              <button type="button" onclick="togglePendingLinePayQr()"
+                style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">📱
+                QR Code</button>
             </div>
-            <div id="pendingLinepayQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-              <img src="assets/linepay-qrcode.jpg?v=20261118_v1" alt="LINE 好友 QR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃描上方 QR Code 加入小編好友</div>
+            <div id="pendingLinepayQrBox"
+              style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/linepay-qrcode.jpg?v=20261118_v1" alt="LINE 好友 QR Code"
+                style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃描上方 QR Code 加入小編好友
+              </div>
             </div>
           </div>
 
@@ -549,24 +693,32 @@
             <div class="bank-account-num" style="margin-top: 6px;">
               <span id="pendingJkoAccountDisplay">900459491</span>
               <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('pendingJkoAccountDisplay', '街口')">📋 複製帳號</button>
-                <button type="button" onclick="togglePendingJkoQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱 QR Code</button>
+                <button type="button" class="btn-copy-acc"
+                  onclick="copyPaymentAccount('pendingJkoAccountDisplay', '街口')">📋 複製帳號</button>
+                <button type="button" onclick="togglePendingJkoQr()"
+                  style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">📱
+                  QR Code</button>
               </div>
             </div>
-            <div id="pendingJkoQrBox" style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-              <img src="assets/jko-qrcode.jpg?v=20261118_v1" alt="街口支付 QR Code" style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR 跨機構轉帳)</div>
+            <div id="pendingJkoQrBox"
+              style="display: none; text-align: center; padding: 12px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+              <img src="assets/jko-qrcode.jpg?v=20261118_v1" alt="街口支付 QR Code"
+                style="width: 180px; height: 180px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; padding: 6px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11.5px; color: #475569; margin-top: 6px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR
+                跨機構轉帳)</div>
             </div>
           </div>
         </div>
 
-        <button type="button" onclick="openReportPaymentModal()" style="display: block; width: 100%; background: #f59e0b; color: #fff; text-align: center; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 14px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);">
+        <button type="button" onclick="openReportPaymentModal()"
+          style="display: block; width: 100%; background: #f59e0b; color: #fff; text-align: center; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 14px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);">
           💰 匯款/付款回報 👉
         </button>
       </div>
 
       <!-- A-2. 對帳待出貨提示卡片 (先匯款回報後呈現) -->
-      <div id="auditingNoticeBox" style="display: none; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;">
+      <div id="auditingNoticeBox"
+        style="display: none; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;">
         <div style="font-weight: 800; color: #6d28d9; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
           🔍 對帳待出貨
         </div>
@@ -576,11 +728,12 @@
       </div>
 
       <!-- A-3. 貨到付款待出貨提示卡片 (超商貨到付款結帳後呈現) -->
-      <div id="codPendingNoticeBox" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);">
+      <div id="codPendingNoticeBox"
+        style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);">
         <div style="font-weight: 800; color: #15803d; font-size: 14.5px; display: flex; align-items: center; gap: 6px;">
           📦 待出貨
         </div>
-                <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
+        <div style="font-size: 12.5px; color: #166534; margin-top: 6px; line-height: 1.6;">
           已收到結帳完成通知！小幫手將盡快為您安排出貨，寄出後將在此顯示包裹查詢編號，屆時請留意取件通知簡訊至指定門市取貨付款！
         </div>
       </div>
@@ -595,15 +748,21 @@
             <span>🚚 配送方式：</span><b id="trackShipMethodName" style="color: #1e293b;">7-11 超商取貨付款</b>
           </div>
           <div style="display: flex; align-items: baseline;">
-            <span style="flex-shrink: 0;">📍 門市/地址：</span><b id="trackDeliveryAddressText" style="color: #1e293b; word-break: break-all;">7-11松山門市 (門市店號: 123456)</b>
+            <span style="flex-shrink: 0;">📍 門市/地址：</span><b id="trackDeliveryAddressText"
+              style="color: #1e293b; word-break: break-all;">7-11松山門市 (門市店號: 123456)</b>
           </div>
           <div style="display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;">
-            <span>📦 包裹查詢編號：</span><span class="tracking-code" id="trackCodeDisplay" style="color: #2563eb;">86312345678</span>
+            <span>📦 包裹查詢編號：</span><span class="tracking-code" id="trackCodeDisplay"
+              style="color: #2563eb;">86312345678</span>
           </div>
-          <div id="trackCodAmountRow" style="display: none; align-items: baseline; gap: 4px; font-size: 13px; color: #1e293b;">
-            <span>💰 貨到付款金額：</span><b style="font-family:'Outfit',sans-serif; color:var(--accent); font-weight:800; font-size:15px;" id="trackCodAmountText">NT$ 0</b>
+          <div id="trackCodAmountRow"
+            style="display: none; align-items: baseline; gap: 4px; font-size: 13px; color: #1e293b;">
+            <span>💰 貨到付款金額：</span><b
+              style="font-family:'Outfit',sans-serif; color:var(--accent); font-weight:800; font-size:15px;"
+              id="trackCodAmountText">NT$ 0</b>
           </div>
-          <div style="font-size: 11px; color: #64748b; line-height: 1.5; padding-top: 6px; border-top: 1px dashed #dbeafe; margin-top: 2px;">
+          <div
+            style="font-size: 11px; color: #64748b; line-height: 1.5; padding-top: 6px; border-top: 1px dashed #dbeafe; margin-top: 2px;">
             包裹已寄出，依選擇之物流項目約 1~3 天送達指定超商/地址，請留意取件通知簡訊或配送員通知！
           </div>
         </div>
@@ -623,16 +782,20 @@
 
         <!-- 本次合併結帳包裹資訊卡 (結帳後呈現，對齊實際結帳資料) -->
         <!-- 已出貨配送中專屬：精簡單號與時間列 (格式同歷史訂單，取代包裹大卡) -->
-        <div id="shippedOrderInfoRow" style="display: none; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 6px;">
+        <div id="shippedOrderInfoRow"
+          style="display: none; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 6px;">
           <div style="font-family:'Outfit',sans-serif; font-size: 13.5px; font-weight: 800; color: #0f172a;">
             <span>結帳單號：<span id="shippedCheckoutIdText">-</span></span>
           </div>
           <div style="font-size: 11px; color: #94a3b8;" id="shippedCheckoutTimeText">結帳時間：-</div>
         </div>
 
-        <div id="checkoutSummaryCard" style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
-            <div style="font-family:'Outfit',sans-serif; font-size: 13.5px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+        <div id="checkoutSummaryCard"
+          style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+            <div
+              style="font-family:'Outfit',sans-serif; font-size: 13.5px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
               <span>結帳單號：<span id="csCheckoutIdText">-</span></span>
             </div>
             <div style="font-size: 11px; color: #94a3b8;" id="csCheckoutTimeText">結帳時間：-</div>
@@ -642,19 +805,24 @@
             <div>📱 聯絡電話：<b id="csRecipientPhoneText">-</b></div>
             <div>🚚 配送方式：<b id="csDeliveryMethodText">-</b></div>
             <div>📍 門市/地址：<b id="csDeliveryAddressText">-</b></div>
-            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; display: none; justify-content: space-between; align-items: center;" id="csTotalAmountRow">
+            <div
+              style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; display: none; justify-content: space-between; align-items: center;"
+              id="csTotalAmountRow">
               <span style="font-weight: 700; color: #475569;" id="csTotalAmountLabel">💰 匯款金額：</span>
-              <span style="font-family:'Outfit',sans-serif; font-size: 16.5px; font-weight: 900; color: var(--accent);" id="csTotalAmountText">NT$ 0</span>
+              <span style="font-family:'Outfit',sans-serif; font-size: 16.5px; font-weight: 900; color: var(--accent);"
+                id="csTotalAmountText">NT$ 0</span>
             </div>
           </div>
         </div>
-        
+
         <!-- 尚有商品連線登記中 警示提示框 -->
-        <div id="pendingProcureAlertBox" style="display: none; gap: 10px; align-items: flex-start; padding: 13px 15px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; margin-bottom: 14px; color: #92400e;">
+        <div id="pendingProcureAlertBox"
+          style="display: none; gap: 10px; align-items: flex-start; padding: 13px 15px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; margin-bottom: 14px; color: #92400e;">
           <span style="font-size: 20px; line-height: 1.2;">⚠️</span>
           <div style="font-size: 13px; line-height: 1.6;">
             <b style="font-size: 13.5px; color: #78350f;">尚有商品連線登記中</b><br>
-            尚有 <b id="pendingProcureCountText" style="color: #b45309;">0</b> 件商品未確定採購結果，若群組發送結帳訊息已超過24小時仍無法結帳，請主動聯繫 <b>小幫手</b> 或 <b>W.W.</b> 幫您確認！
+            尚有 <b id="pendingProcureCountText" style="color: #b45309;">0</b> 件商品未確定採購結果，若群組發送結帳訊息已超過24小時仍無法結帳，請主動聯繫
+            <b>小幫手</b> 或 <b>W.W.</b> 幫您確認！
           </div>
         </div>
 
@@ -663,38 +831,51 @@
         </div>
 
         <!-- 金額統計與結帳明細卡片 -->
-        <div id="goodsSubtotalRow" style="display: none; flex-direction: column; gap: 8px; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
+        <div id="goodsSubtotalRow"
+          style="display: none; flex-direction: column; gap: 8px; padding: 14px 0 4px 0; border-top: 1.5px dashed var(--border-color); margin-top: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 700; color: #334155; font-size: 14px;"><span id="goodsSubtotalLabelText">連線訂購商品合計</span> (<span id="totalItemsCountText">0</span> 件)</span>
-            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;" id="goodsSubtotalText">NT$ 0</span>
+            <span style="font-weight: 700; color: #334155; font-size: 14px;"><span
+                id="goodsSubtotalLabelText">連線訂購商品合計</span> (<span id="totalItemsCountText">0</span> 件)</span>
+            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:20px; font-weight: 900;"
+              id="goodsSubtotalText">NT$ 0</span>
           </div>
-          <div id="checkoutShipFeeRow" style="display: none; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b;">
+          <div id="checkoutShipFeeRow"
+            style="display: none; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b;">
             <span>運費 (<span id="checkoutShipMethodLabel">已選配送</span>)</span>
             <span style="font-weight: 700; color: #334155;" id="checkoutShipFeeText">免運 NT$ 0</span>
           </div>
-          <div id="checkoutTotalRow" style="display: none; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 2px;">
+          <div id="checkoutTotalRow"
+            style="display: none; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 2px;">
             <span style="font-weight: 800; color: #1e293b; font-size: 14.5px;" id="totalAmountLabelText">應付結帳總額</span>
-            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:21px; font-weight: 900;" id="finalCheckoutTotalText">NT$ 0</span>
+            <span style="font-family:'Outfit',sans-serif; color:var(--accent); font-size:21px; font-weight: 900;"
+              id="finalCheckoutTotalText">NT$ 0</span>
           </div>
         </div>
 
         <!-- 結帳按鈕 (開放結帳且有採購成功商品時亮起) -->
-        <button type="button" class="btn-action-checkout" id="btnOpenCheckoutDrawer" style="display: none;" onclick="openCheckoutModal()">
+        <button type="button" class="btn-action-checkout" id="btnOpenCheckoutDrawer" style="display: none;"
+          onclick="openCheckoutModal()">
           💳 前往結帳 👉
         </button>
       </div>
 
       <!-- 如果沒有登記商品時顯示提示 -->
-      <div id="noPendingBox" style="display: none; text-align: center; padding: 40px 20px; background: #fff; border-radius: var(--radius); border: 1px dashed var(--border-color); margin-bottom: 16px;">
+      <div id="noPendingBox"
+        style="display: none; text-align: center; padding: 40px 20px; background: #fff; border-radius: var(--radius); border: 1px dashed var(--border-color); margin-bottom: 16px;">
         <div style="font-size: 40px; margin-bottom: 12px;">🛍️</div>
         <div style="font-weight: 800; color: #1e293b; font-size: 16px;">目前尚無連線訂購中的商品！</div>
-        <p style="font-size: 13px; color: #64748b; margin-top: 6px; line-height: 1.6;">您可以在群組中登記喜歡商品，若沒有看到想要的商品也能到群組中用圖片許願！</p>
-        <a href="index.html?v=20261118_v1" id="emptyCatalogBtn" style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉 來去逛逛</a>
+        <p style="font-size: 13px; color: #64748b; margin-top: 6px; line-height: 1.6;">
+          您可以在群組中登記喜歡商品，若沒有看到想要的商品也能到群組中用圖片許願！</p>
+        <a href="index.html?v=20261118_v1" id="emptyCatalogBtn"
+          style="display: inline-block; margin-top: 16px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 12px; text-decoration: none;">👉
+          來去逛逛</a>
       </div>
 
       <!-- C. 連線採購進度與出貨須知說明卡片 -->
-      <div class="section-card" id="procureGuideCard" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0;">
-        <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+      <div class="section-card" id="procureGuideCard"
+        style="display: none; background: #f8fafc; border: 1px solid #e2e8f0;">
+        <div
+          style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
           📌 連線狀態說明
         </div>
         <div style="font-size: 12.5px; color: #475569; line-height: 1.8;">
@@ -723,7 +904,8 @@
 
         <!-- 底部前往更多商品按鈕 -->
         <div style="margin-top: 16px;">
-          <a href="index.html?v=20261118_v1" id="btnContinueShoppingOrders" style="display: block; width: 100%; box-sizing: border-box; background: #fff; color: #334155; border: 1px solid #cbd5e1; text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none;">
+          <a href="index.html?v=20261118_v1" id="btnContinueShoppingOrders"
+            style="display: block; width: 100%; box-sizing: border-box; background: #fff; color: #334155; border: 1px solid #cbd5e1; text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none;">
             🛍️ 繼續挑選更多商品
           </a>
         </div>
@@ -758,7 +940,8 @@
           <span>運費：</span>
           <b id="modalShippingFeeText" style="color:var(--accent);">NT$ 0</b>
         </div>
-        <div style="display:flex; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-size:15px; font-weight:800;">
+        <div
+          style="display:flex; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-size:15px; font-weight:800;">
           <span>應付結帳總額：</span>
           <span style="color:var(--accent); font-family:'Outfit',sans-serif;" id="modalFinalTotalText">NT$ 0</span>
         </div>
@@ -767,7 +950,7 @@
       <!-- 7 大配送方式選擇 -->
       <div class="form-group">
         <label class="form-label">選擇配送方式 (超商純取 0 元免運 ｜ 貨到付款滿 3,000 免運)</label>
-        
+
         <div class="shipping-option selected" id="opt_711_PREPAID" onclick="selectShipping('711_PREPAID', 0, true)">
           <div>
             <div class="ship-name">① 7-11 超商純取貨 (需先匯款)</div>
@@ -844,9 +1027,10 @@
       <!-- 匯款/支付方式資訊卡 (先匯款時顯示，提供 3 種支付方式) -->
       <div id="prepayBankBox" class="bank-box" style="display: block;">
         <div style="font-weight: 800; color: #1e293b; margin-bottom: 8px; font-size: 13.5px;">🏦 賣家收款帳戶資訊：</div>
-        
+
         <!-- 方式 1: 中國信託商業銀行 -->
-        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+        <div
+          style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
           <div style="font-weight: 700; color: #0284c7; font-size: 13.5px; margin-bottom: 6px;">
             💳 中國信託銀行轉帳
           </div>
@@ -857,22 +1041,28 @@
           <div class="bank-account-num" style="margin-top: 6px;">
             <span id="bankAccountDisplay">4175-402-49273</span>
             <div style="display: flex; gap: 6px;">
-              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('bankAccountDisplay', '中國信託')">📋 複製帳號</button>
-              <button type="button" onclick="toggleCtbcQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
+              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('bankAccountDisplay', '中國信託')">📋
+                複製帳號</button>
+              <button type="button" onclick="toggleCtbcQr()"
+                style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
                 📱 QR Code
               </button>
             </div>
           </div>
 
           <!-- 中信 QR Code 展開展示區塊 -->
-          <div id="ctbcQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-            <img src="assets/ctbc-qrcode.jpg?v=20261118_v1" alt="中國信託 TWQR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳 (支援 TWQR 跨機構轉帳)</div>
+          <div id="ctbcQrBox"
+            style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/ctbc-qrcode.jpg?v=20261118_v1" alt="中國信託 TWQR Code"
+              style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">開啟銀行 APP 掃描 QR Code 轉帳
+              (支援 TWQR 跨機構轉帳)</div>
           </div>
         </div>
 
         <!-- 方式 2: LINE Pay (好友轉帳) -->
-        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+        <div
+          style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
           <div style="font-weight: 700; color: #16a34a; font-size: 13.5px; margin-bottom: 6px;">
             🟢 LINE Pay 好友轉帳
           </div>
@@ -883,23 +1073,29 @@
 
           <!-- 動作按鈕：加好友連結與 QR Code 預覽 -->
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="linepayFriendLink" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 9px 10px; border-radius: 8px; font-weight: 700; font-size: 12.5px; box-shadow: 0 2px 6px rgba(6, 199, 85, 0.2);">
+            <a href="https://line.me/ti/p/IUqKCB7dRU" target="_blank" id="linepayFriendLink"
+              style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: #06c755; color: #fff; text-decoration: none; padding: 9px 10px; border-radius: 8px; font-weight: 700; font-size: 12.5px; box-shadow: 0 2px 6px rgba(6, 199, 85, 0.2);">
               💬 點此前往加 LINE 好友
             </a>
-            <button type="button" onclick="toggleLinePayQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            <button type="button" onclick="toggleLinePayQr()"
+              style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 9px 12px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;">
               📱 QR Code
             </button>
           </div>
 
           <!-- QR Code 展開展示區塊 -->
-          <div id="linepayQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-            <img src="assets/linepay-qrcode.jpg?v=20261118_v1" alt="LINE 好友 QR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃描上方 QR Code 加入【粉絲團小編兼職小小幫手】好友</div>
+          <div id="linepayQrBox"
+            style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/linepay-qrcode.jpg?v=20261118_v1" alt="LINE 好友 QR Code"
+              style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃描上方 QR Code
+              加入【粉絲團小編兼職小小幫手】好友</div>
           </div>
         </div>
 
         <!-- 方式 3: 街口支付 -->
-        <div style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+        <div
+          style="background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
           <div style="font-weight: 700; color: #dc2626; font-size: 13.5px; margin-bottom: 6px;">
             🔴 街口支付 (JKOPAY)
           </div>
@@ -911,21 +1107,27 @@
           <div class="bank-account-num" style="margin-top: 6px;">
             <span id="jkoAccountDisplay">900459491</span>
             <div style="display: flex; gap: 6px;">
-              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('jkoAccountDisplay', '街口')">📋 複製帳號</button>
-              <button type="button" onclick="toggleJkoQr()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
+              <button type="button" class="btn-copy-acc" onclick="copyPaymentAccount('jkoAccountDisplay', '街口')">📋
+                複製帳號</button>
+              <button type="button" onclick="toggleJkoQr()"
+                style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer;">
                 📱 QR Code
               </button>
             </div>
           </div>
 
           <!-- 街口 QR Code 展開展示區塊 -->
-          <div id="jkoQrBox" style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
-            <img src="assets/jko-qrcode.jpg?v=20261118_v1" alt="街口支付 QR Code" style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR 跨機構轉帳)</div>
+          <div id="jkoQrBox"
+            style="display: none; text-align: center; padding: 14px 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 8px;">
+            <img src="assets/jko-qrcode.jpg?v=20261118_v1" alt="街口支付 QR Code"
+              style="width: 200px; height: 200px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; background: #fff; padding: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11.5px; color: #475569; margin-top: 8px; font-weight: 600;">掃一掃轉給我 (支援街口與 TWQR 跨機構轉帳)
+            </div>
           </div>
         </div>
 
-        <div style="margin-top: 10px; font-size: 12px; color: #64748b; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.6;">
+        <div
+          style="margin-top: 10px; font-size: 12px; color: #64748b; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.6;">
           💡 <b>轉帳流程說明：</b><br>
           送出結帳後訂單狀態為【待付款】。<br>
           完成轉帳付款後，請點選【💰 匯款/付款回報】填寫資料，小幫手確認後將立即安排出貨！
@@ -933,7 +1135,8 @@
       </div>
 
       <!-- 超商貨到付款專屬提示卡 (選 7-11 賣貨便 / 全家好賣+ 時顯示) -->
-      <div id="codMartNoticeBox" class="bank-box" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0;">
+      <div id="codMartNoticeBox" class="bank-box"
+        style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0;">
         <div style="font-weight: 700; color: #15803d; font-size: 13.5px;">📦 超商取貨付款：</div>
         <div style="font-size: 12.5px; color: #166534; margin-top: 4px; line-height: 1.6;">
           將依提供之配送資料為您安排出貨，屆時再請留意取件通知並於指定門市完成取貨付款！
@@ -941,7 +1144,8 @@
       </div>
 
       <!-- 郵局貨到付款專屬提示卡 (選 郵局貨到付款 時顯示) -->
-      <div id="codPostNoticeBox" class="bank-box" style="display: none; background: #eff6ff; border: 1.5px solid #bfdbfe;">
+      <div id="codPostNoticeBox" class="bank-box"
+        style="display: none; background: #eff6ff; border: 1.5px solid #bfdbfe;">
         <div style="font-weight: 700; color: #1d4ed8; font-size: 13.5px;">📦 郵局取貨付款：</div>
         <div style="font-size: 12.5px; color: #1e40af; margin-top: 4px; line-height: 1.6;">
           將依提供之配送資料為您安排出貨，屆時再請留意郵差先生/小姐配送時間與付款！
@@ -970,7 +1174,8 @@
       <div style="background: #f8fafc; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px;">
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
           <span>應付款金額：</span>
-          <b id="reportOrderAmountText" style="color:var(--accent); font-family:'Outfit',sans-serif; font-size:16px;">NT$ 0</b>
+          <b id="reportOrderAmountText"
+            style="color:var(--accent); font-family:'Outfit',sans-serif; font-size:16px;">NT$ 0</b>
         </div>
         <div style="font-size:11.5px; color:#64748b;">
           請核對您的轉帳明細並提供以下資料，方便小幫手進行對帳。
@@ -997,7 +1202,8 @@
       <!-- 匯款後五碼 -->
       <div class="form-group">
         <label class="form-label" id="labelReportLastFive">匯款或付款帳號後五碼 *</label>
-        <input type="text" id="reportPayLastFiveInput" class="form-input" maxlength="10" placeholder="例如：12345 (LinePay/街口請填帳號末五碼)">
+        <input type="text" id="reportPayLastFiveInput" class="form-input" maxlength="10"
+          placeholder="例如：12345 (LinePay/街口請填帳號末五碼)">
       </div>
 
       <!-- 備註 -->
@@ -1018,9 +1224,9 @@
     const TEST_GAS_URL = 'https://script.google.com/macros/s/AKfycbzHdEBRN4OsqvXECkypDGvt_NHOjlAxet_9KP3LeaBJgzRlt478i-qhwDl7WmxcdGch/exec';
 
     const IS_LOCAL_DEV = window.location.hostname === 'localhost' ||
-                         window.location.hostname === '127.0.0.1' ||
-                         window.location.protocol === 'file:' ||
-                         !window.location.hostname;
+      window.location.hostname === '127.0.0.1' ||
+      window.location.protocol === 'file:' ||
+      !window.location.hostname;
 
     // 支援網址參數 ?env=prod 或 ?env=test 強制指定環境，預設本機連測試庫、線上連正式庫
     const _envParam = (new URLSearchParams(window.location.search)).get('env');
@@ -1088,7 +1294,7 @@
         const d = new Date(rawDate);
         if (!isNaN(d.getTime())) {
           const pad = n => String(n).padStart(2, '0');
-          return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
         if (typeof rawDate === 'string' && rawDate.trim()) {
           return rawDate.replace(/-/g, '/').slice(0, 16);
@@ -1104,7 +1310,7 @@
       }
       const now = new Date();
       const pad = n => String(n).padStart(2, '0');
-      return `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      return `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
 
     function parseDeliveryInfo(raw) {
@@ -1178,7 +1384,7 @@
         try {
           sessionStorage.clear();
           localStorage.clear();
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (urlParams.get('uid')) {
@@ -1271,9 +1477,9 @@
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload),
             keepalive: true
-          }).catch(() => {});
+          }).catch(() => { });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 0 毫秒訂單快取還原
@@ -1358,7 +1564,7 @@
               });
               sessionStorage.setItem('liff_user_profile', profStr);
               localStorage.setItem('liff_user_profile', profStr);
-            } catch (e) {}
+            } catch (e) { }
 
             // 若身分有更新且先前是用不同 UID 抓取，才重新靜默更新訂單
             if (prevId !== currentUserId) {
@@ -1491,7 +1697,7 @@
           updateUserProfileUI();
           renderOrdersView();
           return;
-                } else if (explicitUid === 'U093941519e020e132fd537bea8ccd4a0' || urlParams.get('co') === 'CO261109120110244' || (currentUserName && currentUserName.includes('湯先生')) || (urlParams.get('name') && urlParams.get('name').includes('湯'))) {
+        } else if (explicitUid === 'U093941519e020e132fd537bea8ccd4a0' || urlParams.get('co') === 'CO261109120110244' || (currentUserName && currentUserName.includes('湯先生')) || (urlParams.get('name') && urlParams.get('name').includes('湯'))) {
           // 湯先生 (Google 試算表真實已結帳包裹)
           currentUserName = '湯先生';
           const trackCode = urlParams.get('track') || '';
@@ -1787,7 +1993,7 @@
             if (p.displayName && !currentUserName) currentUserName = p.displayName;
             if (p.pictureUrl && !currentUserAvatar) currentUserAvatar = p.pictureUrl;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // 若線上環境依然尚未獲得 UID，且非本機/demo，先暫緩發送無效請求
@@ -1808,7 +2014,7 @@
             if (parsed.systemSettings) systemSettings = Object.assign(systemSettings, parsed.systemSettings);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       updateUserProfileUI();
       renderOrdersView();
@@ -1837,7 +2043,7 @@
               const localRaw = localStorage.getItem('line_order_customer_profile');
               let localObj = {};
               if (localRaw) {
-                try { localObj = JSON.parse(localRaw); } catch (e) {}
+                try { localObj = JSON.parse(localRaw); } catch (e) { }
               }
               // 若本地暫存的真實姓名與雲端顧客歸戶不一致 (例如先前被收件人卓建谷污染)，自動導正修復！
               if (localObj.realName !== customerProfile.realName || localObj.phone !== customerProfile.phone) {
@@ -1852,10 +2058,10 @@
             console.warn('同步顧客本地快取警告:', healErr);
           }
           if (json.data.settings) {
-            if (!json.data.settings.BANK_ACCOUNT || 
-                json.data.settings.BANK_ACCOUNT.includes('123-4567') || 
-                json.data.settings.BANK_ACCOUNT.includes('0123-4567') || 
-                json.data.settings.BANK_ACCOUNT.includes('12345-6789')) {
+            if (!json.data.settings.BANK_ACCOUNT ||
+              json.data.settings.BANK_ACCOUNT.includes('123-4567') ||
+              json.data.settings.BANK_ACCOUNT.includes('0123-4567') ||
+              json.data.settings.BANK_ACCOUNT.includes('12345-6789')) {
               json.data.settings.BANK_ACCOUNT = '4175-402-49273';
             }
             if (!json.data.settings.BANK_ACCOUNT_HOLDER || json.data.settings.BANK_ACCOUNT_HOLDER === '陳小美') {
@@ -1872,7 +2078,7 @@
               customerProfile: customerProfile,
               systemSettings: systemSettings
             }));
-          } catch (e) {}
+          } catch (e) { }
 
           updateUserProfileUI();
           renderOrdersView();
@@ -1882,7 +2088,7 @@
       }
     }
 
-            // 測試情境一鍵即時切換 (零延遲、免重整、抗快取)
+    // 測試情境一鍵即時切換 (零延遲、免重整、抗快取)
     function switchDemoScenario(scenario) {
       const s = String(scenario || 'unpaid');
       const allBtns = document.querySelectorAll('#demoBtnGroup .demo-tag');
@@ -2267,9 +2473,9 @@
         if (trackBtn) trackBtn.href = getLogisticsUrl(shippedItemData.deliveryAddress);
 
         const isShippedCod = String(shippedItemData.deliveryAddress || '').includes('取貨付款') ||
-                             String(shippedItemData.deliveryAddress || '').includes('貨到付款') ||
-                             String(shippedItemData.paymentStatus || '').includes('貨到付款') ||
-                             (currentCheckoutMethodName && currentCheckoutMethodName.includes('貨到付款'));
+          String(shippedItemData.deliveryAddress || '').includes('貨到付款') ||
+          String(shippedItemData.paymentStatus || '').includes('貨到付款') ||
+          (currentCheckoutMethodName && currentCheckoutMethodName.includes('貨到付款'));
         const codRow = document.getElementById('trackCodAmountRow');
         if (codRow) {
           codRow.style.display = isShippedCod ? 'flex' : 'none';
@@ -2397,13 +2603,13 @@
               csTotRow.style.display = hasAuditing ? 'none' : 'flex';
             }
             if (csTotLabel && !hasAuditing) {
-              const isCodMethod = shipMethod.includes('貨到付款') || 
-                                  shipMethod.includes('COD') || 
-                                  shipMethod.includes('賣貨便') || 
-                                  shipMethod.includes('好賣') ||
-                                  String(firstChecked.paymentStatus || '').includes('貨到付款') || 
-                                  String(firstChecked.deliveryAddress || '').includes('取貨付款') ||
-                                  hasCodPending;
+              const isCodMethod = shipMethod.includes('貨到付款') ||
+                shipMethod.includes('COD') ||
+                shipMethod.includes('賣貨便') ||
+                shipMethod.includes('好賣') ||
+                String(firstChecked.paymentStatus || '').includes('貨到付款') ||
+                String(firstChecked.deliveryAddress || '').includes('取貨付款') ||
+                hasCodPending;
               csTotLabel.textContent = isCodMethod ? '💰 貨到付款金額：' : '💰 匯款金額：';
             }
           }
@@ -2430,16 +2636,33 @@
         }
       });
 
-      // 3. 判定是否已經結單 (已過收單截止時間，或賣家在後台開放通知結帳)
+      // 3. 判定是否為「純現貨訂單」或「已結單」
+      const activeUncheckedOrders = pendingOrders.filter(it => {
+        const s = String(it.shippingStatus || '').trim();
+        const paySt = String(it.paymentStatus || '').trim();
+        const out = s.includes('缺貨') || s.includes('斷貨') || s.includes('取消') || paySt.includes('免付款');
+        const checked = !out && (
+          Boolean(it.checkoutId) ||
+          s.includes('已完成結帳') || s.includes('出貨') || s.includes('寄出') ||
+          paySt.includes('待付款') || paySt.includes('貨到付款') || paySt.includes('對帳') || paySt === '已付款'
+        );
+        return !out && !checked;
+      });
+
+      const isAllSpotOrders = activeUncheckedOrders.length > 0 && activeUncheckedOrders.every(it => {
+        const cat = String(it.supplyMode || it.category || '').trim();
+        return cat.includes('現貨');
+      });
+
       let isCutoffExpired = false;
       const deadline = parseDeadline(systemSettings.ORDER_DEADLINE);
       if (deadline && new Date() >= deadline) {
         isCutoffExpired = true;
       }
-      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') || 
-                              urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1';
+      const isAllowCheckout = (String(systemSettings.ALLOW_CHECKOUT || '').toUpperCase() === 'YES') ||
+        urlParams.get('checkout') === '1' || urlParams.get('test') === '1' || urlParams.get('demo') === '1';
 
-      const isAfterCutoff = isCutoffExpired || isAllowCheckout;
+      const isAfterCutoff = isCutoffExpired || isAllowCheckout || isAllSpotOrders;
 
       // 顯示/隱藏連線登記中警示提示框
       // 🌟 嚴格規範：僅在「結單後」且尚有商品未確定採購結果時才呈現，連線採購期間正常隱藏！
@@ -2454,7 +2677,7 @@
 
       // 需求 1：③ 開放結帳(雙徽章) 後的訂購清單中無須顯示 [🛍️ 繼續挑選更多商品] 按鈕
       if (continueShoppingBtn) {
-        if (isAllowCheckout || hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems) {
+        if (isAllowCheckout || isAllSpotOrders || hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems) {
           continueShoppingBtn.style.display = 'none';
         } else {
           continueShoppingBtn.style.display = 'block';
@@ -2492,16 +2715,22 @@
 
         const card = document.createElement('div');
         card.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border-radius:12px; border:1px solid var(--border-color); margin-bottom:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
-        
-        // 徽章樣式邏輯 (嚴格遵循文字清單規範)
+
+        const catRaw = String(item.supplyMode || item.category || '').trim();
+        const isSpot = catRaw.includes('現貨');
+
+        // 徽章樣式邏輯 (嚴格遵循規範)
         let badgeHtml = '';
         if (isOut) {
           badgeHtml = `<span class="status-badge badge-danger">⚠️ 缺貨斷貨</span>`;
-        } else if (isRegistering) {
-          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         } else if (isCheckedOut) {
           // 狀態 5 (採購成功品項已送出結帳)：依規範統一標示 [已結帳]（藍紫底深藍字）
           badgeHtml = `<span class="status-badge badge-info" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:11.5px; font-weight:700;">已結帳</span>`;
+        } else if (isSpot) {
+          // ⚡ 現貨專屬徽章 (綠底白字，簡潔俐落)
+          badgeHtml = `<span class="status-badge" style="background:#059669; color:#ffffff; border:1px solid #059669; font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap;">⚡ 現貨</span>`;
+        } else if (isRegistering) {
+          badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         } else if (isProcured) {
           // 只有在全部商品都確認完畢 (無登記中商品) 且系統開放結帳時，才顯示 [🛒 請結帳] 雙徽章
           if (isAllowCheckout && pendingRegisterCount === 0) {
@@ -2518,10 +2747,9 @@
           badgeHtml = `<span class="status-badge badge-pending">⏳ 連線登記</span>`;
         }
 
-        const catRaw = String(item.supplyMode || item.category || '').trim();
         let modeBadge = '';
-        if (catRaw.includes('現貨')) {
-          modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">⚡現貨</span>`;
+        if (isSpot) {
+          modeBadge = ''; // 現貨右側已有「⚡ 現貨」綠底白字徽章，品名不再重複加 modeBadge 保持乾淨俐落
         } else if (catRaw.includes('預購')) {
           modeBadge = `<span style="display:inline-block; font-size:10.5px; font-weight:800; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:1px 6px; border-radius:4px; margin-right:5px; vertical-align:middle;">📦預購</span>`;
         } else {
@@ -2555,7 +2783,11 @@
 
       const subtotalLabelText = document.getElementById('goodsSubtotalLabelText');
       if (subtotalLabelText) {
-        subtotalLabelText.textContent = isShowProcuredSubtotal ? '已採購商品合計' : '連線訂購商品合計';
+        if (isAllSpotOrders) {
+          subtotalLabelText.textContent = '現貨商品合計';
+        } else {
+          subtotalLabelText.textContent = isShowProcuredSubtotal ? '已採購商品合計' : '連線訂購商品合計';
+        }
       }
 
       const shipFeeRow = document.getElementById('checkoutShipFeeRow');
@@ -2616,10 +2848,23 @@
         if (totalRow) totalRow.style.display = 'none';
       }
 
-      // 結帳按鈕是否點亮 (只有在開放結帳、且尚未送出結帳、且無任何「連線登記」商品時才點亮！)
+      // 結帳按鈕是否點亮 (開放結帳、或全部皆為現貨商品且無連線登記品項時點亮)
       const isAlreadyCheckedOut = hasPendingPayment || hasCodPending || hasAuditing || hasShippedItems;
-      if (isAllowCheckout && hasSuccessfulItems && !isAlreadyCheckedOut && pendingRegisterCount === 0) {
+      const canCheckout = !isAlreadyCheckedOut && hasSuccessfulItems && pendingRegisterCount === 0 && (isAllowCheckout || isAllSpotOrders);
+
+      if (canCheckout) {
         checkoutBtn.style.display = 'block';
+        if (isAllSpotOrders) {
+          checkoutBtn.innerHTML = '⚡ 現貨結帳';
+          checkoutBtn.style.background = '#059669';
+          checkoutBtn.style.borderColor = '#059669';
+          checkoutBtn.style.color = '#ffffff';
+        } else {
+          checkoutBtn.innerHTML = '💳 前往結帳 👉';
+          checkoutBtn.style.background = '';
+          checkoutBtn.style.borderColor = '';
+          checkoutBtn.style.color = '';
+        }
       } else {
         checkoutBtn.style.display = 'none';
       }
@@ -2669,10 +2914,10 @@
         const grp = groupMap[groupKey];
         grp.items.push(order);
 
-        const isOut = String(order.shippingStatus || '').includes('缺貨') || 
-                      String(order.shippingStatus || '').includes('斷貨') || 
-                      String(order.shippingStatus || '').includes('取消') ||
-                      String(order.paymentStatus || '').includes('免付款');
+        const isOut = String(order.shippingStatus || '').includes('缺貨') ||
+          String(order.shippingStatus || '').includes('斷貨') ||
+          String(order.shippingStatus || '').includes('取消') ||
+          String(order.paymentStatus || '').includes('免付款');
         if (!isOut) {
           grp.goodsTotal += (Number(order.subtotal) || (Number(order.unitPrice || 0) * Number(order.quantity || 1)));
         }
@@ -2694,12 +2939,12 @@
         const card = document.createElement('div');
         card.className = 'section-card';
         card.style.cssText = 'margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 14px; padding: 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.03);';
-        
+
         const itemsHtml = grp.items.map(it => {
-          const isOut = String(it.shippingStatus || '').includes('缺貨') || 
-                        String(it.shippingStatus || '').includes('斷貨') || 
-                        String(it.shippingStatus || '').includes('取消') ||
-                        String(it.paymentStatus || '').includes('免付款');
+          const isOut = String(it.shippingStatus || '').includes('缺貨') ||
+            String(it.shippingStatus || '').includes('斷貨') ||
+            String(it.shippingStatus || '').includes('取消') ||
+            String(it.paymentStatus || '').includes('免付款');
           const itCat = String(it.supplyMode || it.category || '').trim();
           let itModeBadge = '';
           if (itCat.includes('現貨')) {
@@ -2789,7 +3034,7 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'confirmReceived',
-            data: { 
+            data: {
               userId: currentUserId,
               userName: (currentUserName && currentUserName !== '訪客') ? currentUserName : (currentUserProfile && currentUserProfile.userName) || '',
               checkoutId: targetCheckoutId,
@@ -2805,7 +3050,7 @@
       if (pendingOrders.length > 0) {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
-        const nowStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const nowStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
         pendingOrders.forEach(item => {
           const s = String(item.shippingStatus || '');
           const p = String(item.paymentStatus || '');
@@ -2829,7 +3074,7 @@
             customerProfile: customerProfile,
             systemSettings: systemSettings
           }));
-        } catch (err) {}
+        } catch (err) { }
       }
 
       alert('🎉 感謝您的協助。\n訂單已確認取件完畢，已為您封存至「📜 歷史訂單」！');
@@ -2860,7 +3105,7 @@
 
       const modal = document.getElementById('checkoutModal');
       document.getElementById('modalGoodsSubtotalText').textContent = `NT$ ${successfulGoodsTotal.toLocaleString()}`;
-      
+
       // 預設自動帶入資料 (不另外紀錄常用寄送地址，每次依配送方式輸入)
       document.getElementById('inputRecipientName').value = customerProfile.realName || '';
       document.getElementById('inputRecipientPhone').value = customerProfile.phone || '';
@@ -3123,7 +3368,7 @@
       if (!resultCheckoutId) {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
-        const timeStr = `${String(now.getFullYear()).slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const timeStr = `${String(now.getFullYear()).slice(-2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
         resultCheckoutId = 'CO' + timeStr + Math.floor(100 + Math.random() * 900);
       }
 
@@ -3133,7 +3378,7 @@
         item.checkoutId = resultCheckoutId;
         const nowTime = new Date();
         const padZero = n => String(n).padStart(2, "0");
-        item.checkoutDate = `${nowTime.getFullYear()}/${padZero(nowTime.getMonth()+1)}/${padZero(nowTime.getDate())} ${padZero(nowTime.getHours())}:${padZero(nowTime.getMinutes())}`;
+        item.checkoutDate = `${nowTime.getFullYear()}/${padZero(nowTime.getMonth() + 1)}/${padZero(nowTime.getDate())} ${padZero(nowTime.getHours())}:${padZero(nowTime.getMinutes())}`;
         const st = String(item.shippingStatus || '');
         const isOut = st.includes('缺貨') || st.includes('斷貨') || st.includes('取消');
         item.recipientName = name;
@@ -3163,7 +3408,7 @@
           customerProfile: customerProfile,
           systemSettings: systemSettings
         }));
-      } catch (err) {}
+      } catch (err) { }
 
       btn.disabled = false;
       btn.textContent = '✓ 確認並送出';
@@ -3188,11 +3433,11 @@
       const modal = document.getElementById('reportPaymentModal');
       const totalPayable = successfulGoodsTotal + currentShippingFee;
       document.getElementById('reportOrderAmountText').textContent = `NT$ ${totalPayable.toLocaleString()}`;
-      
+
       // 自動填入當前時間
       const now = new Date();
       const pad = n => String(n).padStart(2, '0');
-      const timeStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const timeStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
       document.getElementById('reportPayMethodSelect').value = '';
       document.getElementById('reportPayTimeInput').value = timeStr;
       document.getElementById('reportPayLastFiveInput').value = '';
@@ -3275,4 +3520,5 @@
     }
   </script>
 </body>
+
 </html>
