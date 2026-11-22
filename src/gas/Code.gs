@@ -6,7 +6,7 @@
  * 如需修改功能，請至 src/gas/modules/ 修改對應的子模組，並執行：
  *   node scripts/build-gas.js
  * 
- * 打包時間：2026/11/22 下午1:08:17 (Asia/Taipei)
+ * 打包時間：2026/11/22 下午7:46:29 (Asia/Taipei)
  * 包含模組：00_Config.gs, 01_Router.gs, 02_ProductService.gs, 03_OrderService.gs, 04_CustomerService.gs, 05_TelegramService.gs, 06_SystemAdminService.gs
  * ==============================================================================
  */
